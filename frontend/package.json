@@ -1,0 +1,17 @@
+{
+  "name": "yunigreen-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:mobile": "turbo dev --filter=@yunigreen/mobile",
+    "dev:admin": "turbo dev --filter=@yunigreen/admin",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4"
+  }
+}
