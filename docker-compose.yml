@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: yunigreen-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: yunigreen
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: yunigreen-backend
+    volumes:
+      - ./backend:/app
+      - ./종합적산정보건축부문(견적서근거자료).pdf:/app/data/estimate_arch.pdf
+      - ./종합적산정보공통부문(견적서근거자료).pdf:/app/data/estimate_common.pdf
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/yunigreen
+      # Add GEMINI_API_KEY to your .env file locally
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    container_name: yunigreen-frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
