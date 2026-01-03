@@ -75,6 +75,7 @@ yarn-error.log*
 # AI Tools (Personal)
 # =====================
 .claude/
+OH-MY-OPENCODE-GUIDE.md
 
 # =====================
 # IDE / Editor
