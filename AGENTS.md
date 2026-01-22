@@ -84,11 +84,57 @@ cd frontend && npm run dev
 cd frontend && npm run tsc --noEmit
 ```
 
+## 개발 환경 주의사항
+
+### 프론트엔드 실행 (CRITICAL)
+
+**절대 `sudo`로 프론트엔드 dev 서버를 실행하지 않습니다.**
+
+```bash
+# WRONG - .next 캐시가 root 소유로 생성되어 권한 문제 발생
+sudo pnpm dev
+
+# CORRECT
+pnpm dev
+```
+
+**Docker 내부에서 실행 시 유저 권한 맞추기:**
+```bash
+docker run --user $(id -u):$(id -g) ...
+```
+
+**권한 문제 발생 시 해결법:**
+```bash
+# .next 캐시 삭제 후 재시작
+rm -rf frontend/apps/*/.next
+pnpm dev
+```
+
+### 포트 충돌 문제
+
+`pnpm dev` 실행 시 `EADDRINUSE` 에러가 발생하면:
+- `predev` 스크립트가 자동으로 yunigreen 프로젝트의 잔류 프로세스를 정리합니다
+- 다른 앱이 포트를 점유 중이면 PID와 명령어가 출력됩니다
+
+### 무한 리로드 문제 (CRITICAL)
+
+**두 앱을 동시에 실행하면 무한 리로드가 발생합니다.** Turbopack + 모노레포 환경에서 공유 패키지 watch 충돌 때문입니다.
+
+```bash
+# WRONG - 무한 리로드 발생
+pnpm dev        # 또는 turbo dev
+
+# CORRECT - 앱을 개별 실행
+pnpm dev:mobile  # 터미널 1
+pnpm dev:admin   # 터미널 2 (필요시)
+```
+
 ## 경계 (수정 금지)
 
 - `vendor/`, `node_modules/`, `.env*`
 - `backend/alembic/versions/` (마이그레이션 파일 직접 수정 금지)
 - `data/` (원본 PDF 파일)
+- `frontend/apps/*/.next/` (빌드 캐시, 권한 문제 시 삭제 가능)
 
 ## 상세 문서 링크
 
@@ -105,3 +151,4 @@ cd frontend && npm run tsc --noEmit
 |-----|------|----------|
 | 0.1.0 | 2026-01-04 | 최초 작성 |
 | 0.2.0 | 2026-01-04 | 구현 상세를 docs/06_AI_INTEGRATION.md로 분리, 슬림화 |
+| 0.2.1 | 2026-01-05 | 프론트엔드 권한/포트 충돌 주의사항 추가 |
