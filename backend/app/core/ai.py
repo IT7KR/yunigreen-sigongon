@@ -25,7 +25,7 @@ class GeminiService:
     """Gemini AI 서비스 - 폴백 로직 포함."""
     
     MODELS = [
-        "gemini-2.0-flash-exp",
+        "gemini-3.0-flash",
         "gemini-2.0-flash",
         "gemini-1.5-flash",
     ]

@@ -34,7 +34,7 @@ class NotFoundException(YunigreenException):
         "diagnosis": "진단 결과를 찾을 수 없어요",
         "site_visit": "현장 방문 기록을 찾을 수 없어요",
         "photo": "사진을 찾을 수 없어요",
-        "pricebook": "단가표를 찾을 수 없어요",
+        "pricebook": "적산 자료를 찾을 수 없어요",
         "catalog_item": "품목을 찾을 수 없어요",
     }
     
@@ -100,18 +100,18 @@ class AuthorizationException(YunigreenException):
 
 
 class PricebookException(YunigreenException):
-    """단가표 관련 예외."""
+    """적산 자료 관련 예외."""
     
     def __init__(self, message: str, code: str = "PRICEBOOK_ERROR"):
         super().__init__(message=message, code=code)
 
 
 class NoPricebookActiveException(PricebookException):
-    """활성 단가표 버전 없음."""
+    """활성 적산 자료 버전 없음."""
     
     def __init__(self):
         super().__init__(
-            message="활성화된 단가표가 없어요. 관리자에게 문의해 주세요.",
+            message="활성화된 적산 자료가 없어요. 관리자에게 문의해 주세요.",
             code="PRICEBOOK_INACTIVE",
         )
 

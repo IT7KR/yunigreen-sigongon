@@ -37,7 +37,13 @@ class Settings(BaseSettings):
     allowed_image_types: list[str] = ["image/jpeg", "image/png", "image/webp"]
     
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:3033",
+        "http://localhost:3034",
+        "http://localhost:3133",
+        "http://localhost:3134",
+    ]
     
     @property
     def async_database_url(self) -> str:
