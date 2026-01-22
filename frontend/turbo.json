@@ -1,10 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalPassThroughEnv": ["NODE_ENV"],
   "tasks": {
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "inputs": ["src/**", "app/**", "components/**", "lib/**", "hooks/**", "public/**", "*.ts", "*.tsx", "*.js", "*.json", "!.next/**"]
     },
     "build": {
       "dependsOn": ["^build"],
