@@ -28,6 +28,7 @@ from app.models.project import (
     VisitType,
 )
 from app.schemas.response import APIResponse
+from app.services.storage import storage_service
 
 router = APIRouter()
 
@@ -211,11 +212,11 @@ async def get_site_visit(
 )
 async def upload_photo(
     visit_id: uuid.UUID,
+    db: DBSession,
+    current_user: CurrentUser,
     file: UploadFile = File(...),
     photo_type: PhotoType = Form(default=PhotoType.BEFORE),
     caption: Optional[str] = Form(default=None),
-    db: DBSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
 ):
     """사진 업로드.
     
@@ -239,22 +240,20 @@ async def upload_photo(
     if not project_result.scalar_one_or_none():
         raise NotFoundException("site_visit", visit_id)
     
-    # 파일 형식 검증
-    if file.content_type not in ALLOWED_IMAGE_TYPES:
+    if not storage_service.validate_image(file):
         raise InvalidFileTypeException(["JPEG", "PNG", "WebP"])
     
-    # 파일 크기 검증
-    content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
+    if not storage_service.validate_file_size(file):
         raise FileTooLargeException(10)
     
-    # 파일 저장 경로 생성
-    file_ext = os.path.splitext(file.filename or "photo.jpg")[1]
-    file_name = f"{uuid.uuid4()}{file_ext}"
-    storage_path = f"/uploads/projects/{visit.project_id}/{visit_id}/{file_name}"
+    storage_path = await storage_service.save_photo(
+        file=file,
+        project_id=str(visit.project_id),
+        visit_id=str(visit_id),
+    )
     
-    # TODO: 실제 파일 저장 구현 (로컬 또는 S3)
-    # 현재는 경로만 저장
+    content = await file.read()
+    await file.seek(0)
     
     # 사진 레코드 생성
     photo = Photo(
@@ -355,7 +354,9 @@ async def delete_photo(
     if not project_result.scalar_one_or_none():
         raise NotFoundException("photo", photo_id)
     
-    # TODO: 실제 파일 삭제
+    # 실제 파일 삭제
+    if photo.storage_path:
+        await storage_service.delete_file(photo.storage_path)
     
     await db.delete(photo)
     await db.commit()
