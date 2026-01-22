@@ -118,8 +118,10 @@ from app.routers import (
 from app.routers.contracts import router as contracts_router, project_contracts_router
 from app.routers.labor_contracts import router as labor_contracts_router, project_labor_router
 from app.routers.materials import router as materials_router
+from app.routers.users import router as users_router
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["인증"])
+app.include_router(users_router, prefix="/api/v1/users", tags=["사용자 관리"])
 app.include_router(projects_router, prefix="/api/v1/projects", tags=["프로젝트"])
 app.include_router(site_visits_router, prefix="/api/v1", tags=["현장 방문"])
 app.include_router(diagnoses_router, prefix="/api/v1", tags=["AI 진단"])
