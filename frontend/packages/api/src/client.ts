@@ -1,4 +1,4 @@
-import axios, { AxiosError, type AxiosInstance } from "axios"
+import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig } from "axios"
 import type {
   APIResponse,
   PaginatedResponse,
@@ -19,11 +19,35 @@ import type {
   EstimateStatus,
 } from "@yunigreen/types"
 
+export class NetworkError extends Error {
+  constructor(
+    message: string,
+    public readonly originalError?: Error,
+    public readonly isRetryable: boolean = true
+  ) {
+    super(message)
+    this.name = "NetworkError"
+  }
+}
+
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string
+  ) {
+    super(message)
+    this.name = "APIError"
+  }
+}
+
 export interface APIClientConfig {
   baseURL: string
   onUnauthorized?: () => void
   getRefreshToken?: () => string | null
   onTokenRefresh?: (accessToken: string) => void
+  maxRetries?: number
+  retryDelay?: number
 }
 
 export class APIClient {
@@ -38,14 +62,19 @@ export class APIClient {
     resolve: (token: string) => void
     reject: (error: Error) => void
   }> = []
+  private maxRetries: number
+  private retryDelay: number
 
   constructor(config: APIClientConfig) {
     this.onUnauthorized = config.onUnauthorized
     this.getRefreshToken = config.getRefreshToken
     this.onTokenRefresh = config.onTokenRefresh
+    this.maxRetries = config.maxRetries ?? 3
+    this.retryDelay = config.retryDelay ?? 1000
 
     this.client = axios.create({
       baseURL: config.baseURL,
+      timeout: 30000,
       headers: {
         "Content-Type": "application/json",
       },
@@ -61,7 +90,10 @@ export class APIClient {
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        const originalRequest = error.config as typeof error.config & { _retry?: boolean }
+        const originalRequest = error.config as AxiosRequestConfig & { 
+          _retry?: boolean
+          _retryCount?: number 
+        }
         
         if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
           originalRequest._retry = true
@@ -84,8 +116,66 @@ export class APIClient {
             this.onUnauthorized?.()
           }
         }
-        return Promise.reject(error)
+        
+        if (this.isRetryableError(error) && originalRequest) {
+          const retryCount = originalRequest._retryCount ?? 0
+          
+          if (retryCount < this.maxRetries) {
+            originalRequest._retryCount = retryCount + 1
+            
+            await this.delay(this.retryDelay * Math.pow(2, retryCount))
+            
+            return this.client(originalRequest)
+          }
+        }
+        
+        return Promise.reject(this.transformError(error))
       }
+    )
+  }
+
+  private isRetryableError(error: AxiosError): boolean {
+    if (!error.response) {
+      return true
+    }
+    
+    const status = error.response.status
+    return status === 408 || status === 429 || status >= 500
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  private transformError(error: AxiosError): Error {
+    if (!error.response) {
+      return new NetworkError(
+        "네트워크에 연결할 수 없어요. 인터넷 연결을 확인해 주세요.",
+        error,
+        true
+      )
+    }
+
+    const status = error.response.status
+    const data = error.response.data as { message?: string; code?: string } | undefined
+
+    const messages: Record<number, string> = {
+      400: "잘못된 요청이에요",
+      401: "로그인이 필요해요",
+      403: "권한이 없어요",
+      404: "요청한 정보를 찾을 수 없어요",
+      409: "이미 존재하는 데이터예요",
+      422: "입력 값을 확인해 주세요",
+      429: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요",
+      500: "서버에 문제가 생겼어요. 잠시 후 다시 시도해 주세요",
+      502: "서버에 연결할 수 없어요",
+      503: "서비스가 일시적으로 중단됐어요",
+    }
+
+    return new APIError(
+      data?.message || messages[status] || "알 수 없는 오류가 발생했어요",
+      status,
+      data?.code
     )
   }
 
@@ -607,6 +697,270 @@ export class APIClient {
   }
 
   // ============================================
+  // Utilities (수도광열비)
+  // ============================================
+
+  async getUtilities(projectId: string) {
+    const response = await this.client.get<
+      APIResponse<{
+        items: Array<{
+          id: string
+          type: "수도" | "전기" | "가스" | "기타"
+          month: string
+          status: "pending" | "completed"
+          amount: number
+          due_date: string
+          doc_status: "pending" | "submitted"
+        }>
+        timeline: Array<{
+          id: string
+          date: string
+          message: string
+        }>
+      }>
+    >(`/projects/${projectId}/utilities`)
+    return response.data
+  }
+
+  async updateUtilityStatus(
+    projectId: string,
+    utilityId: string,
+    data: { status?: "pending" | "completed"; doc_status?: "pending" | "submitted" }
+  ) {
+    const response = await this.client.patch<APIResponse<{ id: string }>>(
+      `/projects/${projectId}/utilities/${utilityId}`,
+      data
+    )
+    return response.data
+  }
+
+  // ============================================
+  // Tax Invoice (팝빌)
+  // ============================================
+
+  async getTaxInvoice(projectId: string) {
+    const response = await this.client.get<
+      APIResponse<{
+        summary: {
+          total_amount: number
+          success_count: number
+          failed_count: number
+        }
+        items: Array<{
+          id: string
+          type: "매출" | "매입"
+          amount: number
+          status: "published" | "failed"
+          date: string
+          customer: string
+          failure_reason?: string
+        }>
+      }>
+    >(`/projects/${projectId}/tax-invoice`)
+    return response.data
+  }
+
+  async issueTaxInvoice(projectId: string) {
+    const response = await this.client.post<
+      APIResponse<{ status: "published" | "failed"; message: string }>
+    >(`/projects/${projectId}/tax-invoice`)
+    return response.data
+  }
+
+  // ============================================
+  // Partners (협력사)
+  // ============================================
+
+  async getPartners(params?: { search?: string; status?: string }) {
+    const response = await this.client.get<
+      APIResponse<
+        Array<{
+          id: string
+          name: string
+          biz_no: string
+          owner: string
+          license: string
+          is_female_owned: boolean
+          status: "active" | "inactive"
+        }>
+      >
+    >("/partners", { params })
+    return response.data
+  }
+
+  // ============================================
+  // Labor Overview (노무 관리)
+  // ============================================
+
+  async getLaborOverview() {
+    const response = await this.client.get<
+      APIResponse<{
+        summary: {
+          active_workers: number
+          pending_paystubs: number
+          unsigned_contracts: number
+        }
+        workers: Array<{
+          id: string
+          name: string
+          role: string
+          status: "active" | "inactive"
+          contract_status: "signed" | "pending"
+          last_work_date: string
+        }>
+      }>
+    >("/labor/overview")
+    return response.data
+  }
+
+  // ============================================
+  // Billing (구독)
+  // ============================================
+
+  async getBillingOverview() {
+    const response = await this.client.get<
+      APIResponse<{
+        plan: string
+        interval: "monthly" | "yearly"
+        next_billing_at: string
+        seats_used: number
+        seats_total: number
+        payment_method: {
+          brand: string
+          last4: string
+          expires: string
+        } | null
+        history: Array<{
+          id: string
+          date: string
+          description: string
+          amount: number
+          status: "paid" | "failed"
+        }>
+      }>
+    >("/billing/overview")
+    return response.data
+  }
+
+  // ============================================
+  // Workers (일용직 앱)
+  // ============================================
+
+  async requestWorkerAccess(phone: string) {
+    const response = await this.client.post<APIResponse<{ request_id: string }>>(
+      "/workers/access",
+      { phone }
+    )
+    return response.data
+  }
+
+  async verifyWorkerAccess(requestId: string, code: string) {
+    const response = await this.client.post<APIResponse<{ worker_id: string }>>(
+      "/workers/verify",
+      { request_id: requestId, code }
+    )
+    return response.data
+  }
+
+  async getWorkerContract(contractId: string) {
+    const response = await this.client.get<
+      APIResponse<{
+        id: string
+        project_name: string
+        work_date: string
+        role: string
+        daily_rate: number
+        status: "pending" | "signed"
+        content: string
+      }>
+    >(`/workers/contracts/${contractId}`)
+    return response.data
+  }
+
+  async signWorkerContract(contractId: string, signatureData: string) {
+    const response = await this.client.post<
+      APIResponse<{ id: string; status: "signed"; signed_at: string }>
+    >(`/workers/contracts/${contractId}/sign`, { signature_data: signatureData })
+    return response.data
+  }
+
+  async getWorkerPaystubs(workerId: string) {
+    const response = await this.client.get<
+      APIResponse<
+        Array<{
+          id: string
+          month: string
+          amount: number
+          status: "sent" | "confirmed"
+          date: string
+        }>
+      >
+    >(`/workers/${workerId}/paystubs`)
+    return response.data
+  }
+
+  async getWorkerPaystub(workerId: string, paystubId: string) {
+    const response = await this.client.get<
+      APIResponse<{
+        id: string
+        title: string
+        total_amount: number
+        deductions: number
+        net_amount: number
+        items: Array<{ label: string; amount: number }>
+        status: "sent" | "confirmed"
+      }>
+    >(`/workers/${workerId}/paystubs/${paystubId}`)
+    return response.data
+  }
+
+  async ackWorkerPaystub(workerId: string, paystubId: string) {
+    const response = await this.client.post<APIResponse<{ received_at: string }>>(
+      `/workers/${workerId}/paystubs/${paystubId}/ack`
+    )
+    return response.data
+  }
+
+  async getWorkerProfile(workerId: string) {
+    const response = await this.client.get<
+      APIResponse<{
+        id: string
+        name: string
+        role: string
+        documents: Array<{ id: string; name: string; status: "submitted" | "pending" }>
+      }>
+    >(`/workers/${workerId}/profile`)
+    return response.data
+  }
+
+  // ============================================
+  // Notifications (모바일)
+  // ============================================
+
+  async getNotifications() {
+    const response = await this.client.get<
+      APIResponse<
+        Array<{
+          id: string
+          type: "contract" | "paystub" | "notice"
+          title: string
+          message: string
+          time: string
+          read: boolean
+        }>
+      >
+    >("/notifications")
+    return response.data
+  }
+
+  async markNotificationRead(notificationId: string) {
+    const response = await this.client.post<APIResponse<{ id: string; read: boolean }>>(
+      `/notifications/${notificationId}/read`
+    )
+    return response.data
+  }
+
+  // ============================================
   // RAG
   // ============================================
 
@@ -622,6 +976,239 @@ export class APIClient {
         }>
       >
     >("/rag/search", { query, top_k: topK })
+    return response.data
+  }
+
+  // ============================================
+  // Users (Admin)
+  // ============================================
+
+  async getUsers(params?: {
+    page?: number
+    per_page?: number
+    search?: string
+    role?: string
+    is_active?: boolean
+  }) {
+    const response = await this.client.get<
+      PaginatedResponse<{
+        id: string
+        email: string
+        name: string
+        phone?: string
+        role: string
+        is_active: boolean
+        created_at: string
+        last_login_at?: string
+      }>
+    >("/users", { params })
+    return response.data
+  }
+
+  async createUser(data: {
+    email: string
+    password: string
+    name: string
+    phone?: string
+    role?: string
+  }) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string
+        email: string
+        name: string
+        role: string
+        message: string
+      }>
+    >("/users", data)
+    return response.data
+  }
+
+  async updateUser(
+    userId: string,
+    data: {
+      name?: string
+      phone?: string
+      role?: string
+      is_active?: boolean
+    }
+  ) {
+    const response = await this.client.patch<
+      APIResponse<{
+        id: string
+        email: string
+        name: string
+        role: string
+        is_active: boolean
+      }>
+    >(`/users/${userId}`, data)
+    return response.data
+  }
+
+  async deleteUser(userId: string) {
+    const response = await this.client.delete<APIResponse<void>>(
+      `/users/${userId}`
+    )
+    return response.data
+  }
+
+  // ============================================
+  // Pricebooks (Admin)
+  // ============================================
+
+  async getRevisions(pricebookId?: string) {
+    const response = await this.client.get<
+      APIResponse<
+        Array<{
+          id: string
+          pricebook_id: string
+          version_label: string
+          effective_from: string
+          effective_to?: string
+          status: string
+          created_at: string
+          activated_at?: string
+          item_count: number
+        }>
+      >
+    >("/pricebooks/revisions", { params: { pricebook_id: pricebookId } })
+    return response.data
+  }
+
+  async getStagingItems(
+    revisionId: string,
+    params?: {
+      page?: number
+      per_page?: number
+      status?: string
+      confidence?: string
+    }
+  ) {
+    const response = await this.client.get<
+      PaginatedResponse<{
+        id: string
+        item_name: string
+        specification?: string
+        unit: string
+        unit_price_extracted: string
+        confidence_score: number
+        confidence_level: string
+        status: string
+        source_page?: number
+        created_at: string
+      }>
+    >(`/pricebooks/revisions/${revisionId}/staging`, { params })
+    return response.data
+  }
+
+  async reviewStagingItem(
+    stagingId: string,
+    data: {
+      action: "approved" | "rejected"
+      corrected_price?: string
+      corrected_item_name?: string
+      corrected_unit?: string
+      review_note?: string
+    }
+  ) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string
+        status: string
+      }>
+    >(`/pricebooks/staging/${stagingId}/review`, data)
+    return response.data
+  }
+
+  async bulkReviewStaging(
+    revisionId: string,
+    data: {
+      staging_ids: string[]
+      action: "approved" | "rejected"
+      review_note?: string
+    }
+  ) {
+    const response = await this.client.post<
+      APIResponse<{
+        updated_count: number
+        message: string
+      }>
+    >(`/pricebooks/revisions/${revisionId}/staging/bulk-review`, data)
+    return response.data
+  }
+
+  async uploadPricebookPdf(
+    file: File,
+    versionLabel: string,
+    effectiveFrom: string
+  ) {
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("version_label", versionLabel)
+    formData.append("effective_from", effectiveFrom)
+
+    const response = await this.client.post<
+      APIResponse<{
+        id: string
+        version_label: string
+        status: string
+        processing_status: string
+        staging_items_count: number
+        message: string
+      }>
+    >("/pricebooks/revisions", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
+    return response.data
+  }
+
+  async activateRevision(revisionId: string) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string
+        version_label: string
+        status: string
+        message: string
+      }>
+    >(`/pricebooks/revisions/${revisionId}/activate`)
+    return response.data
+  }
+
+  async deleteRevision(revisionId: string) {
+    const response = await this.client.delete<APIResponse<void>>(
+      `/pricebooks/revisions/${revisionId}`
+    )
+    return response.data
+  }
+
+  async promoteApprovedStaging(revisionId: string) {
+    const response = await this.client.post<
+      APIResponse<{
+        promoted_count: number
+        message: string
+      }>
+    >(`/pricebooks/revisions/${revisionId}/promote`)
+    return response.data
+  }
+
+  async autoApproveStaging(
+    revisionId: string,
+    minConfidence: number = 0.9,
+    requireGrounding: boolean = true
+  ) {
+    const response = await this.client.post<
+      APIResponse<{
+        approved_count: number
+        message: string
+      }>
+    >(`/pricebooks/revisions/${revisionId}/staging/auto-approve`, null, {
+      params: {
+        min_confidence: minConfidence,
+        require_grounding: requireGrounding,
+      },
+    })
     return response.data
   }
 }

@@ -292,6 +292,8 @@ export interface SiteVisitDetail {
 
 export interface DiagnosisDetail {
   id: string
+  site_visit_id: string
+  project_id: string
   status: DiagnosisStatus
   leak_opinion_text: string
   confidence_score?: number
