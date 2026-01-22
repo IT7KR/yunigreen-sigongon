@@ -1,11 +1,4 @@
-"""단가표 관리 API 라우터 (관리자 전용).
-
-핵심 워크플로우:
-1. PDF 업로드 → Gemini로 가격 추출 → staging 테이블 저장
-2. Grounding 검증으로 환각 방지
-3. 관리자 검토/승인 → 정식 DB (CatalogItemPrice)로 이동
-4. 견적 생성 시에는 정식 DB만 사용 (환각 없음)
-"""
+"""단가표 관리 API 라우터 (관리자 전용)."""
 import uuid
 import tempfile
 import os
@@ -14,6 +7,7 @@ from typing import Annotated, Optional, List
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, status, BackgroundTasks
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 from sqlmodel import select
@@ -66,8 +60,7 @@ class ActivateResponse(PricebookRevisionRead):
     message: str
 
 
-class UploadResponse:
-    """PDF 업로드 응답."""
+class UploadResponse(BaseModel):
     id: uuid.UUID
     version_label: str
     status: RevisionStatus
@@ -133,12 +126,12 @@ async def list_revisions(
     status_code=status.HTTP_201_CREATED,
 )
 async def upload_revision(
+    db: DBSession,
+    admin: AdminUser,
     file: UploadFile = File(...),
     version_label: str = Form(...),
     effective_from: date = Form(...),
     pricebook_id: Optional[uuid.UUID] = Form(default=None),
-    db: DBSession = Depends(get_async_db),
-    admin: User = Depends(get_current_active_admin),
 ):
     """단가표 PDF 업로드.
     

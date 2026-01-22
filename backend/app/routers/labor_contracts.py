@@ -1,32 +1,30 @@
-"""Labor contract management endpoints."""
-from typing import Optional
+"""일용 계약 관리 API 라우터."""
+from typing import Annotated, Optional
 from uuid import UUID
 from datetime import date
 from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_async_db
 from app.core.security import get_current_user
-from app.core.exceptions import NotFoundError, ForbiddenError
 from app.schemas.response import APIResponse
 from app.models.user import User
-from app.models.contract import (
-    LaborContract,
-    LaborContractCreate,
-    LaborContractRead,
-    LaborContractUpdate,
-    LaborContractStatus,
-)
+from app.models.contract import LaborContractStatus
 
 router = APIRouter(prefix="/labor-contracts", tags=["labor-contracts"])
+
+
+DBSession = Annotated[AsyncSession, Depends(get_async_db)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 @router.post("/{labor_contract_id}/send", response_model=APIResponse)
 async def send_labor_contract_for_signature(
     labor_contract_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: DBSession,
+    current_user: CurrentUser,
 ):
     return {
         "success": True,
@@ -44,8 +42,8 @@ async def send_labor_contract_for_signature(
 async def sign_labor_contract(
     labor_contract_id: UUID,
     signature_data: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: DBSession,
+    current_user: CurrentUser,
 ):
     return {
         "success": True,
@@ -62,10 +60,10 @@ async def sign_labor_contract(
 @router.patch("/{labor_contract_id}", response_model=APIResponse)
 async def update_labor_contract(
     labor_contract_id: UUID,
+    db: DBSession,
+    current_user: CurrentUser,
     status: Optional[LaborContractStatus] = None,
     hours_worked: Optional[Decimal] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     return {
         "success": True,
@@ -84,8 +82,8 @@ project_labor_router = APIRouter(prefix="/projects/{project_id}/labor-contracts"
 @project_labor_router.get("", response_model=APIResponse)
 async def get_project_labor_contracts(
     project_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: DBSession,
+    current_user: CurrentUser,
 ):
     return {
         "success": True,
@@ -100,11 +98,11 @@ async def create_labor_contract(
     worker_name: str,
     work_date: date,
     daily_rate: Decimal,
+    db: DBSession,
+    current_user: CurrentUser,
     worker_phone: Optional[str] = None,
     work_type: Optional[str] = None,
     hours_worked: Optional[Decimal] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     return {
         "success": True,
@@ -121,8 +119,8 @@ async def create_labor_contract(
 @project_labor_router.get("/summary", response_model=APIResponse)
 async def get_labor_contracts_summary(
     project_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: DBSession,
+    current_user: CurrentUser,
 ):
     return {
         "success": True,
