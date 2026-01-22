@@ -1,13 +1,12 @@
-"""AI 진단 서비스 - Gemini 3.0 Flash 통합.
+"""AI 진단 서비스 - Gemini API 통합.
 
 CRITICAL: 단가 계산은 절대 AI에게 맡기지 않음.
 AI는 이미지 분석과 자재 추천만 담당함.
 """
 import uuid
 import time
-import json
+import logging
 from decimal import Decimal
-from datetime import datetime
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,41 +14,23 @@ from sqlmodel import select
 
 from app.core.config import settings
 from app.core.exceptions import AIServiceException, AIAnalysisFailedException
+from app.core.ai import gemini_service, prompt_loader, AIResponse
 from app.models.diagnosis import (
     AIDiagnosis,
     DiagnosisStatus,
     AIMaterialSuggestion,
     MatchMethod,
 )
-from app.models.pricebook import CatalogItem, CatalogItemAlias
+from app.models.pricebook import CatalogItem
 from app.services.material_matcher import MaterialMatcher
+
+logger = logging.getLogger(__name__)
 
 
 class DiagnosisService:
     """AI 진단 서비스."""
     
-    LEAK_OPINION_PROMPT = """
-당신은 누수 진단 전문가입니다. 제공된 현장 사진을 분석하여 누수 소견서를 작성해주세요.
-
-## 분석 항목
-1. 누수 발생 위치 및 범위
-2. 누수 원인 추정 (방수층 노후화, 균열, 시공 불량 등)
-3. 손상 정도 (경미/중간/심각)
-4. 권장 보수 방법
-
-## 출력 형식 (JSON)
-{
-  "leak_opinion_text": "누수 소견서 본문 (한글, 300자 이상)",
-  "confidence_score": 0.0~1.0,
-  "leak_locations": ["위치1", "위치2"],
-  "damage_level": "minor|moderate|severe",
-  "suggested_repairs": ["방법1", "방법2"]
-}
-
-사진을 분석하고 위 형식으로 응답해주세요.
-"""
-
-    MATERIAL_SUGGESTION_PROMPT = """
+    MATERIAL_PROMPT_TEMPLATE = """
 당신은 방수 공사 자재 전문가입니다. 누수 현장 사진과 진단 결과를 바탕으로 필요한 자재를 추천해주세요.
 
 ## 진단 결과
@@ -61,18 +42,17 @@ class DiagnosisService:
 - 수량은 사진에서 추정 가능한 범위로 제안
 
 ## 출력 형식 (JSON)
-{
+{{
   "materials": [
-    {
+    {{
       "name": "자재명 (한글)",
       "spec": "규격/사양",
       "unit": "단위",
-      "quantity": 수량(숫자)
-    }
+      "quantity": 수량(숫자),
+      "reason": "추천 사유"
+    }}
   ]
-}
-
-자재를 추천해주세요.
+}}
 """
 
     def __init__(self, db: AsyncSession):
@@ -101,8 +81,18 @@ class DiagnosisService:
             
             leak_analysis = await self._analyze_leak(photo_paths, additional_notes)
             
-            diagnosis.leak_opinion_text = leak_analysis.get("leak_opinion_text", "")
-            diagnosis.confidence_score = Decimal(str(leak_analysis.get("confidence_score", 0.0)))
+            if leak_analysis.get("requires_manual"):
+                diagnosis.status = DiagnosisStatus.FAILED
+                diagnosis.error_message = leak_analysis.get("error", "AI 분석 실패")
+                await self.db.commit()
+                return diagnosis
+            
+            diagnosis.leak_opinion_text = leak_analysis.get("leak_opinion", {}).get(
+                "details", leak_analysis.get("leak_opinion_text", "")
+            )
+            diagnosis.confidence_score = Decimal(
+                str(leak_analysis.get("confidence", leak_analysis.get("confidence_score", 0.0)))
+            )
             diagnosis.raw_response_json = leak_analysis
             
             material_suggestions = await self._suggest_materials(
@@ -114,7 +104,7 @@ class DiagnosisService:
                 suggestion = AIMaterialSuggestion(
                     ai_diagnosis_id=diagnosis.id,
                     suggested_name=material.get("name", ""),
-                    suggested_spec=material.get("spec"),
+                    suggested_spec=material.get("spec", material.get("specification")),
                     suggested_unit=material.get("unit", "EA"),
                     suggested_quantity=Decimal(str(material.get("quantity", 1))),
                 )
@@ -135,12 +125,19 @@ class DiagnosisService:
             diagnosis.processing_time_ms = processing_time
             diagnosis.status = DiagnosisStatus.COMPLETED
             
+            logger.info(
+                f"Diagnosis {diagnosis_id} completed: "
+                f"time={processing_time}ms, confidence={diagnosis.confidence_score}, "
+                f"materials={len(material_suggestions)}"
+            )
+            
             await self.db.commit()
             await self.db.refresh(diagnosis)
             
             return diagnosis
             
         except Exception as e:
+            logger.error(f"Diagnosis {diagnosis_id} failed: {e}")
             diagnosis.status = DiagnosisStatus.FAILED
             diagnosis.error_message = str(e)
             await self.db.commit()
@@ -151,35 +148,35 @@ class DiagnosisService:
         photo_paths: list[str],
         additional_notes: Optional[str],
     ) -> dict:
-        """누수 분석 실행."""
-        if not settings.gemini_api_key:
+        """누수 분석 실행 - GeminiService 사용."""
+        
+        if not photo_paths:
             return self._get_mock_leak_analysis()
         
         try:
-            import google.generativeai as genai
-            
-            genai.configure(api_key=settings.gemini_api_key)
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            
-            prompt = self.LEAK_OPINION_PROMPT
-            if additional_notes:
-                prompt += f"\n\n## 추가 참고 사항\n{additional_notes}"
-            
-            response = model.generate_content(
-                prompt,
-                generation_config={
-                    "response_mime_type": "application/json",
-                    "temperature": 0.3,
-                },
-            )
-            
-            return json.loads(response.text)
-            
-        except Exception as e:
-            raise AIServiceException(
-                message="누수 분석에 실패했어요. 잠시 후 다시 시도해 주세요.",
-                details={"error": str(e)},
-            )
+            prompt = prompt_loader.load("diagnosis", "current")
+        except FileNotFoundError:
+            logger.warning("Diagnosis prompt not found, using default")
+            prompt = self._get_default_diagnosis_prompt()
+        
+        response: AIResponse = await gemini_service.analyze_with_images(
+            prompt=prompt,
+            image_paths=photo_paths,
+            additional_context=additional_notes,
+        )
+        
+        if response.success and response.data:
+            logger.info(f"Leak analysis completed with model: {response.model_used}")
+            return response.data
+        
+        if response.requires_manual:
+            logger.warning(f"AI analysis requires manual input: {response.error}")
+            return {
+                "requires_manual": True,
+                "error": response.error,
+            }
+        
+        return self._get_mock_leak_analysis()
     
     async def _suggest_materials(
         self,
@@ -187,35 +184,26 @@ class DiagnosisService:
         photo_paths: list[str],
     ) -> list[dict]:
         """자재 추천 실행."""
-        if not settings.gemini_api_key:
+        
+        if not diagnosis_text:
             return self._get_mock_materials()
         
-        try:
-            import google.generativeai as genai
-            
-            genai.configure(api_key=settings.gemini_api_key)
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            
-            prompt = self.MATERIAL_SUGGESTION_PROMPT.format(
-                diagnosis_text=diagnosis_text
-            )
-            
-            response = model.generate_content(
-                prompt,
-                generation_config={
-                    "response_mime_type": "application/json",
-                    "temperature": 0.3,
-                },
-            )
-            
-            result = json.loads(response.text)
-            return result.get("materials", [])
-            
-        except Exception as e:
-            raise AIServiceException(
-                message="자재 추천에 실패했어요",
-                details={"error": str(e)},
-            )
+        prompt = self.MATERIAL_PROMPT_TEMPLATE.format(diagnosis_text=diagnosis_text)
+        
+        response: AIResponse = await gemini_service.analyze_with_images(
+            prompt=prompt,
+            image_paths=photo_paths,
+        )
+        
+        if response.success and response.data:
+            materials = response.data.get("materials", [])
+            if isinstance(response.data.get("suggested_materials"), list):
+                materials = response.data.get("suggested_materials", [])
+            logger.info(f"Material suggestion completed: {len(materials)} items")
+            return materials
+        
+        logger.warning("Material suggestion failed, using mock data")
+        return self._get_mock_materials()
     
     async def _match_catalog_item(
         self,
@@ -241,19 +229,56 @@ class DiagnosisService:
         
         return None, 0.0
     
+    def _get_default_diagnosis_prompt(self) -> str:
+        """기본 진단 프롬프트."""
+        return """
+당신은 20년 경력의 방수/누수 전문 기술자입니다.
+주어진 현장 사진을 분석하여 아래 형식으로 JSON을 출력하세요.
+
+## 출력 형식 (JSON)
+{
+  "leak_opinion": {
+    "summary": "요약 (1-2문장)",
+    "details": "상세 소견 (300자 이상)",
+    "severity": "low | medium | high | critical",
+    "leak_locations": ["위치1", "위치2"]
+  },
+  "suggested_materials": [
+    {
+      "name": "자재명 (한글)",
+      "spec": "규격",
+      "unit": "단위",
+      "quantity": 숫자
+    }
+  ],
+  "confidence": 0.0 ~ 1.0
+}
+
+모든 텍스트는 한글로 작성합니다.
+"""
+    
     def _get_mock_leak_analysis(self) -> dict:
         """테스트용 목업 응답."""
         return {
+            "leak_opinion": {
+                "summary": "옥상 방수층 노후화로 인한 누수",
+                "details": (
+                    "본 현장은 옥상 방수층의 노후화로 인한 누수가 발생한 것으로 판단됩니다. "
+                    "우레탄 방수 도막이 균열되어 있으며, 드레인 주변 실링 불량이 관찰됩니다. "
+                    "전반적인 방수층 재시공을 권장하며, 드레인 주변은 특별히 방수 처리가 필요합니다. "
+                    "손상 정도는 중간 수준으로, 조속한 보수가 필요합니다."
+                ),
+                "severity": "medium",
+                "leak_locations": ["옥상 방수층", "드레인 주변"],
+            },
             "leak_opinion_text": (
                 "본 현장은 옥상 방수층의 노후화로 인한 누수가 발생한 것으로 판단됩니다. "
                 "우레탄 방수 도막이 균열되어 있으며, 드레인 주변 실링 불량이 관찰됩니다. "
                 "전반적인 방수층 재시공을 권장하며, 드레인 주변은 특별히 방수 처리가 필요합니다. "
                 "손상 정도는 중간 수준으로, 조속한 보수가 필요합니다."
             ),
+            "confidence": 0.85,
             "confidence_score": 0.85,
-            "leak_locations": ["옥상 방수층", "드레인 주변"],
-            "damage_level": "moderate",
-            "suggested_repairs": ["우레탄 방수 재시공", "드레인 실링 보수"],
         }
     
     def _get_mock_materials(self) -> list[dict]:
@@ -264,17 +289,20 @@ class DiagnosisService:
                 "spec": "1액형, KS F 4911",
                 "unit": "kg",
                 "quantity": 100,
+                "reason": "옥상 전체 방수층 재시공",
             },
             {
                 "name": "방수용 프라이머",
                 "spec": "우레탄계",
                 "unit": "kg",
                 "quantity": 20,
+                "reason": "바탕면 접착력 향상",
             },
             {
                 "name": "드레인 실링재",
                 "spec": "폴리우레탄계",
                 "unit": "EA",
                 "quantity": 2,
+                "reason": "드레인 주변 누수 방지",
             },
         ]

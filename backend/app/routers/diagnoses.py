@@ -4,11 +4,17 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.core.database import get_async_db
+from app.core.database import get_async_db, async_session_factory
 from app.core.security import get_current_user
+from app.services.diagnosis import DiagnosisService
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 from app.core.exceptions import NotFoundException
 from app.models.user import User
 from app.models.project import Project, SiteVisit, Photo
@@ -26,20 +32,48 @@ from app.schemas.response import APIResponse
 router = APIRouter()
 
 
-# 타입 별칭
+async def run_ai_diagnosis_background(
+    diagnosis_id: uuid.UUID,
+    photo_paths: list[str],
+    additional_notes: str | None,
+):
+    async with async_session_factory() as db:
+        try:
+            logger.info(f"Starting background diagnosis: {diagnosis_id}")
+            service = DiagnosisService(db)
+            await service.run_diagnosis(
+                diagnosis_id=diagnosis_id,
+                photo_paths=photo_paths,
+                additional_notes=additional_notes,
+            )
+            logger.info(f"Background diagnosis completed: {diagnosis_id}")
+        except Exception as e:
+            logger.error(f"Background diagnosis failed: {diagnosis_id}, error: {e}")
+            try:
+                result = await db.execute(
+                    select(AIDiagnosis).where(AIDiagnosis.id == diagnosis_id)
+                )
+                diagnosis = result.scalar_one_or_none()
+                if diagnosis:
+                    diagnosis.status = DiagnosisStatus.FAILED
+                    diagnosis.error_message = str(e)
+                    await db.commit()
+            except Exception as update_error:
+                logger.error(f"Failed to update diagnosis status: {update_error}")
+
+
 DBSession = Annotated[AsyncSession, Depends(get_async_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
-class DiagnosisRequestResponse:
-    """진단 요청 응답."""
+class DiagnosisRequestResponse(BaseModel):
     diagnosis_id: uuid.UUID
     status: DiagnosisStatus
     message: str
 
 
 class DiagnosisDetailResponse(AIDiagnosisRead):
-    """진단 상세 응답."""
+    project_id: uuid.UUID
     suggested_materials: list[AIMaterialSuggestionRead] = []
 
 
@@ -112,14 +146,12 @@ async def request_diagnosis(
     await db.commit()
     await db.refresh(diagnosis)
     
-    # 백그라운드로 AI 분석 실행
-    # TODO: 실제 서비스 구현 후 연결
-    # background_tasks.add_task(
-    #     run_ai_diagnosis,
-    #     diagnosis_id=diagnosis.id,
-    #     photo_paths=[p.storage_path for p in photos],
-    #     additional_notes=request_data.additional_notes,
-    # )
+    background_tasks.add_task(
+        run_ai_diagnosis_background,
+        diagnosis_id=diagnosis.id,
+        photo_paths=[p.storage_path for p in photos],
+        additional_notes=request_data.additional_notes,
+    )
     
     return APIResponse.ok(
         DiagnosisRequestResponse(
@@ -165,16 +197,17 @@ async def get_diagnosis(
         .where(Project.id == visit.project_id)
         .where(Project.organization_id == current_user.organization_id)
     )
-    if not project_result.scalar_one_or_none():
+    project = project_result.scalar_one_or_none()
+    if not project:
         raise NotFoundException("diagnosis", diagnosis_id)
     
-    # 자재 추천 로드
     await db.refresh(diagnosis, ["suggestions"])
     
     return APIResponse.ok(
         DiagnosisDetailResponse(
             id=diagnosis.id,
             site_visit_id=diagnosis.site_visit_id,
+            project_id=project.id,
             model_name=diagnosis.model_name,
             model_version=diagnosis.model_version,
             leak_opinion_text=diagnosis.leak_opinion_text,
