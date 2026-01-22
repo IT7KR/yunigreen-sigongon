@@ -16,6 +16,7 @@ import {
   Droplets,
 } from "lucide-react"
 import { cn, Button } from "@yunigreen/ui"
+import { useAuth } from "@/lib/auth"
 
 interface AdminLayoutProps {
   children: ReactNode
@@ -25,14 +26,18 @@ const navItems = [
   { href: "/", icon: LayoutDashboard, label: "대시보드" },
   { href: "/projects", icon: FolderKanban, label: "프로젝트" },
   { href: "/estimates", icon: FileText, label: "견적서" },
-  { href: "/pricebooks", icon: FileSpreadsheet, label: "단가표" },
+  { href: "/pricebooks", icon: FileSpreadsheet, label: "적산 자료" },
   { href: "/users", icon: Users, label: "사용자" },
+  { href: "/labor", icon: Users, label: "노무관리" },
+  { href: "/partners", icon: Users, label: "협력사" },
+  { href: "/billing", icon: FileText, label: "결제/구독" },
   { href: "/settings", icon: Settings, label: "설정" },
 ]
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { logout } = useAuth()
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -49,7 +54,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white">
             <Droplets className="h-4 w-4" />
           </div>
-          <span className="font-semibold text-slate-900">유니그린</span>
+          <span className="font-semibold text-slate-900">시공ON</span>
         </Link>
 
         <div className="w-10" /> {/* Spacer */}
@@ -75,7 +80,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white">
               <Droplets className="h-4 w-4" />
             </div>
-            <span className="font-semibold text-slate-900">유니그린 관리자</span>
+            <span className="font-semibold text-slate-900">시공ON 관리자</span>
           </Link>
 
           <button
@@ -112,7 +117,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 p-4">
-          <Button variant="ghost" fullWidth className="justify-start gap-3">
+          <Button variant="ghost" fullWidth className="justify-start gap-3" onClick={logout}>
             <LogOut className="h-5 w-5" />
             로그아웃
           </Button>

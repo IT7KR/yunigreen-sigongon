@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, Droplets } from "lucide-react"
 import { Card, CardContent, Button, Input } from "@yunigreen/ui"
 import { useAuth } from "@/lib/auth"
 
-export default function AdminLoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login, isAuthenticated, isLoading: authLoading } = useAuth()
@@ -110,6 +110,37 @@ export default function AdminLoginPage() {
       <p className="mt-8 text-xs text-slate-400">
         © 2026 유니그린. All rights reserved.
       </p>
+    </div>
+  )
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={<LoginPageSkeleton />}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginPageSkeleton() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-100 p-4">
+      <div className="mb-8 flex flex-col items-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-lg">
+          <Droplets className="h-8 w-8" />
+        </div>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">유니그린 관리자</h1>
+        <p className="mt-1 text-sm text-slate-500">관리자 계정으로 로그인하세요</p>
+      </div>
+      <Card className="w-full max-w-sm">
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-10 rounded bg-slate-200" />
+            <div className="h-10 rounded bg-slate-200" />
+            <div className="h-10 rounded bg-teal-200" />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

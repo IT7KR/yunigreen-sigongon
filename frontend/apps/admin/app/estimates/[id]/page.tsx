@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useState, useEffect } from "react"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -10,11 +10,10 @@ import {
   Plus,
   Trash2,
   Edit2,
-  MoreHorizontal,
-  Check,
-  X,
+  Loader2,
 } from "lucide-react"
 import { AdminLayout } from "@/components/AdminLayout"
+import { EstimateLineModal } from "@/components/EstimateLineModal"
 import {
   Card,
   CardContent,
@@ -25,69 +24,28 @@ import {
   formatDate,
 } from "@yunigreen/ui"
 import type { EstimateStatus, EstimateLineSource } from "@yunigreen/types"
+import { api } from "@/lib/api"
 
-const mockEstimate = {
-  id: "e1",
-  version: 1,
-  status: "draft" as EstimateStatus,
-  project: {
-    id: "1",
-    name: "강남역 인근 상가 누수",
-    address: "서울시 강남구 테헤란로 123, 4층",
-    client_name: "김철수",
-    client_phone: "010-1234-5678",
-  },
-  lines: [
-    {
-      id: "l1",
-      sort_order: 1,
-      description: "우레탄계 도막방수재",
-      specification: "1액형, KS F 4911",
-      unit: "kg",
-      quantity: "100",
-      unit_price_snapshot: "15000",
-      amount: "1500000",
-      source: "ai" as EstimateLineSource,
-    },
-    {
-      id: "l2",
-      sort_order: 2,
-      description: "방수용 프라이머",
-      specification: "우레탄계",
-      unit: "kg",
-      quantity: "20",
-      unit_price_snapshot: "12000",
-      amount: "240000",
-      source: "ai" as EstimateLineSource,
-    },
-    {
-      id: "l3",
-      sort_order: 3,
-      description: "드레인 실링재",
-      specification: "폴리우레탄계",
-      unit: "EA",
-      quantity: "2",
-      unit_price_snapshot: "25000",
-      amount: "50000",
-      source: "ai" as EstimateLineSource,
-    },
-    {
-      id: "l4",
-      sort_order: 4,
-      description: "방수 시공 인건비",
-      specification: "숙련공 기준",
-      unit: "인",
-      quantity: "3",
-      unit_price_snapshot: "250000",
-      amount: "750000",
-      source: "manual" as EstimateLineSource,
-    },
-  ],
-  subtotal: "2540000",
-  vat_amount: "254000",
-  total_amount: "2794000",
-  created_at: "2026-01-04T16:00:00Z",
-  issued_at: null,
+interface EstimateDetail {
+  id: string
+  version: number
+  status: EstimateStatus
+  subtotal: string
+  vat_amount: string
+  total_amount: string
+  created_at: string
+  issued_at?: string
+  lines: Array<{
+    id: string
+    sort_order: number
+    description: string
+    specification?: string
+    unit: string
+    quantity: string
+    unit_price_snapshot: string
+    amount: string
+    source: EstimateLineSource
+  }>
 }
 
 const sourceLabels: Record<EstimateLineSource, { label: string; color: string }> = {
@@ -102,11 +60,105 @@ export default function EstimateDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
-  const estimate = mockEstimate
-  const [editingLineId, setEditingLineId] = useState<string | null>(null)
+  const [estimate, setEstimate] = useState<EstimateDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [lineModalOpen, setLineModalOpen] = useState(false)
+  const [editingLine, setEditingLine] = useState<EstimateDetail["lines"][0] | null>(null)
+
+  useEffect(() => {
+    loadEstimate()
+  }, [id])
+
+  async function loadEstimate() {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await api.getEstimate(id)
+      if (response.success && response.data) {
+        setEstimate(response.data as EstimateDetail)
+      }
+    } catch (err) {
+      setError("견적서를 불러오는데 실패했어요")
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleIssue() {
+    try {
+      await api.issueEstimate(id)
+      await loadEstimate()
+    } catch (err) {
+      alert("발송에 실패했어요")
+      console.error(err)
+    }
+  }
+
+  async function handleDeleteLine(lineId: string) {
+    if (!confirm("이 항목을 삭제할까요?")) return
+    
+    try {
+      await api.deleteEstimateLine(id, lineId)
+      await loadEstimate()
+    } catch (err) {
+      alert("삭제에 실패했어요")
+      console.error(err)
+    }
+  }
+
+  async function handleSaveLine(data: {
+    id?: string
+    description: string
+    specification?: string
+    unit: string
+    quantity: string
+    unit_price_snapshot: string
+  }) {
+    if (editingLine) {
+      await api.updateEstimateLine(id, editingLine.id, {
+        description: data.description,
+        quantity: data.quantity,
+        unit_price_snapshot: data.unit_price_snapshot,
+      })
+    } else {
+      await api.addEstimateLine(id, {
+        description: data.description,
+        specification: data.specification,
+        unit: data.unit,
+        quantity: data.quantity,
+        unit_price_snapshot: data.unit_price_snapshot,
+      })
+    }
+    await loadEstimate()
+  }
 
   const formatCurrency = (amount: string) => {
     return Number(amount).toLocaleString() + "원"
+  }
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  if (error || !estimate) {
+    return (
+      <AdminLayout>
+        <div className="flex h-64 flex-col items-center justify-center gap-4">
+          <p className="text-red-500">{error || "견적서를 찾을 수 없어요"}</p>
+          <Link href="/estimates">
+            <Button>목록으로 돌아가기</Button>
+          </Link>
+        </div>
+      </AdminLayout>
+    )
   }
 
   return (
@@ -126,24 +178,24 @@ export default function EstimateDetailPage({
               </h1>
               <StatusBadge status={estimate.status} />
             </div>
-            <Link
-              href={`/projects/${estimate.project.id}`}
-              className="mt-1 text-slate-500 hover:text-teal-600"
-            >
-              {estimate.project.name}
-            </Link>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={() => window.print()}>
               <Printer className="h-4 w-4" />
               인쇄
             </Button>
-            <Button variant="secondary">
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                const url = `/api/v1/estimates/${id}/pdf`
+                window.open(url, '_blank')
+              }}
+            >
               <Download className="h-4 w-4" />
               다운로드
             </Button>
             {estimate.status === "draft" && (
-              <Button>
+              <Button onClick={handleIssue}>
                 <Send className="h-4 w-4" />
                 발송
               </Button>
@@ -151,62 +203,42 @@ export default function EstimateDetailPage({
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>프로젝트 정보</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="text-sm text-slate-500">현장</p>
-                <p className="font-medium text-slate-900">{estimate.project.name}</p>
-                <p className="text-sm text-slate-600">{estimate.project.address}</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">고객</p>
-                <p className="font-medium text-slate-900">
-                  {estimate.project.client_name}
-                </p>
-                <p className="text-sm text-slate-600">
-                  {estimate.project.client_phone}
+        <Card>
+          <CardHeader>
+            <CardTitle>견적 요약</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="rounded-lg bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">공급가액</p>
+                <p className="mt-1 text-xl font-bold text-slate-900">
+                  {formatCurrency(estimate.subtotal)}
                 </p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>견적 요약</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="rounded-lg bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">공급가액</p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">
-                    {formatCurrency(estimate.subtotal)}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">부가세 (10%)</p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">
-                    {formatCurrency(estimate.vat_amount)}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-teal-50 p-4">
-                  <p className="text-sm text-teal-600">합계</p>
-                  <p className="mt-1 text-xl font-bold text-teal-700">
-                    {formatCurrency(estimate.total_amount)}
-                  </p>
-                </div>
+              <div className="rounded-lg bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">부가세 (10%)</p>
+                <p className="mt-1 text-xl font-bold text-slate-900">
+                  {formatCurrency(estimate.vat_amount)}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              <div className="rounded-lg bg-teal-50 p-4">
+                <p className="text-sm text-teal-600">합계</p>
+                <p className="mt-1 text-xl font-bold text-teal-700">
+                  {formatCurrency(estimate.total_amount)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>견적 항목</CardTitle>
-            <Button size="sm" variant="secondary">
+            <Button 
+              size="sm" 
+              variant="secondary"
+              onClick={() => { setEditingLine(null); setLineModalOpen(true) }}
+            >
               <Plus className="h-4 w-4" />
               항목 추가
             </Button>
@@ -258,12 +290,15 @@ export default function EstimateDetailPage({
                       <td className="px-6 py-4">
                         <div className="flex gap-1">
                           <button
-                            onClick={() => setEditingLineId(line.id)}
+                            onClick={() => { setEditingLine(line); setLineModalOpen(true) }}
                             className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                           >
                             <Edit2 className="h-4 w-4 text-slate-400" />
                           </button>
-                          <button className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50">
+                          <button 
+                            onClick={() => handleDeleteLine(line.id)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
+                          >
                             <Trash2 className="h-4 w-4 text-red-400" />
                           </button>
                         </div>
@@ -318,14 +353,34 @@ export default function EstimateDetailPage({
                 <div>
                   <p className="font-medium text-slate-900">견적서 생성</p>
                   <p className="text-sm text-slate-500">
-                    {formatDate(estimate.created_at)} · AI 진단 기반
+                    {formatDate(estimate.created_at)}
                   </p>
                 </div>
               </div>
+              {estimate.issued_at && (
+                <div className="flex gap-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                    <Send className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">견적서 발송</p>
+                    <p className="text-sm text-slate-500">
+                      {formatDate(estimate.issued_at)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <EstimateLineModal
+        isOpen={lineModalOpen}
+        onClose={() => setLineModalOpen(false)}
+        onSave={handleSaveLine}
+        line={editingLine}
+      />
     </AdminLayout>
   )
 }

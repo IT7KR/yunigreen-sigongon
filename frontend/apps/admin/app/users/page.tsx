@@ -1,10 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Plus,
   Search,
-  MoreHorizontal,
   Mail,
   Phone,
   Shield,
@@ -12,8 +11,10 @@ import {
   UserX,
   Edit2,
   Trash2,
+  Loader2,
 } from "lucide-react"
 import { AdminLayout } from "@/components/AdminLayout"
+import { UserModal } from "@/components/UserModal"
 import {
   Card,
   CardContent,
@@ -21,49 +22,18 @@ import {
   formatDate,
 } from "@yunigreen/ui"
 import type { UserRole } from "@yunigreen/types"
+import { api } from "@/lib/api"
 
-const mockUsers = [
-  {
-    id: "u1",
-    name: "김관리",
-    email: "admin@yunigreen.com",
-    phone: "010-1111-1111",
-    role: "admin" as UserRole,
-    is_active: true,
-    created_at: "2025-01-01T00:00:00Z",
-    last_login_at: "2026-01-04T09:30:00Z",
-  },
-  {
-    id: "u2",
-    name: "이매니저",
-    email: "manager@yunigreen.com",
-    phone: "010-2222-2222",
-    role: "manager" as UserRole,
-    is_active: true,
-    created_at: "2025-03-15T00:00:00Z",
-    last_login_at: "2026-01-04T08:15:00Z",
-  },
-  {
-    id: "u3",
-    name: "박기술",
-    email: "tech1@yunigreen.com",
-    phone: "010-3333-3333",
-    role: "technician" as UserRole,
-    is_active: true,
-    created_at: "2025-06-01T00:00:00Z",
-    last_login_at: "2026-01-03T17:45:00Z",
-  },
-  {
-    id: "u4",
-    name: "최기술",
-    email: "tech2@yunigreen.com",
-    phone: "010-4444-4444",
-    role: "technician" as UserRole,
-    is_active: false,
-    created_at: "2025-08-20T00:00:00Z",
-    last_login_at: "2025-12-15T14:30:00Z",
-  },
-]
+interface UserItem {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  role: UserRole
+  is_active: boolean
+  created_at: string
+  last_login_at?: string
+}
 
 const roleConfig: Record<UserRole, { label: string; color: string }> = {
   admin: { label: "관리자", color: "bg-purple-100 text-purple-700" },
@@ -73,13 +43,102 @@ const roleConfig: Record<UserRole, { label: string; color: string }> = {
 
 export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [users, setUsers] = useState<UserItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<UserItem | null>(null)
 
-  const filteredUsers = mockUsers.filter(
+  useEffect(() => {
+    loadUsers()
+  }, [])
+
+  async function loadUsers() {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await api.getUsers({ per_page: 100 })
+      if (response.success && response.data) {
+        setUsers(response.data as UserItem[])
+      }
+    } catch (err) {
+      setError("사용자 목록을 불러오는데 실패했어요")
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSaveUser(data: { id?: string; name: string; email: string; phone?: string; role: UserRole; password?: string }) {
+    if (data.id) {
+      await api.updateUser(data.id, {
+        name: data.name,
+        phone: data.phone,
+        role: data.role,
+      })
+    } else {
+      await api.createUser({
+        email: data.email,
+        password: data.password!,
+        name: data.name,
+        phone: data.phone,
+        role: data.role,
+      })
+    }
+    await loadUsers()
+  }
+
+  async function handleDelete(userId: string) {
+    if (!confirm("정말 이 사용자를 삭제할까요?")) return
+    
+    try {
+      await api.deleteUser(userId)
+      setUsers(users.filter(u => u.id !== userId))
+    } catch (err) {
+      alert("삭제에 실패했어요")
+      console.error(err)
+    }
+  }
+
+  function openAddModal() {
+    setEditingUser(null)
+    setModalOpen(true)
+  }
+
+  function openEditModal(user: UserItem) {
+    setEditingUser(user)
+    setModalOpen(true)
+  }
+
+  const filteredUsers = users.filter(
     (user) =>
       user.name.includes(searchQuery) ||
       user.email.includes(searchQuery) ||
-      user.phone.includes(searchQuery)
+      (user.phone && user.phone.includes(searchQuery))
   )
+
+  const activeCount = users.filter((u) => u.is_active).length
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex h-64 flex-col items-center justify-center gap-4">
+          <p className="text-red-500">{error}</p>
+          <Button onClick={loadUsers}>다시 시도</Button>
+        </div>
+      </AdminLayout>
+    )
+  }
 
   return (
     <AdminLayout>
@@ -88,10 +147,10 @@ export default function UsersPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">사용자 관리</h1>
             <p className="mt-1 text-slate-500">
-              전체 {mockUsers.length}명 · 활성 {mockUsers.filter((u) => u.is_active).length}명
+              전체 {users.length}명 · 활성 {activeCount}명
             </p>
           </div>
-          <Button>
+          <Button onClick={openAddModal}>
             <Plus className="h-4 w-4" />
             사용자 추가
           </Button>
@@ -147,10 +206,12 @@ export default function UsersPage() {
                                   <Mail className="h-3.5 w-3.5" />
                                   {user.email}
                                 </span>
-                                <span className="flex items-center gap-1">
-                                  <Phone className="h-3.5 w-3.5" />
-                                  {user.phone}
-                                </span>
+                                {user.phone && (
+                                  <span className="flex items-center gap-1">
+                                    <Phone className="h-3.5 w-3.5" />
+                                    {user.phone}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -182,10 +243,16 @@ export default function UsersPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex gap-1">
-                            <button className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100">
+                            <button 
+                              onClick={() => openEditModal(user)}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
+                            >
                               <Edit2 className="h-4 w-4 text-slate-400" />
                             </button>
-                            <button className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50">
+                            <button 
+                              onClick={() => handleDelete(user.id)}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
+                            >
                               <Trash2 className="h-4 w-4 text-red-400" />
                             </button>
                           </div>
@@ -199,6 +266,13 @@ export default function UsersPage() {
           </CardContent>
         </Card>
       </div>
+
+      <UserModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSaveUser}
+        user={editingUser}
+      />
     </AdminLayout>
   )
 }
