@@ -1,7 +1,10 @@
 # Models package - Export all models
 from app.models.base import BaseModel, TimestampMixin
 from app.models.user import Organization, User, UserRole
-from app.models.project import Project, ProjectStatus, SiteVisit, VisitType, Photo, PhotoType
+from app.models.project import (
+    Project, ProjectStatus, SiteVisit, VisitType, Photo, PhotoType,
+    ASRequest, ASRequestStatus, ASRequestCreate, ASRequestRead
+)
 from app.models.diagnosis import AIDiagnosis, DiagnosisStatus, AIMaterialSuggestion, MatchMethod
 from app.models.pricebook import (
     Pricebook, 
@@ -33,6 +36,10 @@ __all__ = [
     "VisitType",
     "Photo",
     "PhotoType",
+    "ASRequest",
+    "ASRequestStatus",
+    "ASRequestCreate",
+    "ASRequestRead",
     # Diagnosis
     "AIDiagnosis",
     "DiagnosisStatus",

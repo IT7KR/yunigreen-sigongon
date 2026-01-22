@@ -4,8 +4,10 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.core.database import get_async_db
@@ -18,6 +20,13 @@ from app.models.project import (
     ProjectCreate, 
     ProjectRead, 
     ProjectUpdate,
+    SiteVisit,
+    Photo,
+    PhotoType,
+    ASRequest,
+    ASRequestStatus,
+    ASRequestCreate,
+    ASRequestRead,
 )
 from app.models.pricebook import PricebookRevision, RevisionStatus
 from app.schemas.response import APIResponse, PaginatedResponse
@@ -42,8 +51,7 @@ class ProjectDetail(ProjectRead):
     estimates: list = []
 
 
-class StatusUpdateRequest:
-    """상태 변경 요청."""
+class StatusUpdateRequest(BaseModel):
     status: ProjectStatus
 
 
@@ -82,9 +90,9 @@ async def list_projects(
     count_query = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_query)).scalar() or 0
     
-    # 페이지네이션
     query = query.order_by(Project.created_at.desc())
     query = query.offset((page - 1) * per_page).limit(per_page)
+    query = query.options(selectinload(Project.site_visits), selectinload(Project.estimates))
     
     result = await db.execute(query)
     projects = result.scalars().all()
@@ -141,7 +149,7 @@ async def create_project(
     if not active_revision:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="활성화된 단가표가 없어요. 관리자에게 문의해 주세요.",
+            detail="활성화된 적산 자료가 없어요. 관리자에게 문의해 주세요.",
         )
     
     # 프로젝트 생성
@@ -317,3 +325,278 @@ async def delete_project(
     
     await db.delete(project)
     await db.commit()
+
+
+class PhotoAlbumPhoto(BaseModel):
+    id: uuid.UUID
+    storage_path: str
+    caption: Optional[str]
+    taken_at: Optional[datetime]
+
+
+class ProjectPhotoAlbum(BaseModel):
+    project_id: uuid.UUID
+    project_name: str
+    photos: dict
+
+
+@router.get("/{project_id}/photo-album", response_model=APIResponse[ProjectPhotoAlbum])
+async def get_project_photo_album(
+    project_id: uuid.UUID,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """준공사진첩 조회.
+    
+    프로젝트의 모든 사진을 시공 전/중/후로 분류해서 보여줘요.
+    """
+    result = await db.execute(
+        select(Project)
+        .where(Project.id == project_id)
+        .where(Project.organization_id == current_user.organization_id)
+    )
+    project = result.scalar_one_or_none()
+    
+    if not project:
+        raise NotFoundException("project", project_id)
+    
+    # Get all site visits with photos
+    visits_result = await db.execute(
+        select(SiteVisit)
+        .where(SiteVisit.project_id == project_id)
+        .options(selectinload(SiteVisit.photos))
+    )
+    site_visits = visits_result.scalars().all()
+    
+    # Categorize photos by type
+    photos_by_type = {
+        "before": [],
+        "during": [],
+        "after": [],
+    }
+    
+    for visit in site_visits:
+        for photo in visit.photos:
+            photo_data = {
+                "id": str(photo.id),
+                "storage_path": photo.storage_path,
+                "caption": photo.caption,
+                "taken_at": photo.taken_at.isoformat() if photo.taken_at else None,
+            }
+            if photo.photo_type == PhotoType.BEFORE:
+                photos_by_type["before"].append(photo_data)
+            elif photo.photo_type == PhotoType.DURING:
+                photos_by_type["during"].append(photo_data)
+            elif photo.photo_type == PhotoType.AFTER:
+                photos_by_type["after"].append(photo_data)
+            else:
+                photos_by_type["during"].append(photo_data)
+    
+    return APIResponse.ok(
+        ProjectPhotoAlbum(
+            project_id=project.id,
+            project_name=project.name,
+            photos=photos_by_type,
+        )
+    )
+
+
+class WarrantyASRequest(BaseModel):
+    id: uuid.UUID
+    description: str
+    status: str
+    created_at: datetime
+    resolved_at: Optional[datetime]
+
+
+class WarrantyInfo(BaseModel):
+    project_id: uuid.UUID
+    warranty_expires_at: Optional[datetime]
+    days_remaining: int
+    is_expired: bool
+    as_requests: list
+
+
+@router.get("/{project_id}/warranty", response_model=APIResponse[WarrantyInfo])
+async def get_warranty_info(
+    project_id: uuid.UUID,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """하자보증 정보 조회.
+    
+    프로젝트의 하자보증 기간과 AS 요청 내역을 확인해요.
+    """
+    result = await db.execute(
+        select(Project)
+        .where(Project.id == project_id)
+        .where(Project.organization_id == current_user.organization_id)
+    )
+    project = result.scalar_one_or_none()
+    
+    if not project:
+        raise NotFoundException("project", project_id)
+    
+    # Calculate days remaining
+    days_remaining = 0
+    is_expired = True
+    
+    if project.warranty_expires_at:
+        now = datetime.utcnow()
+        if project.warranty_expires_at > now:
+            days_remaining = (project.warranty_expires_at - now).days
+            is_expired = False
+    
+    # Get AS requests
+    as_result = await db.execute(
+        select(ASRequest)
+        .where(ASRequest.project_id == project_id)
+        .order_by(ASRequest.created_at.desc())
+    )
+    as_requests = as_result.scalars().all()
+    
+    as_request_list = [
+        {
+            "id": str(req.id),
+            "description": req.description,
+            "status": req.status.value,
+            "created_at": req.created_at.isoformat(),
+            "resolved_at": req.resolved_at.isoformat() if req.resolved_at else None,
+        }
+        for req in as_requests
+    ]
+    
+    return APIResponse.ok(
+        WarrantyInfo(
+            project_id=project.id,
+            warranty_expires_at=project.warranty_expires_at,
+            days_remaining=days_remaining,
+            is_expired=is_expired,
+            as_requests=as_request_list,
+        )
+    )
+
+
+class ASRequestCreateRequest(BaseModel):
+    description: str
+    photos: Optional[list] = None
+
+
+class ASRequestResponse(BaseModel):
+    id: uuid.UUID
+    status: str
+    message: str
+
+
+@router.post("/{project_id}/warranty/as-requests", response_model=APIResponse[ASRequestResponse])
+async def create_as_request(
+    project_id: uuid.UUID,
+    request_data: ASRequestCreateRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """AS 요청 생성.
+    
+    하자보증 기간 내에 AS 요청을 등록해요.
+    """
+    result = await db.execute(
+        select(Project)
+        .where(Project.id == project_id)
+        .where(Project.organization_id == current_user.organization_id)
+    )
+    project = result.scalar_one_or_none()
+    
+    if not project:
+        raise NotFoundException("project", project_id)
+    
+    # Check if project is in warranty period
+    if project.status != ProjectStatus.WARRANTY and project.status != ProjectStatus.COMPLETED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="완료된 프로젝트만 AS 요청을 할 수 있어요",
+        )
+    
+    # Check if warranty is still valid
+    if project.warranty_expires_at:
+        if project.warranty_expires_at < datetime.utcnow():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="하자보증 기간이 만료되었어요",
+            )
+    
+    import json
+    photos_json = json.dumps(request_data.photos) if request_data.photos else None
+    
+    as_request = ASRequest(
+        project_id=project_id,
+        description=request_data.description,
+        photos=photos_json,
+        created_by=current_user.id,
+    )
+    
+    db.add(as_request)
+    await db.commit()
+    await db.refresh(as_request)
+    
+    return APIResponse.ok(
+        ASRequestResponse(
+            id=as_request.id,
+            status=as_request.status.value,
+            message="AS 요청이 접수되었어요",
+        )
+    )
+
+
+class CompleteProjectResponse(BaseModel):
+    id: uuid.UUID
+    status: ProjectStatus
+    completed_at: datetime
+    warranty_expires_at: datetime
+
+
+@router.post("/{project_id}/complete", response_model=APIResponse[CompleteProjectResponse])
+async def complete_project(
+    project_id: uuid.UUID,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """프로젝트 완료 처리.
+    
+    시공이 완료된 프로젝트를 완료 처리하고 하자보증 기간을 시작해요.
+    """
+    result = await db.execute(
+        select(Project)
+        .where(Project.id == project_id)
+        .where(Project.organization_id == current_user.organization_id)
+    )
+    project = result.scalar_one_or_none()
+    
+    if not project:
+        raise NotFoundException("project", project_id)
+    
+    # Only IN_PROGRESS projects can be completed
+    if project.status != ProjectStatus.IN_PROGRESS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="진행 중인 프로젝트만 완료 처리할 수 있어요",
+        )
+    
+    now = datetime.utcnow()
+    from datetime import timedelta
+    
+    project.status = ProjectStatus.COMPLETED
+    project.completed_at = now
+    project.warranty_expires_at = now + timedelta(days=365 * 3)  # 3 years warranty
+    project.updated_at = now
+    
+    await db.commit()
+    await db.refresh(project)
+    
+    return APIResponse.ok(
+        CompleteProjectResponse(
+            id=project.id,
+            status=project.status,
+            completed_at=project.completed_at,
+            warranty_expires_at=project.warranty_expires_at,
+        )
+    )

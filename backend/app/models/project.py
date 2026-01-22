@@ -192,3 +192,45 @@ class PhotoRead(PhotoBase):
     original_filename: Optional[str]
     taken_at: Optional[datetime]
     created_at: datetime
+
+
+# AS Request Models (After-Service 하자보수 요청)
+class ASRequestStatus(str, Enum):
+    """AS Request status enumeration."""
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    RESOLVED = "resolved"
+    CANCELLED = "cancelled"
+
+
+class ASRequest(SQLModel, table=True):
+    """AS Request model - After-service requests during warranty period."""
+    __tablename__ = "as_request"
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    project_id: uuid.UUID = Field(foreign_key="project.id", index=True)
+    
+    description: str
+    status: ASRequestStatus = Field(default=ASRequestStatus.PENDING)
+    photos: Optional[str] = Field(default=None)  # JSON array of photo paths
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    resolved_at: Optional[datetime] = Field(default=None)
+    
+    created_by: Optional[uuid.UUID] = Field(default=None, foreign_key="user.id")
+
+
+class ASRequestCreate(SQLModel):
+    """Schema for creating AS request."""
+    description: str
+    photos: Optional[List[str]] = None
+
+
+class ASRequestRead(SQLModel):
+    """Schema for reading AS request."""
+    id: uuid.UUID
+    description: str
+    status: ASRequestStatus
+    created_at: datetime
+    resolved_at: Optional[datetime]
