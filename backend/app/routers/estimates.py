@@ -1,4 +1,4 @@
-"""견적서 API 라우터."""
+import io
 import uuid
 from datetime import datetime
 from decimal import Decimal
@@ -34,6 +34,7 @@ from app.models.estimate import (
     LineSource,
 )
 from app.schemas.response import APIResponse, PaginatedResponse
+from app.services.pdf_generator import generate_estimate_pdf
 
 router = APIRouter()
 
@@ -457,15 +458,10 @@ async def issue_estimate(
 )
 async def export_estimate(
     estimate_id: uuid.UUID,
-    format: str = Query(default="xlsx", regex="^(xlsx|pdf)$"),
-    db: DBSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    db: DBSession,
+    current_user: CurrentUser,
+    format: str = Query(default="pdf", pattern="^(xlsx|pdf)$"),
 ):
-    """견적서 내보내기.
-    
-    견적서를 Excel 또는 PDF로 내보내요.
-    """
-    # 견적서 확인
     result = await db.execute(
         select(Estimate).where(Estimate.id == estimate_id)
     )
@@ -474,16 +470,56 @@ async def export_estimate(
     if not estimate:
         raise NotFoundException("estimate", estimate_id)
     
-    # 권한 확인
     project_result = await db.execute(
         select(Project)
         .where(Project.id == estimate.project_id)
         .where(Project.organization_id == current_user.organization_id)
     )
-    if not project_result.scalar_one_or_none():
+    project = project_result.scalar_one_or_none()
+    if not project:
         raise NotFoundException("estimate", estimate_id)
     
-    # TODO: 실제 Excel/PDF 생성 구현
+    await db.refresh(estimate, ["lines"])
+    
+    if format == "pdf":
+        lines_data = [
+            {
+                "description": line.description,
+                "specification": line.specification,
+                "unit": line.unit,
+                "quantity": float(line.quantity),
+                "unit_price": float(line.unit_price_snapshot),
+                "amount": float(line.amount),
+            }
+            for line in sorted(estimate.lines or [], key=lambda x: x.sort_order)
+        ]
+        
+        pdf_bytes = generate_estimate_pdf(
+            estimate_id=str(estimate.id),
+            project_name=project.name,
+            client_name=project.client_name or "",
+            client_address=project.address or "",
+            estimate_version=estimate.version,
+            lines=lines_data,
+            subtotal=estimate.subtotal,
+            vat_amount=estimate.vat_amount,
+            total_amount=estimate.total_amount,
+            issued_at=estimate.issued_at,
+            notes=estimate.notes,
+        )
+        
+        from urllib.parse import quote
+        filename = f"estimate_v{estimate.version}.pdf"
+        filename_utf8 = f"견적서_{project.name}_v{estimate.version}.pdf"
+        
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=\"{filename}\"; filename*=UTF-8''{quote(filename_utf8)}"
+            }
+        )
+    
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Excel 내보내기 기능은 준비 중이에요",
