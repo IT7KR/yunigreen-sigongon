@@ -1,8 +1,6 @@
-"""RAG (Retrieval-Augmented Generation) 서비스.
-
-pgvector를 사용한 시공 지침 검색.
-"""
+"""RAG (Retrieval-Augmented Generation) 서비스."""
 import uuid
+import math
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,14 +12,9 @@ from app.models.pricebook import PricebookRevision
 
 
 class RAGService:
-    """RAG 검색 서비스.
-    
-    PDF에서 추출한 시공 지침, 할증 규정 등을 검색함.
-    """
     
     def __init__(self, db: AsyncSession):
         self.db = db
-        self._embedding_model = None
     
     async def search(
         self,
@@ -30,17 +23,6 @@ class RAGService:
         revision_id: Optional[uuid.UUID] = None,
         category: Optional[str] = None,
     ) -> list[dict]:
-        """시공 지침 검색.
-        
-        Args:
-            query: 검색 쿼리 (자연어)
-            top_k: 반환할 결과 수
-            revision_id: 특정 단가표 버전으로 제한
-            category: 카테고리 필터
-            
-        Returns:
-            검색 결과 목록
-        """
         query_embedding = await self._get_embedding(query)
         
         results = await self._vector_search(
@@ -53,8 +35,8 @@ class RAGService:
         return [
             {
                 "chunk_text": chunk.chunk_text,
-                "source_file": chunk.source_file_name,
-                "source_page": chunk.source_page_number,
+                "source_file": chunk.source_file,
+                "source_page": chunk.source_page,
                 "category": chunk.category,
                 "relevance_score": score,
             }
@@ -62,10 +44,6 @@ class RAGService:
         ]
     
     async def _get_embedding(self, text: str) -> list[float]:
-        """텍스트 임베딩 생성.
-        
-        Gemini embedding-001 모델 사용.
-        """
         if not settings.gemini_api_key:
             return [0.0] * 768
         
@@ -92,10 +70,6 @@ class RAGService:
         revision_id: Optional[uuid.UUID] = None,
         category: Optional[str] = None,
     ) -> list[tuple[DocumentChunk, float]]:
-        """벡터 유사도 검색.
-        
-        pgvector의 cosine distance 사용.
-        """
         base_query = select(DocumentChunk)
         
         if revision_id:
@@ -108,10 +82,30 @@ class RAGService:
                 DocumentChunk.category == category
             )
         
-        result = await self.db.execute(base_query.limit(top_k))
+        result = await self.db.execute(base_query.limit(100))
         chunks = result.scalars().all()
         
-        return [(chunk, 0.9) for chunk in chunks]
+        scored_chunks = []
+        for chunk in chunks:
+            if chunk.embedding:
+                score = self._cosine_similarity(query_embedding, chunk.embedding)
+                scored_chunks.append((chunk, score))
+        
+        scored_chunks.sort(key=lambda x: x[1], reverse=True)
+        return scored_chunks[:top_k]
+    
+    def _cosine_similarity(self, vec_a: list[float], vec_b: list[float]) -> float:
+        if len(vec_a) != len(vec_b):
+            return 0.0
+        
+        dot_product = sum(a * b for a, b in zip(vec_a, vec_b))
+        norm_a = math.sqrt(sum(a * a for a in vec_a))
+        norm_b = math.sqrt(sum(b * b for b in vec_b))
+        
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        
+        return dot_product / (norm_a * norm_b)
     
     async def add_document(
         self,
@@ -121,14 +115,13 @@ class RAGService:
         revision_id: uuid.UUID,
         category: Optional[str] = None,
     ) -> DocumentChunk:
-        """문서 청크 추가."""
         embedding = await self._get_embedding(text)
         
         chunk = DocumentChunk(
             pricebook_revision_id=revision_id,
             chunk_text=text,
-            source_file_name=source_file,
-            source_page_number=source_page,
+            source_file=source_file,
+            source_page=source_page,
             category=category,
             embedding=embedding,
         )
@@ -140,7 +133,6 @@ class RAGService:
         return chunk
     
     async def get_categories(self) -> list[str]:
-        """사용 가능한 카테고리 목록."""
         return [
             "시공방법",
             "할증규정",

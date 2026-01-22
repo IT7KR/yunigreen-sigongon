@@ -94,15 +94,13 @@ class PricebookLoader:
         effective_until: Optional[datetime],
         source_files: list[str],
     ) -> PricebookRevision:
-        """단가표 버전 생성."""
         revision = PricebookRevision(
             id=uuid.uuid4(),
             pricebook_id=pricebook_id,
-            revision_code=revision_code,
-            effective_from=effective_from,
-            effective_until=effective_until,
-            source_files=",".join(source_files),
-            is_active=True,
+            version_label=revision_code,
+            effective_from=effective_from.date() if isinstance(effective_from, datetime) else effective_from,
+            effective_to=effective_until.date() if effective_until and isinstance(effective_until, datetime) else effective_until,
+            source_files=source_files,
         )
         self.db.add(revision)
         await self.db.flush()

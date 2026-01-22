@@ -2,6 +2,9 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
+
+from sqlalchemy import Column, Float
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
@@ -9,21 +12,16 @@ if TYPE_CHECKING:
 
 
 class DocumentChunkBase(SQLModel):
-    """Document Chunk base fields."""
     source_file: Optional[str] = Field(default=None, max_length=255)
     source_page: Optional[int] = Field(default=None)
     chunk_text: str
     chunk_index: Optional[int] = Field(default=None)
-    category: Optional[str] = Field(default=None, max_length=100)  # e.g., '할증규정', '시공방법'
+    category: Optional[str] = Field(default=None, max_length=100)
+    chapter: Optional[str] = Field(default=None, max_length=255)
+    section: Optional[str] = Field(default=None, max_length=255)
 
 
 class DocumentChunk(DocumentChunkBase, table=True):
-    """Document Chunk model - Text chunks for RAG.
-    
-    Note: The embedding field uses pgvector extension.
-    In actual usage, you need to ensure pgvector is installed and configured.
-    The vector dimension (768) depends on the embedding model used.
-    """
     __tablename__ = "document_chunk"
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -31,13 +29,10 @@ class DocumentChunk(DocumentChunkBase, table=True):
         default=None, foreign_key="pricebook_revision.id", index=True
     )
     
-    # Note: embedding field is handled separately due to pgvector type
-    # In production, use: embedding: List[float] with proper pgvector setup
-    # embedding vector(768)  -- Dimension depends on model (e.g., text-embedding-ada-002)
+    embedding: Optional[List[float]] = Field(default=None, sa_column=Column(ARRAY(Float)))
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
-    # Relationships
     revision: Optional["PricebookRevision"] = Relationship(back_populates="document_chunks")
 
 
