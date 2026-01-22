@@ -12,7 +12,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.core.database import async_session_maker
+from app.core.database import async_session_factory
 from app.services.pdf_parser import PricebookLoader
 
 
@@ -63,7 +63,7 @@ async def main():
     print(f"   - PDF 파일: {len(pdf_paths)}개")
     print()
     
-    async with async_session_maker() as session:
+    async with async_session_factory() as session:
         loader = PricebookLoader(session)
         
         try:
