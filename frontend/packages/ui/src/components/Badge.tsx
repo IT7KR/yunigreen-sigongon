@@ -1,7 +1,9 @@
 import { cn } from "../lib/utils"
-import type { ProjectStatus } from "@yunigreen/types"
+import type { ProjectStatus, EstimateStatus } from "@yunigreen/types"
 
-const statusConfig: Record<ProjectStatus, { label: string; className: string }> = {
+type StatusType = ProjectStatus | EstimateStatus
+
+const statusConfig: Record<StatusType, { label: string; className: string }> = {
   draft: {
     label: "초안",
     className: "bg-slate-100 text-slate-700 before:bg-slate-400",
@@ -34,15 +36,31 @@ const statusConfig: Record<ProjectStatus, { label: string; className: string }> 
     label: "하자보증",
     className: "bg-slate-50 text-slate-600 before:bg-slate-400",
   },
+  issued: {
+    label: "발행됨",
+    className: "bg-purple-50 text-purple-700 before:bg-purple-500",
+  },
+  accepted: {
+    label: "수락됨",
+    className: "bg-green-50 text-green-700 before:bg-green-500",
+  },
+  rejected: {
+    label: "거절됨",
+    className: "bg-red-50 text-red-700 before:bg-red-500",
+  },
+  void: {
+    label: "무효",
+    className: "bg-slate-100 text-slate-500 before:bg-slate-400",
+  },
 }
 
 interface StatusBadgeProps {
-  status: ProjectStatus
+  status: StatusType
   className?: string
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const config = statusConfig[status]
+  const config = statusConfig[status] || { label: status, className: "bg-slate-100 text-slate-700" }
 
   return (
     <span
