@@ -25,7 +25,8 @@ import {
   Badge,
   formatDate 
 } from "@yunigreen/ui"
-import { useDiagnosis, useCreateEstimate } from "@/hooks"
+import { useDiagnosis } from "@/hooks"
+import { api } from "@/lib/api"
 import type { DiagnosisStatus } from "@yunigreen/types"
 
 interface DiagnosisDetailPageProps {
@@ -64,6 +65,7 @@ export default function DiagnosisDetailPage({ params }: DiagnosisDetailPageProps
   const router = useRouter()
   const { data, isLoading, error } = useDiagnosis(id)
   const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(new Set())
+  const [isCreatingEstimate, setIsCreatingEstimate] = useState(false)
 
   const diagnosis = data?.data
 
@@ -248,7 +250,7 @@ export default function DiagnosisDetailPage({ params }: DiagnosisDetailPageProps
                       {!material.matched_catalog_item && (
                         <div className="mt-2 flex items-center gap-1 text-xs text-amber-600">
                           <AlertTriangle className="h-3 w-3" />
-                          단가표에서 자재를 찾지 못했어요. 수동으로 추가해 주세요.
+                          적산 자료에서 자재를 찾지 못했어요. 수동으로 추가해 주세요.
                         </div>
                       )}
                     </div>
@@ -266,9 +268,24 @@ export default function DiagnosisDetailPage({ params }: DiagnosisDetailPageProps
             <div className="fixed bottom-0 left-0 right-0 border-t bg-white p-4 safe-area-bottom">
               <Button 
                 fullWidth 
-                disabled={selectedMaterials.size === 0}
-                onClick={() => {
-                  router.push(`/estimates/new?diagnosis_id=${id}&materials=${Array.from(selectedMaterials).join(",")}`)
+                disabled={selectedMaterials.size === 0 || isCreatingEstimate}
+                loading={isCreatingEstimate}
+                onClick={async () => {
+                  if (!diagnosis.project_id) {
+                    console.error("프로젝트 ID를 찾을 수 없어요")
+                    return
+                  }
+                  
+                  setIsCreatingEstimate(true)
+                  try {
+                    const result = await api.createEstimate(diagnosis.project_id, id)
+                    if (result.success && result.data) {
+                      router.push(`/estimates/${result.data.id}`)
+                    }
+                  } catch (err) {
+                    console.error("견적서 생성 실패:", err)
+                    setIsCreatingEstimate(false)
+                  }
                 }}
               >
                 선택한 자재로 견적서 만들기 ({selectedMaterials.size}개)

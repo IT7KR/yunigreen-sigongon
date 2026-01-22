@@ -2,6 +2,8 @@
 
 @theme {
   /* Colors - Yunigreen Brand */
+  --color-brand-primary: #0E325A;
+  --color-brand-point: #48AE2F;
   --color-primary-50: oklch(0.97 0.02 175);
   --color-primary-100: oklch(0.93 0.04 175);
   --color-primary-200: oklch(0.87 0.08 175);

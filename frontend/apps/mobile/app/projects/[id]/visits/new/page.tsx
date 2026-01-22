@@ -6,6 +6,7 @@ import { Camera, X } from "lucide-react"
 import { MobileLayout } from "@/components/MobileLayout"
 import { Card, CardContent, Button, Input } from "@yunigreen/ui"
 import { useCreateSiteVisit } from "@/hooks"
+import { api } from "@/lib/api"
 import type { VisitType, PhotoType } from "@yunigreen/types"
 
 interface NewSiteVisitPageProps {
@@ -85,6 +86,9 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
     setPhotos((prev) => prev.filter((p) => p.id !== photoId))
   }
 
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+
   const handleSubmit = async () => {
     setError(null)
 
@@ -96,12 +100,30 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
       })
 
       if (result.success && result.data) {
-        // TODO: 사진 업로드 로직 추가
+        const visitId = result.data.id
+
+        if (photos.length > 0) {
+          setIsUploading(true)
+          
+          for (let i = 0; i < photos.length; i++) {
+            const photo = photos[i]
+            try {
+              await api.uploadPhoto(visitId, photo.file, photo.type)
+              setUploadProgress(Math.round(((i + 1) / photos.length) * 100))
+            } catch (uploadErr) {
+              console.error(`사진 업로드 실패 (${i + 1}/${photos.length}):`, uploadErr)
+            }
+          }
+          
+          setIsUploading(false)
+        }
+
         router.push(`/projects/${projectId}`)
       }
     } catch (err) {
       console.error("방문 기록 생성 실패:", err)
       setError("방문 기록을 저장하지 못했어요. 다시 시도해 주세요")
+      setIsUploading(false)
     }
   }
 
@@ -248,10 +270,13 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
         <Button
           fullWidth
           onClick={handleSubmit}
-          loading={createVisit.isPending}
-          disabled={createVisit.isPending}
+          loading={createVisit.isPending || isUploading}
+          disabled={createVisit.isPending || isUploading}
         >
-          저장하기
+          {isUploading 
+            ? `사진 업로드 중... ${uploadProgress}%` 
+            : "저장하기"
+          }
         </Button>
       </div>
     </MobileLayout>

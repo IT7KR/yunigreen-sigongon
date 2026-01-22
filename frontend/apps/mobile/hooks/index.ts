@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import type { ProjectStatus, VisitType, PhotoType } from "@yunigreen/types"
 
@@ -19,6 +19,23 @@ export function useProjects(params?: {
   return useQuery({
     queryKey: ["projects", params],
     queryFn: () => api.getProjects(params),
+  })
+}
+
+export function useInfiniteProjects(params?: {
+  per_page?: number
+  status?: ProjectStatus
+  search?: string
+}) {
+  return useInfiniteQuery({
+    queryKey: ["projects-infinite", params],
+    queryFn: ({ pageParam }) => api.getProjects({ ...params, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.success || !lastPage.data) return undefined
+      const { page, total_pages } = lastPage.meta || { page: 1, total_pages: 1 }
+      return page < total_pages ? page + 1 : undefined
+    },
   })
 }
 

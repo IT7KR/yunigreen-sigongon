@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, Droplets } from "lucide-react"
 import { Card, CardContent, Button, Input } from "@yunigreen/ui"
 import { useAuth } from "@/lib/auth"
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login, isAuthenticated, isLoading: authLoading } = useAuth()
@@ -43,7 +43,6 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-teal-50 to-white p-4">
-      {/* 로고 */}
       <div className="mb-8 flex flex-col items-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-lg">
           <Droplets className="h-8 w-8" />
@@ -52,7 +51,6 @@ export default function LoginPage() {
         <p className="mt-1 text-sm text-slate-500">AI 누수진단 시스템</p>
       </div>
 
-      {/* 로그인 폼 */}
       <Card className="w-full max-w-sm">
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -121,6 +119,37 @@ export default function LoginPage() {
       <p className="mt-8 text-xs text-slate-400">
         © 2026 유니그린. All rights reserved.
       </p>
+    </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageSkeleton />}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginPageSkeleton() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-teal-50 to-white p-4">
+      <div className="mb-8 flex flex-col items-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-lg">
+          <Droplets className="h-8 w-8" />
+        </div>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">유니그린</h1>
+        <p className="mt-1 text-sm text-slate-500">AI 누수진단 시스템</p>
+      </div>
+      <Card className="w-full max-w-sm">
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-10 rounded bg-slate-200" />
+            <div className="h-10 rounded bg-slate-200" />
+            <div className="h-10 rounded bg-teal-200" />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

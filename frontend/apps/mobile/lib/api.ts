@@ -1,15 +1,21 @@
 import { APIClient } from "@yunigreen/api"
+import { mockApiClient } from "./mocks/mockApi"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true"
 
-export const api = new APIClient({
+const realApi = new APIClient({
   baseURL: API_BASE_URL,
   onUnauthorized: () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("access_token")
       localStorage.removeItem("refresh_token")
       document.cookie = "access_token=; path=/; max-age=0"
-      window.location.href = "/login"
+      
+      const currentPath = window.location.pathname
+      if (currentPath !== "/login") {
+        window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`
+      }
     }
   },
   getRefreshToken: () => {
@@ -26,13 +32,15 @@ export const api = new APIClient({
   },
 })
 
-if (typeof window !== "undefined") {
+export const api = (USE_MOCKS ? mockApiClient : realApi) as unknown as APIClient
+
+if (typeof window !== "undefined" && !USE_MOCKS) {
   const accessToken = localStorage.getItem("access_token")
   const refreshToken = localStorage.getItem("refresh_token")
   if (accessToken) {
-    api.setAccessToken(accessToken)
+    realApi.setAccessToken(accessToken)
   }
   if (refreshToken) {
-    api.setRefreshToken(refreshToken)
+    realApi.setRefreshToken(refreshToken)
   }
 }

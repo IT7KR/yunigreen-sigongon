@@ -12,7 +12,9 @@ import {
   FileText, 
   Sparkles,
   Plus,
-  ChevronRight
+  ChevronRight,
+  ClipboardList,
+  FileCheck,
 } from "lucide-react"
 import { MobileLayout } from "@/components/MobileLayout"
 import { Card, CardContent, CardHeader, CardTitle, Button, StatusBadge, formatDate } from "@yunigreen/ui"
@@ -169,6 +171,20 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
             <FileText className="h-5 w-5" />
             <span className="text-xs">견적서</span>
           </Button>
+
+          <Link href={`/projects/${id}/construction/start-report`}>
+            <Button variant="secondary" fullWidth className="flex-col gap-1 py-3">
+              <FileCheck className="h-5 w-5" />
+              <span className="text-xs">착공계</span>
+            </Button>
+          </Link>
+
+          <Link href={`/projects/${id}/construction/daily-reports`}>
+            <Button variant="secondary" fullWidth className="flex-col gap-1 py-3">
+              <ClipboardList className="h-5 w-5" />
+              <span className="text-xs">작업일지</span>
+            </Button>
+          </Link>
         </div>
 
         {/* 현장방문 기록 */}
