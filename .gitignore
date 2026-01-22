@@ -18,6 +18,7 @@ ENV/
 htmlcov/
 .tox/
 .nox/
+test/
 
 # Type checkers & Linters
 .mypy_cache/
@@ -76,6 +77,8 @@ yarn-error.log*
 # =====================
 .claude/
 OH-MY-OPENCODE-GUIDE.md
+**/CLAUDE.md
+!/CLAUDE.md
 
 # =====================
 # IDE / Editor
@@ -129,3 +132,7 @@ backend/alembic/versions/__pycache__/
 credentials.json
 service-account.json
 secrets/
+.env
+.env.dev
+.env.test
+.env.prod

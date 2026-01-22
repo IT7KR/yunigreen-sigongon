@@ -9,9 +9,14 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: yunigreen
     ports:
-      - "5432:5432"
+      - "5437:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
@@ -20,12 +25,13 @@ services:
       - ./backend:/app
       - ./종합적산정보건축부문(견적서근거자료).pdf:/app/data/estimate_arch.pdf
       - ./종합적산정보공통부문(견적서근거자료).pdf:/app/data/estimate_common.pdf
+      - backend_uploads:/app/uploads
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/yunigreen
-      # Add GEMINI_API_KEY to your .env file locally
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/yunigreen
+      - UPLOAD_DIR=/app/uploads
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     depends_on:
       - db
 
@@ -36,7 +42,8 @@ services:
       - ./frontend:/app
       - /app/node_modules
     ports:
-      - "3000:3000"
+      - "3133:3033"
+      - "3134:3034"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
@@ -44,3 +51,4 @@ services:
 
 volumes:
   postgres_data:
+  backend_uploads:
