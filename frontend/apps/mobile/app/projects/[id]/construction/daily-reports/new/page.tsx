@@ -1,34 +1,33 @@
+"use client";
 
-"use client"
-
-import { use, useState } from "react"
-import { useRouter } from "next/navigation"
-import { MobileLayout } from "@/components/MobileLayout"
-import { Button, Input, Card, CardContent } from "@yunigreen/ui"
-import { Loader2, Camera, X } from "lucide-react"
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
+import { MobileLayout } from "@/components/MobileLayout";
+import { Button, Input, Card, CardContent } from "@sigongon/ui";
+import { Loader2, Camera, X } from "lucide-react";
 
 export default function NewDailyReportPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params)
-  const router = useRouter()
-  const [submitting, setSubmitting] = useState(false)
-  const [photos, setPhotos] = useState<string[]>([]) 
+  const { id } = use(params);
+  const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setSubmitting(true)
-    
+    e.preventDefault();
+    setSubmitting(true);
+
     setTimeout(() => {
-      setSubmitting(false)
-      router.push(`/projects/${id}/construction/daily-reports`)
-    }, 1000)
+      setSubmitting(false);
+      router.push(`/projects/${id}/construction/daily-reports`);
+    }, 1000);
   }
 
   function handleAddPhoto() {
-    setPhotos([...photos, "mock-photo-url"])
+    setPhotos([...photos, "mock-photo-url"]);
   }
 
   return (
@@ -41,7 +40,7 @@ export default function NewDailyReportPage({
             </label>
             <input
               type="date"
-              defaultValue={new Date().toISOString().split('T')[0]}
+              defaultValue={new Date().toISOString().split("T")[0]}
               className="w-full rounded-lg border border-slate-300 p-3"
             />
           </div>
@@ -73,10 +72,15 @@ export default function NewDailyReportPage({
             </label>
             <div className="grid grid-cols-3 gap-2">
               {photos.map((_, i) => (
-                <div key={i} className="relative aspect-square rounded-lg bg-slate-200">
-                  <button 
+                <div
+                  key={i}
+                  className="relative aspect-square rounded-lg bg-slate-200"
+                >
+                  <button
                     type="button"
-                    onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
+                    onClick={() =>
+                      setPhotos(photos.filter((_, idx) => idx !== i))
+                    }
                     className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white"
                   >
                     <X className="h-3 w-3" />
@@ -99,9 +103,13 @@ export default function NewDailyReportPage({
         </div>
 
         <Button type="submit" fullWidth disabled={submitting}>
-          {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "작성 완료"}
+          {submitting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            "작성 완료"
+          )}
         </Button>
       </form>
     </MobileLayout>
-  )
+  );
 }

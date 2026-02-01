@@ -1,6 +1,6 @@
 {
-  "name": "유니그린 현장",
-  "short_name": "유니그린",
+  "name": "시공ON 현장",
+  "short_name": "시공ON",
   "description": "AI 누수진단 현장 앱",
   "start_url": "/",
   "display": "standalone",

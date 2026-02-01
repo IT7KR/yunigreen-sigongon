@@ -1,68 +1,70 @@
-"use client"
+"use client";
 
-import { use, useState, useRef } from "react"
-import { useRouter } from "next/navigation"
-import { Camera, X } from "lucide-react"
-import { MobileLayout } from "@/components/MobileLayout"
-import { Card, CardContent, Button, Input } from "@yunigreen/ui"
-import { useCreateSiteVisit } from "@/hooks"
-import { api } from "@/lib/api"
-import type { VisitType, PhotoType } from "@yunigreen/types"
+import { use, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Camera, X } from "lucide-react";
+import { MobileLayout } from "@/components/MobileLayout";
+import { Card, CardContent, Button, Input } from "@sigongon/ui";
+import { useCreateSiteVisit } from "@/hooks";
+import { api } from "@/lib/api";
+import type { VisitType, PhotoType } from "@sigongon/types";
 
 interface NewSiteVisitPageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 const visitTypes: { value: VisitType; label: string }[] = [
   { value: "initial", label: "최초방문" },
   { value: "progress", label: "중간점검" },
   { value: "completion", label: "준공검사" },
-]
+];
 
 const photoTypes: { value: PhotoType; label: string }[] = [
   { value: "before", label: "시공 전" },
   { value: "during", label: "시공 중" },
   { value: "after", label: "시공 후" },
   { value: "detail", label: "상세" },
-]
+];
 
 interface PendingPhoto {
-  id: string
-  file: File
-  preview: string
-  type: PhotoType
+  id: string;
+  file: File;
+  preview: string;
+  type: PhotoType;
 }
 
 export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
-  const { id: projectId } = use(params)
-  const router = useRouter()
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { id: projectId } = use(params);
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [visitType, setVisitType] = useState<VisitType>("initial")
-  const [visitedAt, setVisitedAt] = useState(new Date().toISOString().slice(0, 16))
-  const [notes, setNotes] = useState("")
-  const [photos, setPhotos] = useState<PendingPhoto[]>([])
-  const [currentPhotoType, setCurrentPhotoType] = useState<PhotoType>("before")
-  const [error, setError] = useState<string | null>(null)
+  const [visitType, setVisitType] = useState<VisitType>("initial");
+  const [visitedAt, setVisitedAt] = useState(
+    new Date().toISOString().slice(0, 16),
+  );
+  const [notes, setNotes] = useState("");
+  const [photos, setPhotos] = useState<PendingPhoto[]>([]);
+  const [currentPhotoType, setCurrentPhotoType] = useState<PhotoType>("before");
+  const [error, setError] = useState<string | null>(null);
 
-  const createVisit = useCreateSiteVisit(projectId)
+  const createVisit = useCreateSiteVisit(projectId);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files) return
+    const files = e.target.files;
+    if (!files) return;
 
     Array.from(files).forEach((file) => {
       if (!file.type.startsWith("image/")) {
-        setError("이미지 파일만 올릴 수 있어요")
-        return
+        setError("이미지 파일만 올릴 수 있어요");
+        return;
       }
 
       if (file.size > 10 * 1024 * 1024) {
-        setError("사진 용량이 너무 커요. 10MB 이하로 올려주세요")
-        return
+        setError("사진 용량이 너무 커요. 10MB 이하로 올려주세요");
+        return;
       }
 
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = () => {
         setPhotos((prev) => [
           ...prev,
@@ -72,64 +74,70 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
             preview: reader.result as string,
             type: currentPhotoType,
           },
-        ])
-      }
-      reader.readAsDataURL(file)
-    })
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+      fileInputRef.current.value = "";
     }
-  }
+  };
 
   const removePhoto = (photoId: string) => {
-    setPhotos((prev) => prev.filter((p) => p.id !== photoId))
-  }
+    setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+  };
 
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleSubmit = async () => {
-    setError(null)
+    setError(null);
 
     try {
       const result = await createVisit.mutateAsync({
         visit_type: visitType,
         visited_at: new Date(visitedAt).toISOString(),
         notes: notes || undefined,
-      })
+      });
 
       if (result.success && result.data) {
-        const visitId = result.data.id
+        const visitId = result.data.id;
 
         if (photos.length > 0) {
-          setIsUploading(true)
-          
+          setIsUploading(true);
+
           for (let i = 0; i < photos.length; i++) {
-            const photo = photos[i]
+            const photo = photos[i];
             try {
-              await api.uploadPhoto(visitId, photo.file, photo.type)
-              setUploadProgress(Math.round(((i + 1) / photos.length) * 100))
+              await api.uploadPhoto(visitId, photo.file, photo.type);
+              setUploadProgress(Math.round(((i + 1) / photos.length) * 100));
             } catch (uploadErr) {
-              console.error(`사진 업로드 실패 (${i + 1}/${photos.length}):`, uploadErr)
+              console.error(
+                `사진 업로드 실패 (${i + 1}/${photos.length}):`,
+                uploadErr,
+              );
             }
           }
-          
-          setIsUploading(false)
+
+          setIsUploading(false);
         }
 
-        router.push(`/projects/${projectId}`)
+        router.push(`/projects/${projectId}`);
       }
     } catch (err) {
-      console.error("방문 기록 생성 실패:", err)
-      setError("방문 기록을 저장하지 못했어요. 다시 시도해 주세요")
-      setIsUploading(false)
+      console.error("방문 기록 생성 실패:", err);
+      setError("방문 기록을 저장하지 못했어요. 다시 시도해 주세요");
+      setIsUploading(false);
     }
-  }
+  };
 
   return (
     <MobileLayout title="현장방문 기록" showBack>
       <div className="space-y-4 p-4">
+        <p className="text-sm text-slate-500">
+          카카오톡 대신 앱에 사진과 작업 내용을 남겨 주세요.
+        </p>
         {error && (
           <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
             {error}
@@ -150,7 +158,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
                   onClick={() => setVisitType(type.value)}
                   className={`rounded-lg border py-2.5 text-sm font-medium transition-colors ${
                     visitType === type.value
-                      ? "border-teal-500 bg-teal-50 text-teal-700"
+                      ? "border-brand-point-500 bg-brand-point-50 text-brand-point-700"
                       : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                   }`}
                 >
@@ -195,7 +203,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
                   onClick={() => setCurrentPhotoType(type.value)}
                   className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                     currentPhotoType === type.value
-                      ? "bg-teal-500 text-white"
+                      ? "bg-brand-point-500 text-white"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
                 >
@@ -229,7 +237,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-slate-400 hover:border-teal-400 hover:bg-teal-50 hover:text-teal-500"
+                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-slate-400 hover:border-brand-point-400 hover:bg-brand-point-50 hover:text-brand-point-500"
               >
                 <Camera className="h-6 w-6" />
                 <span className="text-xs">추가</span>
@@ -262,7 +270,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="현장 상황이나 특이사항을 기록해 주세요"
               rows={3}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             />
           </CardContent>
         </Card>
@@ -273,12 +281,9 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
           loading={createVisit.isPending || isUploading}
           disabled={createVisit.isPending || isUploading}
         >
-          {isUploading 
-            ? `사진 업로드 중... ${uploadProgress}%` 
-            : "저장하기"
-          }
+          {isUploading ? `사진 업로드 중... ${uploadProgress}%` : "저장"}
         </Button>
       </div>
     </MobileLayout>
-  )
+  );
 }

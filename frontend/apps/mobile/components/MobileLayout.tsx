@@ -1,16 +1,17 @@
-"use client"
+"use client";
 
-import { type ReactNode } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Home, FolderKanban, Plus, User } from "lucide-react"
-import { cn } from "@yunigreen/ui"
+import { type ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Home, FolderKanban, Plus, User } from "lucide-react";
+import { cn } from "@sigongon/ui";
+import { OfflineBanner } from "./camera/OfflineBanner";
 
 interface MobileLayoutProps {
-  children: ReactNode
-  title?: string
-  showBack?: boolean
-  rightAction?: ReactNode
+  children: ReactNode;
+  title?: string;
+  showBack?: boolean;
+  rightAction?: ReactNode;
 }
 
 const navItems = [
@@ -18,7 +19,7 @@ const navItems = [
   { href: "/projects", icon: FolderKanban, label: "프로젝트" },
   { href: "/projects/new", icon: Plus, label: "새 작업" },
   { href: "/profile", icon: User, label: "내 정보" },
-]
+];
 
 export function MobileLayout({
   children,
@@ -26,7 +27,7 @@ export function MobileLayout({
   showBack,
   rightAction,
 }: MobileLayoutProps) {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -62,6 +63,8 @@ export function MobileLayout({
         </header>
       )}
 
+      <OfflineBanner />
+
       <main className="flex-1 pb-20">{children}</main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white">
@@ -69,7 +72,7 @@ export function MobileLayout({
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href !== "/" && pathname.startsWith(item.href))
+              (item.href !== "/" && pathname.startsWith(item.href));
 
             return (
               <Link
@@ -79,16 +82,16 @@ export function MobileLayout({
                   "flex flex-col items-center gap-1 px-4 py-2",
                   isActive
                     ? "text-teal-600"
-                    : "text-slate-500 hover:text-slate-700"
+                    : "text-slate-500 hover:text-slate-700",
                 )}
               >
                 <item.icon className="h-6 w-6" />
                 <span className="text-xs font-medium">{item.label}</span>
               </Link>
-            )
+            );
           })}
         </div>
       </nav>
     </div>
-  )
+  );
 }

@@ -1,32 +1,35 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { Camera, Calendar, ChevronRight } from "lucide-react"
-import { Badge } from "@yunigreen/ui"
-import { formatDate } from "@yunigreen/ui"
-import type { VisitType } from "@yunigreen/types"
+import Link from "next/link";
+import { Camera, Calendar, ChevronRight } from "lucide-react";
+import { Badge } from "@sigongon/ui";
+import { formatDate } from "@sigongon/ui";
+import type { VisitType } from "@sigongon/types";
 
-const visitTypeLabels: Record<VisitType, { label: string; variant: "default" | "info" | "success" }> = {
+const visitTypeLabels: Record<
+  VisitType,
+  { label: string; variant: "default" | "info" | "success" }
+> = {
   initial: { label: "최초방문", variant: "info" },
   progress: { label: "중간점검", variant: "default" },
   completion: { label: "준공검사", variant: "success" },
-}
+};
 
 interface SiteVisitCardProps {
   visit: {
-    id: string
-    visit_type: VisitType
-    visited_at: string
-    photo_count: number
-  }
-  projectId: string
+    id: string;
+    visit_type: VisitType;
+    visited_at: string;
+    photo_count: number;
+  };
+  projectId: string;
 }
 
 export function SiteVisitCard({ visit, projectId }: SiteVisitCardProps) {
   const typeConfig = visitTypeLabels[visit.visit_type] || {
     label: visit.visit_type,
     variant: "default" as const,
-  }
+  };
 
   return (
     <Link
@@ -52,5 +55,5 @@ export function SiteVisitCard({ visit, projectId }: SiteVisitCardProps) {
       </div>
       <ChevronRight className="h-4 w-4 text-slate-400" />
     </Link>
-  )
+  );
 }

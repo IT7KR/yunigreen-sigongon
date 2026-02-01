@@ -1,18 +1,21 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { FolderKanban, Camera, Sparkles, FileText } from "lucide-react"
-import { MobileLayout } from "@/components/MobileLayout"
-import { Card, CardContent, Button } from "@yunigreen/ui"
-import { useProjects } from "@/hooks"
+import Link from "next/link";
+import { FolderKanban, Camera, Sparkles, FileText } from "lucide-react";
+import { MobileLayout } from "@/components/MobileLayout";
+import { Card, CardContent, Button, CountUp, Skeleton } from "@sigongon/ui";
+import { useProjects } from "@/hooks";
 
 export default function HomePage() {
-  const { data } = useProjects({ per_page: 5 })
+  const { data, isLoading } = useProjects({ per_page: 5 });
 
-  const recentProjects = data?.data || []
+  const recentProjects = data?.data || [];
   const inProgressCount = recentProjects.filter(
-    (p) => p.status === "diagnosing" || p.status === "estimating" || p.status === "in_progress"
-  ).length
+    (p) =>
+      p.status === "diagnosing" ||
+      p.status === "estimating" ||
+      p.status === "in_progress",
+  ).length;
 
   return (
     <MobileLayout>
@@ -26,10 +29,10 @@ export default function HomePage() {
         {/* 빠른 액션 */}
         <div className="grid grid-cols-2 gap-3">
           <Link href="/projects/new">
-            <Card className="h-full hover:border-teal-200">
+            <Card className="h-full hover:border-brand-point-200">
               <CardContent className="flex flex-col items-center justify-center gap-2 p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-100">
-                  <FolderKanban className="h-6 w-6 text-teal-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-point-100">
+                  <FolderKanban className="h-6 w-6 text-brand-point-600" />
                 </div>
                 <span className="font-medium text-slate-900">새 프로젝트</span>
               </CardContent>
@@ -37,7 +40,7 @@ export default function HomePage() {
           </Link>
 
           <Link href="/projects">
-            <Card className="h-full hover:border-teal-200">
+            <Card className="h-full hover:border-brand-primary-200">
               <CardContent className="flex flex-col items-center justify-center gap-2 p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
                   <Camera className="h-6 w-6 text-blue-600" />
@@ -52,20 +55,40 @@ export default function HomePage() {
         <Card>
           <CardContent className="p-4">
             <h2 className="font-semibold text-slate-900">오늘의 현황</h2>
-            <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-teal-600">{inProgressCount}</p>
-                <p className="mt-1 text-xs text-slate-500">진행 중</p>
+            {isLoading ? (
+              <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+                {[1, 2, 3].map((i) => (
+                  <div key={i}>
+                    <Skeleton className="mx-auto h-8 w-12" />
+                    <Skeleton className="mx-auto mt-1 h-4 w-16" />
+                  </div>
+                ))}
               </div>
-              <div>
-                <p className="text-2xl font-bold text-amber-600">0</p>
-                <p className="mt-1 text-xs text-slate-500">오늘 방문</p>
+            ) : (
+              <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <CountUp
+                    end={inProgressCount}
+                    className="text-2xl font-bold text-brand-point-600"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">진행 중</p>
+                </div>
+                <div>
+                  <CountUp
+                    end={0}
+                    className="text-2xl font-bold text-amber-600"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">오늘 방문</p>
+                </div>
+                <div>
+                  <CountUp
+                    end={0}
+                    className="text-2xl font-bold text-blue-600"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">AI 진단</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-600">0</p>
-                <p className="mt-1 text-xs text-slate-500">AI 진단</p>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -73,7 +96,7 @@ export default function HomePage() {
         <div>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold text-slate-900">최근 프로젝트</h2>
-            <Link href="/projects" className="text-sm text-teal-600">
+            <Link href="/projects" className="text-sm text-brand-point-600">
               전체보기
             </Link>
           </div>
@@ -82,7 +105,7 @@ export default function HomePage() {
             <div className="space-y-2">
               {recentProjects.slice(0, 3).map((project) => (
                 <Link key={project.id} href={`/projects/${project.id}`}>
-                  <Card className="hover:border-teal-200">
+                  <Card className="hover:border-brand-point-200">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
@@ -120,5 +143,5 @@ export default function HomePage() {
         </div>
       </div>
     </MobileLayout>
-  )
+  );
 }

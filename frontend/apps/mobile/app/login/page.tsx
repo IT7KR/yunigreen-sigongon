@@ -1,54 +1,64 @@
-"use client"
+"use client";
 
-import { useState, useEffect, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Eye, EyeOff, Droplets } from "lucide-react"
-import { Card, CardContent, Button, Input } from "@yunigreen/ui"
-import { useAuth } from "@/lib/auth"
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, EyeOff, Droplets } from "lucide-react";
+import { Card, CardContent, Button, Input, BlurText } from "@sigongon/ui";
+import { useAuth } from "@/lib/auth";
+import Image from "next/image";
 
 function LoginForm() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth()
-  
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const redirectTo = searchParams.get("redirect") || "/"
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const redirectTo = searchParams.get("redirect") || "/";
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.push(redirectTo)
+      router.push(redirectTo);
     }
-  }, [authLoading, isAuthenticated, router, redirectTo])
+  }, [authLoading, isAuthenticated, router, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setIsLoading(true)
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
 
-    const result = await login(email, password)
-    
+    const result = await login(email, password);
+
     if (result.success) {
-      router.push(redirectTo)
+      router.push(redirectTo);
     } else {
-      setError(result.error || "로그인에 실패했어요")
+      setError(result.error || "로그인에 실패했어요");
     }
-    
-    setIsLoading(false)
-  }
+
+    setIsLoading(false);
+  };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-teal-50 to-white p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-brand-primary-50 to-white p-4">
       <div className="mb-8 flex flex-col items-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-lg">
-          <Droplets className="h-8 w-8" />
-        </div>
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">유니그린</h1>
+        <Image
+          src="/logo-sq.png"
+          alt="시공ON 로고"
+          width={80}
+          height={80}
+          className="object-contain"
+        />
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">
+          <BlurText text="시공ON" />
+        </h1>
         <p className="mt-1 text-sm text-slate-500">AI 누수진단 시스템</p>
+        <p className="mt-4 text-sm font-medium text-slate-700">
+          초대받은 계정으로 로그인하세요.
+        </p>
       </div>
 
       <Card className="w-full max-w-sm">
@@ -108,7 +118,7 @@ function LoginForm() {
           <div className="mt-6 text-center">
             <button
               type="button"
-              className="text-sm text-teal-600 hover:text-teal-700 hover:underline"
+              className="text-sm text-brand-primary-600 hover:text-brand-primary-700 hover:underline"
             >
               비밀번호를 잊으셨나요?
             </button>
@@ -117,10 +127,10 @@ function LoginForm() {
       </Card>
 
       <p className="mt-8 text-xs text-slate-400">
-        © 2026 유니그린. All rights reserved.
+        © 2026 시공ON. All rights reserved.
       </p>
     </div>
-  )
+  );
 }
 
 export default function LoginPage() {
@@ -128,28 +138,31 @@ export default function LoginPage() {
     <Suspense fallback={<LoginPageSkeleton />}>
       <LoginForm />
     </Suspense>
-  )
+  );
 }
 
 function LoginPageSkeleton() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-teal-50 to-white p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-brand-primary-50 to-white p-4">
       <div className="mb-8 flex flex-col items-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-lg">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-primary-500 text-white shadow-lg">
           <Droplets className="h-8 w-8" />
         </div>
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">유니그린</h1>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">시공ON</h1>
         <p className="mt-1 text-sm text-slate-500">AI 누수진단 시스템</p>
+        <p className="mt-4 text-sm font-medium text-slate-700">
+          초대받은 계정으로 로그인하세요.
+        </p>
       </div>
       <Card className="w-full max-w-sm">
         <CardContent className="p-6">
           <div className="animate-pulse space-y-4">
             <div className="h-10 rounded bg-slate-200" />
             <div className="h-10 rounded bg-slate-200" />
-            <div className="h-10 rounded bg-teal-200" />
+            <div className="h-10 rounded bg-brand-primary-200" />
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { MobileLayout } from "@/components/MobileLayout"
-import { Card, CardContent, Button, Input } from "@yunigreen/ui"
-import { useCreateProject } from "@/hooks"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { MobileLayout } from "@/components/MobileLayout";
+import { Card, CardContent, Button, Input } from "@sigongon/ui";
+import { useCreateProject } from "@/hooks";
 
 export default function NewProjectPage() {
-  const router = useRouter()
-  const createProject = useCreateProject()
+  const router = useRouter();
+  const createProject = useCreateProject();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -16,27 +16,27 @@ export default function NewProjectPage() {
     client_name: "",
     client_phone: "",
     notes: "",
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = () => {
-    const newErrors: Record<string, string> = {}
-    
+    const newErrors: Record<string, string> = {};
+
     if (!formData.name.trim()) {
-      newErrors.name = "프로젝트명을 입력해 주세요"
+      newErrors.name = "프로젝트명을 입력해 주세요";
     }
     if (!formData.address.trim()) {
-      newErrors.address = "주소를 입력해 주세요"
+      newErrors.address = "주소를 입력해 주세요";
     }
-    
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validate()) return
+    e.preventDefault();
+
+    if (!validate()) return;
 
     try {
       const result = await createProject.mutateAsync({
@@ -45,22 +45,22 @@ export default function NewProjectPage() {
         client_name: formData.client_name.trim() || undefined,
         client_phone: formData.client_phone.trim() || undefined,
         notes: formData.notes.trim() || undefined,
-      })
+      });
 
       if (result.success && result.data) {
-        router.push(`/projects/${result.data.id}`)
+        router.push(`/projects/${result.data.id}`);
       }
     } catch (error) {
-      console.error("프로젝트 생성 실패:", error)
+      console.error("프로젝트 생성 실패:", error);
     }
-  }
+  };
 
   const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }))
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
-  }
+  };
 
   return (
     <MobileLayout title="새 프로젝트" showBack>
@@ -89,8 +89,10 @@ export default function NewProjectPage() {
 
         <Card>
           <CardContent className="space-y-4 p-4">
-            <h3 className="text-sm font-medium text-slate-700">고객 정보 (선택)</h3>
-            
+            <h3 className="text-sm font-medium text-slate-700">
+              고객 정보 (선택)
+            </h3>
+
             <Input
               label="고객명"
               placeholder="홍길동"
@@ -118,7 +120,7 @@ export default function NewProjectPage() {
               onChange={(e) => handleChange("notes", e.target.value)}
               placeholder="프로젝트에 대한 메모를 남겨주세요"
               rows={3}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             />
           </CardContent>
         </Card>
@@ -133,5 +135,5 @@ export default function NewProjectPage() {
         </Button>
       </form>
     </MobileLayout>
-  )
+  );
 }

@@ -1,58 +1,93 @@
-"use client"
+"use client";
 
-import { use, useEffect, useState } from "react"
-import { Button, Badge } from "@yunigreen/ui"
-import { ArrowLeft, CheckCircle, PenTool } from "lucide-react"
-import Link from "next/link"
-import { api } from "@/lib/api"
+import { use, useEffect, useState } from "react";
+import { Button, Badge, SignaturePad, Modal } from "@sigongon/ui";
+import { ArrowLeft, CheckCircle, PenTool } from "lucide-react";
+import Link from "next/link";
+import { api } from "@/lib/api";
+import { toast } from "@sigongon/ui";
 
 export default function WorkerContractPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params)
+  const { id } = use(params);
   const [contract, setContract] = useState<{
-    id: string
-    project_name: string
-    work_date: string
-    role: string
-    daily_rate: number
-    status: "pending" | "signed"
-    content: string
-  } | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+    id: string;
+    project_name: string;
+    work_date: string;
+    role: string;
+    daily_rate: number;
+    status: "pending" | "signed";
+    content: string;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [signatureData, setSignatureData] = useState<string>("");
+  const [hasReadContract, setHasReadContract] = useState(false);
+  const [isSigning, setIsSigning] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true)
-      const response = await api.getWorkerContract(id)
+      setIsLoading(true);
+      const response = await api.getWorkerContract(id);
       if (response.success && response.data) {
-        setContract(response.data)
+        setContract(response.data);
       }
-      setIsLoading(false)
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, [id]);
+
+  const handleOpenSignature = () => {
+    if (!hasReadContract) {
+      toast.warning("계약 내용을 먼저 확인해주세요.");
+      return;
+    }
+    setShowSignatureModal(true);
+  };
+
+  const handleSign = (dataUrl: string) => {
+    setSignatureData(dataUrl);
+  };
+
+  const handleSubmitSignature = async () => {
+    if (!signatureData) {
+      toast.warning("서명을 작성해주세요.");
+      return;
     }
 
-    fetchData()
-  }, [id])
-
-  const handleSign = async () => {
-    if (!contract || contract.status === "signed") return
-    await api.signWorkerContract(id, "signed")
-    const response = await api.getWorkerContract(id)
-    if (response.success && response.data) {
-      setContract(response.data)
+    setIsSigning(true);
+    try {
+      await api.signWorkerContract(id, signatureData);
+      const response = await api.getWorkerContract(id);
+      if (response.success && response.data) {
+        setContract(response.data);
+      }
+      setShowSignatureModal(false);
+      toast.success("계약서 서명이 완료되었습니다.");
+    } catch (error) {
+      toast.error("서명 처리 중 오류가 발생했습니다.");
+    } finally {
+      setIsSigning(false);
     }
-  }
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center gap-3">
-          <Link href="/worker/profile" className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100">
+          <Link
+            href="/worker/profile"
+            className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-lg font-semibold text-slate-900">근로계약서 확인</h1>
+          <h1 className="text-lg font-semibold text-slate-900">
+            근로계약서 확인
+          </h1>
         </div>
       </header>
 
@@ -60,19 +95,23 @@ export default function WorkerContractPage({
         <div className="rounded-lg bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
             <h2 className="text-lg font-bold">일용직 근로계약서</h2>
-            <Badge variant={contract?.status === "signed" ? "success" : "warning"}>
+            <Badge
+              variant={contract?.status === "signed" ? "success" : "warning"}
+            >
               {contract?.status === "signed" ? "서명 완료" : "서명 대기"}
             </Badge>
           </div>
-          
+
           <div className="space-y-4 text-sm text-slate-600">
-             {isLoading ? (
-               <div className="text-sm text-slate-400">불러오는 중...</div>
-             ) : contract ? (
-               <div className="grid grid-cols-2 gap-4 rounded-lg bg-slate-50 p-4">
+            {isLoading ? (
+              <div className="text-sm text-slate-400">불러오는 중...</div>
+            ) : contract ? (
+              <div className="grid grid-cols-2 gap-4 rounded-lg bg-slate-50 p-4">
                 <div>
                   <p className="text-xs text-slate-400">현장명</p>
-                  <p className="font-medium text-slate-900">{contract.project_name}</p>
+                  <p className="font-medium text-slate-900">
+                    {contract.project_name}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">일급</p>
@@ -81,37 +120,98 @@ export default function WorkerContractPage({
                   </p>
                 </div>
                 <div>
-                   <p className="text-xs text-slate-400">근로일자</p>
-                   <p className="font-medium text-slate-900">{contract.work_date}</p>
+                  <p className="text-xs text-slate-400">근로일자</p>
+                  <p className="font-medium text-slate-900">
+                    {contract.work_date}
+                  </p>
                 </div>
                 <div>
-                   <p className="text-xs text-slate-400">직종</p>
-                   <p className="font-medium text-slate-900">{contract.role}</p>
+                  <p className="text-xs text-slate-400">직종</p>
+                  <p className="font-medium text-slate-900">{contract.role}</p>
                 </div>
               </div>
-             ) : (
-               <div className="text-sm text-slate-400">계약 정보를 찾을 수 없습니다.</div>
-             )}
+            ) : (
+              <div className="text-sm text-slate-400">
+                계약 정보를 찾을 수 없습니다.
+              </div>
+            )}
 
-             <div className="h-64 overflow-y-auto rounded border border-slate-200 p-4 text-xs leading-relaxed">
-                <p className="font-bold">제1조 (목적)</p>
-                <p>{contract?.content || "계약 내용을 불러오는 중입니다."}</p>
-                <br />
-                <p className="font-bold">제2조 (근로조건)</p>
-                <p>1. 근로시간은 ...</p>
-                <br />
-                <p>(이하 계약 내용 생략)</p>
-             </div>
+            <div className="h-64 overflow-y-auto rounded border border-slate-200 p-4 text-xs leading-relaxed">
+              <p className="font-bold">제1조 (목적)</p>
+              <p>{contract?.content || "계약 내용을 불러오는 중입니다."}</p>
+              <br />
+              <p className="font-bold">제2조 (근로조건)</p>
+              <p>1. 근로시간은 ...</p>
+              <br />
+              <p>(이하 계약 내용 생략)</p>
+            </div>
+
+            {contract?.status !== "signed" && (
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={hasReadContract}
+                  onChange={(e) => setHasReadContract(e.target.checked)}
+                  className="h-5 w-5 rounded border-slate-300"
+                />
+                <span className="text-sm text-slate-700">
+                  계약 내용을 모두 확인했습니다.
+                </span>
+              </label>
+            )}
           </div>
         </div>
       </main>
 
       <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4">
-        <Button fullWidth size="lg" onClick={handleSign} disabled={contract?.status === "signed"}>
+        <p className="mb-2 text-center text-xs text-slate-500">
+          서명은 이미지로 저장되고 시간이 기록됩니다.
+        </p>
+        <Button
+          fullWidth
+          size="lg"
+          onClick={handleOpenSignature}
+          disabled={contract?.status === "signed"}
+        >
           <PenTool className="mr-2 h-4 w-4" />
           {contract?.status === "signed" ? "서명 완료" : "서명하기"}
         </Button>
       </div>
+
+      <Modal
+        isOpen={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        title="서명하기"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            아래 영역에 손가락으로 서명해주세요.
+          </p>
+          <SignaturePad
+            width={400}
+            height={200}
+            onSign={handleSign}
+            onClear={() => setSignatureData("")}
+          />
+          <div className="flex gap-2">
+            <Button
+              fullWidth
+              variant="secondary"
+              onClick={() => setShowSignatureModal(false)}
+            >
+              취소
+            </Button>
+            <Button
+              fullWidth
+              onClick={handleSubmitSignature}
+              disabled={!signatureData || isSigning}
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              {isSigning ? "처리 중..." : "계약 체결"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
-  )
+  );
 }

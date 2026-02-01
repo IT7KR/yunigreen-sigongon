@@ -1,5 +1,5 @@
 {
-  "name": "@yunigreen/mobile",
+  "name": "@sigongon/mobile",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.16",
-    "@yunigreen/api": "workspace:*",
-    "@yunigreen/types": "workspace:*",
-    "@yunigreen/ui": "workspace:*",
+    "@sigongon/api": "workspace:*",
+    "@sigongon/types": "workspace:*",
+    "@sigongon/ui": "workspace:*",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "react": "19.2.3",
