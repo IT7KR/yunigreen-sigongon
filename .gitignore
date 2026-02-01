@@ -114,6 +114,19 @@ docker-compose.override.yml
 uploads/
 temp/
 
+# OMC (oh-my-claudecode) workspace
+.omc/
+
+# Playwright artifacts
+frontend/playwright-report/
+frontend/test-results/
+
+# Backend data files (PDFs)
+backend/data/
+
+# Temporary images
+image_1.png
+
 # Database files (local dev)
 *.db
 *.sqlite3
