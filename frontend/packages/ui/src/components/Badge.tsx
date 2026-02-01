@@ -1,7 +1,7 @@
-import { cn } from "../lib/utils"
-import type { ProjectStatus, EstimateStatus } from "@yunigreen/types"
+import { cn } from "../lib/utils";
+import type { ProjectStatus, EstimateStatus, ReportStatus } from "@sigongon/types";
 
-type StatusType = ProjectStatus | EstimateStatus
+type StatusType = ProjectStatus | EstimateStatus | ReportStatus;
 
 const statusConfig: Record<StatusType, { label: string; className: string }> = {
   draft: {
@@ -22,7 +22,7 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
   },
   contracted: {
     label: "계약완료",
-    className: "bg-teal-50 text-teal-700 before:bg-teal-500",
+    className: "bg-brand-point-50 text-brand-point-700 before:bg-brand-point-500",
   },
   in_progress: {
     label: "공사중",
@@ -34,7 +34,11 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
   },
   warranty: {
     label: "하자보증",
-    className: "bg-slate-50 text-slate-600 before:bg-slate-400",
+    className: "bg-teal-50 text-teal-700 before:bg-teal-500",
+  },
+  closed: {
+    label: "완결",
+    className: "bg-slate-100 text-slate-700 before:bg-slate-400",
   },
   issued: {
     label: "발행됨",
@@ -52,15 +56,26 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
     label: "무효",
     className: "bg-slate-100 text-slate-500 before:bg-slate-400",
   },
-}
+  submitted: {
+    label: "제출됨",
+    className: "bg-blue-50 text-blue-700 before:bg-blue-500",
+  },
+  approved: {
+    label: "승인됨",
+    className: "bg-green-50 text-green-700 before:bg-green-500",
+  },
+};
 
 interface StatusBadgeProps {
-  status: StatusType
-  className?: string
+  status: StatusType;
+  className?: string;
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const config = statusConfig[status] || { label: status, className: "bg-slate-100 text-slate-700" }
+  const config = statusConfig[status] || {
+    label: status,
+    className: "bg-slate-100 text-slate-700",
+  };
 
   return (
     <span
@@ -68,18 +83,18 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
         "before:h-1.5 before:w-1.5 before:rounded-full",
         config.className,
-        className
+        className,
       )}
     >
       {config.label}
     </span>
-  )
+  );
 }
 
 interface BadgeProps {
-  children: React.ReactNode
-  variant?: "default" | "success" | "warning" | "error" | "info"
-  className?: string
+  children: React.ReactNode;
+  variant?: "default" | "success" | "warning" | "error" | "info";
+  className?: string;
 }
 
 const variantStyles = {
@@ -88,18 +103,22 @@ const variantStyles = {
   warning: "bg-amber-50 text-amber-700",
   error: "bg-red-50 text-red-700",
   info: "bg-blue-50 text-blue-700",
-}
+};
 
-export function Badge({ children, variant = "default", className }: BadgeProps) {
+export function Badge({
+  children,
+  variant = "default",
+  className,
+}: BadgeProps) {
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
         variantStyles[variant],
-        className
+        className,
       )}
     >
       {children}
     </span>
-  )
+  );
 }
