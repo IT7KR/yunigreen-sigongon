@@ -1,5 +1,5 @@
 {
-  "name": "@yunigreen/admin",
+  "name": "@sigongon/admin",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,10 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@sigongon/api": "workspace:*",
+    "@sigongon/types": "workspace:*",
+    "@sigongon/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.16",
-    "@yunigreen/api": "workspace:*",
-    "@yunigreen/types": "workspace:*",
-    "@yunigreen/ui": "workspace:*",
+    "@tosspayments/payment-widget-sdk": "^0.12.1",
+    "framer-motion": "^12.0.5",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "react": "19.2.3",
