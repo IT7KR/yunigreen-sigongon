@@ -1,13 +1,13 @@
-version: '3.8'
+version: "3.8"
 
 services:
   db:
     image: pgvector/pgvector:pg16
-    container_name: yunigreen-db
+    container_name: sigongon-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: yunigreen
+      POSTGRES_DB: sigongon
     ports:
       - "5444:5432"
     volumes:

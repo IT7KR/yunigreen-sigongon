@@ -1,15 +1,18 @@
-# Technical Design Document (TDD): Yunigreen SaaS
+# Technical Design Document (TDD): SigongOn SaaS
 
 ## 1. Project Overview
 
 ### Goal
-Yunigreen SaaS is a comprehensive platform designed to streamline leak diagnosis and construction management for Yunigreen. It automates the complex process of site diagnosis, cost estimation, and contract management.
+
+SigongOn SaaS is a comprehensive platform designed to streamline leak diagnosis and construction management for SigongOn. It automates the complex process of site diagnosis, cost estimation, and contract management.
 
 ### Target Users
+
 - **Field Technicians:** Use the Mobile Web/App for on-site diagnosis, photo uploads, and material listing.
 - **Admins/Managers:** Use the Web Dashboard for project oversight, estimate approval, and labor management.
 
 ### Key Value Proposition
+
 - **Automated AI Diagnosis:** Leveraging Gemini 3.0 Flash to analyze leak photos and provide professional opinions.
 - **Instant Accurate Estimation:** Deterministic cost calculation based on digitized standard price books.
 - **Integrated Management:** Seamless flow from diagnosis to contract signing and operational logging.
@@ -19,6 +22,7 @@ Yunigreen SaaS is a comprehensive platform designed to streamline leak diagnosis
 ## 2. System Architecture
 
 ### Technology Stack
+
 - **Frontend:** Next.js 15 (React 19, TypeScript, Tailwind CSS)
   - Responsive design optimized for both mobile (technicians) and desktop (admins).
 - **Backend:** Python FastAPI
@@ -34,15 +38,17 @@ Yunigreen SaaS is a comprehensive platform designed to streamline leak diagnosis
 
 ## 3. Core Data Strategy (The Hybrid Approach)
 
-To ensure both mathematical precision and intelligent information retrieval, Yunigreen uses a hybrid data strategy.
+To ensure both mathematical precision and intelligent information retrieval, SigongOn uses a hybrid data strategy.
 
 ### A. Estimation (Relational Database)
+
 - **Source:** 'Comprehensive Estimation Info' (종합적산정보) PDFs.
 - **Method:** Tables are extracted from PDFs and stored in structured SQL tables.
 - **Logic:** `Total Cost = Σ (Quantity * Unit Price)`. All math is performed deterministically in the backend.
 - **Versioning:** `PricebookRevision` system (e.g., '2025-H1') allows projects to maintain pricing consistency even when master price books are updated.
 
 ### B. Construction Guidelines (RAG - Retrieval-Augmented Generation)
+
 - **Source:** Unstructured text, specs, and safety commentary in PDFs.
 - **Method:** Content is chunked, converted into embeddings, and stored in `pgvector`.
 - **Usage:** Provides context-aware construction methods and warnings (e.g., "Add 5% labor cost for 10th floor+").
@@ -52,6 +58,7 @@ To ensure both mathematical precision and intelligent information retrieval, Yun
 ## 4. Detailed Workflows
 
 ### Step 1: Site Visit & Diagnosis
+
 1. Technician uploads site photos via the mobile interface.
 2. Backend sends photos to **Gemini 3.0 Flash**.
 3. AI returns a structured JSON containing:
@@ -59,15 +66,18 @@ To ensure both mathematical precision and intelligent information retrieval, Yun
    - Suggested Material List (Standardized names)
 
 ### Step 2: Estimation
+
 1. System maps the AI-suggested materials to the `MaterialItem` in the database.
 2. A draft estimate is generated using current `PricebookRevision` rates.
 3. Manager reviews and edits the quantities or items in the dashboard.
 
 ### Step 3: Contract
+
 1. Finalized estimate is converted into a digital contract.
 2. Parties sign via an integrated electronic signature module.
 
 ### Step 4: Operations & Logging
+
 1. **Labor Management:** Daily logs for labor contracts and attendance.
 2. **Photo Logs:** Systematic storage of "Before," "During," and "After" construction photos for quality assurance.
 

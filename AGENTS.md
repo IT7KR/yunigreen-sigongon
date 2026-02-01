@@ -12,13 +12,13 @@
 
 ### AI 역할 분담 (절대 규칙)
 
-| 영역 | 담당 | 이유 |
-|-----|------|------|
-| 이미지 분석 | **AI** | 누수 부위 식별, 손상 판단 |
-| 자재 추천 | **AI** | 종류/수량 추정 |
-| 공법 제안 | **AI + RAG** | 시공 방법 검색 |
-| **단가 계산** | **RDB only** | 환각(hallucination) 방지 |
-| 할증 적용 | **RAG + 규칙** | 조건부 규정 검색 |
+| 영역          | 담당           | 이유                      |
+| ------------- | -------------- | ------------------------- |
+| 이미지 분석   | **AI**         | 누수 부위 식별, 손상 판단 |
+| 자재 추천     | **AI**         | 종류/수량 추정            |
+| 공법 제안     | **AI + RAG**   | 시공 방법 검색            |
+| **단가 계산** | **RDB only**   | 환각(hallucination) 방지  |
+| 할증 적용     | **RAG + 규칙** | 조건부 규정 검색          |
 
 **CRITICAL**: 단가 계산은 절대 AI에게 맡기지 않습니다.
 
@@ -38,7 +38,7 @@
 ## 프로젝트 구조
 
 ```
-yunigreen-dev/
+sigongon-dev/
 ├── AGENTS.md                 # 본 문서 (에이전트 가이드)
 ├── docs/
 │   ├── 01_ARCHITECTURE.md    # 시스템 아키텍처
@@ -60,13 +60,13 @@ yunigreen-dev/
 
 ## 주요 파일 위치
 
-| 기능 | 파일 |
-|-----|------|
-| AI 진단 서비스 | `backend/app/services/diagnosis.py` |
-| RAG 검색 | `backend/app/services/rag.py` |
-| 견적 생성 | `backend/app/services/estimation.py` |
-| 단가 모델 | `backend/app/models/pricebook.py` |
-| 프롬프트 | `backend/app/prompts/diagnosis/current.txt` |
+| 기능           | 파일                                        |
+| -------------- | ------------------------------------------- |
+| AI 진단 서비스 | `backend/app/services/diagnosis.py`         |
+| RAG 검색       | `backend/app/services/rag.py`               |
+| 견적 생성      | `backend/app/services/estimation.py`        |
+| 단가 모델      | `backend/app/models/pricebook.py`           |
+| 프롬프트       | `backend/app/prompts/diagnosis/current.txt` |
 
 ## 실행 명령어
 
@@ -99,11 +99,13 @@ pnpm dev
 ```
 
 **Docker 내부에서 실행 시 유저 권한 맞추기:**
+
 ```bash
 docker run --user $(id -u):$(id -g) ...
 ```
 
 **권한 문제 발생 시 해결법:**
+
 ```bash
 # .next 캐시 삭제 후 재시작
 rm -rf frontend/apps/*/.next
@@ -113,7 +115,8 @@ pnpm dev
 ### 포트 충돌 문제
 
 `pnpm dev` 실행 시 `EADDRINUSE` 에러가 발생하면:
-- `predev` 스크립트가 자동으로 yunigreen 프로젝트의 잔류 프로세스를 정리합니다
+
+- `predev` 스크립트가 자동으로 sigongon 프로젝트의 잔류 프로세스를 정리합니다
 - 다른 앱이 포트를 점유 중이면 PID와 명령어가 출력됩니다
 
 ### 무한 리로드 문제 (CRITICAL)
@@ -147,8 +150,8 @@ pnpm dev:admin   # 터미널 2 (필요시)
 
 ## 버전 이력
 
-| 버전 | 날짜 | 변경 내용 |
-|-----|------|----------|
-| 0.1.0 | 2026-01-04 | 최초 작성 |
+| 버전  | 날짜       | 변경 내용                                            |
+| ----- | ---------- | ---------------------------------------------------- |
+| 0.1.0 | 2026-01-04 | 최초 작성                                            |
 | 0.2.0 | 2026-01-04 | 구현 상세를 docs/06_AI_INTEGRATION.md로 분리, 슬림화 |
-| 0.2.1 | 2026-01-05 | 프론트엔드 권한/포트 충돌 주의사항 추가 |
+| 0.2.1 | 2026-01-05 | 프론트엔드 권한/포트 충돌 주의사항 추가              |

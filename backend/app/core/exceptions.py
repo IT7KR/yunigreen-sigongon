@@ -8,7 +8,7 @@ UX 라이팅 원칙:
 from typing import Any, Optional
 
 
-class YunigreenException(Exception):
+class SigongOnException(Exception):
     """유니그린 기본 예외."""
     
     def __init__(
@@ -23,7 +23,7 @@ class YunigreenException(Exception):
         super().__init__(message)
 
 
-class NotFoundException(YunigreenException):
+class NotFoundException(SigongOnException):
     """리소스를 찾을 수 없음."""
     
     # 리소스별 친근한 메시지
@@ -50,7 +50,7 @@ class NotFoundException(YunigreenException):
         )
 
 
-class ValidationException(YunigreenException):
+class ValidationException(SigongOnException):
     """유효성 검사 실패."""
     
     def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
@@ -61,7 +61,7 @@ class ValidationException(YunigreenException):
         )
 
 
-class AuthenticationException(YunigreenException):
+class AuthenticationException(SigongOnException):
     """인증 실패."""
     
     def __init__(self, message: str = "로그인이 필요해요"):
@@ -89,7 +89,7 @@ class TokenExpiredException(AuthenticationException):
         )
 
 
-class AuthorizationException(YunigreenException):
+class AuthorizationException(SigongOnException):
     """권한 부족."""
     
     def __init__(self, message: str = "이 기능은 관리자만 쓸 수 있어요"):
@@ -99,7 +99,7 @@ class AuthorizationException(YunigreenException):
         )
 
 
-class PricebookException(YunigreenException):
+class PricebookException(SigongOnException):
     """적산 자료 관련 예외."""
     
     def __init__(self, message: str, code: str = "PRICEBOOK_ERROR"):
@@ -116,7 +116,7 @@ class NoPricebookActiveException(PricebookException):
         )
 
 
-class EstimateException(YunigreenException):
+class EstimateException(SigongOnException):
     """견적서 관련 예외."""
     
     def __init__(self, message: str, code: str = "ESTIMATE_ERROR"):
@@ -133,7 +133,7 @@ class EstimateLockedException(EstimateException):
         )
 
 
-class AIServiceException(YunigreenException):
+class AIServiceException(SigongOnException):
     """AI 서비스 관련 예외."""
     
     def __init__(
@@ -157,7 +157,7 @@ class AIAnalysisFailedException(AIServiceException):
         )
 
 
-class FileUploadException(YunigreenException):
+class FileUploadException(SigongOnException):
     """파일 업로드 관련 예외."""
     
     def __init__(self, message: str = "파일을 올리는 데 실패했어요"):
@@ -186,7 +186,7 @@ class InvalidFileTypeException(FileUploadException):
         )
 
 
-class DuplicateException(YunigreenException):
+class DuplicateException(SigongOnException):
     """중복 데이터."""
     
     def __init__(self, field: str, value: str):
@@ -197,7 +197,7 @@ class DuplicateException(YunigreenException):
         )
 
 
-class InactiveAccountException(YunigreenException):
+class InactiveAccountException(SigongOnException):
     """비활성 계정."""
     
     def __init__(self):
