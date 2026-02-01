@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy import text
 
 import sys
-sys.path.insert(0, '/workspace/yunigreen-dev/backend')
+sys.path.insert(0, '/workspace/sigongon-dev/backend')
 
 from app.core.security import get_password_hash
 from app.models.user import User, UserRole, Organization
@@ -21,7 +21,7 @@ from app.models.pricebook import (
     CatalogItem, CatalogItemPrice, ItemType,
 )
 
-DOCKER_DB_URL = "postgresql+asyncpg://postgres:password@localhost:5437/yunigreen"
+DOCKER_DB_URL = "postgresql+asyncpg://postgres:password@localhost:5437/sigongon"
 
 
 async def create_seed_data():
@@ -44,6 +44,9 @@ async def create_seed_data():
             business_number="123-45-67890",
             address="서울시 강남구 테헤란로 123",
             phone="02-1234-5678",
+            rep_name="관리자",
+            rep_phone="010-1111-1111",
+            rep_email="admin@sigongon.test",
             created_at=datetime.utcnow(),
         )
         db.add(org)
@@ -52,28 +55,32 @@ async def create_seed_data():
         
         users_data = [
             {
-                "email": "admin@yunigreen.test",
+            "email": "admin@sigongon.test",
+                "username": "admin",
                 "password": "admin123!",
                 "name": "관리자",
                 "role": UserRole.ADMIN,
                 "phone": "010-1111-1111",
             },
             {
-                "email": "manager@yunigreen.test",
+            "email": "manager@sigongon.test",
+                "username": "manager_kim",
                 "password": "manager123!",
                 "name": "김매니저",
                 "role": UserRole.MANAGER,
                 "phone": "010-2222-2222",
             },
             {
-                "email": "tech1@yunigreen.test",
+            "email": "tech1@sigongon.test",
+                "username": "tech_park",
                 "password": "tech123!",
                 "name": "박기술",
                 "role": UserRole.TECHNICIAN,
                 "phone": "010-3333-3333",
             },
             {
-                "email": "tech2@yunigreen.test",
+            "email": "tech2@sigongon.test",
+                "username": "tech_lee",
                 "password": "tech123!",
                 "name": "이기사",
                 "role": UserRole.TECHNICIAN,
@@ -86,6 +93,7 @@ async def create_seed_data():
             user = User(
                 id=uuid.uuid4(),
                 email=user_data["email"],
+                username=user_data["username"],
                 password_hash=get_password_hash(user_data["password"]),
                 name=user_data["name"],
                 role=user_data["role"],
@@ -238,7 +246,7 @@ async def create_seed_data():
         print("\n📋 로그인 정보:")
         print("-" * 50)
         for user_data in users_data:
-            print(f"  {user_data['role'].value:12} | {user_data['email']:30} | {user_data['password']}")
+            print(f"  {user_data['role'].value:12} | {user_data['username']:20} | {user_data['password']}")
         print("-" * 50)
     
     await engine.dispose()

@@ -3,10 +3,12 @@
 ## 1. 개요
 
 ### 1.1 기본 URL
+
 - 개발 환경: `http://localhost:8000/api/v1`
-- 운영 환경: `https://api.yunigreen.com/api/v1`
+- 운영 환경: `https://api.sigongon.com/api/v1`
 
 ### 1.2 인증
+
 `/auth/*` 및 `/health` 를 제외한 모든 엔드포인트는 JWT 인증이 필요합니다.
 
 ```
@@ -14,6 +16,7 @@ Authorization: Bearer <access_token>
 ```
 
 ### 1.3 응답 형식
+
 ```json
 {
   "success": true,
@@ -28,6 +31,7 @@ Authorization: Bearer <access_token>
 ```
 
 ### 1.4 에러 응답
+
 ```json
 {
   "success": false,
@@ -43,6 +47,7 @@ Authorization: Bearer <access_token>
 ```
 
 ### 1.5 비동기 응답 패턴
+
 장시간 처리가 필요한 작업 (AI 진단 등)은 비동기로 처리됩니다.
 
 ```json
@@ -71,7 +76,7 @@ GET /tasks/{task_id}/status
 ```json
 // 요청
 {
-  "email": "tech@yunigreen.com",
+  "email": "tech@sigongon.com",
   "password": "password123"
 }
 
@@ -85,7 +90,7 @@ GET /tasks/{task_id}/status
     "expires_in": 3600,
     "user": {
       "id": "uuid",
-      "email": "tech@yunigreen.com",
+  "email": "tech@sigongon.com",
       "name": "홍길동",
       "role": "technician"
     }
@@ -123,7 +128,7 @@ GET /tasks/{task_id}/status
   "success": true,
   "data": {
     "id": "uuid",
-    "email": "tech@yunigreen.com",
+  "email": "tech@sigongon.com",
     "name": "홍길동",
     "phone": "010-1234-5678",
     "role": "technician",
@@ -298,11 +303,11 @@ GET /tasks/{task_id}/status
 
 Content-Type: `multipart/form-data`
 
-| 필드 | 타입 | 설명 |
-|-----|------|------|
-| `file` | File | 이미지 파일 (JPEG, PNG) |
+| 필드         | 타입   | 설명                          |
+| ------------ | ------ | ----------------------------- |
+| `file`       | File   | 이미지 파일 (JPEG, PNG)       |
 | `photo_type` | string | before, during, after, detail |
-| `caption` | string | 사진 설명 (선택) |
+| `caption`    | string | 사진 설명 (선택)              |
 
 ```json
 // 응답 (201 Created)
@@ -581,11 +586,11 @@ Excel 파일을 다운로드합니다.
 
 Content-Type: `multipart/form-data`
 
-| 필드 | 타입 | 설명 |
-|-----|------|------|
-| `file` | File | PDF 파일 |
-| `version_label` | string | 예: "2026-H1" |
-| `effective_from` | date | 적용 시작일 |
+| 필드             | 타입   | 설명          |
+| ---------------- | ------ | ------------- |
+| `file`           | File   | PDF 파일      |
+| `version_label`  | string | 예: "2026-H1" |
+| `effective_from` | date   | 적용 시작일   |
 
 ```json
 // 응답 (201 Created)
@@ -695,7 +700,7 @@ Content-Type: `multipart/form-data`
   "data": {
     "status": "sent",
     "sent_at": "2026-01-04T14:00:00Z",
-    "sign_link": "https://yunigreen.com/sign/abc123"
+  "sign_link": "https://sigongon.com/sign/abc123"
   }
 }
 ```
@@ -722,21 +727,21 @@ Content-Type: `multipart/form-data`
 
 ## 11. 에러 코드
 
-| 코드 | HTTP 상태 | 설명 |
-|-----|----------|------|
-| `UNAUTHORIZED` | 401 | 토큰 없음 또는 유효하지 않음 |
-| `FORBIDDEN` | 403 | 권한 부족 |
-| `NOT_FOUND` | 404 | 리소스를 찾을 수 없음 |
-| `VALIDATION_ERROR` | 422 | 요청 데이터가 유효하지 않음 |
-| `PRICEBOOK_INACTIVE` | 400 | 활성 단가표 버전 없음 |
-| `AI_SERVICE_ERROR` | 503 | Gemini API 사용 불가 |
-| `ESTIMATE_LOCKED` | 400 | 발행된 견적서 수정 불가 |
+| 코드                 | HTTP 상태 | 설명                         |
+| -------------------- | --------- | ---------------------------- |
+| `UNAUTHORIZED`       | 401       | 토큰 없음 또는 유효하지 않음 |
+| `FORBIDDEN`          | 403       | 권한 부족                    |
+| `NOT_FOUND`          | 404       | 리소스를 찾을 수 없음        |
+| `VALIDATION_ERROR`   | 422       | 요청 데이터가 유효하지 않음  |
+| `PRICEBOOK_INACTIVE` | 400       | 활성 단가표 버전 없음        |
+| `AI_SERVICE_ERROR`   | 503       | Gemini API 사용 불가         |
+| `ESTIMATE_LOCKED`    | 400       | 발행된 견적서 수정 불가      |
 
 ---
 
 ## 12. 버전 이력
 
-| 버전 | 날짜 | 변경 내용 |
-|-----|------|----------|
-| 0.1.0 | 2026-01-04 | 최초 API 명세서 작성 |
+| 버전  | 날짜       | 변경 내용                |
+| ----- | ---------- | ------------------------ |
+| 0.1.0 | 2026-01-04 | 최초 API 명세서 작성     |
 | 0.2.0 | 2026-01-04 | 한글화, 비동기 패턴 추가 |

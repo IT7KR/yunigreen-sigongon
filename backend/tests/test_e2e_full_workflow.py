@@ -37,7 +37,7 @@ class TestHealthAndDocs:
             assert response.status_code == 200
             schema = response.json()
             
-            assert schema["info"]["title"] == "Yunigreen API"
+            assert schema["info"]["title"] == "SigongOn API"
             assert "/api/v1/auth/login" in schema["paths"]
             assert "/api/v1/projects" in schema["paths"]
     

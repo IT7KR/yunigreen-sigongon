@@ -1,11 +1,13 @@
 # 스토리보드 Mock API 계약서 (페이지 흐름 기준)
 
 ## 공통 규칙
+
 - 응답 형태: `{ success, data, error }` 또는 `PaginatedResponse`
 - 상태 값은 UI 상태머신 기준으로 최소화(상세 코드는 내부용)
 - 파일 업로드는 mock에서 `storage_path`만 반환
 
 ## 1) Auth
+
 - `POST /auth/login`
   - req: `{ email, password }`
   - res: `LoginResponse`
@@ -13,6 +15,7 @@
   - res: `{ id, email, name, role, organization? }`
 
 ## 2) Projects
+
 - `GET /projects`
   - query: `page, per_page, status, search`
   - res: `PaginatedResponse<ProjectListItem>`
@@ -23,6 +26,7 @@
   - res: `{ id, name, status }`
 
 ## 3) Site Visits / Photos
+
 - `GET /projects/:id/site-visits`
   - res: `SiteVisitDetail[]`
 - `POST /projects/:id/site-visits`
@@ -33,6 +37,7 @@
   - res: `{ id, storage_path, photo_type }`
 
 ## 4) Diagnosis (AI)
+
 - `POST /site-visits/:visitId/diagnose`
   - req: `{ additional_notes?, photo_ids? }`
   - res: `{ diagnosis_id, status, message }`
@@ -40,6 +45,7 @@
   - res: `DiagnosisDetail` (status: `pending|processing|completed|failed`)
 
 ## 5) Estimates
+
 - `POST /projects/:projectId/estimates`
   - req: `{ diagnosis_id?, include_confirmed_only? }`
   - res: `{ id, version, status, total_amount, lines[] }`
@@ -57,6 +63,7 @@
   - res: `{ message }`
 
 ## 6) Contracts (공사도급)
+
 - `GET /projects/:id/contracts`
   - res: `ContractDetail[]`
 - `GET /contracts/:id`
@@ -71,6 +78,7 @@
   - res: `{ id, status, signed_at }`
 
 ## 7) Labor (일용직 근로계약)
+
 - `GET /projects/:id/labor-contracts`
   - res: `LaborContractListItem[]`
 - `POST /projects/:id/labor-contracts`
@@ -85,6 +93,7 @@
   - res: `{ total_workers, total_amount, by_status, by_work_type }`
 
 ## 8) Paystubs (지급명세서)
+
 - `GET /workers/:id/paystubs`
   - res: `[{ id, status, issued_at, amount, project_name }]`
 - `GET /workers/:id/paystubs/:paystubId`
@@ -93,6 +102,7 @@
   - res: `{ id, received_at }`
 
 ## 9) Workers (서류/프로필)
+
 - `GET /workers/:id/profile`
   - res: `{ name, phone, bank_account, address, real_address, documents[] }`
 - `PATCH /workers/:id/profile`
@@ -103,6 +113,7 @@
   - res: `{ id, doc_type, storage_path }`
 
 ## 10) Warranty
+
 - `GET /projects/:id/warranty`
   - res: `{ project_id, warranty_expires_at, days_remaining, is_expired, as_requests[] }`
 - `POST /projects/:id/warranty/as-requests`
@@ -110,12 +121,14 @@
   - res: `{ id, status, message }`
 
 ## 11) Tax Invoice (Popbill)
+
 - `GET /projects/:id/tax-invoice`
   - res: `{ status, issued_at?, failed_reason? }`
 - `POST /projects/:id/tax-invoice`
   - res: `{ status, message }`
 
 ## 12) Billing (Toss)
+
 - `GET /billing/subscription`
   - res: `{ plan, seat_count, status, trial_ends_at?, next_billing_at? }`
 - `POST /billing/checkout`
@@ -124,7 +137,8 @@
   - req: `{ seat_count }`
   - res: `{ seat_count, message }`
 
-## 13) Tenants (슈퍼어드민)
+## 13) Tenants (최고관리자)
+
 - `GET /sa/tenants`
   - res: `PaginatedResponse<{ id, name, status, seats, trial_ends_at }>`
 - `POST /sa/tenants`
@@ -134,7 +148,8 @@
   - req: `{ status }`
   - res: `{ id, status }`
 
-## 14) Pricebooks (슈퍼어드민)
+## 14) Pricebooks (최고관리자)
+
 - `GET /pricebooks/revisions`
   - res: `[{ id, version_label, status, effective_from, item_count }]`
 - `POST /pricebooks/revisions`
@@ -152,6 +167,7 @@
   - res: `{ promoted_count, message }`
 
 ## 15) Notifications (모바일)
+
 - `GET /notifications`
   - res: `[{ id, title, body, link, is_read, created_at }]`
 - `POST /notifications/:id/read`
