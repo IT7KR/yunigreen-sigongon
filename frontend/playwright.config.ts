@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test"
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -7,7 +7,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
-  
+
   use: {
     trace: "on-first-retry",
     screenshot: "only-on-failure",
@@ -17,7 +17,7 @@ export default defineConfig({
   projects: [
     {
       name: "admin",
-      use: { 
+      use: {
         ...devices["Desktop Chrome"],
         baseURL: "http://localhost:3133",
       },
@@ -25,7 +25,7 @@ export default defineConfig({
     },
     {
       name: "mobile",
-      use: { 
+      use: {
         ...devices["iPhone 13"],
         baseURL: "http://localhost:3134",
       },
@@ -35,16 +35,16 @@ export default defineConfig({
 
   webServer: [
     {
-      command: "pnpm --filter @yunigreen/admin dev",
+      command: "pnpm --filter @sigongon/admin dev",
       url: "http://localhost:3133",
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },
     {
-      command: "pnpm --filter @yunigreen/mobile dev",
+      command: "pnpm --filter @sigongon/mobile dev",
       url: "http://localhost:3134",
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },
   ],
-})
+});
