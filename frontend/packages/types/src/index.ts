@@ -11,8 +11,36 @@ export type ProjectStatus =
   | "in_progress"
   | "completed"
   | "warranty"
+  | "closed"
 
-export type UserRole = "admin" | "manager" | "technician"
+/**
+ * User role types.
+ *
+ * System-level roles (organization_id = null):
+ * - super_admin: Unigreen internal staff, manages all tenants
+ * - worker: Daily laborers, linked to projects via LaborContract
+ *
+ * Tenant-level roles (organization_id required):
+ * - company_admin: Customer company CEO, full access within company
+ * - site_manager: Field supervisor, project-scoped access
+ */
+export type UserRole = "super_admin" | "company_admin" | "site_manager" | "worker"
+
+/** Tenant-level roles that require organization_id */
+export const TENANT_ROLES: UserRole[] = ["company_admin", "site_manager"]
+
+/** System-level roles that have organization_id = null */
+export const SYSTEM_ROLES: UserRole[] = ["super_admin", "worker"]
+
+/** Check if a role is tenant-level (requires organization_id) */
+export function isTenantRole(role: UserRole): boolean {
+  return TENANT_ROLES.includes(role)
+}
+
+/** Check if a role is system-level (no organization_id) */
+export function isSystemRole(role: UserRole): boolean {
+  return SYSTEM_ROLES.includes(role)
+}
 
 export type PhotoType = "before" | "during" | "after" | "detail"
 
@@ -28,6 +56,38 @@ export type ContractStatus = "draft" | "sent" | "signed" | "active" | "completed
 
 export type LaborContractStatus = "draft" | "sent" | "signed" | "paid"
 
+// Photo Album
+export type AlbumLayoutType = "three_column" | "four_column"
+export type PhotoAlbumStatus = "draft" | "published"
+
+// Construction Report (착공계/준공계)
+export type ReportType = "start" | "completion"
+export type ReportStatus = "draft" | "submitted" | "approved" | "rejected"
+
+// Subscription & Billing (토스페이먼츠)
+export type SubscriptionPlan = "starter" | "standard" | "premium"
+export type SubscriptionStatus = "active" | "cancelled" | "expired" | "past_due"
+export type PaymentStatus = "pending" | "paid" | "failed" | "refunded"
+
+// Tax Invoice (팝빌)
+export type TaxInvoiceStatus = "draft" | "issued" | "cancelled" | "failed"
+export type TaxInvoiceType = "regular" | "simplified"
+
+// Project Categories (건설업 신고 기준)
+export const PROJECT_CATEGORIES = [
+  { id: "architecture", label: "건축공사업" },
+  { id: "civil", label: "토목공사업" },
+  { id: "landscape", label: "조경공사업" },
+  { id: "waterproof", label: "방수공사업" },
+  { id: "plumbing", label: "설비공사업" },
+  { id: "electrical", label: "전기공사업" },
+  { id: "interior", label: "실내건축공사업" },
+  { id: "steel", label: "철강재설치공사업" },
+  { id: "other", label: "기타" },
+] as const
+
+export type ProjectCategory = typeof PROJECT_CATEGORIES[number]["id"]
+
 // ============================================
 // Domain Models
 // ============================================
@@ -38,7 +98,8 @@ export interface User {
   name: string
   phone?: string
   role: UserRole
-  organization_id: string
+  /** Organization ID. Null for system-level roles (super_admin, worker) */
+  organization_id: string | null
   is_active: boolean
   created_at: string
   last_login_at?: string
@@ -60,6 +121,7 @@ export interface Project {
   client_phone?: string
   notes?: string
   status: ProjectStatus
+  category?: ProjectCategory
   organization_id: string
   pricebook_revision_id?: string
   created_at: string
@@ -178,12 +240,115 @@ export interface PhotoAlbum {
   id: string
   project_id: string
   name: string
-  photos: {
-    before: Photo[]
-    during: Photo[]
-    after: Photo[]
-  }
+  description?: string
+  layout: AlbumLayoutType
+  status: PhotoAlbumStatus
+  photos: AlbumPhotoDetail[]
   created_at: string
+  updated_at: string
+}
+
+export interface AlbumPhotoDetail {
+  id: string
+  album_photo_id: string
+  storage_path: string
+  caption?: string
+  caption_override?: string
+  photo_type: PhotoType
+  taken_at?: string
+  sort_order: number
+}
+
+export interface ConstructionReport {
+  id: string
+  project_id: string
+  report_type: ReportType
+  report_number?: string
+  status: ReportStatus
+  notes?: string
+  // 착공계 fields
+  construction_name?: string
+  site_address?: string
+  start_date?: string
+  expected_end_date?: string
+  supervisor_name?: string
+  supervisor_phone?: string
+  // 준공계 fields
+  actual_end_date?: string
+  final_amount?: string
+  defect_warranty_period?: number
+  // Timestamps
+  created_at: string
+  updated_at: string
+  submitted_at?: string
+  approved_at?: string
+  created_by: string
+  approved_by?: string
+}
+
+export interface Subscription {
+  id: string
+  organization_id: string
+  plan: SubscriptionPlan
+  status: SubscriptionStatus
+  has_billing_key: boolean
+  started_at: string
+  expires_at: string
+  cancelled_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Payment {
+  id: string
+  subscription_id: string
+  organization_id: string
+  payment_key: string
+  order_id: string
+  amount: string
+  status: PaymentStatus
+  method?: string
+  paid_at?: string
+  failed_at?: string
+  failure_reason?: string
+  receipt_url?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface TaxInvoice {
+  id: string
+  project_id: string
+  organization_id: string
+  issue_id?: string
+  mgtkey: string
+  invoice_type: TaxInvoiceType
+  status: TaxInvoiceStatus
+  supply_amount: string
+  tax_amount: string
+  total_amount: string
+  // Supplier info
+  supplier_corp_num: string
+  supplier_name: string
+  supplier_ceo?: string
+  supplier_address?: string
+  supplier_email?: string
+  // Buyer info
+  buyer_corp_num: string
+  buyer_name: string
+  buyer_ceo?: string
+  buyer_address?: string
+  buyer_email?: string
+  // Description
+  description?: string
+  remark?: string
+  // Timestamps
+  issue_date?: string
+  issued_at?: string
+  cancelled_at?: string
+  created_at: string
+  updated_at: string
+  created_by: string
 }
 
 export interface WarrantyInfo {
@@ -273,6 +438,8 @@ export interface ProjectDetail {
     version: number
     status: EstimateStatus
     total_amount: string
+    created_at?: string
+    issued_at?: string
   }>
 }
 
@@ -385,3 +552,78 @@ export interface ProjectPhotoAlbum {
     }>
   }
 }
+
+// Photo Album List/Detail
+export interface PhotoAlbumListItem {
+  id: string
+  project_id: string
+  name: string
+  description?: string
+  layout: AlbumLayoutType
+  status: PhotoAlbumStatus
+  photo_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface PhotoAlbumDetail {
+  id: string
+  project_id: string
+  name: string
+  description?: string
+  layout: AlbumLayoutType
+  status: PhotoAlbumStatus
+  photos: AlbumPhotoDetail[]
+  created_at: string
+  updated_at: string
+}
+
+// Construction Report List/Detail
+export interface ConstructionReportListItem {
+  id: string
+  project_id: string
+  report_type: ReportType
+  report_number?: string
+  status: ReportStatus
+  construction_name?: string
+  start_date?: string
+  actual_end_date?: string
+  created_at: string
+  submitted_at?: string
+  approved_at?: string
+}
+
+export interface ConstructionReportDetail extends ConstructionReport {}
+
+// Subscription & Payment List Items
+export interface SubscriptionDetail extends Subscription {
+  plan_name: string
+  plan_price: number
+  days_remaining: number
+}
+
+export interface PaymentListItem {
+  id: string
+  amount: string
+  status: PaymentStatus
+  method?: string
+  paid_at?: string
+  created_at: string
+  receipt_url?: string
+}
+
+// Tax Invoice List/Detail
+export interface TaxInvoiceListItem {
+  id: string
+  project_id: string
+  mgtkey: string
+  invoice_type: TaxInvoiceType
+  status: TaxInvoiceStatus
+  total_amount: string
+  buyer_name: string
+  issue_date?: string
+  issued_at?: string
+  created_at: string
+}
+
+export interface TaxInvoiceDetail extends TaxInvoice {}

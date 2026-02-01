@@ -1,4 +1,9 @@
-export { APIClient, NetworkError, APIError, type APIClientConfig } from "./client"
+export {
+  APIClient,
+  NetworkError,
+  APIError,
+  type APIClientConfig,
+} from "./client";
 
 // Re-export types for convenience
 export type {
@@ -10,4 +15,4 @@ export type {
   SiteVisitDetail,
   DiagnosisDetail,
   EstimateDetail,
-} from "@yunigreen/types"
+} from "@sigongon/types";
