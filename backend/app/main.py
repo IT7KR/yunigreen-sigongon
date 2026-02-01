@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.database import init_db, close_db
-from app.core.exceptions import YunigreenException
+from app.core.exceptions import SigongOnException
 
 
 @asynccontextmanager
@@ -50,10 +50,10 @@ app.add_middleware(
 
 
 # 전역 예외 핸들러
-@app.exception_handler(YunigreenException)
-async def yunigreen_exception_handler(
+@app.exception_handler(SigongOnException)
+async def sigongon_exception_handler(
     request: Request,
-    exc: YunigreenException,
+    exc: SigongOnException,
 ) -> JSONResponse:
     """커스텀 예외 핸들러."""
     return JSONResponse(
@@ -119,6 +119,10 @@ from app.routers.contracts import router as contracts_router, project_contracts_
 from app.routers.labor_contracts import router as labor_contracts_router, project_labor_router
 from app.routers.materials import router as materials_router
 from app.routers.users import router as users_router
+from app.routers.photo_albums import router as photo_albums_router
+from app.routers.construction_reports import router as construction_reports_router
+from app.routers.billing import router as billing_router
+from app.routers.tax_invoices import router as tax_invoices_router
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["인증"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["사용자 관리"])
@@ -133,3 +137,7 @@ app.include_router(project_contracts_router, prefix="/api/v1", tags=["계약"])
 app.include_router(labor_contracts_router, prefix="/api/v1", tags=["노무비"])
 app.include_router(project_labor_router, prefix="/api/v1", tags=["노무비"])
 app.include_router(materials_router, prefix="/api/v1/materials", tags=["자재 매칭"])
+app.include_router(photo_albums_router, prefix="/api/v1", tags=["준공사진첩"])
+app.include_router(construction_reports_router, prefix="/api/v1", tags=["착공계/준공계"])
+app.include_router(billing_router, prefix="/api/v1", tags=["결제 및 구독"])
+app.include_router(tax_invoices_router, prefix="/api/v1", tags=["세금계산서"])

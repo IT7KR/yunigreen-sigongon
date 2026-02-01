@@ -77,7 +77,7 @@ async def send_contract_for_signature(
                 "id": str(contract.id),
                 "status": contract.status.value,
                 "sent_at": contract.sent_at.isoformat() if contract.sent_at else None,
-                "signature_url": f"https://sign.yunigreen.com/contracts/{contract.id}",
+                "signature_url": f"https://sign.sigongon.com/contracts/{contract.id}",
                 "message": "서명 요청을 보냈어요",
             },
             "error": None,
