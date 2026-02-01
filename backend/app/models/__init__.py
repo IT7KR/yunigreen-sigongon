@@ -7,10 +7,10 @@ from app.models.project import (
 )
 from app.models.diagnosis import AIDiagnosis, DiagnosisStatus, AIMaterialSuggestion, MatchMethod
 from app.models.pricebook import (
-    Pricebook, 
-    PricebookRevision, 
+    Pricebook,
+    PricebookRevision,
     RevisionStatus,
-    CatalogItem, 
+    CatalogItem,
     ItemType,
     CatalogItemPrice,
     CatalogItemAlias,
@@ -18,8 +18,28 @@ from app.models.pricebook import (
 )
 from app.models.estimate import Estimate, EstimateStatus, EstimateLine, LineSource
 from app.models.contract import Contract, ContractStatus, LaborContract, LaborContractStatus
+from app.models.photo_album import (
+    PhotoAlbum, PhotoAlbumStatus, AlbumLayoutType, AlbumPhoto,
+    PhotoAlbumCreate, PhotoAlbumRead, PhotoAlbumUpdate,
+    AlbumPhotoCreate, AlbumPhotoRead
+)
+from app.models.construction_report import (
+    ConstructionReport, ReportType, ReportStatus,
+    ConstructionReportCreate, ConstructionReportRead,
+    ConstructionReportUpdate, ConstructionReportSubmit
+)
+from app.models.tax_invoice import (
+    TaxInvoice, TaxInvoiceStatus, TaxInvoiceType,
+    TaxInvoiceCreate, TaxInvoiceRead, TaxInvoiceUpdate, TaxInvoiceIssue
+)
 from app.models.rag import DocumentChunk
 from app.models.price_staging import PriceStaging, StagingStatus, ConfidenceLevel
+from app.models.billing import (
+    Subscription, SubscriptionPlan, SubscriptionStatus,
+    Payment, PaymentStatus,
+    SubscriptionCreate, SubscriptionRead, SubscriptionUpdate,
+    PaymentCreate, PaymentRead
+)
 
 __all__ = [
     # Base
@@ -27,7 +47,7 @@ __all__ = [
     "TimestampMixin",
     # User
     "Organization",
-    "User", 
+    "User",
     "UserRole",
     # Project
     "Project",
@@ -64,10 +84,47 @@ __all__ = [
     "ContractStatus",
     "LaborContract",
     "LaborContractStatus",
+    # Photo Album
+    "PhotoAlbum",
+    "PhotoAlbumStatus",
+    "AlbumLayoutType",
+    "AlbumPhoto",
+    "PhotoAlbumCreate",
+    "PhotoAlbumRead",
+    "PhotoAlbumUpdate",
+    "AlbumPhotoCreate",
+    "AlbumPhotoRead",
+    # Construction Report
+    "ConstructionReport",
+    "ReportType",
+    "ReportStatus",
+    "ConstructionReportCreate",
+    "ConstructionReportRead",
+    "ConstructionReportUpdate",
+    "ConstructionReportSubmit",
+    # Tax Invoice
+    "TaxInvoice",
+    "TaxInvoiceStatus",
+    "TaxInvoiceType",
+    "TaxInvoiceCreate",
+    "TaxInvoiceRead",
+    "TaxInvoiceUpdate",
+    "TaxInvoiceIssue",
     # RAG
     "DocumentChunk",
     # Price Staging
     "PriceStaging",
     "StagingStatus",
     "ConfidenceLevel",
+    # Billing
+    "Subscription",
+    "SubscriptionPlan",
+    "SubscriptionStatus",
+    "Payment",
+    "PaymentStatus",
+    "SubscriptionCreate",
+    "SubscriptionRead",
+    "SubscriptionUpdate",
+    "PaymentCreate",
+    "PaymentRead",
 ]

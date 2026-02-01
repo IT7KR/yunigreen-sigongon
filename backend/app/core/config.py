@@ -14,12 +14,12 @@ class Settings(BaseSettings):
     )
     
     # 애플리케이션
-    app_name: str = "Yunigreen API"
+    app_name: str = "SigongOn API"
     app_version: str = "0.1.0"
     debug: bool = False
     
     # 데이터베이스 (비동기)
-    database_url: str = "postgresql+asyncpg://postgres:password@db:5432/yunigreen"
+    database_url: str = "postgresql+asyncpg://postgres:password@db:5432/sigongon"
     
     # JWT 인증
     jwt_secret: str = "your-super-secret-key-change-in-production"
@@ -44,6 +44,23 @@ class Settings(BaseSettings):
         "http://localhost:3133",
         "http://localhost:3134",
     ]
+
+    # Toss Payments (토스페이먼츠)
+    toss_client_key: Optional[str] = None
+    toss_secret_key: Optional[str] = None
+    toss_webhook_secret: Optional[str] = None
+
+    # Popbill (팝빌 세금계산서)
+    popbill_link_id: Optional[str] = None
+    popbill_secret_key: Optional[str] = None
+    popbill_corp_num: Optional[str] = None  # 유니그린 사업자번호
+    popbill_is_test: bool = True  # 테스트 환경 여부
+
+    # Aligo SMS
+    aligo_api_key: Optional[str] = None
+    aligo_user_id: Optional[str] = None
+    aligo_sender: Optional[str] = None
+    aligo_is_mock: bool = True
     
     @property
     def async_database_url(self) -> str:

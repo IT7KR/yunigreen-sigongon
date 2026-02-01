@@ -7,10 +7,44 @@ from sqlmodel import SQLModel, Field, Relationship
 
 
 class UserRole(str, Enum):
-    """User role enumeration."""
-    ADMIN = "admin"
-    MANAGER = "manager"
-    TECHNICIAN = "technician"
+    """User role enumeration.
+
+    System-level roles (organization_id = NULL):
+    - SUPER_ADMIN: Unigreen internal staff, manages all tenants
+    - WORKER: Daily laborers, linked to projects via LaborContract
+
+    Tenant-level roles (organization_id required):
+    - COMPANY_ADMIN: Customer company CEO, full access within company
+    - SITE_MANAGER: Field supervisor, project-scoped access
+    """
+    # System-level roles (organization_id = NULL)
+    SUPER_ADMIN = "super_admin"
+    WORKER = "worker"
+
+    # Tenant-level roles (organization_id required)
+    COMPANY_ADMIN = "company_admin"
+    SITE_MANAGER = "site_manager"
+
+
+# Role classification constants
+TENANT_ROLES = {UserRole.COMPANY_ADMIN, UserRole.SITE_MANAGER}
+SYSTEM_ROLES = {UserRole.SUPER_ADMIN, UserRole.WORKER}
+
+
+def validate_user_role_organization(role: UserRole, organization_id: Optional["uuid.UUID"]) -> None:
+    """Validate role and organization_id consistency.
+
+    Args:
+        role: User role
+        organization_id: Organization ID (can be None for system roles)
+
+    Raises:
+        ValueError: If role-organization combination is invalid
+    """
+    if role in TENANT_ROLES and organization_id is None:
+        raise ValueError(f"{role.value} role requires an organization_id")
+    if role in SYSTEM_ROLES and organization_id is not None:
+        raise ValueError(f"{role.value} role must not have an organization_id")
 
 
 class OrganizationBase(SQLModel):
@@ -20,6 +54,14 @@ class OrganizationBase(SQLModel):
     address: Optional[str] = Field(default=None)
     phone: Optional[str] = Field(default=None, max_length=20)
     is_active: bool = Field(default=True)
+    # 대표자 정보
+    rep_name: Optional[str] = Field(default=None, max_length=100)
+    rep_phone: Optional[str] = Field(default=None, max_length=20)
+    rep_email: Optional[str] = Field(default=None, max_length=255)
+    # 실무자 정보
+    contact_name: Optional[str] = Field(default=None, max_length=100)
+    contact_phone: Optional[str] = Field(default=None, max_length=20)
+    contact_position: Optional[str] = Field(default=None, max_length=50)
 
 
 class Organization(OrganizationBase, table=True):
@@ -47,49 +89,64 @@ class OrganizationRead(OrganizationBase):
 
 class UserBase(SQLModel):
     """User base fields."""
-    email: str = Field(max_length=255, index=True, unique=True)
+    username: str = Field(max_length=50, index=True, unique=True)
+    email: Optional[str] = Field(default=None, max_length=255, index=True)
     name: str = Field(max_length=100)
     phone: Optional[str] = Field(default=None, max_length=20)
-    role: UserRole = Field(default=UserRole.TECHNICIAN)
+    role: UserRole = Field(default=UserRole.SITE_MANAGER)
     is_active: bool = Field(default=True)
 
 
 class User(UserBase, table=True):
-    """User model."""
+    """User model.
+
+    System-level roles (super_admin, worker) have organization_id = NULL.
+    Tenant-level roles (company_admin, site_manager) require organization_id.
+    """
     __tablename__ = "user"
-    
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    organization_id: uuid.UUID = Field(foreign_key="organization.id", index=True)
+    organization_id: Optional[uuid.UUID] = Field(
+        default=None,
+        foreign_key="organization.id",
+        index=True
+    )
     password_hash: str = Field(max_length=255)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     last_login_at: Optional[datetime] = Field(default=None)
-    
+
     # Relationships
     organization: Optional[Organization] = Relationship(back_populates="users")
 
 
 class UserCreate(SQLModel):
-    """Schema for creating user."""
-    email: str
+    """Schema for creating user.
+
+    For tenant-level roles (company_admin, site_manager): organization_id is required.
+    For system-level roles (super_admin, worker): organization_id must be None.
+    """
+    username: str
+    email: Optional[str] = None
     name: str
     password: str
     phone: Optional[str] = None
-    role: UserRole = UserRole.TECHNICIAN
-    organization_id: uuid.UUID
+    role: UserRole = UserRole.SITE_MANAGER
+    organization_id: Optional[uuid.UUID] = None
 
 
 class UserRead(UserBase):
     """Schema for reading user."""
     id: uuid.UUID
-    organization_id: uuid.UUID
+    username: str
+    organization_id: Optional[uuid.UUID]
     created_at: datetime
     last_login_at: Optional[datetime]
 
 
 class UserLogin(SQLModel):
     """Schema for user login."""
-    email: str
+    username: str
     password: str
 
 
@@ -106,4 +163,4 @@ class TokenPayload(SQLModel):
     sub: str  # user_id
     exp: int
     role: str
-    org_id: str
+    org_id: Optional[str] = None  # NULL for system-level roles
