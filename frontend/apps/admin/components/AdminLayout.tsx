@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { type ReactNode, useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { type ReactNode, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -14,30 +14,35 @@ import {
   Menu,
   X,
   Droplets,
-} from "lucide-react"
-import { cn, Button } from "@yunigreen/ui"
-import { useAuth } from "@/lib/auth"
+  Shield,
+} from "lucide-react";
+import { cn, Button } from "@sigongon/ui";
+import { useAuth } from "@/lib/auth";
+import Image from "next/image";
 
 interface AdminLayoutProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
+// 일반 사용자용 메뉴 (company_admin, site_manager)
 const navItems = [
-  { href: "/", icon: LayoutDashboard, label: "대시보드" },
+  { href: "/dashboard", icon: LayoutDashboard, label: "대시보드" },
   { href: "/projects", icon: FolderKanban, label: "프로젝트" },
   { href: "/estimates", icon: FileText, label: "견적서" },
-  { href: "/pricebooks", icon: FileSpreadsheet, label: "적산 자료" },
   { href: "/users", icon: Users, label: "사용자" },
-  { href: "/labor", icon: Users, label: "노무관리" },
   { href: "/partners", icon: Users, label: "협력사" },
   { href: "/billing", icon: FileText, label: "결제/구독" },
   { href: "/settings", icon: Settings, label: "설정" },
-]
+];
+
+// 슈퍼어드민 전용 메뉴 (SA 섹션 내에서 접근)
+// - /sa/pricebooks: 적산 자료 (시스템 전체)
+// - /sa/tenants: 고객사 관리 (노무관리 포함)
 
 export function AdminLayout({ children }: AdminLayoutProps) {
-  const pathname = usePathname()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { logout } = useAuth()
+  const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { logout, user } = useAuth();
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -49,14 +54,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         >
           <Menu className="h-6 w-6" />
         </button>
-
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/dashboard" className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white">
             <Droplets className="h-4 w-4" />
           </div>
           <span className="font-semibold text-slate-900">시공ON</span>
         </Link>
-
         <div className="w-10" /> {/* Spacer */}
       </header>
 
@@ -72,14 +75,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 transform bg-white shadow-lg transition-transform lg:translate-x-0 lg:shadow-none",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white">
-              <Droplets className="h-4 w-4" />
-            </div>
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Image
+              src="/logo-sq.png"
+              alt="시공ON 로고"
+              width={40}
+              height={40}
+              className="object-contain"
+            />
             <span className="font-semibold text-slate-900">시공ON 관리자</span>
           </Link>
 
@@ -95,7 +102,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href !== "/" && pathname.startsWith(item.href))
+              (item.href !== "/" && pathname.startsWith(item.href));
 
             return (
               <Link
@@ -106,18 +113,43 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
                     ? "bg-teal-50 text-teal-700"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                 )}
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}
               </Link>
-            )
+            );
           })}
+
+          {/* Super Admin Menu - only visible to super_admin role */}
+          {user?.role === "super_admin" && (
+            <>
+              <div className="my-4 border-t border-slate-200" />
+              <Link
+                href="/sa"
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  pathname === "/sa" || pathname.startsWith("/sa/")
+                    ? "bg-purple-50 text-purple-700"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                )}
+              >
+                <Shield className="h-5 w-5" />
+                최고관리자
+              </Link>
+            </>
+          )}
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 p-4">
-          <Button variant="ghost" fullWidth className="justify-start gap-3" onClick={logout}>
+          <Button
+            variant="ghost"
+            fullWidth
+            className="justify-start gap-3"
+            onClick={logout}
+          >
             <LogOut className="h-5 w-5" />
             로그아웃
           </Button>
@@ -129,5 +161,5 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <div className="mx-auto max-w-7xl p-4 lg:p-8">{children}</div>
       </main>
     </div>
-  )
+  );
 }

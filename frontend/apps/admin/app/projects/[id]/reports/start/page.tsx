@@ -1,0 +1,190 @@
+"use client";
+
+import { use, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, Button } from "@sigongon/ui";
+import { ConstructionReportForm } from "@/components/ConstructionReportForm";
+import { api } from "@/lib/api";
+
+interface StartReportData {
+  id?: string;
+  construction_name?: string;
+  site_address?: string;
+  start_date?: string;
+  expected_end_date?: string;
+  supervisor_name?: string;
+  supervisor_phone?: string;
+  notes?: string;
+  status?: string;
+}
+
+export default function StartReportPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const reportId = searchParams.get("reportId");
+
+  const [reportData, setReportData] = useState<StartReportData | null>(null);
+  const [loading, setLoading] = useState(!!reportId);
+
+  useEffect(() => {
+    if (reportId) {
+      loadReport();
+    }
+  }, [reportId]);
+
+  async function loadReport() {
+    if (!reportId) return;
+
+    try {
+      setLoading(true);
+      const response = await api.getConstructionReport(reportId);
+      if (response.success && response.data) {
+        setReportData(response.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSubmit(data: any, isDraft: boolean) {
+    try {
+      if (reportId) {
+        // Update existing report
+        await api.updateConstructionReport(reportId, data);
+        if (!isDraft) {
+          await api.submitConstructionReport(reportId);
+        }
+      } else {
+        // Create new report
+        const response = await api.createStartReport(id, data);
+        if (response.success && response.data && !isDraft) {
+          await api.submitConstructionReport(response.data.id);
+        }
+      }
+      router.push(`/projects/${id}/reports`);
+    } catch (err) {
+      console.error(err);
+      alert("오류가 발생했어요");
+    }
+  }
+
+  async function handleSave(data: any) {
+    try {
+      if (reportId) {
+        await api.updateConstructionReport(reportId, data);
+      } else {
+        await api.createStartReport(id, data);
+      }
+      alert("저장했어요");
+      router.push(`/projects/${id}/reports`);
+    } catch (err) {
+      console.error(err);
+      alert("오류가 발생했어요");
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
+      </div>
+    );
+  }
+
+  const isReadOnly = reportData?.status === "submitted" || reportData?.status === "approved";
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Link href={`/projects/${id}/reports`}>
+          <Button variant="secondary" size="sm">
+            <ArrowLeft className="h-4 w-4" />
+            뒤로
+          </Button>
+        </Link>
+        <h1 className="text-2xl font-bold text-slate-900">
+          {reportId ? "착공계 보기" : "착공계 작성"}
+        </h1>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>착공계</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isReadOnly ? (
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-700">
+                  {reportData?.status === "submitted"
+                    ? "이미 제출된 보고서예요. 수정할 수 없어요."
+                    : "승인된 보고서예요. 수정할 수 없어요."}
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm text-slate-500">공사명</p>
+                  <p className="font-medium text-slate-900">
+                    {reportData?.construction_name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">공사 장소</p>
+                  <p className="font-medium text-slate-900">
+                    {reportData?.site_address}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">착공일</p>
+                  <p className="font-medium text-slate-900">
+                    {reportData?.start_date}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">준공예정일</p>
+                  <p className="font-medium text-slate-900">
+                    {reportData?.expected_end_date}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">감독자명</p>
+                  <p className="font-medium text-slate-900">
+                    {reportData?.supervisor_name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">감독자 연락처</p>
+                  <p className="font-medium text-slate-900">
+                    {reportData?.supervisor_phone}
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm text-slate-500">비고</p>
+                  <p className="font-medium text-slate-900">
+                    {reportData?.notes || "-"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <ConstructionReportForm
+              reportType="start"
+              initialData={reportData || undefined}
+              onSubmit={handleSubmit}
+              onSave={reportId ? undefined : handleSave}
+            />
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

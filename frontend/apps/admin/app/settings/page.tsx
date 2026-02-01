@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 import {
   Building2,
   Bell,
@@ -9,8 +9,8 @@ import {
   Database,
   Key,
   Save,
-} from "lucide-react"
-import { AdminLayout } from "@/components/AdminLayout"
+} from "lucide-react";
+import { AdminLayout } from "@/components/AdminLayout";
 import {
   Card,
   CardContent,
@@ -18,10 +18,10 @@ import {
   CardTitle,
   Button,
   Input,
-} from "@yunigreen/ui"
+} from "@sigongon/ui";
 
 export default function SettingsPage() {
-  const [activeSection, setActiveSection] = useState("organization")
+  const [activeSection, setActiveSection] = useState("organization");
 
   const sections = [
     { id: "organization", label: "조직 정보", icon: Building2 },
@@ -30,7 +30,7 @@ export default function SettingsPage() {
     { id: "appearance", label: "외관", icon: Palette },
     { id: "integrations", label: "연동", icon: Database },
     { id: "api", label: "API 키", icon: Key },
-  ]
+  ];
 
   return (
     <AdminLayout>
@@ -45,23 +45,23 @@ export default function SettingsPage() {
             <CardContent className="p-2">
               <nav className="space-y-1">
                 {sections.map((section) => {
-                  const Icon = section.icon
-                  const isActive = activeSection === section.id
-                  
+                  const Icon = section.icon;
+                  const isActive = activeSection === section.id;
+
                   return (
                     <button
                       key={section.id}
                       onClick={() => setActiveSection(section.id)}
                       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                         isActive
-                          ? "bg-teal-50 text-teal-700"
+                          ? "bg-brand-point-50 text-brand-point-700"
                           : "text-slate-600 hover:bg-slate-100"
                       }`}
                     >
                       <Icon className="h-5 w-5" />
                       {section.label}
                     </button>
-                  )
+                  );
                 })}
               </nav>
             </CardContent>
@@ -74,30 +74,18 @@ export default function SettingsPage() {
                   <CardTitle>조직 정보</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Input
-                    label="회사명"
-                    defaultValue="유니그린"
-                  />
-                  <Input
-                    label="사업자등록번호"
-                    defaultValue="123-45-67890"
-                  />
-                  <Input
-                    label="대표자"
-                    defaultValue="홍길동"
-                  />
+                  <Input label="회사명" defaultValue="시공ON" />
+                  <Input label="사업자등록번호" defaultValue="123-45-67890" />
+                  <Input label="대표자" defaultValue="홍길동" />
                   <Input
                     label="주소"
                     defaultValue="서울시 강남구 테헤란로 123"
                   />
-                  <Input
-                    label="대표전화"
-                    defaultValue="02-1234-5678"
-                  />
+                  <Input label="대표전화" defaultValue="02-1234-5678" />
                   <Input
                     label="이메일"
                     type="email"
-                    defaultValue="info@yunigreen.com"
+                    defaultValue="info@sigongon.com"
                   />
                   <div className="flex justify-end pt-4">
                     <Button>
@@ -117,42 +105,68 @@ export default function SettingsPage() {
                 <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-slate-900">새 프로젝트 알림</p>
-                      <p className="text-sm text-slate-500">새 프로젝트가 생성되면 알림을 받습니다</p>
+                      <p className="font-medium text-slate-900">
+                        새 프로젝트 알림
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        새 프로젝트가 생성되면 알림을 받습니다
+                      </p>
                     </div>
                     <label className="relative inline-flex cursor-pointer items-center">
-                      <input type="checkbox" defaultChecked className="peer sr-only" />
-                      <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-teal-500 peer-checked:after:translate-x-full"></div>
+                      <input
+                        type="checkbox"
+                        defaultChecked
+                        className="peer sr-only"
+                      />
+                      <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-brand-point-500 peer-checked:after:translate-x-full"></div>
                     </label>
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-slate-900">진단 완료 알림</p>
-                      <p className="text-sm text-slate-500">AI 진단이 완료되면 알림을 받습니다</p>
+                      <p className="font-medium text-slate-900">
+                        진단 완료 알림
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        AI 진단이 완료되면 알림을 받습니다
+                      </p>
                     </div>
                     <label className="relative inline-flex cursor-pointer items-center">
-                      <input type="checkbox" defaultChecked className="peer sr-only" />
-                      <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-teal-500 peer-checked:after:translate-x-full"></div>
+                      <input
+                        type="checkbox"
+                        defaultChecked
+                        className="peer sr-only"
+                      />
+                      <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-brand-point-500 peer-checked:after:translate-x-full"></div>
                     </label>
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-slate-900">계약 체결 알림</p>
-                      <p className="text-sm text-slate-500">계약이 체결되면 알림을 받습니다</p>
+                      <p className="font-medium text-slate-900">
+                        계약 체결 알림
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        계약이 체결되면 알림을 받습니다
+                      </p>
                     </div>
                     <label className="relative inline-flex cursor-pointer items-center">
-                      <input type="checkbox" defaultChecked className="peer sr-only" />
-                      <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-teal-500 peer-checked:after:translate-x-full"></div>
+                      <input
+                        type="checkbox"
+                        defaultChecked
+                        className="peer sr-only"
+                      />
+                      <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-brand-point-500 peer-checked:after:translate-x-full"></div>
                     </label>
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium text-slate-900">이메일 알림</p>
-                      <p className="text-sm text-slate-500">중요 알림을 이메일로도 받습니다</p>
+                      <p className="text-sm text-slate-500">
+                        중요 알림을 이메일로도 받습니다
+                      </p>
                     </div>
                     <label className="relative inline-flex cursor-pointer items-center">
                       <input type="checkbox" className="peer sr-only" />
-                      <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-teal-500 peer-checked:after:translate-x-full"></div>
+                      <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-brand-point-500 peer-checked:after:translate-x-full"></div>
                     </label>
                   </div>
                 </CardContent>
@@ -166,30 +180,57 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
-                    <h3 className="font-medium text-slate-900">비밀번호 정책</h3>
+                    <h3 className="font-medium text-slate-900">
+                      비밀번호 정책
+                    </h3>
                     <div className="mt-3 space-y-3">
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" defaultChecked className="rounded border-slate-300" />
-                        <span className="text-sm text-slate-600">최소 8자 이상</span>
+                        <input
+                          type="checkbox"
+                          defaultChecked
+                          className="rounded border-slate-300"
+                        />
+                        <span className="text-sm text-slate-600">
+                          최소 8자 이상
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" defaultChecked className="rounded border-slate-300" />
-                        <span className="text-sm text-slate-600">대소문자 포함</span>
+                        <input
+                          type="checkbox"
+                          defaultChecked
+                          className="rounded border-slate-300"
+                        />
+                        <span className="text-sm text-slate-600">
+                          대소문자 포함
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" defaultChecked className="rounded border-slate-300" />
-                        <span className="text-sm text-slate-600">숫자 포함</span>
+                        <input
+                          type="checkbox"
+                          defaultChecked
+                          className="rounded border-slate-300"
+                        />
+                        <span className="text-sm text-slate-600">
+                          숫자 포함
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" className="rounded border-slate-300" />
-                        <span className="text-sm text-slate-600">특수문자 포함</span>
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300"
+                        />
+                        <span className="text-sm text-slate-600">
+                          특수문자 포함
+                        </span>
                       </div>
                     </div>
                   </div>
                   <div>
                     <h3 className="font-medium text-slate-900">세션 설정</h3>
                     <div className="mt-3">
-                      <label className="text-sm text-slate-600">자동 로그아웃 시간</label>
+                      <label className="text-sm text-slate-600">
+                        자동 로그아웃 시간
+                      </label>
                       <select className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
                         <option value="30">30분</option>
                         <option value="60">1시간</option>
@@ -215,7 +256,9 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Gemini API 키</label>
+                    <label className="text-sm font-medium text-slate-700">
+                      Gemini API 키
+                    </label>
                     <div className="mt-1 flex gap-2">
                       <input
                         type="password"
@@ -238,7 +281,8 @@ export default function SettingsPage() {
               </Card>
             )}
 
-            {(activeSection === "appearance" || activeSection === "integrations") && (
+            {(activeSection === "appearance" ||
+              activeSection === "integrations") && (
               <Card>
                 <CardContent className="py-12 text-center">
                   <p className="text-slate-500">준비 중입니다</p>
@@ -249,5 +293,5 @@ export default function SettingsPage() {
         </div>
       </div>
     </AdminLayout>
-  )
+  );
 }

@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { use, useState, useEffect } from "react"
-import Link from "next/link"
+import { use, useState, useEffect } from "react";
+import Link from "next/link";
 import {
   ArrowLeft,
   Download,
@@ -11,9 +11,9 @@ import {
   Trash2,
   Edit2,
   Loader2,
-} from "lucide-react"
-import { AdminLayout } from "@/components/AdminLayout"
-import { EstimateLineModal } from "@/components/EstimateLineModal"
+} from "lucide-react";
+import { AdminLayout } from "@/components/AdminLayout";
+import { EstimateLineModal } from "@/components/EstimateLineModal";
 import {
   Card,
   CardContent,
@@ -22,106 +22,111 @@ import {
   Button,
   StatusBadge,
   formatDate,
-} from "@yunigreen/ui"
-import type { EstimateStatus, EstimateLineSource } from "@yunigreen/types"
-import { api } from "@/lib/api"
+} from "@sigongon/ui";
+import type { EstimateStatus, EstimateLineSource } from "@sigongon/types";
+import { api } from "@/lib/api";
 
 interface EstimateDetail {
-  id: string
-  version: number
-  status: EstimateStatus
-  subtotal: string
-  vat_amount: string
-  total_amount: string
-  created_at: string
-  issued_at?: string
+  id: string;
+  version: number;
+  status: EstimateStatus;
+  subtotal: string;
+  vat_amount: string;
+  total_amount: string;
+  created_at: string;
+  issued_at?: string;
   lines: Array<{
-    id: string
-    sort_order: number
-    description: string
-    specification?: string
-    unit: string
-    quantity: string
-    unit_price_snapshot: string
-    amount: string
-    source: EstimateLineSource
-  }>
+    id: string;
+    sort_order: number;
+    description: string;
+    specification?: string;
+    unit: string;
+    quantity: string;
+    unit_price_snapshot: string;
+    amount: string;
+    source: EstimateLineSource;
+  }>;
 }
 
-const sourceLabels: Record<EstimateLineSource, { label: string; color: string }> = {
+const sourceLabels: Record<
+  EstimateLineSource,
+  { label: string; color: string }
+> = {
   ai: { label: "AI", color: "bg-purple-100 text-purple-700" },
   manual: { label: "수동", color: "bg-slate-100 text-slate-700" },
   template: { label: "템플릿", color: "bg-blue-100 text-blue-700" },
-}
+};
 
 export default function EstimateDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params)
-  const [estimate, setEstimate] = useState<EstimateDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [lineModalOpen, setLineModalOpen] = useState(false)
-  const [editingLine, setEditingLine] = useState<EstimateDetail["lines"][0] | null>(null)
+  const { id } = use(params);
+  const [estimate, setEstimate] = useState<EstimateDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lineModalOpen, setLineModalOpen] = useState(false);
+  const [editingLine, setEditingLine] = useState<
+    EstimateDetail["lines"][0] | null
+  >(null);
 
   useEffect(() => {
-    loadEstimate()
-  }, [id])
+    loadEstimate();
+  }, [id]);
 
   async function loadEstimate() {
     try {
-      setLoading(true)
-      setError(null)
-      const response = await api.getEstimate(id)
+      setLoading(true);
+      setError(null);
+      const response = await api.getEstimate(id);
       if (response.success && response.data) {
-        setEstimate(response.data as EstimateDetail)
+        setEstimate(response.data as EstimateDetail);
       }
     } catch (err) {
-      setError("견적서를 불러오는데 실패했어요")
-      console.error(err)
+      setError("견적서를 불러오는데 실패했어요");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   async function handleIssue() {
     try {
-      await api.issueEstimate(id)
-      await loadEstimate()
+      await api.issueEstimate(id);
+      await loadEstimate();
     } catch (err) {
-      alert("발송에 실패했어요")
-      console.error(err)
+      alert("발송에 실패했어요");
+      console.error(err);
     }
   }
 
   async function handleDeleteLine(lineId: string) {
-    if (!confirm("이 항목을 삭제할까요?")) return
-    
+    if (!confirm("이 항목을 삭제할까요?")) return;
+
     try {
-      await api.deleteEstimateLine(id, lineId)
-      await loadEstimate()
+      await api.deleteEstimateLine(id, lineId);
+      await loadEstimate();
     } catch (err) {
-      alert("삭제에 실패했어요")
-      console.error(err)
+      alert("삭제에 실패했어요");
+      console.error(err);
     }
   }
 
   async function handleSaveLine(data: {
-    id?: string
-    description: string
-    specification?: string
-    unit: string
-    quantity: string
-    unit_price_snapshot: string
+    id?: string;
+    description: string;
+    specification?: string;
+    unit: string;
+    quantity: string;
+    unit_price_snapshot: string;
   }) {
     if (editingLine) {
       await api.updateEstimateLine(id, editingLine.id, {
         description: data.description,
         quantity: data.quantity,
         unit_price_snapshot: data.unit_price_snapshot,
-      })
+      });
     } else {
       await api.addEstimateLine(id, {
         description: data.description,
@@ -129,23 +134,23 @@ export default function EstimateDetailPage({
         unit: data.unit,
         quantity: data.quantity,
         unit_price_snapshot: data.unit_price_snapshot,
-      })
+      });
     }
-    await loadEstimate()
+    await loadEstimate();
   }
 
   const formatCurrency = (amount: string) => {
-    return Number(amount).toLocaleString() + "원"
-  }
+    return Number(amount).toLocaleString() + "원";
+  };
 
   if (loading) {
     return (
       <AdminLayout>
         <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
         </div>
       </AdminLayout>
-    )
+    );
   }
 
   if (error || !estimate) {
@@ -158,7 +163,7 @@ export default function EstimateDetailPage({
           </Link>
         </div>
       </AdminLayout>
-    )
+    );
   }
 
   return (
@@ -184,11 +189,11 @@ export default function EstimateDetailPage({
               <Printer className="h-4 w-4" />
               인쇄
             </Button>
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               onClick={() => {
-                const url = `/api/v1/estimates/${id}/pdf`
-                window.open(url, '_blank')
+                const url = `/api/v1/estimates/${id}/pdf`;
+                window.open(url, "_blank");
               }}
             >
               <Download className="h-4 w-4" />
@@ -221,9 +226,9 @@ export default function EstimateDetailPage({
                   {formatCurrency(estimate.vat_amount)}
                 </p>
               </div>
-              <div className="rounded-lg bg-teal-50 p-4">
-                <p className="text-sm text-teal-600">합계</p>
-                <p className="mt-1 text-xl font-bold text-teal-700">
+              <div className="rounded-lg bg-brand-point-50 p-4">
+                <p className="text-sm text-brand-point-600">합계</p>
+                <p className="mt-1 text-xl font-bold text-brand-point-700">
                   {formatCurrency(estimate.total_amount)}
                 </p>
               </div>
@@ -234,10 +239,13 @@ export default function EstimateDetailPage({
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>견적 항목</CardTitle>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="secondary"
-              onClick={() => { setEditingLine(null); setLineModalOpen(true) }}
+              onClick={() => {
+                setEditingLine(null);
+                setLineModalOpen(true);
+              }}
             >
               <Plus className="h-4 w-4" />
               항목 추가
@@ -290,12 +298,15 @@ export default function EstimateDetailPage({
                       <td className="px-6 py-4">
                         <div className="flex gap-1">
                           <button
-                            onClick={() => { setEditingLine(line); setLineModalOpen(true) }}
+                            onClick={() => {
+                              setEditingLine(line);
+                              setLineModalOpen(true);
+                            }}
                             className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                           >
                             <Edit2 className="h-4 w-4 text-slate-400" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDeleteLine(line.id)}
                             className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
                           >
@@ -308,7 +319,10 @@ export default function EstimateDetailPage({
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-slate-200 bg-slate-50">
-                    <td colSpan={5} className="px-6 py-4 text-right font-medium text-slate-700">
+                    <td
+                      colSpan={5}
+                      className="px-6 py-4 text-right font-medium text-slate-700"
+                    >
                       공급가액
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-slate-900">
@@ -317,7 +331,10 @@ export default function EstimateDetailPage({
                     <td colSpan={2}></td>
                   </tr>
                   <tr className="bg-slate-50">
-                    <td colSpan={5} className="px-6 py-4 text-right font-medium text-slate-700">
+                    <td
+                      colSpan={5}
+                      className="px-6 py-4 text-right font-medium text-slate-700"
+                    >
                       부가세 (10%)
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-slate-900">
@@ -325,11 +342,14 @@ export default function EstimateDetailPage({
                     </td>
                     <td colSpan={2}></td>
                   </tr>
-                  <tr className="bg-teal-50">
-                    <td colSpan={5} className="px-6 py-4 text-right font-bold text-teal-700">
+                  <tr className="bg-brand-point-50">
+                    <td
+                      colSpan={5}
+                      className="px-6 py-4 text-right font-bold text-brand-point-700"
+                    >
                       합계
                     </td>
-                    <td className="px-6 py-4 text-right text-lg font-bold text-teal-700">
+                    <td className="px-6 py-4 text-right text-lg font-bold text-brand-point-700">
                       {formatCurrency(estimate.total_amount)}
                     </td>
                     <td colSpan={2}></td>
@@ -347,8 +367,8 @@ export default function EstimateDetailPage({
           <CardContent>
             <div className="space-y-4">
               <div className="flex gap-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-100">
-                  <Plus className="h-4 w-4 text-teal-600" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-point-100">
+                  <Plus className="h-4 w-4 text-brand-point-600" />
                 </div>
                 <div>
                   <p className="font-medium text-slate-900">견적서 생성</p>
@@ -382,5 +402,5 @@ export default function EstimateDetailPage({
         line={editingLine}
       />
     </AdminLayout>
-  )
+  );
 }

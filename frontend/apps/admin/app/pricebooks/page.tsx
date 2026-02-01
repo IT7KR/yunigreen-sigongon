@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react";
 import {
   Upload,
   Search,
@@ -15,8 +15,8 @@ import {
   Loader2,
   Play,
   Archive,
-} from "lucide-react"
-import { AdminLayout } from "@/components/AdminLayout"
+} from "lucide-react";
+import { AdminLayout } from "@/components/AdminLayout";
 import {
   Card,
   CardContent,
@@ -24,200 +24,217 @@ import {
   CardTitle,
   Button,
   formatDate,
-} from "@yunigreen/ui"
-import { api } from "@/lib/api"
-import { PdfUploadModal } from "@/components/PdfUploadModal"
+} from "@sigongon/ui";
+import { api } from "@/lib/api";
+import { PdfUploadModal } from "@/components/PdfUploadModal";
 
-type RevisionStatus = "active" | "draft" | "deprecated"
+type RevisionStatus = "active" | "draft" | "deprecated";
 
 interface Revision {
-  id: string
-  version_label: string
-  effective_from: string
-  status: RevisionStatus
-  item_count: number
-  created_at: string
-  activated_at?: string
+  id: string;
+  version_label: string;
+  effective_from: string;
+  status: RevisionStatus;
+  item_count: number;
+  created_at: string;
+  activated_at?: string;
 }
 
 interface StagingItem {
-  id: string
-  item_name: string
-  specification?: string
-  unit: string
-  unit_price_extracted: string
-  confidence_score: number
-  status: string
-  created_at: string
+  id: string;
+  item_name: string;
+  specification?: string;
+  unit: string;
+  unit_price_extracted: string;
+  confidence_score: number;
+  status: string;
+  created_at: string;
 }
 
-const statusConfig: Record<RevisionStatus, { label: string; icon: typeof CheckCircle; color: string }> = {
-  active: { label: "사용중", icon: CheckCircle, color: "text-green-600 bg-green-100" },
+const statusConfig: Record<
+  RevisionStatus,
+  { label: string; icon: typeof CheckCircle; color: string }
+> = {
+  active: {
+    label: "사용중",
+    icon: CheckCircle,
+    color: "text-green-600 bg-green-100",
+  },
   draft: { label: "검토중", icon: Clock, color: "text-amber-600 bg-amber-100" },
-  deprecated: { label: "보관", icon: FileSpreadsheet, color: "text-slate-500 bg-slate-100" },
-}
+  deprecated: {
+    label: "보관",
+    icon: FileSpreadsheet,
+    color: "text-slate-500 bg-slate-100",
+  },
+};
 
 export default function PricebooksPage() {
-  const [activeTab, setActiveTab] = useState<"revisions" | "staging">("revisions")
-  const [revisions, setRevisions] = useState<Revision[]>([])
-  const [stagingItems, setStagingItems] = useState<StagingItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null)
-  const [uploadModalOpen, setUploadModalOpen] = useState(false)
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const [activeTab, setActiveTab] = useState<"revisions" | "staging">(
+    "revisions",
+  );
+  const [revisions, setRevisions] = useState<Revision[]>([]);
+  const [stagingItems, setStagingItems] = useState<StagingItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(
+    null,
+  );
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setOpenMenuId(null)
+        setOpenMenuId(null);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
-    loadRevisions()
-  }, [])
+    loadRevisions();
+  }, []);
 
   useEffect(() => {
     if (activeTab === "staging" && selectedRevisionId) {
-      loadStagingItems(selectedRevisionId)
+      loadStagingItems(selectedRevisionId);
     }
-  }, [activeTab, selectedRevisionId])
+  }, [activeTab, selectedRevisionId]);
 
   async function loadRevisions() {
     try {
-      setLoading(true)
-      setError(null)
-      const response = await api.getRevisions()
+      setLoading(true);
+      setError(null);
+      const response = await api.getRevisions();
       if (response.success && response.data) {
-        const items = response.data as Revision[]
-        setRevisions(items)
+        const items = response.data as Revision[];
+        setRevisions(items);
         if (items.length > 0 && !selectedRevisionId) {
-          setSelectedRevisionId(items[0].id)
+          setSelectedRevisionId(items[0].id);
         }
       }
     } catch (err) {
-      setError("적산 자료 버전을 불러오는데 실패했어요")
-      console.error(err)
+      setError("적산 자료 버전을 불러오는데 실패했어요");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   async function loadStagingItems(revisionId: string) {
     try {
-      setLoading(true)
-      const response = await api.getStagingItems(revisionId, { status: "pending" })
+      setLoading(true);
+      const response = await api.getStagingItems(revisionId, {
+        status: "pending",
+      });
       if (response.success && response.data) {
-        setStagingItems(response.data as StagingItem[])
+        setStagingItems(response.data as StagingItem[]);
       }
     } catch (err) {
-      console.error(err)
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   async function handleApprove(stagingId: string) {
     try {
-      await api.reviewStagingItem(stagingId, { action: "approved" })
-      setStagingItems(stagingItems.filter(item => item.id !== stagingId))
+      await api.reviewStagingItem(stagingId, { action: "approved" });
+      setStagingItems(stagingItems.filter((item) => item.id !== stagingId));
     } catch (err) {
-      alert("승인에 실패했어요")
-      console.error(err)
+      alert("승인에 실패했어요");
+      console.error(err);
     }
   }
 
   async function handleBulkApprove() {
-    if (!selectedRevisionId || stagingItems.length === 0) return
-    
+    if (!selectedRevisionId || stagingItems.length === 0) return;
+
     try {
       await api.bulkReviewStaging(selectedRevisionId, {
-        staging_ids: stagingItems.map(item => item.id),
+        staging_ids: stagingItems.map((item) => item.id),
         action: "approved",
-      })
-      setStagingItems([])
+      });
+      setStagingItems([]);
     } catch (err) {
-      alert("일괄 승인에 실패했어요")
-      console.error(err)
+      alert("일괄 승인에 실패했어요");
+      console.error(err);
     }
   }
 
   async function handleBulkReject() {
-    if (!selectedRevisionId || stagingItems.length === 0) return
-    
-    if (!confirm("전체 항목을 거부하시겠어요?")) return
-    
+    if (!selectedRevisionId || stagingItems.length === 0) return;
+
+    if (!confirm("전체 항목을 거부하시겠어요?")) return;
+
     try {
       await api.bulkReviewStaging(selectedRevisionId, {
-        staging_ids: stagingItems.map(item => item.id),
+        staging_ids: stagingItems.map((item) => item.id),
         action: "rejected",
-      })
-      setStagingItems([])
+      });
+      setStagingItems([]);
     } catch (err) {
-      alert("일괄 거부에 실패했어요")
-      console.error(err)
+      alert("일괄 거부에 실패했어요");
+      console.error(err);
     }
   }
 
   async function handleReject(stagingId: string) {
     try {
-      await api.reviewStagingItem(stagingId, { action: "rejected" })
-      setStagingItems(stagingItems.filter(item => item.id !== stagingId))
+      await api.reviewStagingItem(stagingId, { action: "rejected" });
+      setStagingItems(stagingItems.filter((item) => item.id !== stagingId));
     } catch (err) {
-      alert("거부에 실패했어요")
-      console.error(err)
+      alert("거부에 실패했어요");
+      console.error(err);
     }
   }
 
   async function handleActivate(revisionId: string) {
     try {
-      const result = await api.activateRevision(revisionId)
+      const result = await api.activateRevision(revisionId);
       if (result.success) {
-        alert(result.data?.message || "활성화했어요")
-        loadRevisions()
+        alert(result.data?.message || "활성화했어요");
+        loadRevisions();
       }
     } catch (err) {
-      alert("활성화에 실패했어요")
-      console.error(err)
+      alert("활성화에 실패했어요");
+      console.error(err);
     } finally {
-      setOpenMenuId(null)
+      setOpenMenuId(null);
     }
   }
 
   async function handlePromote(revisionId: string) {
     try {
-      const result = await api.promoteApprovedStaging(revisionId)
+      const result = await api.promoteApprovedStaging(revisionId);
       if (result.success) {
-        alert(result.data?.message || "정식 DB로 이동했어요")
-        loadRevisions()
+        alert(result.data?.message || "정식 DB로 이동했어요");
+        loadRevisions();
       }
     } catch (err) {
-      alert("이동에 실패했어요")
-      console.error(err)
+      alert("이동에 실패했어요");
+      console.error(err);
     } finally {
-      setOpenMenuId(null)
+      setOpenMenuId(null);
     }
   }
 
   async function handleAutoApprove(revisionId: string) {
     try {
-      const result = await api.autoApproveStaging(revisionId)
+      const result = await api.autoApproveStaging(revisionId);
       if (result.success) {
-        alert(result.data?.message || "자동 승인 완료")
+        alert(result.data?.message || "자동 승인 완료");
         if (selectedRevisionId === revisionId) {
-          loadStagingItems(revisionId)
+          loadStagingItems(revisionId);
         }
       }
     } catch (err) {
-      alert("자동 승인에 실패했어요")
-      console.error(err)
+      alert("자동 승인에 실패했어요");
+      console.error(err);
     } finally {
-      setOpenMenuId(null)
+      setOpenMenuId(null);
     }
   }
 
@@ -225,10 +242,10 @@ export default function PricebooksPage() {
     return (
       <AdminLayout>
         <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
         </div>
       </AdminLayout>
-    )
+    );
   }
 
   if (error) {
@@ -239,7 +256,7 @@ export default function PricebooksPage() {
           <Button onClick={loadRevisions}>다시 시도</Button>
         </div>
       </AdminLayout>
-    )
+    );
   }
 
   return (
@@ -248,9 +265,7 @@ export default function PricebooksPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">적산 자료</h1>
-            <p className="mt-1 text-slate-500">
-              PDF 업로드 및 가격 정보 관리
-            </p>
+            <p className="mt-1 text-slate-500">PDF 업로드 및 가격 정보 관리</p>
           </div>
           <Button onClick={() => setUploadModalOpen(true)}>
             <Upload className="h-4 w-4" />
@@ -263,7 +278,7 @@ export default function PricebooksPage() {
             onClick={() => setActiveTab("revisions")}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "revisions"
-                ? "border-teal-500 text-teal-600"
+                ? "border-brand-point-500 text-brand-point-600"
                 : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
           >
@@ -273,7 +288,7 @@ export default function PricebooksPage() {
             onClick={() => setActiveTab("staging")}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "staging"
-                ? "border-teal-500 text-teal-600"
+                ? "border-brand-point-500 text-brand-point-600"
                 : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
           >
@@ -303,9 +318,10 @@ export default function PricebooksPage() {
                   </thead>
                   <tbody>
                     {revisions.map((revision) => {
-                      const status = statusConfig[revision.status] || statusConfig.draft
-                      const StatusIcon = status.icon
-                      
+                      const status =
+                        statusConfig[revision.status] || statusConfig.draft;
+                      const StatusIcon = status.icon;
+
                       return (
                         <tr
                           key={revision.id}
@@ -317,7 +333,9 @@ export default function PricebooksPage() {
                             </p>
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${status.color}`}>
+                            <span
+                              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${status.color}`}
+                            >
                               <StatusIcon className="h-3.5 w-3.5" />
                               {status.label}
                             </span>
@@ -329,29 +347,44 @@ export default function PricebooksPage() {
                             {formatDate(revision.effective_from)}
                           </td>
                           <td className="px-6 py-4 text-slate-500">
-                            {revision.activated_at ? formatDate(revision.activated_at) : "-"}
+                            {revision.activated_at
+                              ? formatDate(revision.activated_at)
+                              : "-"}
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex gap-1">
-                              <button 
+                              <button
                                 onClick={() => {
-                                  setSelectedRevisionId(revision.id)
-                                  setActiveTab("staging")
+                                  setSelectedRevisionId(revision.id);
+                                  setActiveTab("staging");
                                 }}
                                 className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                                 title="검토 대기 보기"
                               >
                                 <Eye className="h-4 w-4 text-slate-400" />
                               </button>
-                              <button 
+                              <button
                                 className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                                 title="다운로드"
                               >
                                 <Download className="h-4 w-4 text-slate-400" />
                               </button>
-                              <div className="relative" ref={openMenuId === revision.id ? menuRef : undefined}>
-                                <button 
-                                  onClick={() => setOpenMenuId(openMenuId === revision.id ? null : revision.id)}
+                              <div
+                                className="relative"
+                                ref={
+                                  openMenuId === revision.id
+                                    ? menuRef
+                                    : undefined
+                                }
+                              >
+                                <button
+                                  onClick={() =>
+                                    setOpenMenuId(
+                                      openMenuId === revision.id
+                                        ? null
+                                        : revision.id,
+                                    )
+                                  }
                                   className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                                 >
                                   <MoreHorizontal className="h-4 w-4 text-slate-400" />
@@ -361,21 +394,27 @@ export default function PricebooksPage() {
                                     {revision.status === "draft" && (
                                       <>
                                         <button
-                                          onClick={() => handleAutoApprove(revision.id)}
+                                          onClick={() =>
+                                            handleAutoApprove(revision.id)
+                                          }
                                           className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                                         >
                                           <CheckCircle className="h-4 w-4" />
                                           고신뢰도 자동 승인
                                         </button>
                                         <button
-                                          onClick={() => handlePromote(revision.id)}
+                                          onClick={() =>
+                                            handlePromote(revision.id)
+                                          }
                                           className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                                         >
                                           <Archive className="h-4 w-4" />
                                           정식 DB로 이동
                                         </button>
                                         <button
-                                          onClick={() => handleActivate(revision.id)}
+                                          onClick={() =>
+                                            handleActivate(revision.id)
+                                          }
                                           className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-green-600 hover:bg-slate-50"
                                         >
                                           <Play className="h-4 w-4" />
@@ -390,7 +429,9 @@ export default function PricebooksPage() {
                                     )}
                                     {revision.status === "deprecated" && (
                                       <button
-                                        onClick={() => handleActivate(revision.id)}
+                                        onClick={() =>
+                                          handleActivate(revision.id)
+                                        }
                                         className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                                       >
                                         <Play className="h-4 w-4" />
@@ -403,7 +444,7 @@ export default function PricebooksPage() {
                             </div>
                           </td>
                         </tr>
-                      )
+                      );
                     })}
                   </tbody>
                 </table>
@@ -423,7 +464,8 @@ export default function PricebooksPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-slate-600">
-                  AI가 PDF에서 추출한 품목입니다. 확인 후 승인하거나 수정해 주세요.
+                  AI가 PDF에서 추출한 품목입니다. 확인 후 승인하거나 수정해
+                  주세요.
                 </p>
               </CardContent>
             </Card>
@@ -444,7 +486,9 @@ export default function PricebooksPage() {
                           <th className="px-6 py-4 font-medium">품목명</th>
                           <th className="px-6 py-4 font-medium">규격</th>
                           <th className="px-6 py-4 font-medium">단위</th>
-                          <th className="px-6 py-4 font-medium text-right">단가</th>
+                          <th className="px-6 py-4 font-medium text-right">
+                            단가
+                          </th>
                           <th className="px-6 py-4 font-medium">신뢰도</th>
                           <th className="px-6 py-4 font-medium"></th>
                         </tr>
@@ -461,27 +505,41 @@ export default function PricebooksPage() {
                             <td className="px-6 py-4 text-slate-600">
                               {item.specification || "-"}
                             </td>
-                            <td className="px-6 py-4 text-slate-600">{item.unit}</td>
+                            <td className="px-6 py-4 text-slate-600">
+                              {item.unit}
+                            </td>
                             <td className="px-6 py-4 text-right font-medium text-slate-900">
-                              {Number(item.unit_price_extracted).toLocaleString()}원
+                              {Number(
+                                item.unit_price_extracted,
+                              ).toLocaleString()}
+                              원
                             </td>
                             <td className="px-6 py-4">
-                              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                                item.confidence_score >= 0.9 
-                                  ? "bg-green-100 text-green-700"
-                                  : item.confidence_score >= 0.7
-                                  ? "bg-amber-100 text-amber-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}>
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  item.confidence_score >= 0.9
+                                    ? "bg-green-100 text-green-700"
+                                    : item.confidence_score >= 0.7
+                                      ? "bg-amber-100 text-amber-700"
+                                      : "bg-red-100 text-red-700"
+                                }`}
+                              >
                                 {Math.round(item.confidence_score * 100)}%
                               </span>
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex gap-2">
-                                <Button size="sm" variant="secondary" onClick={() => handleReject(item.id)}>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => handleReject(item.id)}
+                                >
                                   거부
                                 </Button>
-                                <Button size="sm" onClick={() => handleApprove(item.id)}>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleApprove(item.id)}
+                                >
                                   승인
                                 </Button>
                               </div>
@@ -497,7 +555,9 @@ export default function PricebooksPage() {
 
             {stagingItems.length > 0 && (
               <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={handleBulkReject}>전체 거부</Button>
+                <Button variant="secondary" onClick={handleBulkReject}>
+                  전체 거부
+                </Button>
                 <Button onClick={handleBulkApprove}>전체 승인</Button>
               </div>
             )}
@@ -511,5 +571,5 @@ export default function PricebooksPage() {
         onSuccess={() => loadRevisions()}
       />
     </AdminLayout>
-  )
+  );
 }

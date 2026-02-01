@@ -1,54 +1,64 @@
-"use client"
+"use client";
 
-import { useState, useEffect, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Eye, EyeOff, Droplets } from "lucide-react"
-import { Card, CardContent, Button, Input } from "@yunigreen/ui"
-import { useAuth } from "@/lib/auth"
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
+import { Card, CardContent, Button, Input, BlurText } from "@sigongon/ui";
+import { useAuth } from "@/lib/auth";
+import Image from "next/image";
 
 function LoginForm() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth()
-  
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const redirectTo = searchParams.get("redirect") || "/"
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const redirectTo = searchParams.get("redirect") || "/dashboard";
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.push(redirectTo)
+      router.push(redirectTo);
     }
-  }, [authLoading, isAuthenticated, router, redirectTo])
+  }, [authLoading, isAuthenticated, router, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setIsLoading(true)
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
 
-    const result = await login(email, password)
-    
+    const result = await login(username, password);
+
     if (result.success) {
-      router.push(redirectTo)
+      router.push(redirectTo);
     } else {
-      setError(result.error || "로그인에 실패했어요")
+      setError(result.error || "로그인에 실패했어요");
     }
-    
-    setIsLoading(false)
-  }
+
+    setIsLoading(false);
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-100 p-4">
       <div className="mb-8 flex flex-col items-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-lg">
-          <Droplets className="h-8 w-8" />
-        </div>
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">유니그린 관리자</h1>
-        <p className="mt-1 text-sm text-slate-500">관리자 계정으로 로그인하세요</p>
+        <Image
+          src="/logo-sq.png"
+          alt="시공ON 로고"
+          width={80}
+          height={80}
+          className="object-contain"
+        />
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">
+          <BlurText text="시공ON 관리자" />
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          관리자 계정으로 로그인하세요
+        </p>
       </div>
 
       <Card className="w-full max-w-sm">
@@ -61,13 +71,13 @@ function LoginForm() {
             )}
 
             <Input
-              type="email"
-              label="이메일"
-              placeholder="admin@yunigreen.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              label="아이디"
+              placeholder="아이디를 입력하세요"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
-              autoComplete="email"
+              autoComplete="username"
               autoFocus
             />
 
@@ -95,23 +105,39 @@ function LoginForm() {
               </button>
             </div>
 
+            <div className="flex justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-sm text-slate-500 hover:text-brand-primary-600"
+              >
+                비밀번호를 잊으셨나요?
+              </Link>
+            </div>
+
             <Button
               type="submit"
               fullWidth
               loading={isLoading}
-              disabled={isLoading || !email || !password}
+              disabled={isLoading || !username || !password}
             >
               로그인
             </Button>
+
+            <div className="mt-4 text-center text-sm text-slate-600">
+              아직 계정이 없으신가요?{" "}
+              <Link href="/signup" className="font-medium text-brand-primary-600 hover:text-brand-primary-700">
+                회원가입
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>
 
       <p className="mt-8 text-xs text-slate-400">
-        © 2026 유니그린. All rights reserved.
+        © 2026 시공ON. All rights reserved.
       </p>
     </div>
-  )
+  );
 }
 
 export default function AdminLoginPage() {
@@ -119,28 +145,38 @@ export default function AdminLoginPage() {
     <Suspense fallback={<LoginPageSkeleton />}>
       <LoginForm />
     </Suspense>
-  )
+  );
 }
 
 function LoginPageSkeleton() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-100 p-4">
       <div className="mb-8 flex flex-col items-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-lg">
-          <Droplets className="h-8 w-8" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-primary-500 text-white shadow-lg">
+          <Image
+            src="/logo.png"
+            alt="시공ON 로고"
+            width={40}
+            height={40}
+            className="object-contain"
+          />
         </div>
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">유니그린 관리자</h1>
-        <p className="mt-1 text-sm text-slate-500">관리자 계정으로 로그인하세요</p>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">
+          시공ON 관리자
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          관리자 계정으로 로그인하세요
+        </p>
       </div>
       <Card className="w-full max-w-sm">
         <CardContent className="p-6">
           <div className="animate-pulse space-y-4">
             <div className="h-10 rounded bg-slate-200" />
             <div className="h-10 rounded bg-slate-200" />
-            <div className="h-10 rounded bg-teal-200" />
+            <div className="h-10 rounded bg-brand-primary-200" />
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

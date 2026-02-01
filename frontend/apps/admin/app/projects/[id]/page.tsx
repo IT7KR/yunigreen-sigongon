@@ -1,9 +1,8 @@
+"use client";
 
-"use client"
-
-import { use, useState, useEffect } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { use, useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   User,
   Camera,
@@ -11,7 +10,7 @@ import {
   ClipboardCheck,
   Plus,
   Loader2,
-} from "lucide-react"
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -20,93 +19,93 @@ import {
   Button,
   StatusBadge,
   formatDate,
-} from "@yunigreen/ui"
-import type { ProjectStatus, VisitType, EstimateStatus } from "@yunigreen/types"
-import { api } from "@/lib/api"
+} from "@sigongon/ui";
+import type { ProjectStatus, VisitType, EstimateStatus } from "@sigongon/types";
+import { api } from "@/lib/api";
 
 interface ProjectDetail {
-  id: string
-  name: string
-  address: string
-  status: ProjectStatus
-  client_name?: string
-  client_phone?: string
-  notes?: string
-  created_at: string
+  id: string;
+  name: string;
+  address: string;
+  status: ProjectStatus;
+  client_name?: string;
+  client_phone?: string;
+  notes?: string;
+  created_at: string;
   site_visits: Array<{
-    id: string
-    visit_type: VisitType
-    visited_at: string
-    photo_count: number
-  }>
+    id: string;
+    visit_type: VisitType;
+    visited_at: string;
+    photo_count: number;
+  }>;
   estimates: Array<{
-    id: string
-    version: number
-    status: EstimateStatus
-    total_amount: string
-    created_at?: string
-  }>
+    id: string;
+    version: number;
+    status: EstimateStatus;
+    total_amount: string;
+    created_at?: string;
+  }>;
 }
 
 const visitTypeLabels: Record<VisitType, string> = {
   initial: "최초 방문",
   progress: "진행 점검",
   completion: "준공 확인",
-}
+};
 
 export default function ProjectDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params)
-  const router = useRouter()
-  const [project, setProject] = useState<ProjectDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [creatingEstimate, setCreatingEstimate] = useState(false)
+  const { id } = use(params);
+  const router = useRouter();
+  const [project, setProject] = useState<ProjectDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [creatingEstimate, setCreatingEstimate] = useState(false);
 
   useEffect(() => {
-    loadProject()
-  }, [id])
+    loadProject();
+  }, [id]);
 
   async function loadProject() {
     try {
-      setLoading(true)
-      setError(null)
-      const response = await api.getProject(id)
+      setLoading(true);
+      setError(null);
+      const response = await api.getProject(id);
       if (response.success && response.data) {
-        setProject(response.data as ProjectDetail)
+        setProject(response.data as ProjectDetail);
       }
     } catch (err) {
-      setError("프로젝트를 불러오는데 실패했어요")
-      console.error(err)
+      setError("프로젝트를 불러오는데 실패했어요");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   async function handleCreateEstimate() {
-    if (!project) return
+    if (!project) return;
     try {
-      setCreatingEstimate(true)
-      const result = await api.createEstimate(id)
+      setCreatingEstimate(true);
+      const result = await api.createEstimate(id);
       if (result.success && result.data) {
-        router.push(`/estimates/${result.data.id}`)
+        router.push(`/estimates/${result.data.id}`);
       }
     } catch (err) {
-      console.error(err)
+      console.error(err);
     } finally {
-      setCreatingEstimate(false)
+      setCreatingEstimate(false);
     }
   }
 
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
       </div>
-    )
+    );
   }
 
   if (error || !project) {
@@ -117,7 +116,7 @@ export default function ProjectDetailPage({
           <Button>목록으로 돌아가기</Button>
         </Link>
       </div>
-    )
+    );
   }
 
   return (
@@ -133,11 +132,15 @@ export default function ProjectDetailPage({
           <CardContent className="space-y-3">
             <div>
               <p className="text-sm text-slate-500">고객명</p>
-              <p className="font-medium text-slate-900">{project.client_name || "-"}</p>
+              <p className="font-medium text-slate-900">
+                {project.client_name || "-"}
+              </p>
             </div>
             <div>
               <p className="text-sm text-slate-500">연락처</p>
-              <p className="font-medium text-slate-900">{project.client_phone || "-"}</p>
+              <p className="font-medium text-slate-900">
+                {project.client_phone || "-"}
+              </p>
             </div>
             <div>
               <p className="text-sm text-slate-500">등록일</p>
@@ -153,7 +156,9 @@ export default function ProjectDetailPage({
             <CardTitle>메모</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-slate-600">{project.notes || "메모가 없습니다."}</p>
+            <p className="text-slate-600">
+              {project.notes || "메모가 없습니다."}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -165,10 +170,15 @@ export default function ProjectDetailPage({
               <Camera className="h-5 w-5 text-slate-400" />
               현장 방문
             </CardTitle>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="secondary"
-              onClick={() => window.open(`http://localhost:3134/projects/${id}/visits/new`, '_blank')}
+              onClick={() =>
+                window.open(
+                  `http://localhost:3134/projects/${id}/visits/new`,
+                  "_blank",
+                )
+              }
             >
               <Plus className="h-4 w-4" />
               방문 추가
@@ -211,10 +221,12 @@ export default function ProjectDetailPage({
               <ClipboardCheck className="h-5 w-5 text-slate-400" />
               AI 진단
             </CardTitle>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="secondary"
-              onClick={() => window.open(`http://localhost:3134/projects/${id}`, '_blank')}
+              onClick={() =>
+                window.open(`http://localhost:3134/projects/${id}`, "_blank")
+              }
               title="Mobile 앱에서 진단 요청"
             >
               <Plus className="h-4 w-4" />
@@ -235,8 +247,16 @@ export default function ProjectDetailPage({
             <FileText className="h-5 w-5 text-slate-400" />
             견적서
           </CardTitle>
-          <Button size="sm" onClick={handleCreateEstimate} disabled={creatingEstimate}>
-            {creatingEstimate ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          <Button
+            size="sm"
+            onClick={handleCreateEstimate}
+            disabled={creatingEstimate}
+          >
+            {creatingEstimate ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
             견적서 생성
           </Button>
         </CardHeader>
@@ -273,7 +293,9 @@ export default function ProjectDetailPage({
                         {Number(estimate.total_amount).toLocaleString()}원
                       </td>
                       <td className="py-4 text-slate-500">
-                        {estimate.created_at ? formatDate(estimate.created_at) : "-"}
+                        {estimate.created_at
+                          ? formatDate(estimate.created_at)
+                          : "-"}
                       </td>
                       <td className="py-4">
                         <Link href={`/estimates/${estimate.id}`}>
@@ -291,5 +313,5 @@ export default function ProjectDetailPage({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
