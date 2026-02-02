@@ -149,3 +149,5 @@ secrets/
 .env.dev
 .env.test
 .env.prod
+
+sample/
