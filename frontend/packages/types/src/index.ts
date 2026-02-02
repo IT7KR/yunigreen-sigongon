@@ -64,6 +64,9 @@ export type PhotoAlbumStatus = "draft" | "published"
 export type ReportType = "start" | "completion"
 export type ReportStatus = "draft" | "submitted" | "approved" | "rejected"
 
+// Weather & Daily Reports
+export type WeatherType = "sunny" | "cloudy" | "rain" | "snow" | "wind"
+
 // Subscription & Billing (토스페이먼츠)
 export type SubscriptionPlan = "starter" | "standard" | "premium"
 export type SubscriptionStatus = "active" | "cancelled" | "expired" | "past_due"
@@ -72,6 +75,9 @@ export type PaymentStatus = "pending" | "paid" | "failed" | "refunded"
 // Tax Invoice (팝빌)
 export type TaxInvoiceStatus = "draft" | "issued" | "cancelled" | "failed"
 export type TaxInvoiceType = "regular" | "simplified"
+
+// Material Orders (자재 발주)
+export type MaterialOrderStatus = "draft" | "requested" | "confirmed" | "shipped" | "delivered" | "cancelled"
 
 // Project Categories (건설업 신고 기준)
 export const PROJECT_CATEGORIES = [
@@ -286,6 +292,18 @@ export interface ConstructionReport {
   approved_by?: string
 }
 
+export interface DailyReport {
+  id: string
+  project_id: string
+  work_date: string
+  weather?: WeatherType
+  temperature?: string
+  work_description: string
+  tomorrow_plan?: string
+  photos: string[]
+  created_at: string
+}
+
 export interface Subscription {
   id: string
   organization_id: string
@@ -363,6 +381,30 @@ export interface WarrantyInfo {
   }>
 }
 
+export interface MaterialOrder {
+  id: string
+  project_id: string
+  order_number: string
+  status: MaterialOrderStatus
+  items: MaterialOrderItem[]
+  total_amount: number
+  requested_at?: string
+  confirmed_at?: string
+  delivered_at?: string
+  notes?: string
+  created_at: string
+}
+
+export interface MaterialOrderItem {
+  id: string
+  description: string
+  specification?: string
+  unit: string
+  quantity: number
+  unit_price: number
+  amount: number
+}
+
 // ============================================
 // API Response Types
 // ============================================
@@ -412,6 +454,7 @@ export interface ProjectListItem {
   name: string
   address: string
   status: ProjectStatus
+  category?: ProjectCategory
   client_name?: string
   created_at: string
   site_visit_count: number
@@ -627,3 +670,225 @@ export interface TaxInvoiceListItem {
 }
 
 export interface TaxInvoiceDetail extends TaxInvoice {}
+
+// ============================================
+// Document Workflow Types
+// ============================================
+
+export type DocumentPhase =
+  | "contract"        // 계약 단계
+  | "commencement"    // 착공 단계
+  | "construction"    // 시공 단계
+  | "completion"      // 준공 단계
+  | "labor_report"    // 일용신고
+  | "private_contract" // 민간 계약
+  | "school"          // 학교 특수
+
+export type DocumentGenerationType =
+  | "auto"      // 시스템 자동 생성
+  | "template"  // 템플릿 기반 생성
+  | "ai"        // AI 기반 생성
+  | "external"  // 외부 연동 (모두싸인, 팝빌)
+  | "upload"    // 사용자 업로드
+
+export type DocumentFileFormat = "xlsx" | "pdf" | "hwp_pdf" | "docx"
+
+export type ProjectDocumentStatus =
+  | "not_started"   // 미작성
+  | "generated"     // 생성완료
+  | "uploaded"      // 업로드완료
+  | "submitted"     // 제출완료
+
+export interface ProjectDocumentItem {
+  id: string
+  phase: DocumentPhase
+  name: string
+  format: DocumentFileFormat
+  generation_type: DocumentGenerationType
+  is_required: boolean
+  is_conditional: boolean
+  condition_description?: string  // e.g. "2천만원 이상 공사만", "보증서 대체 시"
+  status: ProjectDocumentStatus
+  file_path?: string
+  file_size?: number
+  generated_at?: string
+  uploaded_at?: string
+  notes?: string
+}
+
+export interface ProjectDocumentPhaseGroup {
+  phase: DocumentPhase
+  phase_label: string
+  documents: ProjectDocumentItem[]
+  total_count: number
+  completed_count: number
+}
+
+// ============================================
+// Modusign Electronic Signature
+// ============================================
+
+export type SignatureMethod = "self" | "modusign"
+
+export type ModusignStatus = "pending" | "sent" | "viewed" | "signed" | "rejected" | "expired"
+
+export interface ModusignRequest {
+  id: string
+  contract_id: string
+  document_id: string
+  status: ModusignStatus
+  signer_name: string
+  signer_email: string
+  signer_phone?: string
+  sent_at: string
+  signed_at?: string
+  expired_at?: string
+  document_url?: string
+}
+
+// ============================================
+// MyPage / User Profile Types
+// ============================================
+
+export interface UserNotificationPrefs {
+  email_notifications: boolean
+  project_status_change: boolean
+  estimate_contract_alerts: boolean
+  daily_report_alerts: boolean
+  platform_announcements: boolean
+}
+
+export type ActivityLogAction =
+  | "login"
+  | "logout"
+  | "profile_update"
+  | "password_change"
+  | "project_create"
+  | "project_update"
+  | "estimate_create"
+  | "contract_sign"
+  | "settings_change"
+
+export interface ActivityLogEntry {
+  id: string
+  user_id: string
+  action: ActivityLogAction
+  description: string
+  ip_address: string
+  device_info: string
+  created_at: string
+}
+
+// ============================================
+// Daily Labor Reporting Types (일용신고)
+// ============================================
+
+/** 보험/세율 설정 */
+export interface LaborInsuranceRates {
+  id: string
+  effective_year: number
+  income_deduction: number           // 소득공제금액 (default: 150000)
+  simplified_tax_rate: number        // 속산세율 (default: 0.027 = 2.7%)
+  local_tax_rate: number             // 지방소득세율 (default: 0.1 = 10%)
+  employment_insurance_rate: number  // 고용보험 근로자 부담 (default: 0.009 = 0.9%)
+  health_insurance_rate: number      // 건강보험 (default: 0.03595 = 3.595%)
+  longterm_care_rate: number         // 요양보험/장기요양 (default: 0.1314 = 13.14%)
+  national_pension_rate: number      // 국민연금 (default: 0.045 = 4.5%)
+  pension_upper_limit: number        // 국민연금 상한 기준소득월액 (default: 6170000)
+  pension_lower_limit: number        // 국민연금 하한 기준소득월액 (default: 390000)
+  health_premium_upper: number       // 건강보험 납부상한 (default: 7822560)
+  health_premium_lower: number       // 건강보험 납부하한 (default: 19780)
+}
+
+/** 일용 근로자 (주소록) */
+export interface DailyWorker {
+  id: string
+  name: string
+  job_type: string              // 직종 (보통인부, 특별인부, 기능공 등)
+  job_type_code: string         // 직종코드
+  team: string                  // 소속반
+  hire_date: string             // 입사일
+  visa_status?: string          // 비자유형 (외국인 근로자)
+  nationality_code?: string     // 국적코드
+  english_name?: string         // 영문이름 (외국인)
+  ssn: string                   // 주민번호 (마스킹: 앞6자리-뒤1자리******)
+  address: string               // 주소
+  daily_rate: number            // 일당
+  account_number: string        // 계좌번호
+  bank_name: string             // 은행명
+  phone: string                 // 연락처
+  is_foreign: boolean           // 외국인 여부
+  organization_id: string       // 소속 조직 ID
+}
+
+/** 일별 근무 기록 */
+export interface DailyWorkRecord {
+  id: string
+  worker_id: string
+  project_id: string
+  work_date: string             // YYYY-MM-DD
+  man_days: number              // 공수 (0.5 = 반일, 1 = 1일)
+}
+
+/** 근로자별 월간 급여 항목 */
+export interface SitePayrollWorkerEntry {
+  worker_id: string
+  worker_name: string
+  job_type: string
+  team: string
+  ssn_masked: string
+  daily_rate: number
+  work_days: Record<number, number>  // day-of-month → man_days
+  total_days: number                  // 총 출력일수
+  total_man_days: number              // 총 공수
+  total_labor_cost: number            // 총노무비 = daily_rate × total_man_days
+  income_tax: number                  // 갑근세
+  resident_tax: number               // 주민세
+  health_insurance: number           // 건강보험
+  longterm_care: number              // 요양보험(장기요양)
+  national_pension: number           // 국민연금
+  employment_insurance: number       // 고용보험
+  total_deductions: number           // 공제 합계
+  net_pay: number                    // 차감지급액
+}
+
+/** 현장별 급여 보고서 */
+export interface SitePayrollReport {
+  project_id: string
+  project_name: string
+  year: number
+  month: number
+  organization_name: string
+  entries: SitePayrollWorkerEntry[]
+  totals: {
+    total_labor_cost: number
+    total_income_tax: number
+    total_resident_tax: number
+    total_health_insurance: number
+    total_longterm_care: number
+    total_national_pension: number
+    total_employment_insurance: number
+    total_deductions: number
+    total_net_pay: number
+  }
+}
+
+/** 월별 통합 보고서 */
+export interface MonthlyConsolidatedReport {
+  year: number
+  month: number
+  organization_name: string
+  projects: Array<{ id: string; name: string }>
+  entries: SitePayrollWorkerEntry[]
+  totals: {
+    total_labor_cost: number
+    total_income_tax: number
+    total_resident_tax: number
+    total_health_insurance: number
+    total_longterm_care: number
+    total_national_pension: number
+    total_employment_insurance: number
+    total_deductions: number
+    total_net_pay: number
+  }
+}
