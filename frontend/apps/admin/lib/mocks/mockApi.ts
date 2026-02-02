@@ -18,8 +18,15 @@ import type {
   LaborContractListItem,
   LaborContractStatus,
   ProjectPhotoAlbum,
+  LaborInsuranceRates,
+  DailyWorker,
+  DailyWorkRecord,
+  SitePayrollReport,
+  SitePayrollWorkerEntry,
+  MonthlyConsolidatedReport,
 } from "@sigongon/types";
-import { mockDb, type Project, type User, type Tenant, type Invitation, type InvitationStatus } from "./db";
+import { mockDb, type Project, type User, type Tenant, type Invitation, type InvitationStatus, type NotificationPrefs, type ActivityLog } from "./db";
+import { buildWorkerEntry } from "@/lib/labor/calculations";
 
 const DELAY = 200;
 
@@ -112,6 +119,14 @@ const recalcTotals = (estimate: StoredEstimate): StoredEstimate => {
   };
 };
 
+const SAMPLE_ESTIMATE_LINES = [
+  { description: "옥상 우레탄 방수", spec: "우레탄 도막방수 2회", unit: "㎡", quantity: "150", unit_price: "35000" },
+  { description: "외벽 크랙 보수", spec: "에폭시 주입", unit: "m", quantity: "45", unit_price: "25000" },
+  { description: "실내 도장 공사", spec: "수성페인트 2회", unit: "㎡", quantity: "200", unit_price: "12000" },
+  { description: "바닥 방수 처리", spec: "시트방수", unit: "㎡", quantity: "80", unit_price: "45000" },
+  { description: "비계 설치/해체", spec: "강관비계", unit: "식", quantity: "1", unit_price: "1500000" },
+];
+
 export class MockAPIClient {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
@@ -130,6 +145,8 @@ export class MockAPIClient {
   private projectContractIds: Record<string, string[]> = {};
 
   private laborContractsByProject: Record<string, LaborContractListItem[]> = {};
+  private materialOrdersByProject: Record<string, any[]> = {};
+  private materialOrdersById: Record<string, any> = {};
   private warrantyRequestsByProject: Record<
     string,
     Array<{
@@ -258,6 +275,7 @@ export class MockAPIClient {
   }> = [];
 
   private workerAccessRequests: Record<string, string> = {};
+  private seeded = false;
 
   private ensureUtilities(projectId: string) {
     if (this.utilitiesByProject[projectId]) return;
@@ -413,8 +431,232 @@ export class MockAPIClient {
     ];
   }
 
+  private seedData() {
+    if (this.seeded) return;
+    this.seeded = true;
+
+    const projects = mockDb.get("projects");
+
+    for (const project of projects) {
+      const s = project.status;
+      const pid = project.id;
+
+      // diagnosing 이상: siteVisit 1건
+      if (s !== "draft") {
+        const visitId = `sv_${pid}`;
+        const visit: SiteVisitDetail = {
+          id: visitId,
+          visit_type: "initial",
+          visited_at: new Date(Date.now() - 86400000 * 30).toISOString(),
+          notes: "현장 초기 방문 조사",
+          photo_count: 3,
+          photos: [
+            { id: `ph_${pid}_1`, photo_type: "before", storage_path: `mock://photos/${pid}/before.jpg`, caption: "시공 전 현장" },
+            { id: `ph_${pid}_2`, photo_type: "during", storage_path: `mock://photos/${pid}/during.jpg`, caption: "조사 중" },
+            { id: `ph_${pid}_3`, photo_type: "after", storage_path: `mock://photos/${pid}/after.jpg`, caption: "조사 완료" },
+          ],
+        };
+        this.siteVisitsByProject[pid] = [visit];
+        this.visitProjectId[visitId] = pid;
+        this.visitById[visitId] = visit;
+      }
+
+      // estimating 이상: diagnosis
+      if (s !== "draft" && s !== "diagnosing") {
+        const diagId = `diag_${pid}`;
+        this.diagnosesById[diagId] = {
+          id: diagId,
+          site_visit_id: `sv_${pid}`,
+          project_id: pid,
+          status: "completed",
+          leak_opinion_text: "누수 원인: 옥상 방수층 노후화 및 외벽 균열. 우레탄 방수 도포 및 크랙 보수 권장.",
+          confidence_score: 0.85,
+          processing_time_ms: 2400,
+          suggested_materials: [
+            {
+              id: `m_${pid}_1`,
+              suggested_name: "우레탄 방수제",
+              suggested_spec: "도막방수용",
+              suggested_unit: "set",
+              suggested_quantity: 2,
+              matched_catalog_item: { id: "mat_1", name_ko: "우레탄 방수제", unit_price: "45000" },
+              match_confidence: 0.88,
+              is_confirmed: true,
+            },
+          ],
+        };
+      }
+
+      // quoted 이상: estimate
+      if (["quoted", "contracted", "in_progress", "completed", "warranty"].includes(s)) {
+        const estimateId = `est_${pid}`;
+        const lines: StoredEstimate["lines"] = SAMPLE_ESTIMATE_LINES.map((item, idx) => ({
+          id: `el_${pid}_${idx + 1}`,
+          sort_order: idx + 1,
+          description: item.description,
+          specification: item.spec,
+          unit: item.unit,
+          quantity: item.quantity,
+          unit_price_snapshot: item.unit_price,
+          amount: calcAmount(item.quantity, item.unit_price),
+          source: idx === 0 ? ("ai" as EstimateLineSource) : ("manual" as EstimateLineSource),
+        }));
+
+        const estimate: StoredEstimate = recalcTotals({
+          id: estimateId,
+          project_id: pid,
+          version: 1,
+          status: s === "quoted" ? "issued" : "accepted",
+          subtotal: "0",
+          vat_amount: "0",
+          total_amount: "0",
+          created_at: new Date(Date.now() - 86400000 * 25).toISOString(),
+          issued_at: new Date(Date.now() - 86400000 * 24).toISOString(),
+          lines,
+        });
+
+        this.estimatesById[estimateId] = estimate;
+        this.projectEstimateIds[pid] = [estimateId];
+      }
+
+      // contracted 이상: contract
+      if (["contracted", "in_progress", "completed", "warranty"].includes(s)) {
+        const contractId = `ct_${pid}`;
+        const estimateId = `est_${pid}`;
+        const estimate = this.estimatesById[estimateId];
+        const contract: ContractDetail = {
+          id: contractId,
+          project_id: pid,
+          estimate_id: estimateId,
+          contract_number: `CT-2026-${pid.replace("p", "")}`,
+          contract_amount: estimate?.total_amount || "0",
+          status: "signed",
+          created_at: new Date(Date.now() - 86400000 * 20).toISOString(),
+          signed_at: new Date(Date.now() - 86400000 * 18).toISOString(),
+          start_date: project.startDate || new Date(Date.now() - 86400000 * 15).toISOString().slice(0, 10),
+          expected_end_date: project.endDate || new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10),
+          project_name: project.name,
+          client_name: project.clientName,
+        };
+        this.contractsById[contractId] = contract;
+        this.projectContractIds[pid] = [contractId];
+      }
+
+      // in_progress 이상: laborContracts + constructionReport(start, approved)
+      if (["in_progress", "completed", "warranty"].includes(s)) {
+        // Labor contracts
+        this.laborContractsByProject[pid] = [
+          {
+            id: `lc_${pid}_1`,
+            worker_name: "김철수",
+            work_date: new Date(Date.now() - 86400000 * 10).toISOString().slice(0, 10),
+            work_type: "목수",
+            daily_rate: "250000",
+            status: "signed",
+            signed_at: new Date(Date.now() - 86400000 * 9).toISOString(),
+          },
+          {
+            id: `lc_${pid}_2`,
+            worker_name: "이영희",
+            work_date: new Date(Date.now() - 86400000 * 10).toISOString().slice(0, 10),
+            work_type: "전기",
+            daily_rate: "280000",
+            status: "signed",
+            signed_at: new Date(Date.now() - 86400000 * 9).toISOString(),
+          },
+        ];
+
+        // Construction report - start (approved)
+        this.constructionReportsByProject[pid] = [
+          {
+            id: `report_start_${pid}`,
+            project_id: pid,
+            report_type: "start" as const,
+            status: "approved" as const,
+            construction_name: project.name,
+            site_address: project.address,
+            start_date: project.startDate || new Date(Date.now() - 86400000 * 15).toISOString().slice(0, 10),
+            expected_end_date: project.endDate || new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10),
+            supervisor_name: "김소장",
+            supervisor_phone: "010-2222-3333",
+            created_at: new Date(Date.now() - 86400000 * 14).toISOString(),
+            submitted_at: new Date(Date.now() - 86400000 * 14).toISOString(),
+            approved_at: new Date(Date.now() - 86400000 * 13).toISOString(),
+          },
+        ];
+      }
+
+      // completed 이상: completionReport + taxInvoices + photoAlbum
+      if (["completed", "warranty"].includes(s)) {
+        // Add completion report
+        if (this.constructionReportsByProject[pid]) {
+          this.constructionReportsByProject[pid].push({
+            id: `report_comp_${pid}`,
+            project_id: pid,
+            report_type: "completion" as const,
+            status: "approved" as const,
+            construction_name: project.name,
+            site_address: project.address,
+            start_date: project.startDate || new Date(Date.now() - 86400000 * 60).toISOString().slice(0, 10),
+            expected_end_date: project.endDate || new Date(Date.now() - 86400000 * 5).toISOString().slice(0, 10),
+            actual_end_date: project.endDate || new Date(Date.now() - 86400000 * 3).toISOString().slice(0, 10),
+            supervisor_name: "김소장",
+            supervisor_phone: "010-2222-3333",
+            final_amount: this.estimatesById[`est_${pid}`]?.total_amount || "10000000",
+            defect_warranty_period: "1년",
+            notes: "공사 정상 완료",
+            created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+            submitted_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+            approved_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+          });
+        }
+
+        // Tax invoices
+        this.ensureTaxInvoices(pid);
+
+        // Photo album
+        const albumId = `album_${pid}`;
+        this.albumsByProject[pid] = [{
+          id: albumId,
+          project_id: pid,
+          name: `${project.name} 시공사진`,
+          description: "착공부터 준공까지 현장 사진",
+          layout: "three_column",
+          status: "published",
+          photo_count: 6,
+          photos: [
+            { id: `aph_${pid}_1`, url: `mock://album/${pid}/1.jpg`, caption: "착공 전 현장", category: "before" },
+            { id: `aph_${pid}_2`, url: `mock://album/${pid}/2.jpg`, caption: "기초공사", category: "during" },
+            { id: `aph_${pid}_3`, url: `mock://album/${pid}/3.jpg`, caption: "방수공사", category: "during" },
+            { id: `aph_${pid}_4`, url: `mock://album/${pid}/4.jpg`, caption: "마감공사", category: "during" },
+            { id: `aph_${pid}_5`, url: `mock://album/${pid}/5.jpg`, caption: "준공 후 외관", category: "after" },
+            { id: `aph_${pid}_6`, url: `mock://album/${pid}/6.jpg`, caption: "준공 후 내부", category: "after" },
+          ],
+          created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+          updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+        }];
+        this.albumsById[albumId] = this.albumsByProject[pid][0];
+      }
+
+      // warranty: AS request
+      if (s === "warranty") {
+        this.warrantyRequestsByProject[pid] = [
+          {
+            id: `as_${pid}_1`,
+            description: "옥상 방수 부위에서 미세 누수 재발생. 우천 시 천장 얼룩 확인됨.",
+            status: "received",
+            created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+          },
+        ];
+      }
+    }
+  }
+
   setAccessToken(token: string | null) {
     this.accessToken = token;
+    if (token) {
+      this.seedData();
+    }
   }
 
   setRefreshToken(token: string | null) {
@@ -428,7 +670,7 @@ export class MockAPIClient {
   private pickUser(email: string): User {
     const users = this.getStoredUsers();
     const byEmail = users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase(),
+      (u) => u.email?.toLowerCase() === email.toLowerCase(),
     );
     return byEmail || users[0];
   }
@@ -446,7 +688,14 @@ export class MockAPIClient {
     }
 
     const users = this.getStoredUsers();
-    const user = users.find(u => u.username === username) || users.find(u => u.email.toLowerCase() === username.toLowerCase()) || users[0];
+    const user = users.find(u => u.username === username) || users.find(u => u.email?.toLowerCase() === username.toLowerCase());
+
+    if (!user) {
+      return delay(
+        fail<LoginResponse>("INVALID_CREDENTIALS", "존재하지 않는 계정입니다"),
+      );
+    }
+
     mockDb.set("currentUser", user);
 
     // JWT 형식으로 토큰 생성 (middleware에서 role 파싱 가능)
@@ -470,8 +719,7 @@ export class MockAPIClient {
         expires_in: 60 * 60,
         user: {
           id: user.id,
-          email: user.email,
-          username: user.username,
+          email: user.email || "",
           name: user.name,
           role: user.role,
         },
@@ -507,6 +755,8 @@ export class MockAPIClient {
           id: user.organization_id,
           name: "시공ON",
         },
+        created_at: user.created_at,
+        last_login_at: user.last_login_at,
       }),
     );
   }
@@ -572,6 +822,7 @@ export class MockAPIClient {
     status?: ProjectStatus;
     search?: string;
   }) {
+    this.seedData();
     let projects = mockDb.get("projects");
 
     if (params?.status) {
@@ -669,7 +920,7 @@ export class MockAPIClient {
       name: data.name,
       address: data.address,
       status: "draft",
-      category: data.category,
+      category: data.category as any,
       clientName: data.client_name || "",
       clientPhone: data.client_phone || "",
       notes: data.notes,
@@ -1349,7 +1600,7 @@ export class MockAPIClient {
       users = users.filter(
         (u) =>
           u.name.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q) ||
+          (u.email || "").toLowerCase().includes(q) ||
           (u.phone || "").includes(q),
       );
     }
@@ -1400,6 +1651,7 @@ export class MockAPIClient {
 
     const user: User = {
       id: randomId("u"),
+      username: data.email.split("@")[0],
       email: data.email,
       name: data.name,
       phone: data.phone,
@@ -1798,61 +2050,6 @@ export class MockAPIClient {
     return delay(ok({ status: "issued" as const, message: "재발행했어요" }));
   }
 
-  async getPartners(_params?: { search?: string; status?: string }) {
-    return delay(
-      ok([
-        {
-          id: "p_1",
-          name: "(주)가나건설",
-          biz_no: "123-45-67890",
-          owner: "홍길동",
-          license: "실내건축공사업",
-          is_female_owned: true,
-          status: "active" as const,
-        },
-        {
-          id: "p_2",
-          name: "다라마디자인",
-          biz_no: "987-65-43210",
-          owner: "김철수",
-          license: "미보유",
-          is_female_owned: false,
-          status: "active" as const,
-        },
-      ]),
-    );
-  }
-
-  async getLaborOverview() {
-    return delay(
-      ok({
-        summary: {
-          active_workers: 12,
-          pending_paystubs: 5,
-          unsigned_contracts: 2,
-        },
-        workers: [
-          {
-            id: "w_1",
-            name: "김철수",
-            role: "목수",
-            status: "active" as const,
-            contract_status: "signed" as const,
-            last_work_date: "2026-01-21",
-          },
-          {
-            id: "w_2",
-            name: "이영희",
-            role: "전기",
-            status: "active" as const,
-            contract_status: "pending" as const,
-            last_work_date: "2026-01-20",
-          },
-        ],
-      }),
-    );
-  }
-
   async registerWorker(data: { name: string; phone: string; id_number?: string }) {
     const users = this.getStoredUsers();
     const existing = users.find(u => u.phone === data.phone && u.role === "worker");
@@ -1958,6 +2155,279 @@ export class MockAPIClient {
           },
         ] : [],
       }),
+    );
+  }
+
+  async changePaymentMethod(data: { card_number: string; expiry: string }) {
+    // Mock implementation for changing payment method
+    const last4 = data.card_number.slice(-4);
+    const brand = data.card_number.startsWith("4") ? "VISA" : "현대카드";
+
+    return delay(
+      ok({
+        billing_key: randomId("bk"),
+        payment_method: {
+          brand,
+          last4,
+          expires: data.expiry,
+        },
+        message: "결제 수단이 변경되었습니다",
+      })
+    );
+  }
+
+  async getPartners(params?: { search?: string; status?: string }) {
+    // Mock partners data
+    const partners = [
+      {
+        id: "p1",
+        name: "협력사 A",
+        biz_no: "123-45-67890",
+        owner: "김철수",
+        license: "건설업등록증",
+        is_female_owned: false,
+        status: "active" as const,
+      },
+      {
+        id: "p2",
+        name: "협력사 B",
+        biz_no: "234-56-78901",
+        owner: "이영희",
+        license: "건설업등록증",
+        is_female_owned: true,
+        status: "active" as const,
+      },
+    ];
+
+    // Apply filters
+    let filtered = partners;
+    if (params?.status) {
+      filtered = filtered.filter((p) => p.status === params.status);
+    }
+    if (params?.search) {
+      const search = params.search.toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          p.name.toLowerCase().includes(search) ||
+          p.owner.toLowerCase().includes(search) ||
+          p.biz_no.includes(search)
+      );
+    }
+
+    return delay(ok(filtered));
+  }
+
+  async createPartner(data: {
+    name: string;
+    owner: string;
+    biz_no: string;
+    license?: string;
+    is_female_owned?: boolean;
+  }) {
+    return delay(
+      ok({
+        id: randomId("p"),
+        name: data.name,
+        owner: data.owner,
+        biz_no: data.biz_no,
+        license: data.license,
+        is_female_owned: data.is_female_owned || false,
+        status: "active" as const,
+      })
+    );
+  }
+
+  async updatePartner(
+    id: string,
+    data: {
+      name?: string;
+      owner?: string;
+      biz_no?: string;
+      license?: string;
+      is_female_owned?: boolean;
+    }
+  ) {
+    return delay(
+      ok({
+        id,
+        name: data.name || "협력사",
+        owner: data.owner || "대표",
+        biz_no: data.biz_no || "000-00-00000",
+        license: data.license,
+        is_female_owned: data.is_female_owned || false,
+        status: "active" as const,
+      })
+    );
+  }
+
+  async deletePartner(_id: string) {
+    return delay(ok(null));
+  }
+
+  async togglePartnerStatus(id: string) {
+    return delay(
+      ok({
+        id,
+        status: "inactive" as const,
+        message: "상태가 변경되었습니다",
+      })
+    );
+  }
+
+  async getLaborOverview() {
+    return delay(
+      ok({
+        summary: {
+          active_workers: 12,
+          pending_paystubs: 3,
+          unsigned_contracts: 2,
+        },
+        workers: [
+          {
+            id: "w1",
+            name: "홍길동",
+            role: "미장공",
+            status: "active" as const,
+            contract_status: "signed" as const,
+            last_work_date: "2026-02-01",
+          },
+        ],
+      })
+    );
+  }
+
+  async getDailyReports(_projectId: string) {
+    return delay(
+      ok([
+        {
+          id: randomId("dr"),
+          project_id: _projectId,
+          work_date: "2026-02-01",
+          weather: "sunny" as const,
+          temperature: "15°C",
+          work_description: "방수 작업 진행",
+          tomorrow_plan: "마감 작업 예정",
+          photos: [],
+          photo_count: 0,
+          created_at: nowIso(),
+        },
+      ])
+    );
+  }
+
+  async createDailyReport(
+    projectId: string,
+    data: {
+      work_date: string;
+      weather?: string;
+      temperature?: string;
+      work_description: string;
+      tomorrow_plan?: string;
+      photos?: string[];
+    }
+  ) {
+    return delay(
+      ok({
+        id: randomId("dr"),
+        project_id: projectId,
+        work_date: data.work_date,
+        weather: data.weather,
+        temperature: data.temperature,
+        work_description: data.work_description,
+        tomorrow_plan: data.tomorrow_plan,
+        photos: data.photos || [],
+        created_at: nowIso(),
+      })
+    );
+  }
+
+  async getModusignStatus(_contractId: string) {
+    return delay(
+      ok({
+        id: "ms_1",
+        status: "pending",
+        sign_url: "https://modusign.co.kr/sign/...",
+        created_at: nowIso(),
+      })
+    );
+  }
+
+  async requestModusign(_contractId: string, _data: any) {
+    return delay(
+      ok({
+        id: "ms_1",
+        status: "sent",
+        sign_url: "https://modusign.co.kr/sign/...",
+        message: "전자서명 요청이 전송되었습니다",
+      })
+    );
+  }
+
+  async cancelModusign(_contractId: string) {
+    return delay(
+      ok({
+        id: "ms_1",
+        status: "cancelled",
+        message: "전자서명 요청이 취소되었습니다",
+      })
+    );
+  }
+
+  async downloadSignedDocument(_contractId: string) {
+    return delay(
+      ok({
+        url: "https://modusign.co.kr/document/download/...",
+        filename: "contract_signed.pdf",
+      })
+    );
+  }
+
+  async getSADashboard() {
+    return delay(
+      ok({
+        stats: {
+          total_tenants: 15,
+          total_users: 48,
+          monthly_revenue: 1500000,
+          new_signups: 3,
+          tenants_growth: 12.5,
+          users_growth: 8.3,
+          revenue_growth: 15.2,
+          signups_growth: 20.0,
+        },
+        recent_activity: [
+          {
+            id: "a1",
+            type: "tenant" as const,
+            title: "새 테넌트 등록",
+            description: "ABC건설이 가입했습니다",
+            timestamp: "2026-02-01T10:00:00Z",
+          },
+        ],
+        monthly_revenue: [
+          { month: "2025-08", amount: 1200000 },
+          { month: "2025-09", amount: 1300000 },
+          { month: "2025-10", amount: 1400000 },
+          { month: "2025-11", amount: 1350000 },
+          { month: "2025-12", amount: 1450000 },
+          { month: "2026-01", amount: 1500000 },
+        ],
+        plan_distribution: [
+          { plan: "Trial", count: 5, revenue: 0, percentage: 33.3 },
+          { plan: "Basic", count: 7, revenue: 4116000, percentage: 46.7 },
+          { plan: "Pro", count: 3, revenue: 3564000, percentage: 20.0 },
+        ],
+      })
+    );
+  }
+
+  async batchSendPaystubs() {
+    // Mock implementation for batch sending paystubs
+    return delay(
+      ok({
+        sent_count: 5,
+        message: "5건의 급여명세서를 발송했습니다",
+      })
     );
   }
 
@@ -2905,7 +3375,7 @@ export class MockAPIClient {
    * Only super_admin can invite any role
    */
   async createInvitation(data: {
-    email: string;
+    phone: string;
     name: string;
     role: User["role"];
   }) {
@@ -2942,7 +3412,7 @@ export class MockAPIClient {
     const invitations = mockDb.get("invitations");
     const existingInvite = invitations.find(
       (inv) =>
-        inv.email.toLowerCase() === data.email.toLowerCase() &&
+        inv.phone === data.phone &&
         inv.status === "pending"
     );
     if (existingInvite) {
@@ -2957,7 +3427,7 @@ export class MockAPIClient {
     // Check if user already exists
     const users = mockDb.get("users");
     const existingUser = users.find(
-      (u) => u.email.toLowerCase() === data.email.toLowerCase()
+      (u) => u.phone === data.phone
     );
     if (existingUser) {
       return delay(
@@ -2975,7 +3445,7 @@ export class MockAPIClient {
 
     const invitation: Invitation = {
       id: invitationId,
-      email: data.email,
+      phone: data.phone,
       name: data.name,
       role: data.role,
       organization_id: currentUser.organization_id || "org_1",
@@ -3048,7 +3518,7 @@ export class MockAPIClient {
       okPage(
         pageItems.map((inv) => ({
           id: inv.id,
-          email: inv.email,
+          phone: inv.phone,
           name: inv.name,
           role: inv.role,
           status: inv.status,
@@ -3232,7 +3702,7 @@ export class MockAPIClient {
     return delay(
       ok({
         id: invitation.id,
-        email: invitation.email,
+        phone: invitation.phone,
         name: invitation.name,
         role: invitation.role,
         organization_name: organizationName,
@@ -3289,7 +3759,9 @@ export class MockAPIClient {
     const userId = randomId("u");
     const newUser: User = {
       id: userId,
-      email: invitation.email,
+      username: `worker_${invitation.phone.replace(/[^0-9]/g, "")}`,
+      email: `worker_${invitation.phone.replace(/[^0-9]/g, "")}@sigongon.local`,
+      phone: invitation.phone,
       name: invitation.name,
       role: invitation.role,
       organization_id: invitation.organization_id,
@@ -3327,6 +3799,672 @@ export class MockAPIClient {
         message: "계정이 생성되었어요. 로그인해 주세요.",
       })
     );
+  }
+
+  async searchRAG(query: string, _topK: number = 5) {
+    const allResults = [
+      {
+        id: "rag_1",
+        description: "옥상 우레탄 방수",
+        specification: "2mm 두께",
+        unit: "㎡",
+        unit_price: 35000,
+        confidence: 0.95,
+      },
+      {
+        id: "rag_2",
+        description: "실리콘 코킹",
+        specification: "바커스 실리콘",
+        unit: "m",
+        unit_price: 8000,
+        confidence: 0.88,
+      },
+      {
+        id: "rag_3",
+        description: "시멘트 모르타르 바름",
+        specification: "1:3 배합",
+        unit: "㎡",
+        unit_price: 12000,
+        confidence: 0.92,
+      },
+      {
+        id: "rag_4",
+        description: "방수 테이프 시공",
+        specification: "부틸 테이프",
+        unit: "m",
+        unit_price: 5000,
+        confidence: 0.85,
+      },
+      {
+        id: "rag_5",
+        description: "벽체 균열 보수",
+        specification: "에폭시 주입",
+        unit: "개소",
+        unit_price: 45000,
+        confidence: 0.91,
+      },
+      {
+        id: "rag_6",
+        description: "타일 붙이기",
+        specification: "300×300",
+        unit: "㎡",
+        unit_price: 28000,
+        confidence: 0.87,
+      },
+      {
+        id: "rag_7",
+        description: "페인트 도장",
+        specification: "수성 페인트 2회",
+        unit: "㎡",
+        unit_price: 8500,
+        confidence: 0.93,
+      },
+      {
+        id: "rag_8",
+        description: "창호 실리콘 보수",
+        specification: "알루미늄 창호",
+        unit: "개소",
+        unit_price: 15000,
+        confidence: 0.89,
+      },
+      {
+        id: "rag_9",
+        description: "지붕 슁글 교체",
+        specification: "아스팔트 슁글",
+        unit: "㎡",
+        unit_price: 42000,
+        confidence: 0.86,
+      },
+      {
+        id: "rag_10",
+        description: "배수관 교체",
+        specification: "PVC 100A",
+        unit: "m",
+        unit_price: 18000,
+        confidence: 0.90,
+      },
+    ];
+
+    const lowerQuery = query.toLowerCase();
+    const filtered = allResults.filter(
+      (item) =>
+        item.description.toLowerCase().includes(lowerQuery) ||
+        (item.specification?.toLowerCase() || "").includes(lowerQuery)
+    );
+
+    return delay(ok(filtered.length > 0 ? filtered : allResults.slice(0, 5)));
+  }
+
+  // ============================================
+  // Material Orders (자재 발주)
+  // ============================================
+
+  async getMaterialOrders(projectId: string) {
+    // Initialize sample orders if not exists
+    if (!this.materialOrdersByProject[projectId]) {
+      this.materialOrdersByProject[projectId] = [
+        {
+          id: randomId("mo"),
+          project_id: projectId,
+          order_number: "MO-2026-001",
+          status: "delivered",
+          items: [
+            {
+              id: randomId("item"),
+              description: "방수 시트",
+              specification: "1.5mm 두께",
+              unit: "롤",
+              quantity: 10,
+              unit_price: 45000,
+              amount: 450000,
+            },
+            {
+              id: randomId("item"),
+              description: "실리콘 코킹제",
+              specification: "300ml",
+              unit: "개",
+              quantity: 20,
+              unit_price: 5000,
+              amount: 100000,
+            },
+          ],
+          total_amount: 550000,
+          requested_at: "2026-01-15T09:00:00Z",
+          confirmed_at: "2026-01-15T14:30:00Z",
+          delivered_at: "2026-01-18T10:00:00Z",
+          notes: "긴급 발주",
+          created_at: "2026-01-15T08:30:00Z",
+        },
+        {
+          id: randomId("mo"),
+          project_id: projectId,
+          order_number: "MO-2026-002",
+          status: "confirmed",
+          items: [
+            {
+              id: randomId("item"),
+              description: "우레탄 방수재",
+              specification: "20kg",
+              unit: "통",
+              quantity: 5,
+              unit_price: 120000,
+              amount: 600000,
+            },
+          ],
+          total_amount: 600000,
+          requested_at: "2026-01-28T10:00:00Z",
+          confirmed_at: "2026-01-28T15:00:00Z",
+          notes: "",
+          created_at: "2026-01-28T09:45:00Z",
+        },
+        {
+          id: randomId("mo"),
+          project_id: projectId,
+          order_number: "MO-2026-003",
+          status: "requested",
+          items: [
+            {
+              id: randomId("item"),
+              description: "보강재",
+              specification: "스테인리스",
+              unit: "개",
+              quantity: 30,
+              unit_price: 8000,
+              amount: 240000,
+            },
+          ],
+          total_amount: 240000,
+          requested_at: "2026-02-01T11:00:00Z",
+          created_at: "2026-02-01T10:50:00Z",
+        },
+      ];
+
+      // Store in by-id map
+      this.materialOrdersByProject[projectId].forEach((order) => {
+        this.materialOrdersById[order.id] = order;
+      });
+    }
+
+    return delay(
+      ok(this.materialOrdersByProject[projectId] || [])
+    );
+  }
+
+  async createMaterialOrder(
+    projectId: string,
+    data: {
+      items: Array<{
+        description: string;
+        specification?: string;
+        unit: string;
+        quantity: number;
+        unit_price: number;
+      }>;
+      notes?: string;
+    }
+  ) {
+    const orderId = randomId("mo");
+    const orderNumber = `MO-2026-${String(Object.keys(this.materialOrdersById).length + 1).padStart(3, "0")}`;
+
+    const items = data.items.map((item) => ({
+      id: randomId("item"),
+      description: item.description,
+      specification: item.specification,
+      unit: item.unit,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      amount: item.quantity * item.unit_price,
+    }));
+
+    const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+
+    const order = {
+      id: orderId,
+      project_id: projectId,
+      order_number: orderNumber,
+      status: "draft" as const,
+      items,
+      total_amount: totalAmount,
+      notes: data.notes,
+      created_at: nowIso(),
+    };
+
+    this.materialOrdersById[orderId] = order;
+
+    if (!this.materialOrdersByProject[projectId]) {
+      this.materialOrdersByProject[projectId] = [];
+    }
+    this.materialOrdersByProject[projectId].push(order);
+
+    return delay(
+      ok({
+        id: orderId,
+        order_number: orderNumber,
+        status: "draft" as const,
+        total_amount: totalAmount,
+      })
+    );
+  }
+
+  async getMaterialOrder(orderId: string) {
+    const order = this.materialOrdersById[orderId];
+    if (!order) {
+      return delay(fail("NOT_FOUND", "발주를 찾을 수 없습니다"));
+    }
+
+    return delay(ok(order));
+  }
+
+  async updateMaterialOrderStatus(orderId: string, status: string) {
+    const order = this.materialOrdersById[orderId];
+    if (!order) {
+      return delay(fail("NOT_FOUND", "발주를 찾을 수 없습니다"));
+    }
+
+    order.status = status as any;
+
+    // Update timestamps based on status
+    if (status === "requested" && !order.requested_at) {
+      order.requested_at = nowIso();
+    } else if (status === "confirmed" && !order.confirmed_at) {
+      order.confirmed_at = nowIso();
+    } else if (status === "delivered" && !order.delivered_at) {
+      order.delivered_at = nowIso();
+    }
+
+    return delay(
+      ok({
+        id: orderId,
+        status,
+        message: "상태가 업데이트되었습니다",
+      })
+    );
+  }
+
+  async cancelMaterialOrder(orderId: string) {
+    const order = this.materialOrdersById[orderId];
+    if (!order) {
+      return delay(fail("NOT_FOUND", "발주를 찾을 수 없습니다"));
+    }
+
+    order.status = "cancelled";
+
+    // Remove from project list
+    if (this.materialOrdersByProject[order.project_id]) {
+      this.materialOrdersByProject[order.project_id] =
+        this.materialOrdersByProject[order.project_id].filter(o => o.id !== orderId);
+    }
+
+    return delay(ok(null));
+  }
+
+  // ============================================
+  // MyPage APIs
+  // ============================================
+
+  async getMyProfile() {
+    const user = this.getCurrentUser() || this.getStoredUsers()[0];
+    return delay(
+      ok({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+        organization: user.organization_id
+          ? { id: user.organization_id, name: "시공ON" }
+          : null,
+        is_active: user.is_active,
+        created_at: user.created_at || nowIso(),
+        last_login_at: user.last_login_at || nowIso(),
+      }),
+    );
+  }
+
+  async updateMyProfile(data: { name?: string; email?: string; phone?: string }) {
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    const updatedUser = { ...currentUser, ...data };
+
+    mockDb.update("users", (users) =>
+      users.map((u) => (u.id === updatedUser.id ? updatedUser : u)),
+    );
+    mockDb.set("currentUser", updatedUser);
+
+    // Add activity log
+    const logs = mockDb.get("activityLogs") as ActivityLog[];
+    logs.unshift({
+      id: randomId("al"),
+      user_id: updatedUser.id,
+      action: "profile_update",
+      description: "프로필 정보 수정",
+      ip_address: "192.168.1.100",
+      device_info: "Chrome / Windows",
+      created_at: nowIso(),
+    });
+    mockDb.set("activityLogs", logs);
+
+    return delay(ok({ success: true }));
+  }
+
+  async changeMyPassword(data: { current_password: string; new_password: string }) {
+    // Mock: just validate that current_password is not empty
+    if (!data.current_password) {
+      return delay(fail("INVALID_PASSWORD", "현재 비밀번호를 입력해 주세요"));
+    }
+    if (data.new_password.length < 8) {
+      return delay(fail("WEAK_PASSWORD", "비밀번호는 8자 이상이어야 합니다"));
+    }
+
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    const logs = mockDb.get("activityLogs") as ActivityLog[];
+    logs.unshift({
+      id: randomId("al"),
+      user_id: currentUser.id,
+      action: "password_change",
+      description: "비밀번호 변경",
+      ip_address: "192.168.1.100",
+      device_info: "Chrome / Windows",
+      created_at: nowIso(),
+    });
+    mockDb.set("activityLogs", logs);
+
+    return delay(ok({ success: true }));
+  }
+
+  async getMyNotificationPrefs() {
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    const allPrefs = mockDb.get("notificationPrefs") as NotificationPrefs[];
+    const prefs = allPrefs.find((p) => p.user_id === currentUser.id);
+    if (!prefs) {
+      return delay(
+        ok({
+          email_notifications: true,
+          project_status_change: true,
+          estimate_contract_alerts: true,
+          daily_report_alerts: true,
+          platform_announcements: true,
+        }),
+      );
+    }
+    return delay(ok(prefs));
+  }
+
+  async updateMyNotificationPrefs(data: Partial<Omit<NotificationPrefs, "user_id">>) {
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    const allPrefs = mockDb.get("notificationPrefs") as NotificationPrefs[];
+    const idx = allPrefs.findIndex((p) => p.user_id === currentUser.id);
+    if (idx >= 0) {
+      allPrefs[idx] = { ...allPrefs[idx], ...data };
+    } else {
+      allPrefs.push({
+        user_id: currentUser.id,
+        email_notifications: true,
+        project_status_change: true,
+        estimate_contract_alerts: true,
+        daily_report_alerts: true,
+        platform_announcements: true,
+        ...data,
+      });
+    }
+    mockDb.set("notificationPrefs", allPrefs);
+
+    const logs = mockDb.get("activityLogs") as ActivityLog[];
+    logs.unshift({
+      id: randomId("al"),
+      user_id: currentUser.id,
+      action: "settings_change",
+      description: "알림 설정 변경",
+      ip_address: "192.168.1.100",
+      device_info: "Chrome / Windows",
+      created_at: nowIso(),
+    });
+    mockDb.set("activityLogs", logs);
+
+    return delay(ok({ success: true }));
+  }
+
+  async getMyActivityLog(page = 1, perPage = 20) {
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    const allLogs = (mockDb.get("activityLogs") as ActivityLog[]).filter(
+      (l) => l.user_id === currentUser.id,
+    );
+    const total = allLogs.length;
+    const start = (page - 1) * perPage;
+    const data = allLogs.slice(start, start + perPage);
+    return delay(
+      okPage(data, {
+        page,
+        per_page: perPage,
+        total,
+        total_pages: Math.ceil(total / perPage),
+      }),
+    );
+  }
+
+  async logoutAllDevices() {
+    return delay(ok({ success: true, message: "모든 기기에서 로그아웃되었습니다" }));
+  }
+
+  async requestAccountDeactivation(reason?: string) {
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    if (currentUser.role === "super_admin") {
+      return delay(fail("FORBIDDEN", "최고관리자 계정은 비활성화할 수 없습니다"));
+    }
+    return delay(ok({ success: true, message: "계정이 비활성화되었습니다" }));
+  }
+
+  async requestAccountDeletion(data: { password: string; reason: string }) {
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    if (currentUser.role === "super_admin") {
+      return delay(fail("FORBIDDEN", "최고관리자 계정은 탈퇴할 수 없습니다"));
+    }
+    if (!data.password) {
+      return delay(fail("INVALID_PASSWORD", "비밀번호를 입력해 주세요"));
+    }
+    if (!data.reason) {
+      return delay(fail("MISSING_REASON", "탈퇴 사유를 입력해 주세요"));
+    }
+    return delay(ok({ success: true, message: "회원 탈퇴가 완료되었습니다" }));
+  }
+
+  // ============================================
+  // Daily Labor Reporting (일용신고)
+  // ============================================
+
+  async getDailyWorkers() {
+    const workers = mockDb.get("dailyWorkers");
+    return delay(ok(workers));
+  }
+
+  async createDailyWorker(data: Omit<DailyWorker, "id">) {
+    const id = randomId("dw");
+    const worker: DailyWorker = { id, ...data };
+    mockDb.update("dailyWorkers", (prev) => [...prev, worker]);
+    return delay(ok(worker));
+  }
+
+  async updateDailyWorker(id: string, data: Partial<Omit<DailyWorker, "id">>) {
+    const workers = mockDb.get("dailyWorkers");
+    const idx = workers.findIndex((w) => w.id === id);
+    if (idx === -1) return delay(fail<DailyWorker>("NOT_FOUND", "근로자를 찾을 수 없습니다"));
+    const updated = { ...workers[idx], ...data };
+    mockDb.update("dailyWorkers", (prev) => prev.map((w) => (w.id === id ? updated : w)));
+    return delay(ok(updated));
+  }
+
+  async deleteDailyWorker(id: string) {
+    mockDb.update("dailyWorkers", (prev) => prev.filter((w) => w.id !== id));
+    return delay(ok({ success: true }));
+  }
+
+  async getWorkRecords(projectId: string, year: number, month: number) {
+    const records = mockDb.get("dailyWorkRecords").filter((r) => {
+      const d = new Date(r.work_date);
+      return r.project_id === projectId && d.getFullYear() === year && d.getMonth() + 1 === month;
+    });
+    return delay(ok(records));
+  }
+
+  async upsertWorkRecords(records: Array<Omit<DailyWorkRecord, "id"> & { id?: string }>) {
+    const existing = mockDb.get("dailyWorkRecords");
+    const existingMap = new Map(existing.map((r) => [r.id, r]));
+
+    for (const rec of records) {
+      if (rec.id && existingMap.has(rec.id)) {
+        existingMap.set(rec.id, { ...existingMap.get(rec.id)!, ...rec, id: rec.id });
+      } else {
+        const id = rec.id || randomId("dwr");
+        existingMap.set(id, { ...rec, id } as DailyWorkRecord);
+      }
+    }
+
+    mockDb.set("dailyWorkRecords", Array.from(existingMap.values()));
+    return delay(ok({ updated: records.length }));
+  }
+
+  async deleteWorkRecord(id: string) {
+    mockDb.update("dailyWorkRecords", (prev) => prev.filter((r) => r.id !== id));
+    return delay(ok({ success: true }));
+  }
+
+  async generateSiteReport(projectId: string, year: number, month: number): Promise<APIResponse<SitePayrollReport>> {
+    const workers = mockDb.get("dailyWorkers");
+    const allRecords = mockDb.get("dailyWorkRecords");
+    const rates = this.getRatesForYear(year);
+    const project = mockDb.get("projects").find((p) => p.id === projectId);
+
+    if (!project) return delay(fail("NOT_FOUND", "프로젝트를 찾을 수 없습니다"));
+
+    const projectRecords = allRecords.filter((r) => {
+      const d = new Date(r.work_date);
+      return r.project_id === projectId && d.getFullYear() === year && d.getMonth() + 1 === month;
+    });
+
+    const workerIds = [...new Set(projectRecords.map((r) => r.worker_id))];
+    // buildWorkerEntry imported at top level
+
+    const entries: SitePayrollWorkerEntry[] = workerIds.map((wid) => {
+      const worker = workers.find((w) => w.id === wid);
+      if (!worker) return null;
+      const workerRecords = projectRecords.filter((r) => r.worker_id === wid);
+      return buildWorkerEntry(worker, workerRecords, rates, year, month);
+    }).filter(Boolean) as SitePayrollWorkerEntry[];
+
+    const totals = this.sumEntries(entries);
+
+    return delay(ok({
+      project_id: projectId,
+      project_name: project.name,
+      year,
+      month,
+      organization_name: "유니그린개발",
+      entries,
+      totals,
+    }));
+  }
+
+  async generateConsolidatedReport(year: number, month: number): Promise<APIResponse<MonthlyConsolidatedReport>> {
+    const workers = mockDb.get("dailyWorkers");
+    const allRecords = mockDb.get("dailyWorkRecords");
+    const rates = this.getRatesForYear(year);
+    const projects = mockDb.get("projects");
+
+    const monthRecords = allRecords.filter((r) => {
+      const d = new Date(r.work_date);
+      return d.getFullYear() === year && d.getMonth() + 1 === month;
+    });
+
+    const projectIds = [...new Set(monthRecords.map((r) => r.project_id))];
+    const projectList = projectIds.map((pid) => {
+      const p = projects.find((pr) => pr.id === pid);
+      return { id: pid, name: p?.name || "알 수 없는 현장" };
+    });
+
+    const workerIds = [...new Set(monthRecords.map((r) => r.worker_id))];
+    // buildWorkerEntry imported at top level
+
+    const entries: SitePayrollWorkerEntry[] = workerIds.map((wid) => {
+      const worker = workers.find((w) => w.id === wid);
+      if (!worker) return null;
+      const workerRecords = monthRecords.filter((r) => r.worker_id === wid);
+      return buildWorkerEntry(worker, workerRecords, rates, year, month);
+    }).filter(Boolean) as SitePayrollWorkerEntry[];
+
+    const totals = this.sumEntries(entries);
+
+    return delay(ok({
+      year,
+      month,
+      organization_name: "유니그린개발",
+      projects: projectList,
+      entries,
+      totals,
+    }));
+  }
+
+  async getInsuranceRates(year?: number): Promise<APIResponse<LaborInsuranceRates[]>> {
+    const rates = mockDb.get("insuranceRates");
+    if (year) {
+      const filtered = rates.filter((r) => r.effective_year === year);
+      return delay(ok(filtered));
+    }
+    return delay(ok(rates));
+  }
+
+  async updateInsuranceRates(id: string, data: Partial<Omit<LaborInsuranceRates, "id">>): Promise<APIResponse<LaborInsuranceRates>> {
+    const rates = mockDb.get("insuranceRates");
+    const idx = rates.findIndex((r) => r.id === id);
+    if (idx === -1) return delay(fail("NOT_FOUND", "요율 설정을 찾을 수 없습니다"));
+    const updated = { ...rates[idx], ...data };
+    mockDb.update("insuranceRates", (prev) => prev.map((r) => (r.id === id ? updated : r)));
+    return delay(ok(updated));
+  }
+
+  async createInsuranceRates(data: Omit<LaborInsuranceRates, "id">): Promise<APIResponse<LaborInsuranceRates>> {
+    const id = randomId("ir");
+    const newRates: LaborInsuranceRates = { id, ...data };
+    mockDb.update("insuranceRates", (prev) => [...prev, newRates]);
+    return delay(ok(newRates));
+  }
+
+  // Helper: get rates for a specific year (fallback to latest)
+  private getRatesForYear(year: number): LaborInsuranceRates {
+    const rates = mockDb.get("insuranceRates");
+    const yearRates = rates.find((r) => r.effective_year === year);
+    if (yearRates) return yearRates;
+    // Fallback: latest year
+    const sorted = [...rates].sort((a, b) => b.effective_year - a.effective_year);
+    return sorted[0] || {
+      id: "ir_default",
+      effective_year: year,
+      income_deduction: 150000,
+      simplified_tax_rate: 0.027,
+      local_tax_rate: 0.1,
+      employment_insurance_rate: 0.009,
+      health_insurance_rate: 0.03595,
+      longterm_care_rate: 0.1314,
+      national_pension_rate: 0.045,
+      pension_upper_limit: 6170000,
+      pension_lower_limit: 390000,
+      health_premium_upper: 7822560,
+      health_premium_lower: 19780,
+    };
+  }
+
+  // Helper: sum up entries for totals
+  private sumEntries(entries: SitePayrollWorkerEntry[]) {
+    return {
+      total_labor_cost: entries.reduce((s, e) => s + e.total_labor_cost, 0),
+      total_income_tax: entries.reduce((s, e) => s + e.income_tax, 0),
+      total_resident_tax: entries.reduce((s, e) => s + e.resident_tax, 0),
+      total_health_insurance: entries.reduce((s, e) => s + e.health_insurance, 0),
+      total_longterm_care: entries.reduce((s, e) => s + e.longterm_care, 0),
+      total_national_pension: entries.reduce((s, e) => s + e.national_pension, 0),
+      total_employment_insurance: entries.reduce((s, e) => s + e.employment_insurance, 0),
+      total_deductions: entries.reduce((s, e) => s + e.total_deductions, 0),
+      total_net_pay: entries.reduce((s, e) => s + e.net_pay, 0),
+    };
   }
 }
 
