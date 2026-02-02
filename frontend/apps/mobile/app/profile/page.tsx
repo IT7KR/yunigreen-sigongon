@@ -12,6 +12,7 @@ import {
   Shield,
   HelpCircle,
   FileText,
+  LogIn,
 } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
 import { Card, CardContent, Button } from "@sigongon/ui";
@@ -36,7 +37,7 @@ export default function ProfilePage() {
         <div className="flex h-64 flex-col items-center justify-center gap-4 p-4">
           <p className="text-slate-500">로그인이 필요해요</p>
           <Button onClick={() => (window.location.href = "/login")}>
-            로그인
+            <LogIn className="h-4 w-4" />로그인
           </Button>
         </div>
       </MobileLayout>
@@ -62,7 +63,7 @@ export default function ProfilePage() {
               <div className="flex-1">
                 <p className="text-lg font-bold text-slate-900">{user.name}</p>
                 <p className="text-sm text-slate-500">
-                  {user.role === "admin" ? "관리자" : "현장기사"}
+                  {user.role === "company_admin" || user.role === "super_admin" ? "관리자" : user.role === "site_manager" ? "현장소장" : "현장기사"}
                 </p>
               </div>
             </div>

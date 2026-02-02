@@ -1593,6 +1593,33 @@ export class MockAPIClient {
     return delay(ok(albums));
   }
 
+  async createDailyReport(
+    projectId: string,
+    data: {
+      work_date: string;
+      weather?: string;
+      temperature?: string;
+      work_description: string;
+      tomorrow_plan?: string;
+      photos?: string[];
+    },
+  ) {
+    const reportId = randomId("dr");
+    return delay(
+      ok({
+        id: reportId,
+        project_id: projectId,
+        work_date: data.work_date,
+        weather: data.weather,
+        temperature: data.temperature,
+        work_description: data.work_description,
+        tomorrow_plan: data.tomorrow_plan,
+        photos: data.photos || [],
+        created_at: nowIso(),
+      }),
+    );
+  }
+
   async getPhotoAlbum(albumId: string) {
     const mockAlbums: Record<
       string,
@@ -1684,6 +1711,15 @@ export class MockAPIClient {
     }
 
     return delay(ok(album));
+  }
+
+  async uploadWorkerDocument() {
+    return delay(
+      ok({
+        id: "doc_1",
+        status: "submitted",
+      })
+    );
   }
 }
 

@@ -4,6 +4,9 @@ import { useState, useCallback } from "react";
 import { Upload, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 import { cn } from "@sigongon/ui";
 import type { PhotoType } from "./PhotoTypeSelector";
+import { computeImageHash, compareHashes } from "../../hooks/useImageHash";
+import { DuplicateWarning } from "./DuplicateWarning";
+import { extractExif } from "../../lib/exif-parser";
 
 interface PhotoUploadTask {
   id: string;
@@ -17,6 +20,7 @@ interface PhotoUploadTask {
   status: "pending" | "uploading" | "success" | "failed";
   progress: number;
   error?: string;
+  hash?: string;
 }
 
 interface PhotoUploaderProps {
@@ -30,28 +34,69 @@ interface PhotoUploaderProps {
   onUploadError: (photoId: string, error: string) => void;
 }
 
+interface DuplicateCheck {
+  photoId: string;
+  existingPhoto: {
+    url: string;
+    name: string;
+    similarity: number;
+  };
+}
+
 export function PhotoUploader({
   photos,
   onUploadComplete,
   onUploadError,
 }: PhotoUploaderProps) {
   const [tasks, setTasks] = useState<Map<string, PhotoUploadTask>>(new Map());
-
-  const extractExif = useCallback(async (file: File) => {
-    // In a real implementation, you would use a library like exifr
-    // For now, we'll return basic metadata
-    return {
-      dateTime: new Date().toISOString(),
-    };
-  }, []);
+  const [photoHashes, setPhotoHashes] = useState<Map<string, string>>(new Map());
+  const [duplicateCheck, setDuplicateCheck] = useState<DuplicateCheck | null>(null);
 
   const uploadPhoto = useCallback(
-    async (photo: typeof photos[0]) => {
+    async (photo: typeof photos[0], skipDuplicateCheck = false) => {
       const file = new File([photo.blob], `photo-${photo.id}.jpg`, {
         type: "image/jpeg",
       });
 
-      // Extract EXIF data
+      // Compute hash for duplicate detection
+      let hash: string | undefined;
+      try {
+        hash = await computeImageHash(file);
+      } catch (error) {
+        console.error("Failed to compute image hash:", error);
+      }
+
+      // Check for duplicates if hash was computed and check not skipped
+      if (hash && !skipDuplicateCheck) {
+        let foundDuplicate = false;
+
+        for (const [taskId, existingTask] of tasks.entries()) {
+          if (existingTask.hash && existingTask.status === "success") {
+            const similarity = compareHashes(hash, existingTask.hash);
+
+            // If similarity > 90%, show warning
+            if (similarity > 0.90) {
+              const mockUrl = URL.createObjectURL(photo.blob);
+              setDuplicateCheck({
+                photoId: photo.id,
+                existingPhoto: {
+                  url: mockUrl,
+                  name: existingTask.file.name,
+                  similarity,
+                },
+              });
+              foundDuplicate = true;
+              break;
+            }
+          }
+        }
+
+        if (foundDuplicate) {
+          return; // Stop upload, wait for user decision
+        }
+      }
+
+      // Extract EXIF data using the exif-parser
       const exif = await extractExif(file);
 
       // Create upload task
@@ -62,6 +107,7 @@ export function PhotoUploader({
         exif,
         status: "pending",
         progress: 0,
+        hash,
       };
 
       setTasks((prev) => new Map(prev).set(photo.id, task));
@@ -118,6 +164,11 @@ export function PhotoUploader({
         });
 
         onUploadComplete(photo.id, mockUrl);
+
+        // Store hash for future duplicate checks
+        if (hash) {
+          setPhotoHashes((prev) => new Map(prev).set(photo.id, hash));
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "업로드 실패";
 
@@ -137,18 +188,36 @@ export function PhotoUploader({
         onUploadError(photo.id, errorMessage);
       }
     },
-    [extractExif, onUploadComplete, onUploadError]
+    [onUploadComplete, onUploadError, tasks]
   );
 
   const retryUpload = useCallback(
     (photoId: string) => {
       const photo = photos.find((p) => p.id === photoId);
       if (photo) {
-        uploadPhoto(photo);
+        uploadPhoto(photo, false);
       }
     },
     [photos, uploadPhoto]
   );
+
+  const handleDuplicateContinue = useCallback(() => {
+    if (!duplicateCheck) return;
+
+    const photo = photos.find((p) => p.id === duplicateCheck.photoId);
+    if (photo) {
+      setDuplicateCheck(null);
+      uploadPhoto(photo, true); // Skip duplicate check this time
+    }
+  }, [duplicateCheck, photos, uploadPhoto]);
+
+  const handleDuplicateCancel = useCallback(() => {
+    if (duplicateCheck) {
+      // Mark as failed so user can see it was cancelled
+      onUploadError(duplicateCheck.photoId, "중복 사진 업로드 취소됨");
+      setDuplicateCheck(null);
+    }
+  }, [duplicateCheck, onUploadError]);
 
   // Auto-upload photos when they're added
   useState(() => {
@@ -169,7 +238,16 @@ export function PhotoUploader({
   }
 
   return (
-    <div className="space-y-3">
+    <>
+      {duplicateCheck && (
+        <DuplicateWarning
+          existingPhoto={duplicateCheck.existingPhoto}
+          onContinue={handleDuplicateContinue}
+          onCancel={handleDuplicateCancel}
+        />
+      )}
+
+      <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-500">
           <Upload className="h-4 w-4" />
@@ -252,5 +330,6 @@ export function PhotoUploader({
         ))}
       </div>
     </div>
+    </>
   );
 }

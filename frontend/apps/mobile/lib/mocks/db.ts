@@ -73,11 +73,12 @@ const STORAGE_KEY = "sigongon_mock_v1";
 const nowIso = () => new Date().toISOString();
 
 const normalizeRole = (role: unknown): UserRole => {
-  if (role === "admin" || role === "manager" || role === "technician")
+  if (role === "super_admin" || role === "company_admin" || role === "site_manager" || role === "worker")
     return role;
-  if (role === "company_rep") return "manager";
-  if (role === "site_manager") return "technician";
-  return "admin";
+  if (role === "admin" || role === "company_rep") return "company_admin";
+  if (role === "manager") return "site_manager";
+  if (role === "technician") return "worker";
+  return "company_admin";
 };
 
 const normalizeStatus = (status: unknown): ProjectStatus => {
@@ -142,7 +143,7 @@ const INITIAL_DATA: MockSchema = {
       id: "u1",
       name: "이중호",
       email: "admin@sigongon.com",
-      role: "admin",
+      role: "company_admin",
       organization_id: "org_1",
       is_active: true,
       created_at: nowIso(),
@@ -151,7 +152,7 @@ const INITIAL_DATA: MockSchema = {
       id: "u2",
       name: "김대표",
       email: "ceo@partner.com",
-      role: "manager",
+      role: "site_manager",
       organization_id: "org_1",
       is_active: true,
       created_at: nowIso(),
@@ -160,7 +161,7 @@ const INITIAL_DATA: MockSchema = {
       id: "u3",
       name: "박소장",
       email: "site@partner.com",
-      role: "technician",
+      role: "worker",
       organization_id: "org_1",
       is_active: true,
       created_at: nowIso(),

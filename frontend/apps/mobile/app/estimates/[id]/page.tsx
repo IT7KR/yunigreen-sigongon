@@ -12,6 +12,9 @@ import {
   Send,
   Download,
   AlertCircle,
+  Sparkles,
+  ArrowLeft,
+  FileSignature,
 } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
 import {
@@ -32,6 +35,8 @@ import {
   useAddEstimateLine,
 } from "@/hooks";
 import type { EstimateStatus, EstimateLineSource } from "@sigongon/types";
+import { VoiceInput } from "@/components/features/VoiceInput";
+import { RAGSearchDrawer } from "@/components/features/RAGSearchDrawer";
 
 interface EstimateDetailPageProps {
   params: Promise<{ id: string }>;
@@ -76,6 +81,7 @@ export default function EstimateDetailPage({
 
   const [editingLine, setEditingLine] = useState<EditingLine | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [ragDrawerOpen, setRagDrawerOpen] = useState(false);
   const [newLine, setNewLine] = useState({
     description: "",
     specification: "",
@@ -148,6 +154,16 @@ export default function EstimateDetailPage({
     await issueEstimate.mutateAsync();
   };
 
+  const handleAddRAGItem = async (item: {
+    description: string;
+    specification?: string;
+    unit: string;
+    quantity: string;
+    unit_price_snapshot: string;
+  }) => {
+    await addLine.mutateAsync(item);
+  };
+
   if (isLoading) {
     return (
       <MobileLayout title="견적서" showBack>
@@ -165,7 +181,7 @@ export default function EstimateDetailPage({
           <AlertCircle className="h-12 w-12 text-red-400" />
           <p className="text-slate-500">견적서를 찾을 수 없어요</p>
           <Button variant="secondary" onClick={() => router.back()}>
-            돌아가기
+            <ArrowLeft className="h-4 w-4" />돌아가기
           </Button>
         </div>
       </MobileLayout>
@@ -296,26 +312,45 @@ export default function EstimateDetailPage({
             ))}
 
             {isDraft && !showAddForm && (
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => setShowAddForm(true)}
-                className="border-dashed"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                항목 추가
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => setRagDrawerOpen(true)}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  AI 검색
+                </Button>
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => setShowAddForm(true)}
+                  className="border-dashed"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  항목 추가
+                </Button>
+              </div>
             )}
 
             {showAddForm && (
               <div className="rounded-lg border-2 border-dashed border-brand-point-200 bg-brand-point-50 p-3 space-y-3">
-                <Input
-                  placeholder="항목명"
-                  value={newLine.description}
-                  onChange={(e) =>
-                    setNewLine({ ...newLine, description: e.target.value })
-                  }
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="항목명"
+                    value={newLine.description}
+                    onChange={(e) =>
+                      setNewLine({ ...newLine, description: e.target.value })
+                    }
+                    className="flex-1"
+                  />
+                  <VoiceInput
+                    onTranscript={(text) =>
+                      setNewLine({ ...newLine, description: text })
+                    }
+                    placeholder="음성으로 입력"
+                  />
+                </div>
                 <Input
                   placeholder="규격 (선택)"
                   value={newLine.specification}
@@ -357,7 +392,7 @@ export default function EstimateDetailPage({
                     size="sm"
                     onClick={() => setShowAddForm(false)}
                   >
-                    취소
+                    <X className="h-3.5 w-3.5" />취소
                   </Button>
                   <Button
                     size="sm"
@@ -365,7 +400,7 @@ export default function EstimateDetailPage({
                     loading={addLine.isPending}
                     disabled={!newLine.description.trim()}
                   >
-                    추가
+                    <Plus className="h-3.5 w-3.5" />추가
                   </Button>
                 </div>
               </div>
@@ -423,10 +458,16 @@ export default function EstimateDetailPage({
               <Download className="mr-2 h-4 w-4" />
               PDF 다운로드
             </Button>
-            <Button className="flex-1">계약서 만들기</Button>
+            <Button className="flex-1"><FileSignature className="h-4 w-4" />계약서 만들기</Button>
           </div>
         )}
       </div>
+
+      <RAGSearchDrawer
+        isOpen={ragDrawerOpen}
+        onClose={() => setRagDrawerOpen(false)}
+        onAddItem={handleAddRAGItem}
+      />
     </MobileLayout>
   );
 }
