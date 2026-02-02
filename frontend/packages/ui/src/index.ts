@@ -1,5 +1,6 @@
 // Components
 export { Button, buttonVariants, type ButtonProps } from "./components/Button"
+export { ActionButton, type ActionButtonProps } from "./components/ActionButton"
 export { 
   Card, 
   CardHeader, 
