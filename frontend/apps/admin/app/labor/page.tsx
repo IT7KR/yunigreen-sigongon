@@ -9,8 +9,9 @@ import {
   Badge,
   Input,
   Modal,
+  toast,
 } from "@sigongon/ui";
-import { Plus, Download, UserPlus, Mail, X, Loader2, Check } from "lucide-react";
+import { Plus, Download, UserPlus, Mail, Loader2, Check, Eye, Send, X, Calculator, UserCheck, Settings, ArrowRight } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
@@ -34,6 +35,12 @@ export default function LaborPage() {
   >([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Excel dropdown removed - moved to /labor/payroll
+
+  // Batch paystub send modal state
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [isBatching, setIsBatching] = useState(false);
+
   // Worker registration modal state
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [workerName, setWorkerName] = useState("");
@@ -55,6 +62,7 @@ export default function LaborPage() {
 
     fetchData();
   }, []);
+
 
   const handlePhoneFormat = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
@@ -126,6 +134,29 @@ export default function LaborPage() {
     setRegisterSuccess(null);
   };
 
+  const handleBatchSend = async () => {
+    setIsBatching(true);
+
+    try {
+      await api.batchSendPaystubs();
+
+      // Update summary to 0
+      setSummary((prev) => ({
+        ...prev,
+        pending_paystubs: 0,
+      }));
+
+      setShowBatchModal(false);
+      toast.success(`${summary.pending_paystubs}건의 지급명세서를 발송했어요.`);
+    } catch {
+      toast.error("지급명세서 발송에 실패했습니다.");
+    }
+
+    setIsBatching(false);
+  };
+
+  // Excel functions moved to /labor/payroll page
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -138,10 +169,12 @@ export default function LaborPage() {
                 근로계약 관리
               </Button>
             </Link>
-            <Button variant="secondary">
-              <Download className="mr-2 h-4 w-4" />
-              신고 엑셀 다운로드
-            </Button>
+            <Link href="/labor/payroll">
+              <Button variant="secondary">
+                <Download className="mr-2 h-4 w-4" />
+                신고 엑셀 다운로드
+              </Button>
+            </Link>
             <Button onClick={() => setShowRegisterModal(true)}>
               <UserPlus className="mr-2 h-4 w-4" />
               근로자 등록
@@ -173,8 +206,14 @@ export default function LaborPage() {
               <div className="text-2xl font-bold text-amber-600">
                 {summary.pending_paystubs}건
               </div>
-              <Button size="sm" variant="ghost" className="px-0">
-                일괄 발송하기
+              <Button
+                size="sm"
+                variant="ghost"
+                className="px-0"
+                onClick={() => setShowBatchModal(true)}
+                disabled={summary.pending_paystubs === 0}
+              >
+                <Send className="h-3.5 w-3.5" />일괄 발송하기
               </Button>
             </CardContent>
           </Card>
@@ -190,6 +229,52 @@ export default function LaborPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Quick Navigation Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Link href="/labor/payroll">
+            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+              <CardContent className="flex items-center gap-4 p-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                  <Calculator className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-slate-900">급여/근무 관리</p>
+                  <p className="text-xs text-slate-500">근무 입력 및 급여 계산, 엑셀 다운로드</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-slate-400" />
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/labor/workers">
+            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+              <CardContent className="flex items-center gap-4 p-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+                  <UserCheck className="h-5 w-5 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-slate-900">근로자 주소록</p>
+                  <p className="text-xs text-slate-500">일용 근로자 등록 및 관리</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-slate-400" />
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/labor/settings">
+            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+              <CardContent className="flex items-center gap-4 p-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+                  <Settings className="h-5 w-5 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-slate-900">보험요율 설정</p>
+                  <p className="text-xs text-slate-500">세율 및 4대보험 요율 관리</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-slate-400" />
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <Card>
@@ -272,7 +357,7 @@ export default function LaborPage() {
                           <div className="flex gap-2">
                             <Link href={`/labor/${worker.id}`}>
                               <Button size="sm" variant="secondary">
-                                상세보기
+                                <Eye className="h-3.5 w-3.5" />상세보기
                               </Button>
                             </Link>
                             <Button size="sm" variant="secondary">
@@ -290,86 +375,75 @@ export default function LaborPage() {
         </Card>
       </div>
 
+      {/* Batch Paystub Send Modal */}
+      <Modal
+        isOpen={showBatchModal}
+        onClose={() => setShowBatchModal(false)}
+        title="지급명세서 일괄 발송"
+        size="sm"
+      >
+        <p className="mb-6 text-sm text-slate-600">
+          대기중인 {summary.pending_paystubs}건의 지급명세서를 일괄 발송하시겠습니까?
+        </p>
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={() => setShowBatchModal(false)} fullWidth disabled={isBatching}><X className="h-4 w-4" />취소</Button>
+          <Button onClick={handleBatchSend} fullWidth disabled={isBatching}>
+            {isBatching ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" />발송하기</>}
+          </Button>
+        </div>
+      </Modal>
+
       {/* Worker Registration Modal */}
-      {showRegisterModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900">근로자 등록</h2>
-              <button
-                onClick={closeModal}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
+      <Modal
+        isOpen={showRegisterModal}
+        onClose={closeModal}
+        title="근로자 등록"
+      >
+        {registerSuccess ? (
+          <div className="py-8 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+              <Check className="h-6 w-6 text-green-600" />
             </div>
-
-            {registerSuccess ? (
-              <div className="py-8 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-                  <Check className="h-6 w-6 text-green-600" />
-                </div>
-                <p className="text-sm text-slate-600">{registerSuccess.message}</p>
-                {registerSuccess.isNew && (
-                  <p className="mt-2 text-xs text-slate-500">
-                    필수 서류(신분증, 통장사본 등)를 근로자에게 요청해주세요.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-slate-600">
-                  근로자 정보를 입력하면 자동으로 회원가입이 진행됩니다.
-                  <br />
-                  임시 비밀번호는 전화번호 뒤 4자리입니다.
-                </p>
-
-                <Input
-                  label="이름"
-                  placeholder="홍길동"
-                  value={workerName}
-                  onChange={(e) => setWorkerName(e.target.value)}
-                  error={registerErrors.name}
-                />
-
-                <Input
-                  label="휴대폰 번호"
-                  placeholder="010-0000-0000"
-                  value={workerPhone}
-                  onChange={(e) => setWorkerPhone(handlePhoneFormat(e.target.value))}
-                  error={registerErrors.phone}
-                />
-
-                {registerErrors.submit && (
-                  <p className="text-sm text-red-600">{registerErrors.submit}</p>
-                )}
-
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    variant="secondary"
-                    onClick={closeModal}
-                    fullWidth
-                    disabled={isRegistering}
-                  >
-                    취소
-                  </Button>
-                  <Button
-                    onClick={handleRegisterWorker}
-                    fullWidth
-                    disabled={isRegistering}
-                  >
-                    {isRegistering ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "등록"
-                    )}
-                  </Button>
-                </div>
-              </div>
+            <p className="text-sm text-slate-600">{registerSuccess.message}</p>
+            {registerSuccess.isNew && (
+              <p className="mt-2 text-xs text-slate-500">
+                필수 서류(신분증, 통장사본 등)를 근로자에게 요청해주세요.
+              </p>
             )}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              근로자 정보를 입력하면 자동으로 회원가입이 진행됩니다.
+              <br />
+              임시 비밀번호는 전화번호 뒤 4자리입니다.
+            </p>
+            <Input
+              label="이름"
+              placeholder="홍길동"
+              value={workerName}
+              onChange={(e) => setWorkerName(e.target.value)}
+              error={registerErrors.name}
+            />
+            <Input
+              label="휴대폰 번호"
+              placeholder="010-0000-0000"
+              value={workerPhone}
+              onChange={(e) => setWorkerPhone(handlePhoneFormat(e.target.value))}
+              error={registerErrors.phone}
+            />
+            {registerErrors.submit && (
+              <p className="text-sm text-red-600">{registerErrors.submit}</p>
+            )}
+            <div className="flex gap-3 pt-2">
+              <Button variant="secondary" onClick={closeModal} fullWidth disabled={isRegistering}><X className="h-4 w-4" />취소</Button>
+              <Button onClick={handleRegisterWorker} fullWidth disabled={isRegistering}>
+                {isRegistering ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4" />등록</>}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </AdminLayout>
   );
 }
