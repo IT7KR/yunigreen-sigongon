@@ -43,6 +43,18 @@ function LoginForm() {
     setIsLoading(false);
   };
 
+  const handleQuickLogin = async (testUsername: string) => {
+    setError(null);
+    setIsLoading(true);
+    const result = await login(testUsername, "test1234");
+    if (result.success) {
+      router.push(redirectTo);
+    } else {
+      setError(result.error || "로그인에 실패했어요");
+    }
+    setIsLoading(false);
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-100 p-4">
       <div className="mb-8 flex flex-col items-center">
@@ -132,6 +144,52 @@ function LoginForm() {
           </form>
         </CardContent>
       </Card>
+
+      <div className="mt-6 w-full max-w-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span className="text-xs text-slate-400">테스트 계정</span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => handleQuickLogin("superadmin")}
+            disabled={isLoading}
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-left text-xs transition-colors hover:bg-red-100 disabled:opacity-50"
+          >
+            <div className="font-medium text-red-700">최고관리자 (SA)</div>
+            <div className="mt-0.5 text-red-600">유니그린 관리자</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickLogin("ceo_lee")}
+            disabled={isLoading}
+            className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-left text-xs transition-colors hover:bg-blue-100 disabled:opacity-50"
+          >
+            <div className="font-medium text-blue-700">대표 (회사관리자)</div>
+            <div className="mt-0.5 text-blue-600">이중호</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickLogin("site_kim")}
+            disabled={isLoading}
+            className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-left text-xs transition-colors hover:bg-green-100 disabled:opacity-50"
+          >
+            <div className="font-medium text-green-700">현장소장</div>
+            <div className="mt-0.5 text-green-600">김소장</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickLogin("worker_hong")}
+            disabled={isLoading}
+            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-left text-xs transition-colors hover:bg-amber-100 disabled:opacity-50"
+          >
+            <div className="font-medium text-amber-700">근로자</div>
+            <div className="mt-0.5 text-amber-600">홍길동</div>
+          </button>
+        </div>
+      </div>
 
       <p className="mt-8 text-xs text-slate-400">
         © 2026 시공ON. All rights reserved.
