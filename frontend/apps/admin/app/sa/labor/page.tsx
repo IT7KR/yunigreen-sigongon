@@ -8,12 +8,12 @@ import {
   Button,
   Badge,
 } from "@sigongon/ui";
-import { Download, UserPlus, Mail } from "lucide-react";
+import { Download, UserPlus, Mail, Send, Eye } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
-import { SANav } from "../components/SANav";
+
 
 export default function SALaborPage() {
   const [summary, setSummary] = useState({
@@ -67,8 +67,6 @@ export default function SALaborPage() {
           </div>
         </div>
 
-        <SANav />
-
         <div className="grid gap-6 md:grid-cols-3">
           <Card>
             <CardHeader>
@@ -94,7 +92,7 @@ export default function SALaborPage() {
                 {summary.pending_paystubs}건
               </div>
               <Button size="sm" variant="ghost" className="px-0">
-                일괄 발송하기
+                <Send className="h-3.5 w-3.5" />일괄 발송하기
               </Button>
             </CardContent>
           </Card>
@@ -188,7 +186,7 @@ export default function SALaborPage() {
                         <td className="py-4">
                           <div className="flex gap-2">
                             <Button size="sm" variant="secondary">
-                              상세보기
+                              <Eye className="h-3.5 w-3.5" />상세보기
                             </Button>
                             <Button size="sm" variant="secondary">
                               <Mail className="h-3 w-3" />

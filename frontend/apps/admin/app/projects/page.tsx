@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Filter, MoreHorizontal, Loader2 } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Loader2, X } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import {
   Card,
@@ -22,12 +22,14 @@ import {
 } from "@sigongon/ui";
 import { useProjects } from "@/hooks";
 import { api } from "@/lib/api";
-import type { ProjectStatus } from "@sigongon/types";
+import type { ProjectStatus, ProjectCategory } from "@sigongon/types";
+import { PROJECT_CATEGORIES } from "@sigongon/types";
 
 export default function ProjectsPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "">("");
+  const [categoryFilter, setCategoryFilter] = useState<ProjectCategory | "">("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -36,8 +38,12 @@ export default function ProjectsPage() {
     search: search || undefined,
   });
 
-  const projects = data?.data ?? [];
-  const total = data?.meta?.total ?? 0;
+  // Client-side category filtering (until API supports it)
+  const allProjects = data?.data ?? [];
+  const projects = categoryFilter
+    ? allProjects.filter((p) => p.category === categoryFilter)
+    : allProjects;
+  const total = projects.length;
 
   async function handleCreateProject(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -90,6 +96,20 @@ export default function ProjectsPage() {
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-4 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 />
               </div>
+              <select
+                value={categoryFilter}
+                onChange={(e) =>
+                  setCategoryFilter(e.target.value as ProjectCategory | "")
+                }
+                className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              >
+                <option value="">모든 카테고리</option>
+                {PROJECT_CATEGORIES.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
               <select
                 value={statusFilter}
                 onChange={(e) =>
@@ -220,13 +240,13 @@ export default function ProjectsPage() {
               className="flex-1"
               onClick={() => setShowCreateModal(false)}
             >
-              취소
+              <X className="h-4 w-4" />취소
             </Button>
             <Button type="submit" className="flex-1" disabled={creating}>
               {creating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "생성"
+                <><Plus className="h-4 w-4" />생성</>
               )}
             </Button>
           </div>

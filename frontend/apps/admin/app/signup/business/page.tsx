@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input, Card, Stepper, FileUpload } from "@sigongon/ui";
-import { Droplets, Check, Loader2, Building2 } from "lucide-react";
+import { Droplets, Check, Loader2, Building2, ArrowLeft, ArrowRight } from "lucide-react";
 import {
   STEPS,
   getSignupData,
@@ -97,6 +97,11 @@ export default function BusinessPage() {
       newErrors.repEmail = "대표자 이메일을 입력해주세요";
     }
 
+    // Validation: At least one contact phone must be provided
+    if (!data.repPhone && !data.contactPhone) {
+      newErrors.contactPhone = "대표자 또는 실무자 연락처 중 하나 이상 입력해주세요";
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -120,7 +125,7 @@ export default function BusinessPage() {
         <span className="text-2xl font-bold text-slate-900">시공ON</span>
       </Link>
 
-      <Card className="w-full max-w-2xl p-6 md:p-8">
+      <Card className="w-full max-w-3xl p-6 md:p-8">
         <Stepper steps={STEPS} currentStep={2} className="mb-8" />
 
         <div className="mb-6 text-center">
@@ -196,104 +201,115 @@ export default function BusinessPage() {
             </div>
           )}
 
-          {/* Business License Upload */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-900">
-              사업자등록증 (필수)
-            </label>
-            <FileUpload
-              accept=".pdf,.jpg,.jpeg,.png"
-              maxSize={10 * 1024 * 1024}
-              onFiles={(files) => {
-                setData({ ...data, businessLicenseFile: files[0] });
-                setErrors({ ...errors, businessLicense: "" });
-              }}
-            />
-            {errors.businessLicense && (
-              <p className="mt-1 text-sm text-red-600">{errors.businessLicense}</p>
-            )}
+          {/* Business License + Construction License (2-column grid) */}
+          <div className="grid gap-6 md:grid-cols-2 md:gap-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-900">
+                사업자등록증 (필수)
+              </label>
+              <FileUpload
+                accept=".pdf,.jpg,.jpeg,.png"
+                maxSize={10 * 1024 * 1024}
+                onFiles={(files) => {
+                  setData({ ...data, businessLicenseFile: files[0] });
+                  setErrors({ ...errors, businessLicense: "" });
+                }}
+              />
+              {errors.businessLicense && (
+                <p className="mt-1 text-sm text-red-600">{errors.businessLicense}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-900">
+                건설업등록증 (필수)
+              </label>
+              <FileUpload
+                accept=".pdf,.jpg,.jpeg,.png"
+                maxSize={10 * 1024 * 1024}
+                onFiles={(files) => {
+                  setData({ ...data, constructionLicenseFile: files[0] });
+                  setErrors({ ...errors, constructionLicense: "" });
+                }}
+              />
+              {errors.constructionLicense && (
+                <p className="mt-1 text-sm text-red-600">{errors.constructionLicense}</p>
+              )}
+              <p className="mt-1 text-xs text-slate-500">
+                건설업등록증을 업로드해주세요
+              </p>
+            </div>
           </div>
 
-          {/* Construction License Upload (Required) */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-900">
-              건설업등록증 (필수)
-            </label>
-            <FileUpload
-              accept=".pdf,.jpg,.jpeg,.png"
-              maxSize={10 * 1024 * 1024}
-              onFiles={(files) => {
-                setData({ ...data, constructionLicenseFile: files[0] });
-                setErrors({ ...errors, constructionLicense: "" });
-              }}
-            />
-            {errors.constructionLicense && (
-              <p className="mt-1 text-sm text-red-600">{errors.constructionLicense}</p>
-            )}
-            <p className="mt-1 text-xs text-slate-500">
-              건설업등록증을 업로드해주세요
+          {/* Note about contact notification */}
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <p className="text-sm text-blue-800">
+              💡 <strong>프로젝트별 알림 수신자를 지정할 수 있습니다.</strong>
+              <br />
+              대표자와 실무자 정보를 등록하면, 각 프로젝트에서 알림을 받을 담당자를 선택할 수 있습니다.
             </p>
           </div>
 
-          {/* Representative Info (대표자 정보) */}
-          <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <h3 className="font-semibold text-slate-900">대표자 정보</h3>
-            <Input
-              label="대표자 성함"
-              value={data.representativeName || ""}
-              onChange={(e) => setData({ ...data, representativeName: e.target.value })}
-              disabled={data.businessVerified}
-            />
-            <Input
-              label="대표자 연락처 (필수)"
-              placeholder="010-0000-0000"
-              value={data.repPhone || ""}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/\D/g, "");
-                let formatted = cleaned;
-                if (cleaned.length > 3 && cleaned.length <= 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3)}`;
-                else if (cleaned.length > 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3,7)}-${cleaned.slice(7,11)}`;
-                setData({ ...data, repPhone: formatted });
-              }}
-              error={errors.repPhone}
-            />
-            <Input
-              label="대표자 이메일 (필수)"
-              type="email"
-              placeholder="ceo@company.com"
-              value={data.repEmail || ""}
-              onChange={(e) => setData({ ...data, repEmail: e.target.value })}
-              error={errors.repEmail}
-            />
-          </div>
+          {/* Representative + Worker Info (2-column grid) */}
+          <div className="grid gap-6 md:grid-cols-2 md:gap-4">
+            <div className="h-full space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <h3 className="font-semibold text-slate-900">대표자 정보</h3>
+              <Input
+                label="대표자 성함"
+                value={data.representativeName || ""}
+                onChange={(e) => setData({ ...data, representativeName: e.target.value })}
+                disabled={data.businessVerified}
+              />
+              <Input
+                label="대표자 연락처 (필수)"
+                placeholder="010-0000-0000"
+                value={data.repPhone || ""}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, "");
+                  let formatted = cleaned;
+                  if (cleaned.length > 3 && cleaned.length <= 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3)}`;
+                  else if (cleaned.length > 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3,7)}-${cleaned.slice(7,11)}`;
+                  setData({ ...data, repPhone: formatted });
+                }}
+                error={errors.repPhone}
+              />
+              <Input
+                label="대표자 이메일 (필수)"
+                type="email"
+                placeholder="ceo@company.com"
+                value={data.repEmail || ""}
+                onChange={(e) => setData({ ...data, repEmail: e.target.value })}
+                error={errors.repEmail}
+              />
+            </div>
 
-          {/* Worker Contact Info (실무자 정보) */}
-          <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <h3 className="font-semibold text-slate-700">실무자 정보 (선택)</h3>
-            <Input
-              label="실무자 성함"
-              placeholder="담당자 이름"
-              value={data.contactName || ""}
-              onChange={(e) => setData({ ...data, contactName: e.target.value })}
-            />
-            <Input
-              label="실무자 연락처"
-              placeholder="010-0000-0000"
-              value={data.contactPhone || ""}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/\D/g, "");
-                let formatted = cleaned;
-                if (cleaned.length > 3 && cleaned.length <= 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3)}`;
-                else if (cleaned.length > 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3,7)}-${cleaned.slice(7,11)}`;
-                setData({ ...data, contactPhone: formatted });
-              }}
-            />
-            <Input
-              label="실무자 직위"
-              placeholder="예: 과장, 팀장"
-              value={data.contactPosition || ""}
-              onChange={(e) => setData({ ...data, contactPosition: e.target.value })}
-            />
+            <div className="h-full space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <h3 className="font-semibold text-slate-700">실무자 정보 (선택)</h3>
+              <Input
+                label="실무자 성함"
+                placeholder="담당자 이름"
+                value={data.contactName || ""}
+                onChange={(e) => setData({ ...data, contactName: e.target.value })}
+              />
+              <Input
+                label="실무자 연락처"
+                placeholder="010-0000-0000"
+                value={data.contactPhone || ""}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, "");
+                  let formatted = cleaned;
+                  if (cleaned.length > 3 && cleaned.length <= 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3)}`;
+                  else if (cleaned.length > 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3,7)}-${cleaned.slice(7,11)}`;
+                  setData({ ...data, contactPhone: formatted });
+                }}
+              />
+              <Input
+                label="실무자 직위"
+                placeholder="예: 과장, 팀장"
+                value={data.contactPosition || ""}
+                onChange={(e) => setData({ ...data, contactPosition: e.target.value })}
+              />
+            </div>
           </div>
 
           {/* Woman-Owned Business Certificate (Optional) */}
@@ -322,10 +338,10 @@ export default function BusinessPage() {
               size="lg"
               className="flex-1"
             >
-              이전
+              <ArrowLeft className="h-5 w-5" />이전
             </Button>
             <Button onClick={handleNext} fullWidth size="lg" className="flex-1">
-              다음
+              <ArrowRight className="h-5 w-5" />다음
             </Button>
           </div>
         </div>

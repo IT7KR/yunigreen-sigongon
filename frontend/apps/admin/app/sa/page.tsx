@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import Link from "next/link";
-import { SANav } from "./components/SANav";
+
 
 interface DashboardStats {
   total_tenants: number;
@@ -76,61 +76,19 @@ export default function SADashboardPage() {
 
   async function loadDashboardData() {
     setIsLoading(true);
-
-    // Mock data - replace with actual API calls
-    setTimeout(() => {
-      setStats({
-        total_tenants: 42,
-        total_users: 156,
-        monthly_revenue: 12500000,
-        new_signups: 8,
-        tenants_growth: 12.5,
-        users_growth: 8.3,
-        revenue_growth: 15.2,
-        signups_growth: 33.3,
-      });
-
-      setRecentActivity([
-        {
-          id: "1",
-          type: "tenant",
-          title: "새 고객사 가입",
-          description: "ABC건설 (Pro Plan)",
-          timestamp: "5분 전",
-        },
-        {
-          id: "2",
-          type: "payment",
-          title: "결제 완료",
-          description: "유니그린개발 - 550,000원",
-          timestamp: "1시간 전",
-        },
-        {
-          id: "3",
-          type: "inquiry",
-          title: "문의 접수",
-          description: "DEF리모델링 - 플랜 업그레이드 문의",
-          timestamp: "3시간 전",
-        },
-      ]);
-
-      setMonthlyRevenue([
-        { month: "2025-07", amount: 8500000 },
-        { month: "2025-08", amount: 9200000 },
-        { month: "2025-09", amount: 9800000 },
-        { month: "2025-10", amount: 10500000 },
-        { month: "2025-11", amount: 11200000 },
-        { month: "2025-12", amount: 12500000 },
-      ]);
-
-      setPlanDistribution([
-        { plan: "Free", count: 15, percentage: 35.7 },
-        { plan: "Basic", count: 12, percentage: 28.6 },
-        { plan: "Pro", count: 15, percentage: 35.7 },
-      ]);
-
+    try {
+      const response = await api.getSADashboard();
+      if (response.success && response.data) {
+        setStats(response.data.stats);
+        setRecentActivity(response.data.recent_activity);
+        setMonthlyRevenue(response.data.monthly_revenue);
+        setPlanDistribution(response.data.plan_distribution);
+      }
+    } catch (err) {
+      console.error("Failed to load dashboard data:", err);
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   }
 
   const maxRevenue = Math.max(...monthlyRevenue.map((m) => m.amount));
@@ -144,8 +102,6 @@ export default function SADashboardPage() {
           </h1>
           <p className="mt-1 text-slate-500">전체 시스템 현황을 확인하세요</p>
         </div>
-
-        <SANav />
 
         {isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

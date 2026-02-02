@@ -11,9 +11,12 @@ import {
   Trash2,
   Edit2,
   Loader2,
+  FileSpreadsheet,
+  Sparkles,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { EstimateLineModal } from "@/components/EstimateLineModal";
+import { RAGSearchPanel } from "@/components/RAGSearchPanel";
 import {
   Card,
   CardContent,
@@ -25,6 +28,8 @@ import {
 } from "@sigongon/ui";
 import type { EstimateStatus, EstimateLineSource } from "@sigongon/types";
 import { api } from "@/lib/api";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 interface EstimateDetail {
   id: string;
@@ -70,6 +75,7 @@ export default function EstimateDetailPage({
   const [editingLine, setEditingLine] = useState<
     EstimateDetail["lines"][0] | null
   >(null);
+  const [ragPanelOpen, setRagPanelOpen] = useState(false);
 
   useEffect(() => {
     loadEstimate();
@@ -139,9 +145,99 @@ export default function EstimateDetailPage({
     await loadEstimate();
   }
 
+  async function handleAddRAGItem(item: {
+    description: string;
+    specification?: string;
+    unit: string;
+    quantity: string;
+    unit_price_snapshot: string;
+  }) {
+    try {
+      await api.addEstimateLine(id, item);
+      await loadEstimate();
+      setRagPanelOpen(false);
+    } catch (err) {
+      alert("항목 추가에 실패했어요");
+      console.error(err);
+    }
+  }
+
   const formatCurrency = (amount: string) => {
     return Number(amount).toLocaleString() + "원";
   };
+
+  async function generateEstimateExcel(estimate: EstimateDetail) {
+    // Prepare data rows
+    const dataRows = estimate.lines.map((line, index) => ({
+      No: index + 1,
+      품목: line.description,
+      규격: line.specification || "",
+      단위: line.unit,
+      수량: Number(line.quantity),
+      단가: Number(line.unit_price_snapshot),
+      금액: Number(line.amount),
+      출처: sourceLabels[line.source].label,
+    }));
+
+    // Add footer rows
+    const footerRows = [
+      {
+        No: "",
+        품목: "",
+        규격: "",
+        단위: "",
+        수량: "",
+        단가: "공급가액",
+        금액: Number(estimate.subtotal),
+        출처: "",
+      },
+      {
+        No: "",
+        품목: "",
+        규격: "",
+        단위: "",
+        수량: "",
+        단가: "부가세 (10%)",
+        금액: Number(estimate.vat_amount),
+        출처: "",
+      },
+      {
+        No: "",
+        품목: "",
+        규격: "",
+        단위: "",
+        수량: "",
+        단가: "합계",
+        금액: Number(estimate.total_amount),
+        출처: "",
+      },
+    ];
+
+    // Combine all rows
+    const allRows = [...dataRows, ...footerRows];
+
+    // Create workbook with exceljs
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("견적서");
+
+    // Add headers
+    const headers = Object.keys(allRows[0]);
+    worksheet.addRow(headers);
+
+    // Add data rows
+    for (const row of allRows) {
+      worksheet.addRow(Object.values(row));
+    }
+
+    // Auto-fit column widths
+    worksheet.columns.forEach((col) => {
+      col.width = 15;
+    });
+
+    // Generate and download file
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `견적서_v${estimate.version}.xlsx`);
+  }
 
   if (loading) {
     return (
@@ -197,7 +293,14 @@ export default function EstimateDetailPage({
               }}
             >
               <Download className="h-4 w-4" />
-              다운로드
+              PDF
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => generateEstimateExcel(estimate)}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Excel
             </Button>
             {estimate.status === "draft" && (
               <Button onClick={handleIssue}>
@@ -239,17 +342,27 @@ export default function EstimateDetailPage({
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>견적 항목</CardTitle>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setEditingLine(null);
-                setLineModalOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              항목 추가
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setRagPanelOpen(true)}
+              >
+                <Sparkles className="h-4 w-4" />
+                적산 검색
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setEditingLine(null);
+                  setLineModalOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                항목 추가
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -400,6 +513,12 @@ export default function EstimateDetailPage({
         onClose={() => setLineModalOpen(false)}
         onSave={handleSaveLine}
         line={editingLine}
+      />
+
+      <RAGSearchPanel
+        isOpen={ragPanelOpen}
+        onClose={() => setRagPanelOpen(false)}
+        onAddItem={handleAddRAGItem}
       />
     </AdminLayout>
   );

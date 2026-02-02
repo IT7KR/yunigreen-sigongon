@@ -33,7 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { SANav } from "../components/SANav";
+
 import type { UserRole } from "@sigongon/types";
 
 /** 역할별 한글 라벨 및 스타일 */
@@ -150,10 +150,10 @@ export default function SAUsersPage() {
           <h1 className="text-2xl font-bold text-slate-900">
             전체 사용자 관리
           </h1>
-          <p className="mt-1 text-slate-500">모든 테넌트의 사용자 관리</p>
+          <p className="mt-1 text-slate-500">
+            전체 {users.length}명 · 활성 {users.filter(u => u.is_active).length}명
+          </p>
         </div>
-
-        <SANav />
 
         <Card>
           <CardContent className="p-4">
@@ -185,6 +185,7 @@ export default function SAUsersPage() {
                       <TableHead>역할</TableHead>
                       <TableHead>소속 고객사</TableHead>
                       <TableHead>마지막 로그인</TableHead>
+                      <TableHead>가입일</TableHead>
                       <TableHead>상태</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
@@ -192,9 +193,9 @@ export default function SAUsersPage() {
                   <TableBody>
                     {filteredUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">
+                        <TableCell colSpan={7} className="text-center">
                           <div className="py-12 text-slate-500">
-                            사용자가 없어요
+                            {searchQuery ? "검색 결과가 없어요" : "사용자가 없어요"}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -248,6 +249,9 @@ export default function SAUsersPage() {
                             {user.last_login_at
                               ? formatDate(user.last_login_at)
                               : "-"}
+                          </TableCell>
+                          <TableCell className="text-slate-500">
+                            {formatDate(user.created_at)}
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -408,7 +412,7 @@ export default function SAUsersPage() {
                 비밀번호 초기화
               </Button>
               <Button
-                variant={selectedUser.is_active ? "destructive" : "default"}
+                variant={selectedUser.is_active ? "destructive" : "primary"}
                 className="flex-1"
                 onClick={() => {
                   handleToggleActive(selectedUser.id, selectedUser.is_active);
@@ -425,7 +429,7 @@ export default function SAUsersPage() {
               className="w-full"
               onClick={closeDetailModal}
             >
-              닫기
+              <X className="h-4 w-4" />닫기
             </Button>
           </div>
         </Modal>

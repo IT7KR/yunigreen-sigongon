@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Loader2, Mail, Copy, Check } from "lucide-react";
+import { Loader2, MessageSquare, Copy, Check } from "lucide-react";
 import { Button, Modal } from "@sigongon/ui";
 import type { UserRole } from "@sigongon/types";
 
 interface InviteUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onInvite: (data: { email: string; name: string; role: UserRole }) => Promise<{
+  onInvite: (data: { phone: string; name: string; role: UserRole }) => Promise<{
     token: string;
     invite_url: string;
   }>;
@@ -31,7 +31,7 @@ export function InviteUserModal({
   currentUserRole = "company_admin",
 }: InviteUserModalProps) {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [role, setRole] = useState<UserRole>("site_manager");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export function InviteUserModal({
     if (isOpen) {
       // Reset form when opened
       setName("");
-      setEmail("");
+      setPhone("");
       setRole(availableRoles[0]?.value || "site_manager");
       setError(null);
       setInviteUrl(null);
@@ -71,15 +71,15 @@ export function InviteUserModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!name.trim() || !email.trim()) {
-      setError("이름과 이메일은 필수입니다");
+    if (!name.trim() || !phone.trim()) {
+      setError("이름과 전화번호는 필수입니다");
       return;
     }
 
-    // Simple email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("올바른 이메일 형식이 아닙니다");
+    // Korean phone number validation (010-xxxx-xxxx or 01xxxxxxxxx)
+    const phoneRegex = /^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/;
+    if (!phoneRegex.test(phone)) {
+      setError("올바른 전화번호 형식이 아닙니다");
       return;
     }
 
@@ -89,7 +89,7 @@ export function InviteUserModal({
 
       const result = await onInvite({
         name: name.trim(),
-        email: email.trim(),
+        phone: phone.trim(),
         role,
       });
 
@@ -141,14 +141,14 @@ export function InviteUserModal({
           <div className="rounded-lg bg-green-50 p-4">
             <div className="flex items-start gap-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100">
-                <Mail className="h-4 w-4 text-green-600" />
+                <MessageSquare className="h-4 w-4 text-green-600" />
               </div>
               <div>
                 <p className="font-medium text-green-800">
                   {name}님에게 초대 링크가 생성되었습니다
                 </p>
                 <p className="mt-1 text-sm text-green-700">
-                  아래 링크를 복사하여 {email}에게 전달해 주세요.
+                  {phone}으로 알림톡이 발송되었습니다.
                 </p>
               </div>
             </div>
@@ -194,7 +194,7 @@ export function InviteUserModal({
               onClick={() => {
                 setInviteUrl(null);
                 setName("");
-                setEmail("");
+                setPhone("");
               }}
             >
               다른 사용자 초대
@@ -237,14 +237,14 @@ export function InviteUserModal({
 
         <div>
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
-            이메일 *
+            전화번호 *
           </label>
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
             className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
-            placeholder="user@example.com"
+            placeholder="010-0000-0000"
           />
         </div>
 
@@ -292,7 +292,7 @@ export function InviteUserModal({
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                <Mail className="h-4 w-4" />
+                <MessageSquare className="h-4 w-4" />
                 초대 보내기
               </>
             )}

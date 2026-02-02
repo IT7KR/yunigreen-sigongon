@@ -6,9 +6,8 @@ import {
   Search,
   Mail,
   Phone,
+  MessageSquare,
   Shield,
-  UserCheck,
-  UserX,
   Edit2,
   Trash2,
   Loader2,
@@ -51,7 +50,7 @@ interface UserItem {
 
 interface InvitationItem {
   id: string;
-  email: string;
+  phone: string;
   name: string;
   role: UserRole;
   status: InvitationStatus;
@@ -153,7 +152,7 @@ export default function UsersPage() {
   }
 
   async function handleInviteUser(data: {
-    email: string;
+    phone: string;
     name: string;
     role: UserRole;
   }) {
@@ -241,7 +240,7 @@ export default function UsersPage() {
   const filteredInvitations = invitations.filter(
     (inv) =>
       inv.name.includes(searchQuery) ||
-      inv.email.includes(searchQuery),
+      inv.phone?.includes(searchQuery),
   );
 
   const pendingInvitations = invitations.filter((inv) => inv.status === "pending");
@@ -334,7 +333,7 @@ export default function UsersPage() {
                 placeholder={
                   activeTab === "users"
                     ? "이름, 이메일, 전화번호로 검색..."
-                    : "이름, 이메일로 검색..."
+                    : "이름, 전화번호로 검색..."
                 }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -353,9 +352,9 @@ export default function UsersPage() {
                   <TableRow>
                     <TableHead>사용자</TableHead>
                     <TableHead>역할</TableHead>
-                    <TableHead>상태</TableHead>
                     <TableHead>마지막 로그인</TableHead>
                     <TableHead>가입일</TableHead>
+                    <TableHead>상태</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -402,19 +401,6 @@ export default function UsersPage() {
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          {user.is_active ? (
-                            <span className="inline-flex items-center gap-1.5 text-sm text-green-600">
-                              <UserCheck className="h-4 w-4" />
-                              활성
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 text-sm text-slate-400">
-                              <UserX className="h-4 w-4" />
-                              비활성
-                            </span>
-                          )}
-                        </TableCell>
                         <TableCell className="text-slate-500">
                           {user.last_login_at
                             ? formatDate(user.last_login_at)
@@ -422,6 +408,11 @@ export default function UsersPage() {
                         </TableCell>
                         <TableCell className="text-slate-500">
                           {formatDate(user.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={user.is_active ? "success" : "default"}>
+                            {user.is_active ? "활성" : "비활성"}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -444,8 +435,10 @@ export default function UsersPage() {
                   })}
                   {filteredUsers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="py-8 text-center text-slate-500">
-                        {searchQuery ? "검색 결과가 없어요" : "등록된 사용자가 없어요"}
+                      <TableCell colSpan={6} className="text-center">
+                        <div className="py-12 text-slate-500">
+                          {searchQuery ? "검색 결과가 없어요" : "등록된 사용자가 없어요"}
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
@@ -481,14 +474,14 @@ export default function UsersPage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 font-medium text-slate-400">
-                              <Mail className="h-5 w-5" />
+                              <MessageSquare className="h-5 w-5" />
                             </div>
                             <div>
                               <p className="font-medium text-slate-900">
                                 {invitation.name}
                               </p>
                               <p className="text-sm text-slate-500">
-                                {invitation.email}
+                                {invitation.phone}
                               </p>
                             </div>
                           </div>

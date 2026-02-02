@@ -19,9 +19,10 @@ import {
   CheckCircle,
   Clock,
   Loader2,
+  Eye,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { SANav } from "../components/SANav";
+
 
 interface PricebookRevision {
   id: string;
@@ -124,8 +125,6 @@ export default function SAPricebooksPage() {
             </Button>
           </Link>
         </div>
-
-        <SANav />
 
         {isLoading ? (
           <div className="flex h-64 items-center justify-center">
@@ -244,7 +243,7 @@ export default function SAPricebooksPage() {
                               </td>
                               <td className="py-4">
                                 <Button size="sm" variant="ghost">
-                                  상세보기
+                                  <Eye className="h-3.5 w-3.5" />상세보기
                                 </Button>
                               </td>
                             </tr>

@@ -10,6 +10,7 @@ import {
   CardTitle,
   Button,
   Badge,
+  Modal,
   formatDate,
 } from "@sigongon/ui";
 import {
@@ -21,15 +22,24 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  ToggleLeft,
+  ToggleRight,
+  X,
+  Check,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { SANav } from "../../components/SANav";
+
 
 interface TenantDetail {
   id: string;
   name: string;
   business_number: string;
   representative: string;
+  rep_phone: string;
+  rep_email: string;
+  contact_name?: string;
+  contact_phone?: string;
+  contact_position?: string;
   plan: "trial" | "basic" | "pro";
   users_count: number;
   projects_count: number;
@@ -49,6 +59,7 @@ interface TenantDetail {
   users: Array<{
     id: string;
     name: string;
+    phone: string;
     email: string;
     role: string;
     last_login_at?: string;
@@ -69,6 +80,15 @@ const planConfig: Record<
   trial: { label: "무료 체험", yearlyPrice: 0 },
   basic: { label: "Basic", yearlyPrice: 588000 },
   pro: { label: "Pro", yearlyPrice: 1188000 },
+};
+
+const roleLabels: Record<string, string> = {
+  super_admin: "슈퍼관리자",
+  company_admin: "대표",
+  site_manager: "현장소장",
+  worker: "근로자",
+  admin: "관리자",
+  manager: "매니저",
 };
 
 export default function TenantDetailPage() {
@@ -114,6 +134,11 @@ export default function TenantDetailPage() {
           days_remaining: daysRemaining,
           business_number: "123-45-67890",
           representative: "홍길동",
+          rep_phone: "010-1111-2222",
+          rep_email: "ceo@sigongon.com",
+          contact_name: "박실무",
+          contact_phone: "010-3333-4444",
+          contact_position: "과장",
           payment_history: (response.data.billing_amount || 0) > 0 ? [
             {
               id: "p1",
@@ -126,15 +151,17 @@ export default function TenantDetailPage() {
             {
               id: "u1",
               name: "이중호",
+              phone: "010-1234-5678",
               email: "admin@sigongon.com",
-              role: "admin",
+              role: "company_admin",
               last_login_at: "2026-01-24T10:30:00Z",
             },
             {
               id: "u2",
               name: "김대표",
+              phone: "010-9876-5432",
               email: "ceo@partner.com",
-              role: "manager",
+              role: "site_manager",
               last_login_at: "2026-01-23T15:20:00Z",
             },
           ],
@@ -235,12 +262,10 @@ export default function TenantDetailPage() {
               variant={tenant.is_active ? "destructive" : "primary"}
               onClick={toggleActiveStatus}
             >
-              {tenant.is_active ? "계정 비활성화" : "계정 활성화"}
+              {tenant.is_active ? <><ToggleLeft className="h-4 w-4" />계정 비활성화</> : <><ToggleRight className="h-4 w-4" />계정 활성화</>}
             </Button>
           </div>
         </div>
-
-        <SANav />
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
@@ -261,17 +286,53 @@ export default function TenantDetailPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <span className="text-sm text-slate-500">대표자</span>
-                <span className="font-medium text-slate-900">
-                  {tenant.representative}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-500">가입일</span>
                 <span className="font-medium text-slate-900">
                   {formatDate(tenant.created_at)}
                 </span>
               </div>
+
+              <div className="pt-2">
+                <h4 className="mb-3 text-sm font-semibold text-slate-700">대표자 정보</h4>
+                <div className="space-y-3 rounded-lg bg-slate-50 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">성함</span>
+                    <span className="font-medium text-slate-900">{tenant.representative}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                    <span className="text-sm text-slate-500">연락처</span>
+                    <span className="font-medium text-slate-900">{tenant.rep_phone}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                    <span className="text-sm text-slate-500">이메일</span>
+                    <span className="font-medium text-slate-900">{tenant.rep_email}</span>
+                  </div>
+                </div>
+              </div>
+
+              {tenant.contact_name && (
+                <div className="pt-2">
+                  <h4 className="mb-3 text-sm font-semibold text-slate-700">실무자 정보</h4>
+                  <div className="space-y-3 rounded-lg bg-slate-50 p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-500">성함</span>
+                      <span className="font-medium text-slate-900">{tenant.contact_name}</span>
+                    </div>
+                    {tenant.contact_phone && (
+                      <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                        <span className="text-sm text-slate-500">연락처</span>
+                        <span className="font-medium text-slate-900">{tenant.contact_phone}</span>
+                      </div>
+                    )}
+                    {tenant.contact_position && (
+                      <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                        <span className="text-sm text-slate-500">직위</span>
+                        <span className="font-medium text-slate-900">{tenant.contact_position}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -339,7 +400,7 @@ export default function TenantDetailPage() {
                   onClick={() => setShowCustomTrialModal(true)}
                   className="w-full"
                 >
-                  커스텀 무료 기간 설정
+                  <Calendar className="h-4 w-4" />커스텀 무료 기간 설정
                 </Button>
               </div>
             </CardContent>
@@ -417,10 +478,11 @@ export default function TenantDetailPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                    <th className="pb-3 font-medium">아이디</th>
                     <th className="pb-3 font-medium">이름</th>
+                    <th className="pb-3 font-medium">연락처</th>
                     <th className="pb-3 font-medium">이메일</th>
                     <th className="pb-3 font-medium">역할</th>
-                    <th className="pb-3 font-medium">마지막 로그인</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -429,19 +491,20 @@ export default function TenantDetailPage() {
                       key={user.id}
                       className="border-b border-slate-100 last:border-0"
                     >
+                      <td className="py-4 text-sm text-slate-600">
+                        {user.id}
+                      </td>
                       <td className="py-4 font-medium text-slate-900">
                         {user.name}
+                      </td>
+                      <td className="py-4 text-slate-600">
+                        {user.phone}
                       </td>
                       <td className="py-4 text-slate-600">{user.email}</td>
                       <td className="py-4">
                         <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                          {user.role}
+                          {roleLabels[user.role] || user.role}
                         </span>
-                      </td>
-                      <td className="py-4 text-slate-500">
-                        {user.last_login_at
-                          ? formatDate(user.last_login_at)
-                          : "-"}
                       </td>
                     </tr>
                   ))}
@@ -506,76 +569,69 @@ export default function TenantDetailPage() {
       </div>
 
       {/* 커스텀 무료 기간 설정 모달 */}
-      {showCustomTrialModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-xl font-bold text-slate-900">
-              커스텀 무료 기간 설정
-            </h2>
-            <p className="mb-4 text-sm text-slate-600">
-              이 고객사에 특별 무료 이용 기간을 부여합니다.
-              설정 시 기존 결제 금액과 관계없이 무료로 전환됩니다.
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  종료일 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  min={new Date().toISOString().slice(0, 10)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  사유 (선택)
-                </label>
-                <textarea
-                  value={customTrialReason}
-                  onChange={(e) => setCustomTrialReason(e.target.value)}
-                  placeholder="예: 파트너십 계약, 데모 기간 연장 등"
-                  rows={3}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setShowCustomTrialModal(false);
-                  setCustomEndDate("");
-                  setCustomTrialReason("");
-                }}
-                className="flex-1"
-                disabled={isSettingCustomTrial}
-              >
-                취소
-              </Button>
-              <Button
-                onClick={handleSetCustomTrial}
-                className="flex-1"
-                disabled={isSettingCustomTrial || !customEndDate}
-              >
-                {isSettingCustomTrial ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    적용 중...
-                  </>
-                ) : (
-                  "적용"
-                )}
-              </Button>
-            </div>
+      <Modal
+        isOpen={showCustomTrialModal}
+        onClose={() => {
+          setShowCustomTrialModal(false);
+          setCustomEndDate("");
+          setCustomTrialReason("");
+        }}
+        title="커스텀 무료 기간 설정"
+        description="이 고객사에 특별 무료 이용 기간을 부여합니다. 설정 시 기존 결제 금액과 관계없이 무료로 전환됩니다."
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              종료일 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={customEndDate}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              min={new Date().toISOString().slice(0, 10)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">사유 (선택)</label>
+            <textarea
+              value={customTrialReason}
+              onChange={(e) => setCustomTrialReason(e.target.value)}
+              placeholder="예: 파트너십 계약, 데모 기간 연장 등"
+              rows={3}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+            />
           </div>
         </div>
-      )}
+        <div className="mt-6 flex gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setShowCustomTrialModal(false);
+              setCustomEndDate("");
+              setCustomTrialReason("");
+            }}
+            className="flex-1"
+            disabled={isSettingCustomTrial}
+          >
+            <X className="h-4 w-4" />취소
+          </Button>
+          <Button
+            onClick={handleSetCustomTrial}
+            className="flex-1"
+            disabled={isSettingCustomTrial || !customEndDate}
+          >
+            {isSettingCustomTrial ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                적용 중...
+              </>
+            ) : (
+              <><Check className="h-4 w-4" />적용</>
+            )}
+          </Button>
+        </div>
+      </Modal>
     </AdminLayout>
   );
 }

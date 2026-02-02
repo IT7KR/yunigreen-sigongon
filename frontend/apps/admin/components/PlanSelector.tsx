@@ -132,7 +132,7 @@ export function PlanSelector({ currentPlan, onSelectPlan }: PlanSelectorProps) {
 
               <Button
                 className="w-full"
-                variant={plan.recommended ? "default" : "secondary"}
+                variant={plan.recommended ? "primary" : "secondary"}
                 disabled={isCurrent}
                 onClick={() => onSelectPlan(plan.id)}
               >

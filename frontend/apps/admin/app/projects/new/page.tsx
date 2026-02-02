@@ -7,7 +7,7 @@ import { Button, Input, Card } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { PROJECT_CATEGORIES } from "@sigongon/types";
 import { api } from "@/lib/api";
-import { Loader2 } from "lucide-react";
+import { Loader2, X, Plus } from "lucide-react";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -16,6 +16,7 @@ export default function NewProjectPage() {
   const [category, setCategory] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [primaryContact, setPrimaryContact] = useState("representative");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -144,6 +145,68 @@ export default function NewProjectPage() {
             />
           </div>
 
+          {/* Primary Contact Selection */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-900">
+              담당자 지정 (프로젝트 알림 수신)
+            </label>
+            <div className="space-y-2">
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
+                <input
+                  type="radio"
+                  name="primaryContact"
+                  value="representative"
+                  checked={primaryContact === "representative"}
+                  onChange={(e) => setPrimaryContact(e.target.value)}
+                  className="h-4 w-4 text-brand-point-600"
+                />
+                <div className="flex-1">
+                  <div className="font-medium text-slate-900">대표자</div>
+                  <div className="text-sm text-slate-600">
+                    회사 대표자가 이 프로젝트의 알림을 받습니다
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
+                <input
+                  type="radio"
+                  name="primaryContact"
+                  value="worker"
+                  checked={primaryContact === "worker"}
+                  onChange={(e) => setPrimaryContact(e.target.value)}
+                  className="h-4 w-4 text-brand-point-600"
+                />
+                <div className="flex-1">
+                  <div className="font-medium text-slate-900">실무자</div>
+                  <div className="text-sm text-slate-600">
+                    등록된 실무자가 이 프로젝트의 알림을 받습니다
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
+                <input
+                  type="radio"
+                  name="primaryContact"
+                  value="both"
+                  checked={primaryContact === "both"}
+                  onChange={(e) => setPrimaryContact(e.target.value)}
+                  className="h-4 w-4 text-brand-point-600"
+                />
+                <div className="flex-1">
+                  <div className="font-medium text-slate-900">대표자 + 실무자</div>
+                  <div className="text-sm text-slate-600">
+                    대표자와 실무자 모두 알림을 받습니다
+                  </div>
+                </div>
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              프로젝트 진행 상황, 견적, 계약 등의 알림이 선택한 담당자에게 전송됩니다.
+            </p>
+          </div>
+
           <div className="space-y-1">
             <label className="text-sm font-medium text-slate-700">메모</label>
             <textarea
@@ -161,13 +224,13 @@ export default function NewProjectPage() {
 
           <div className="flex justify-end gap-3 pt-4">
             <Link href="/projects">
-              <Button variant="ghost" type="button">취소</Button>
+              <Button variant="ghost" type="button"><X className="h-4 w-4" />취소</Button>
             </Link>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "프로젝트 만들기"
+                <><Plus className="h-4 w-4" />프로젝트 만들기</>
               )}
             </Button>
           </div>

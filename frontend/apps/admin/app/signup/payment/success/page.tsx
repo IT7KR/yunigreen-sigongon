@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, Button } from "@sigongon/ui";
-import { Droplets, CheckCircle, Loader2 } from "lucide-react";
+import { Droplets, CheckCircle, Loader2, RefreshCw } from "lucide-react";
 import { getSignupData, clearSignupData, saveSignupData } from "../../types";
 import { api } from "@/lib/api";
 
@@ -40,11 +40,15 @@ function PaymentSuccessContent() {
 
           if (signupData.email && signupData.companyName && signupData.businessNumber) {
             const registerResponse = await api.register({
+              username: signupData.email,
               email: signupData.email,
               password: signupData.password,
               phone: signupData.phone,
               company_name: signupData.companyName,
               business_number: signupData.businessNumber.replace(/-/g, ""),
+              representative_name: signupData.companyName,
+              rep_phone: signupData.phone,
+              rep_email: signupData.email,
               plan: signupData.planType,
             });
 
@@ -125,7 +129,7 @@ function PaymentSuccessContent() {
               onClick={() => router.push("/signup/payment")}
               fullWidth
             >
-              다시 시도하기
+              <RefreshCw className="h-4 w-4" />다시 시도하기
             </Button>
             <Button
               variant="secondary"

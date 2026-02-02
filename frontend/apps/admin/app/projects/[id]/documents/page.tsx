@@ -1,79 +1,204 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState } from "react";
 import {
   FileText,
+  FileSpreadsheet,
   Download,
-  Filter,
-  Search,
-  File,
-  FileCheck,
-  FileEdit,
-  FileSignature,
-  Camera,
-  Receipt,
+  Upload,
+  Wand2,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  Circle,
+  AlertCircle,
+  FolderOpen,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  Input,
-  formatDate,
-} from "@sigongon/ui";
+import { Card, CardContent, Button, Badge } from "@sigongon/ui";
+import type {
+  DocumentPhase,
+  DocumentGenerationType,
+  DocumentFileFormat,
+  ProjectDocumentStatus,
+  ProjectDocumentItem,
+  ProjectDocumentPhaseGroup,
+} from "@sigongon/types";
 
-type DocumentType =
-  | "estimate"
-  | "contract"
-  | "construction_report"
-  | "daily_report"
-  | "completion_album"
-  | "tax_invoice";
+// ─── Phase config ───────────────────────────────────────────────────────────
 
-type DocumentStatus =
-  | "draft"
-  | "sent"
-  | "signed"
-  | "submitted"
-  | "issued"
-  | "completed";
+const PHASE_CONFIG: Record<
+  DocumentPhase,
+  { label: string; icon: typeof FileText }
+> = {
+  contract: { label: "계약 단계", icon: FileText },
+  commencement: { label: "착공 단계", icon: FolderOpen },
+  construction: { label: "시공 단계", icon: FileText },
+  completion: { label: "준공 단계", icon: CheckCircle2 },
+  labor_report: { label: "일용신고", icon: FileSpreadsheet },
+  private_contract: { label: "민간 계약", icon: FileText },
+  school: { label: "학교 특수", icon: AlertCircle },
+};
 
-interface Document {
-  id: string;
-  name: string;
-  type: DocumentType;
-  status: DocumentStatus;
-  created_at: string;
-  file_path?: string;
-  file_size?: number;
-  created_by?: string;
+const STATUS_CONFIG: Record<
+  ProjectDocumentStatus,
+  { label: string; className: string }
+> = {
+  not_started: {
+    label: "미작성",
+    className: "bg-slate-100 text-slate-600",
+  },
+  generated: {
+    label: "생성완료",
+    className: "bg-green-50 text-green-700",
+  },
+  uploaded: {
+    label: "업로드완료",
+    className: "bg-blue-50 text-blue-700",
+  },
+  submitted: {
+    label: "제출완료",
+    className: "bg-emerald-50 text-emerald-700",
+  },
+};
+
+const FORMAT_LABELS: Record<DocumentFileFormat, string> = {
+  xlsx: "Excel",
+  pdf: "PDF",
+  hwp_pdf: "HWP→PDF",
+  docx: "Word",
+};
+
+const FORMAT_CLASS: Record<DocumentFileFormat, string> = {
+  xlsx: "bg-emerald-50 text-emerald-700",
+  pdf: "bg-red-50 text-red-700",
+  hwp_pdf: "bg-sky-50 text-sky-700",
+  docx: "bg-indigo-50 text-indigo-700",
+};
+
+// ─── Mock data ──────────────────────────────────────────────────────────────
+
+function doc(
+  id: string,
+  phase: DocumentPhase,
+  name: string,
+  format: DocumentFileFormat,
+  generation_type: DocumentGenerationType,
+  is_required: boolean,
+  status: ProjectDocumentStatus,
+  opts?: {
+    is_conditional?: boolean;
+    condition_description?: string;
+    file_path?: string;
+  },
+): ProjectDocumentItem {
+  const isComplete =
+    status === "generated" || status === "uploaded" || status === "submitted";
+  return {
+    id,
+    phase,
+    name,
+    format,
+    generation_type,
+    is_required,
+    is_conditional: opts?.is_conditional ?? false,
+    condition_description: opts?.condition_description,
+    status,
+    file_path: isComplete ? `/files/${id}.${format}` : opts?.file_path,
+    file_size: isComplete ? 102400 : undefined,
+    generated_at: isComplete ? "2026-01-20T10:00:00Z" : undefined,
+  };
 }
 
-const DOCUMENT_TYPE_CONFIG: Record<
-  DocumentType,
-  { label: string; icon: typeof FileText; color: string }
-> = {
-  estimate: { label: "견적서", icon: FileText, color: "blue" },
-  contract: { label: "계약서", icon: FileSignature, color: "green" },
-  construction_report: { label: "착공계/준공계", icon: FileCheck, color: "purple" },
-  daily_report: { label: "작업일지", icon: FileEdit, color: "orange" },
-  completion_album: { label: "준공사진첩", icon: Camera, color: "pink" },
-  tax_invoice: { label: "세금계산서", icon: Receipt, color: "indigo" },
-};
+function makePhaseGroup(
+  phase: DocumentPhase,
+  documents: ProjectDocumentItem[],
+): ProjectDocumentPhaseGroup {
+  const completedStatuses: ProjectDocumentStatus[] = [
+    "generated",
+    "uploaded",
+    "submitted",
+  ];
+  return {
+    phase,
+    phase_label: PHASE_CONFIG[phase].label,
+    documents,
+    total_count: documents.length,
+    completed_count: documents.filter((d) =>
+      completedStatuses.includes(d.status),
+    ).length,
+  };
+}
 
-const DOCUMENT_STATUS_CONFIG: Record<
-  DocumentStatus,
-  { label: string; variant: "default" | "success" | "warning" | "error" | "info" }
-> = {
-  draft: { label: "작성중", variant: "default" },
-  sent: { label: "발송완료", variant: "info" },
-  signed: { label: "서명완료", variant: "success" },
-  submitted: { label: "제출완료", variant: "success" },
-  issued: { label: "발행완료", variant: "success" },
-  completed: { label: "완료", variant: "success" },
-};
+const MOCK_DOCUMENT_PHASES: ProjectDocumentPhaseGroup[] = [
+  makePhaseGroup("contract", [
+    doc("c1", "contract", "견적내역서", "xlsx", "auto", true, "generated"),
+    doc("c2", "contract", "수의계약체결제한여부확인서", "hwp_pdf", "template", true, "not_started"),
+    doc("c3", "contract", "시방서", "hwp_pdf", "auto", true, "generated"),
+    doc("c4", "contract", "사업자 외 서류", "pdf", "upload", true, "uploaded"),
+    doc("c5", "contract", "계약보증서", "pdf", "upload", true, "not_started"),
+    doc("c6", "contract", "계약보증금 지급각서", "hwp_pdf", "template", false, "not_started", {
+      is_conditional: true,
+      condition_description: "보증서 대체 시",
+    }),
+  ]),
+  makePhaseGroup("commencement", [
+    doc("m1", "commencement", "착공공문", "hwp_pdf", "template", true, "not_started"),
+    doc("m2", "commencement", "착공신고서", "hwp_pdf", "template", true, "not_started"),
+    doc("m3", "commencement", "현장대리인 서류", "hwp_pdf", "upload", true, "not_started"),
+    doc("m4", "commencement", "계약내역서", "xlsx", "auto", true, "generated"),
+    doc("m5", "commencement", "노무비 서류", "hwp_pdf", "template", false, "not_started", {
+      is_conditional: true,
+      condition_description: "상용/일용 선택",
+    }),
+    doc("m6", "commencement", "안전보건관리 서약서", "hwp_pdf", "template", true, "not_started"),
+    doc("m7", "commencement", "착공 전 사진", "hwp_pdf", "auto", true, "not_started"),
+    doc("m8", "commencement", "직접시공계획서", "hwp_pdf", "template", true, "not_started"),
+    doc("m9", "commencement", "안전보건관리계획서", "hwp_pdf", "template", true, "not_started"),
+  ]),
+  makePhaseGroup("construction", [
+    doc("s1", "construction", "공사일지", "hwp_pdf", "auto", true, "generated"),
+    doc("s2", "construction", "일용근로계약서", "hwp_pdf", "auto", true, "generated"),
+    doc("s3", "construction", "현장 점검 보고서", "xlsx", "ai", true, "not_started"),
+  ]),
+  makePhaseGroup("completion", [
+    doc("p1", "completion", "준공공문", "hwp_pdf", "template", true, "not_started"),
+    doc("p2", "completion", "준공계", "hwp_pdf", "template", true, "not_started"),
+    doc("p3", "completion", "준공내역서", "xlsx", "auto", true, "not_started"),
+    doc("p4", "completion", "준공정산동의서", "pdf", "template", false, "not_started", {
+      is_conditional: true,
+      condition_description: "금액 변동 시",
+    }),
+    doc("p5", "completion", "준공사진첩", "pdf", "auto", true, "not_started"),
+    doc("p6", "completion", "노무비 증빙자료", "pdf", "upload", true, "not_started"),
+    doc("p7", "completion", "산업안전관리비 집행내역", "hwp_pdf", "template", false, "not_started", {
+      is_conditional: true,
+      condition_description: "2천만원 이상 공사",
+    }),
+    doc("p8", "completion", "하자보수보증금 지급각서", "hwp_pdf", "template", true, "not_started"),
+    doc("p9", "completion", "폐기물/납세 증빙서류", "pdf", "upload", true, "not_started"),
+  ]),
+  makePhaseGroup("labor_report", [
+    doc("l1", "labor_report", "근로내용확인신고", "xlsx", "auto", true, "not_started"),
+    doc("l2", "labor_report", "일용근로지급명세서", "xlsx", "auto", true, "not_started"),
+    doc("l3", "labor_report", "일용근로계약서", "hwp_pdf", "auto", true, "generated"),
+  ]),
+  makePhaseGroup("private_contract", [
+    doc("v1", "private_contract", "공사도급표준계약서", "pdf", "external", true, "not_started"),
+  ]),
+  makePhaseGroup("school", [
+    doc("h1", "school", "교육청 원클릭 프로그램 양식", "xlsx", "upload", false, "not_started", {
+      is_conditional: true,
+      condition_description: "학교 프로젝트만",
+    }),
+    doc("h2", "school", "수도전기공문", "hwp_pdf", "template", false, "not_started", {
+      is_conditional: true,
+      condition_description: "학교 준공 시",
+    }),
+  ]),
+];
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 export default function DocumentsPage({
   params,
@@ -81,344 +206,309 @@ export default function DocumentsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedType, setSelectedType] = useState<DocumentType | "all">("all");
-
-  useEffect(() => {
-    loadDocuments();
-  }, [id]);
-
-  async function loadDocuments() {
-    try {
-      setLoading(true);
-      // Mock data for now - replace with actual API call when backend implements
-      const mockDocuments: Document[] = [
-        {
-          id: "1",
-          name: "견적서 v1",
-          type: "estimate",
-          status: "sent",
-          created_at: "2026-01-15T10:00:00Z",
-          file_path: "/files/estimate_v1.pdf",
-          file_size: 245678,
-          created_by: "김관리",
-        },
-        {
-          id: "2",
-          name: "견적서 v2 (최종)",
-          type: "estimate",
-          status: "signed",
-          created_at: "2026-01-18T14:30:00Z",
-          file_path: "/files/estimate_v2.pdf",
-          file_size: 256789,
-          created_by: "김관리",
-        },
-        {
-          id: "3",
-          name: "공사계약서",
-          type: "contract",
-          status: "signed",
-          created_at: "2026-01-20T09:00:00Z",
-          file_path: "/files/contract.pdf",
-          file_size: 512345,
-          created_by: "이대표",
-        },
-        {
-          id: "4",
-          name: "착공계",
-          type: "construction_report",
-          status: "submitted",
-          created_at: "2026-01-22T11:00:00Z",
-          file_path: "/files/start_report.pdf",
-          file_size: 345678,
-          created_by: "박현장",
-        },
-        {
-          id: "5",
-          name: "1월 22일 작업일지",
-          type: "daily_report",
-          status: "completed",
-          created_at: "2026-01-22T18:00:00Z",
-          file_size: 123456,
-          created_by: "박현장",
-        },
-        {
-          id: "6",
-          name: "1월 23일 작업일지",
-          type: "daily_report",
-          status: "completed",
-          created_at: "2026-01-23T18:00:00Z",
-          file_size: 134567,
-          created_by: "박현장",
-        },
-        {
-          id: "7",
-          name: "준공 사진첩",
-          type: "completion_album",
-          status: "draft",
-          created_at: "2026-01-24T10:00:00Z",
-          created_by: "박현장",
-        },
-      ];
-      setDocuments(mockDocuments);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleDownload(doc: Document) {
-    if (doc.file_path) {
-      alert(`다운로드: ${doc.name}\n경로: ${doc.file_path}`);
-      // Implement actual download logic
-    } else {
-      alert("파일이 없습니다.");
-    }
-  }
-
-  // Filter documents
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = doc.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesType = selectedType === "all" || doc.type === selectedType;
-    return matchesSearch && matchesType;
-  });
-
-  // Group by type
-  const documentsByType = filteredDocuments.reduce(
-    (acc, doc) => {
-      if (!acc[doc.type]) {
-        acc[doc.type] = [];
-      }
-      acc[doc.type].push(doc);
-      return acc;
-    },
-    {} as Record<DocumentType, Document[]>,
+  const [expandedPhases, setExpandedPhases] = useState<Set<DocumentPhase>>(
+    () => new Set(MOCK_DOCUMENT_PHASES.map((g) => g.phase)),
   );
 
-  const documentTypes = Object.keys(DOCUMENT_TYPE_CONFIG) as DocumentType[];
+  const totalDocs = MOCK_DOCUMENT_PHASES.reduce(
+    (sum, g) => sum + g.total_count,
+    0,
+  );
+  const completedDocs = MOCK_DOCUMENT_PHASES.reduce(
+    (sum, g) => sum + g.completed_count,
+    0,
+  );
+  const progressPercent =
+    totalDocs > 0 ? Math.round((completedDocs / totalDocs) * 100) : 0;
+
+  function togglePhase(phase: DocumentPhase) {
+    setExpandedPhases((prev) => {
+      const next = new Set(prev);
+      if (next.has(phase)) {
+        next.delete(phase);
+      } else {
+        next.add(phase);
+      }
+      return next;
+    });
+  }
+
+  function handleAction(actionLabel: string, docName: string) {
+    alert(`[${actionLabel}] ${docName}\n프로젝트 ID: ${id}`);
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header & Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">문서함</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            프로젝트 관련 모든 문서를 확인하고 다운로드할 수 있습니다.
-          </p>
-        </div>
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">문서함</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          프로젝트 단계별 문서를 관리하고 다운로드할 수 있습니다.
+        </p>
       </div>
 
-      {/* Search & Filter */}
+      {/* Overall Progress */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder="문서 이름으로 검색..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              <Button
-                variant={selectedType === "all" ? "primary" : "secondary"}
-                size="sm"
-                onClick={() => setSelectedType("all")}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700">
+              전체 진행률
+            </span>
+            <span className="text-sm text-slate-500">
+              {completedDocs}/{totalDocs}건 완료 ({progressPercent}%)
+            </span>
+          </div>
+          <div className="h-3 w-full rounded-full bg-slate-200">
+            <div
+              className="h-3 rounded-full bg-emerald-500 transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Phase Sections */}
+      <div className="space-y-4">
+        {MOCK_DOCUMENT_PHASES.map((group) => {
+          const config = PHASE_CONFIG[group.phase];
+          const Icon = config.icon;
+          const isExpanded = expandedPhases.has(group.phase);
+          const phaseProgress =
+            group.total_count > 0
+              ? Math.round(
+                  (group.completed_count / group.total_count) * 100,
+                )
+              : 0;
+
+          return (
+            <Card key={group.phase}>
+              {/* Phase Header */}
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition-colors rounded-t-lg"
+                onClick={() => togglePhase(group.phase)}
               >
-                전체
-              </Button>
-              {documentTypes.map((type) => {
-                const config = DOCUMENT_TYPE_CONFIG[type];
-                const Icon = config.icon;
-                return (
-                  <Button
-                    key={type}
-                    variant={selectedType === type ? "primary" : "secondary"}
-                    size="sm"
-                    onClick={() => setSelectedType(type)}
+                <div className="flex items-center gap-3">
+                  <Icon className="h-5 w-5 text-slate-500" />
+                  <span className="text-base font-semibold text-slate-900">
+                    {group.phase_label}
+                  </span>
+                  <Badge
+                    className={
+                      group.completed_count === group.total_count &&
+                      group.total_count > 0
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-slate-100 text-slate-600"
+                    }
                   >
-                    <Icon className="mr-1.5 h-3.5 w-3.5" />
-                    {config.label}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Documents List */}
-      {loading ? (
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-slate-500">문서를 불러오는 중...</p>
-        </div>
-      ) : filteredDocuments.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <File className="mx-auto h-12 w-12 text-slate-300" />
-            <p className="mt-4 text-slate-500">
-              {searchQuery || selectedType !== "all"
-                ? "검색 결과가 없습니다."
-                : "아직 문서가 없습니다."}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {selectedType === "all" ? (
-            // Grouped by type
-            documentTypes.map((type) => {
-              const docs = documentsByType[type];
-              if (!docs || docs.length === 0) return null;
-
-              const config = DOCUMENT_TYPE_CONFIG[type];
-              const Icon = config.icon;
-
-              return (
-                <Card key={type}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Icon className="h-5 w-5 text-slate-400" />
-                      {config.label}
-                      <Badge>{docs.length}</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="divide-y divide-slate-100">
-                      {docs.map((doc) => (
-                        <DocumentRow
-                          key={doc.id}
-                          doc={doc}
-                          onDownload={handleDownload}
-                        />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-          ) : (
-            // Single type
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Filter className="h-5 w-5 text-slate-400" />
-                  {DOCUMENT_TYPE_CONFIG[selectedType].label}
-                  <Badge>{filteredDocuments.length}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="divide-y divide-slate-100">
-                  {filteredDocuments.map((doc) => (
-                    <DocumentRow
-                      key={doc.id}
-                      doc={doc}
-                      onDownload={handleDownload}
+                    {group.completed_count}/{group.total_count}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-3">
+                  {/* Mini progress bar */}
+                  <div className="hidden sm:block w-24 h-1.5 rounded-full bg-slate-200">
+                    <div
+                      className="h-1.5 rounded-full bg-emerald-500 transition-all duration-300"
+                      style={{ width: `${phaseProgress}%` }}
                     />
-                  ))}
+                  </div>
+                  {isExpanded ? (
+                    <ChevronUp className="h-5 w-5 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-slate-400" />
+                  )}
                 </div>
-              </CardContent>
+              </button>
+
+              {/* Phase Content */}
+              {isExpanded && (
+                <CardContent className="pt-0 pb-4">
+                  <div className="divide-y divide-slate-100">
+                    {group.documents.map((docItem) => (
+                      <DocumentRow
+                        key={docItem.id}
+                        doc={docItem}
+                        onAction={handleAction}
+                      />
+                    ))}
+                  </div>
+                </CardContent>
+              )}
             </Card>
-          )}
-        </div>
-      )}
-
-      {/* Statistics */}
-      <Card>
-        <CardHeader>
-          <CardTitle>문서 통계</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {documentTypes.map((type) => {
-              const docs = documentsByType[type] || [];
-              const config = DOCUMENT_TYPE_CONFIG[type];
-              const Icon = config.icon;
-
-              return (
-                <div
-                  key={type}
-                  className="flex items-center gap-3 rounded-lg border border-slate-200 p-4"
-                >
-                  <div className={`rounded-lg bg-${config.color}-50 p-2`}>
-                    <Icon className={`h-5 w-5 text-${config.color}-600`} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">{config.label}</p>
-                    <p className="text-xl font-bold text-slate-900">
-                      {docs.length}건
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
+// ─── Document Row ───────────────────────────────────────────────────────────
+
 function DocumentRow({
-  doc,
-  onDownload,
+  doc: d,
+  onAction,
 }: {
-  doc: Document;
-  onDownload: (doc: Document) => void;
+  doc: ProjectDocumentItem;
+  onAction: (action: string, name: string) => void;
 }) {
-  const typeConfig = DOCUMENT_TYPE_CONFIG[doc.type];
-  const statusConfig = DOCUMENT_STATUS_CONFIG[doc.status];
-  const TypeIcon = typeConfig.icon;
+  const statusCfg = STATUS_CONFIG[d.status];
+  const hasFile = !!d.file_path;
+  const isComplete =
+    d.status === "generated" ||
+    d.status === "uploaded" ||
+    d.status === "submitted";
 
   return (
-    <div className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-      <div className="flex items-center gap-4">
-        <div className={`rounded-lg bg-${typeConfig.color}-50 p-2`}>
-          <TypeIcon className={`h-5 w-5 text-${typeConfig.color}-600`} />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="font-medium text-slate-900">{doc.name}</p>
-            <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-          </div>
-          <div className="mt-1 flex items-center gap-3 text-sm text-slate-500">
-            <span>{typeConfig.label}</span>
-            <span>•</span>
-            <span>{formatDate(doc.created_at)}</span>
-            {doc.created_by && (
-              <>
-                <span>•</span>
-                <span>{doc.created_by}</span>
-              </>
+    <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+      {/* Left: info */}
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        {isComplete ? (
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+        ) : (
+          <Circle className="h-4 w-4 shrink-0 text-slate-300" />
+        )}
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-slate-900 truncate">
+              {d.name}
+            </span>
+            {/* Format badge */}
+            <span
+              className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${FORMAT_CLASS[d.format]}`}
+            >
+              {FORMAT_LABELS[d.format]}
+            </span>
+            {/* Status badge */}
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${statusCfg.className}`}
+            >
+              {statusCfg.label}
+            </span>
+            {/* Required label */}
+            {d.is_required && (
+              <span className="text-[10px] font-medium text-red-500">
+                필수
+              </span>
             )}
-            {doc.file_size && (
-              <>
-                <span>•</span>
-                <span>{(doc.file_size / 1024).toFixed(0)} KB</span>
-              </>
-            )}
           </div>
+          {/* Conditional description */}
+          {d.is_conditional && d.condition_description && (
+            <p className="mt-0.5 text-xs text-slate-400">
+              조건: {d.condition_description}
+            </p>
+          )}
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        {doc.file_path && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => onDownload(doc)}
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-        )}
+
+      {/* Right: actions */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <ActionButtons
+          doc={d}
+          hasFile={hasFile}
+          isComplete={isComplete}
+          onAction={onAction}
+        />
       </div>
     </div>
   );
+}
+
+// ─── Action Buttons ─────────────────────────────────────────────────────────
+
+function ActionButtons({
+  doc: d,
+  hasFile,
+  isComplete,
+  onAction,
+}: {
+  doc: ProjectDocumentItem;
+  hasFile: boolean;
+  isComplete: boolean;
+  onAction: (action: string, name: string) => void;
+}) {
+  const genType = d.generation_type;
+
+  if (genType === "auto" || genType === "template" || genType === "ai") {
+    return (
+      <>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={isComplete}
+          onClick={() => onAction("생성", d.name)}
+          className="text-xs"
+        >
+          <Wand2 className="mr-1 h-3.5 w-3.5" />
+          생성
+        </Button>
+        {hasFile && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => onAction("다운로드", d.name)}
+            className="text-xs"
+          >
+            <Download className="mr-1 h-3.5 w-3.5" />
+            다운로드
+          </Button>
+        )}
+      </>
+    );
+  }
+
+  if (genType === "upload") {
+    return (
+      <>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => onAction("업로드", d.name)}
+          className="text-xs"
+        >
+          <Upload className="mr-1 h-3.5 w-3.5" />
+          업로드
+        </Button>
+        {hasFile && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => onAction("다운로드", d.name)}
+            className="text-xs"
+          >
+            <Download className="mr-1 h-3.5 w-3.5" />
+            다운로드
+          </Button>
+        )}
+      </>
+    );
+  }
+
+  if (genType === "external") {
+    return (
+      <>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => onAction("외부 연동", d.name)}
+          className="text-xs"
+        >
+          <ExternalLink className="mr-1 h-3.5 w-3.5" />
+          외부 연동
+        </Button>
+        {hasFile && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => onAction("다운로드", d.name)}
+            className="text-xs"
+          >
+            <Download className="mr-1 h-3.5 w-3.5" />
+            다운로드
+          </Button>
+        )}
+      </>
+    );
+  }
+
+  return null;
 }

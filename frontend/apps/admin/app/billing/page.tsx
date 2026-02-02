@@ -7,8 +7,9 @@ import {
   CardTitle,
   Button,
   Badge,
+  toast,
 } from "@sigongon/ui";
-import { CreditCard, CheckCircle } from "lucide-react";
+import { CheckCircle, RefreshCw } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -81,11 +82,6 @@ export default function BillingPage() {
     router.push(`/billing/checkout?plan=${plan}`);
   };
 
-  const handleChangePaymentMethod = () => {
-    // 결제 수단 변경 로직 (추후 구현)
-    alert("결제 수단 변경 기능은 준비 중입니다.");
-  };
-
   if (isLoading) {
     return (
       <AdminLayout>
@@ -113,113 +109,74 @@ export default function BillingPage() {
           </div>
         ) : (
           <>
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>현재 플랜</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-3xl font-bold text-slate-900">
-                        {overview.plan || "무료 체험"}
-                      </span>
-                      {overview.is_custom_trial && (
-                        <Badge variant="warning">커스텀 무료</Badge>
-                      )}
-                    </div>
-                    <div className="mt-2 space-y-1">
-                      <p className="text-sm text-slate-500">
-                        구독 만료일:{" "}
-                        {overview.subscription_end_date
-                          ? overview.subscription_end_date.slice(0, 10)
-                          : "-"}
-                      </p>
-                      <p className="text-sm font-medium text-brand-point-600">
-                        {overview.days_remaining > 0
-                          ? `${overview.days_remaining}일 남음`
-                          : overview.days_remaining === 0
-                            ? "오늘 만료"
-                            : "만료됨"}
-                      </p>
-                    </div>
-                    {overview.billing_amount > 0 && (
-                      <p className="mt-2 text-slate-500">
-                        연간 요금: ₩{overview.billing_amount.toLocaleString()}
-                      </p>
+            <Card>
+              <CardHeader>
+                <CardTitle>현재 플랜</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-3xl font-bold text-slate-900">
+                      {overview.plan || "무료 체험"}
+                    </span>
+                    {overview.is_custom_trial && (
+                      <Badge variant="warning">커스텀 무료</Badge>
                     )}
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>사용자 좌석</span>
-                      <span className="font-medium">
-                        {overview.seats_used} /{" "}
-                        {overview.seats_total === 999
-                          ? "무제한"
-                          : `${overview.seats_total}석`}
-                      </span>
-                    </div>
-                    {overview.seats_total !== 999 && (
-                      <div className="h-2 w-full rounded-full bg-slate-100">
-                        <div
-                          className="h-2 rounded-full bg-brand-point-500"
-                          style={{
-                            width:
-                              overview.seats_total === 0
-                                ? "0%"
-                                : `${Math.min(100, Math.round((overview.seats_used / overview.seats_total) * 100))}%`,
-                          }}
-                        ></div>
-                      </div>
-                    )}
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm text-slate-500">
+                      구독 만료일:{" "}
+                      {overview.subscription_end_date
+                        ? overview.subscription_end_date.slice(0, 10)
+                        : "-"}
+                    </p>
+                    <p className="text-sm font-medium text-brand-point-600">
+                      {overview.days_remaining > 0
+                        ? `${overview.days_remaining}일 남음`
+                        : overview.days_remaining === 0
+                          ? "오늘 만료"
+                          : "만료됨"}
+                    </p>
                   </div>
+                  {overview.billing_amount > 0 && (
+                    <p className="mt-2 text-slate-500">
+                      연간 요금: ₩{overview.billing_amount.toLocaleString()}
+                    </p>
+                  )}
+                </div>
 
-                  <div className="flex gap-2">
-                    <Button onClick={() => setShowPlanSelector(true)}>
-                      플랜 변경
-                    </Button>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>사용자 좌석</span>
+                    <span className="font-medium">
+                      {overview.seats_used} /{" "}
+                      {overview.seats_total === 999
+                        ? "무제한"
+                        : `${overview.seats_total}석`}
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>결제 수단</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {overview.payment_method ? (
-                    <div className="flex items-center gap-4 rounded-lg border border-slate-200 p-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
-                        <CreditCard className="h-5 w-5 text-slate-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-900">
-                          {overview.payment_method.brand} (
-                          {overview.payment_method.last4})
-                        </p>
-                        <p className="text-sm text-slate-500">
-                          만료일: {overview.payment_method.expires}
-                        </p>
-                      </div>
-                      <Badge variant="success">기본</Badge>
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-400">
-                      등록된 결제 수단이 없습니다.
+                  {overview.seats_total !== 999 && (
+                    <div className="h-2 w-full rounded-full bg-slate-100">
+                      <div
+                        className="h-2 rounded-full bg-brand-point-500"
+                        style={{
+                          width:
+                            overview.seats_total === 0
+                              ? "0%"
+                              : `${Math.min(100, Math.round((overview.seats_used / overview.seats_total) * 100))}%`,
+                        }}
+                      ></div>
                     </div>
                   )}
+                </div>
 
-                  <Button
-                    variant="secondary"
-                    className="w-full"
-                    onClick={handleChangePaymentMethod}
-                  >
-                    결제 수단 변경
+                <div className="flex gap-2">
+                  <Button onClick={() => setShowPlanSelector(true)}>
+                    <RefreshCw className="h-4 w-4" />플랜 변경
                   </Button>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {showPlanSelector && (
               <Card>
@@ -248,14 +205,13 @@ export default function BillingPage() {
                         <th className="pb-3 font-medium">내용</th>
                         <th className="pb-3 font-medium">금액</th>
                         <th className="pb-3 font-medium">상태</th>
-                        <th className="pb-3 font-medium">영수증</th>
                       </tr>
                     </thead>
                     <tbody>
                       {overview.history.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={5}
+                            colSpan={4}
                             className="py-6 text-center text-sm text-slate-400"
                           >
                             결제 내역이 없습니다.
@@ -287,11 +243,6 @@ export default function BillingPage() {
                                   ? "결제 성공"
                                   : "결제 실패"}
                               </span>
-                            </td>
-                            <td className="py-4">
-                              <Button size="sm" variant="ghost">
-                                보기
-                              </Button>
                             </td>
                           </tr>
                         ))

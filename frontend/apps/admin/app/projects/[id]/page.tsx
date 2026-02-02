@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   Plus,
   Loader2,
+  Eye,
 } from "lucide-react";
 import {
   Card,
@@ -300,7 +301,7 @@ export default function ProjectDetailPage({
                       <td className="py-4">
                         <Link href={`/estimates/${estimate.id}`}>
                           <Button size="sm" variant="secondary">
-                            상세보기
+                            <Eye className="h-3.5 w-3.5" />상세보기
                           </Button>
                         </Link>
                       </td>

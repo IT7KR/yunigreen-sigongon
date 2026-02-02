@@ -71,7 +71,7 @@ export default function TaxInvoiceDetailPage({
     setIsLoading(true);
     const response = await api.getTaxInvoiceDetail(invoiceId);
     if (response.success && response.data) {
-      setInvoice(response.data);
+      setInvoice(response.data as TaxInvoiceDetail);
     }
     setIsLoading(false);
   };

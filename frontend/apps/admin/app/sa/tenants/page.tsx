@@ -17,9 +17,9 @@ import {
   formatDate,
   Pagination,
 } from "@sigongon/ui";
-import { Search, Building2, Users, FolderKanban, Loader2 } from "lucide-react";
+import { Search, Building2, Users, FolderKanban, Loader2, Eye } from "lucide-react";
 import { api } from "@/lib/api";
-import { SANav } from "../components/SANav";
+
 
 interface TenantItem {
   id: string;
@@ -109,8 +109,6 @@ export default function TenantsPage() {
             전체 {tenants.length}개 고객사
           </p>
         </div>
-
-        <SANav />
 
         <Card>
           <CardContent className="p-4">
@@ -233,7 +231,7 @@ export default function TenantsPage() {
                             <TableCell>
                               <Link href={`/sa/tenants/${tenant.id}`}>
                                 <Button size="sm" variant="ghost">
-                                  상세보기
+                                  <Eye className="h-3.5 w-3.5" />상세보기
                                 </Button>
                               </Link>
                             </TableCell>

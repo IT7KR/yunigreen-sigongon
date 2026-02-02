@@ -1,7 +1,18 @@
 "use client";
 
 import { use, useState, useEffect } from "react";
-import { FileSignature, Plus, Loader2, Download, Send } from "lucide-react";
+import {
+  FileSignature,
+  Plus,
+  Loader2,
+  Download,
+  Send,
+  FileSpreadsheet,
+  Stamp,
+  X,
+} from "lucide-react";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import {
   Card,
   CardContent,
@@ -10,9 +21,11 @@ import {
   Button,
   formatDate,
   Badge,
+  Modal,
 } from "@sigongon/ui";
 import type { ContractStatus, ContractDetail } from "@sigongon/types";
 import { api } from "@/lib/api";
+import { ModusignModal } from "@/components/ModusignModal";
 
 const contractStatusColors: Record<ContractStatus, string> = {
   draft: "bg-gray-100 text-gray-700",
@@ -47,6 +60,8 @@ export default function ContractsPage({
   >([]);
   const [selectedEstimateId, setSelectedEstimateId] = useState("");
   const [creating, setCreating] = useState(false);
+  const [showModusignModal, setShowModusignModal] = useState(false);
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
 
   useEffect(() => {
     loadContracts();
@@ -117,7 +132,51 @@ export default function ContractsPage({
   }
 
   function handleDownloadPDF(contractId: string) {
-    alert(`계약서 ${contractId} PDF 다운로드 (Mock)`);
+    window.open(`/api/v1/contracts/${contractId}/pdf`, "_blank");
+  }
+
+  async function handleDownloadExcel() {
+    // Prepare contract summary data
+    const dataRows = contracts.map((contract, index) => ({
+      No: index + 1,
+      계약번호: contract.contract_number || contract.id,
+      상태: contractStatusLabels[contract.status],
+      계약금액: Number(contract.contract_amount),
+      생성일: contract.created_at,
+      서명일: contract.signed_at || "",
+    }));
+
+    // Create workbook with exceljs
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("계약서 목록");
+
+    // Add headers
+    const headers = Object.keys(dataRows[0]);
+    worksheet.addRow(headers);
+
+    // Add data rows
+    for (const row of dataRows) {
+      worksheet.addRow(Object.values(row));
+    }
+
+    // Auto-fit column widths
+    worksheet.columns.forEach((col) => {
+      col.width = 18;
+    });
+
+    // Generate and download file
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `계약서_목록.xlsx`);
+  }
+
+  function handleOpenModusign(contractId: string) {
+    setSelectedContractId(contractId);
+    setShowModusignModal(true);
+  }
+
+  function handleCloseModusign() {
+    setShowModusignModal(false);
+    setSelectedContractId(null);
   }
 
   if (loading) {
@@ -145,10 +204,18 @@ export default function ContractsPage({
             <FileSignature className="h-5 w-5 text-slate-400" />
             계약서 목록
           </CardTitle>
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-4 w-4" />
-            계약서 생성
-          </Button>
+          <div className="flex gap-2">
+            {contracts.length > 0 && (
+              <Button variant="secondary" onClick={handleDownloadExcel}>
+                <FileSpreadsheet className="h-4 w-4" />
+                Excel
+              </Button>
+            )}
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4" />
+              계약서 생성
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {contracts.length === 0 ? (
@@ -213,16 +280,26 @@ export default function ContractsPage({
                       <td className="py-4">
                         <div className="flex items-center gap-2">
                           {contract.status === "draft" && (
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() =>
-                                handleSendForSignature(contract.id)
-                              }
-                            >
-                              <Send className="h-4 w-4" />
-                              서명 요청
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() =>
+                                  handleSendForSignature(contract.id)
+                                }
+                              >
+                                <Send className="h-4 w-4" />
+                                서명 요청
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleOpenModusign(contract.id)}
+                              >
+                                <Stamp className="h-4 w-4" />
+                                모두싸인 전자서명
+                              </Button>
+                            </>
                           )}
                           <Button
                             size="sm"
@@ -281,64 +358,51 @@ export default function ContractsPage({
         </Card>
       )}
 
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h3 className="mb-4 text-xl font-bold text-slate-900">
-              계약서 생성
-            </h3>
-            {availableEstimates.length === 0 ? (
-              <div className="py-8 text-center">
-                <p className="text-slate-500">
-                  승인된 견적서가 없습니다.
-                </p>
-                <p className="mt-2 text-sm text-slate-400">
-                  먼저 견적서를 생성하고 발송해 주세요.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    견적서 선택
-                  </label>
-                  <select
-                    value={selectedEstimateId}
-                    onChange={(e) => setSelectedEstimateId(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-                  >
-                    {availableEstimates.map((estimate) => (
-                      <option key={estimate.id} value={estimate.id}>
-                        v{estimate.version} -{" "}
-                        {Number(estimate.total_amount).toLocaleString()}원
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-            <div className="mt-6 flex justify-end gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => setShowCreateModal(false)}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="계약서 생성"
+      >
+        {availableEstimates.length === 0 ? (
+          <div className="py-8 text-center">
+            <p className="text-slate-500">승인된 견적서가 없습니다.</p>
+            <p className="mt-2 text-sm text-slate-400">먼저 견적서를 생성하고 발송해 주세요.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700">견적서 선택</label>
+              <select
+                value={selectedEstimateId}
+                onChange={(e) => setSelectedEstimateId(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
               >
-                취소
-              </Button>
-              {availableEstimates.length > 0 && (
-                <Button
-                  onClick={handleCreateContract}
-                  disabled={creating}
-                >
-                  {creating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "생성"
-                  )}
-                </Button>
-              )}
+                {availableEstimates.map((estimate) => (
+                  <option key={estimate.id} value={estimate.id}>
+                    v{estimate.version} - {Number(estimate.total_amount).toLocaleString()}원
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
+        )}
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setShowCreateModal(false)}><X className="h-4 w-4" />취소</Button>
+          {availableEstimates.length > 0 && (
+            <Button onClick={handleCreateContract} disabled={creating}>
+              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4" />생성</>}
+            </Button>
+          )}
         </div>
+      </Modal>
+
+      {selectedContractId && (
+        <ModusignModal
+          isOpen={showModusignModal}
+          onClose={handleCloseModusign}
+          contractId={selectedContractId}
+          onSuccess={loadContracts}
+        />
       )}
     </div>
   );
