@@ -671,6 +671,39 @@ export class APIClient {
     return response.data;
   }
 
+  // Modusign integration
+  async requestModusign(
+    contractId: string,
+    data: { signer_name: string; signer_email: string; signer_phone?: string },
+  ) {
+    const response = await this.client.post<APIResponse<any>>(
+      `/contracts/${contractId}/modusign/request`,
+      data,
+    );
+    return response.data;
+  }
+
+  async getModusignStatus(contractId: string) {
+    const response = await this.client.get<APIResponse<any>>(
+      `/contracts/${contractId}/modusign/status`,
+    );
+    return response.data;
+  }
+
+  async cancelModusign(contractId: string) {
+    const response = await this.client.post<APIResponse<void>>(
+      `/contracts/${contractId}/modusign/cancel`,
+    );
+    return response.data;
+  }
+
+  async downloadSignedDocument(contractId: string) {
+    const response = await this.client.get<APIResponse<any>>(
+      `/contracts/${contractId}/modusign/download`,
+    );
+    return response.data;
+  }
+
   // ============================================
   // Labor Contracts (노무비 관리)
   // ============================================
@@ -760,6 +793,57 @@ export class APIClient {
         message: string;
       }>
     >("/labor-contracts/workers/register", data);
+    return response.data;
+  }
+
+  // ============================================
+  // Daily Reports (작업일지)
+  // ============================================
+
+  async getDailyReports(projectId: string) {
+    const response = await this.client.get<
+      APIResponse<
+        Array<{
+          id: string;
+          project_id: string;
+          work_date: string;
+          weather?: string;
+          temperature?: string;
+          work_description: string;
+          tomorrow_plan?: string;
+          photos: string[];
+          photo_count: number;
+          created_at: string;
+        }>
+      >
+    >(`/projects/${projectId}/daily-reports`);
+    return response.data;
+  }
+
+  async createDailyReport(
+    projectId: string,
+    data: {
+      work_date: string;
+      weather?: string;
+      temperature?: string;
+      work_description: string;
+      tomorrow_plan?: string;
+      photos?: string[];
+    },
+  ) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        project_id: string;
+        work_date: string;
+        weather?: string;
+        temperature?: string;
+        work_description: string;
+        tomorrow_plan?: string;
+        photos: string[];
+        created_at: string;
+      }>
+    >(`/projects/${projectId}/daily-reports`, data);
     return response.data;
   }
 
@@ -1298,6 +1382,69 @@ export class APIClient {
     return response.data;
   }
 
+  async createPartner(data: {
+    name: string;
+    owner: string;
+    biz_no: string;
+    license?: string;
+    is_female_owned?: boolean;
+  }) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        name: string;
+        owner: string;
+        biz_no: string;
+        license?: string;
+        is_female_owned: boolean;
+        status: "active" | "inactive";
+      }>
+    >("/partners", data);
+    return response.data;
+  }
+
+  async updatePartner(
+    id: string,
+    data: {
+      name?: string;
+      owner?: string;
+      biz_no?: string;
+      license?: string;
+      is_female_owned?: boolean;
+    },
+  ) {
+    const response = await this.client.patch<
+      APIResponse<{
+        id: string;
+        name: string;
+        owner: string;
+        biz_no: string;
+        license?: string;
+        is_female_owned: boolean;
+        status: "active" | "inactive";
+      }>
+    >(`/partners/${id}`, data);
+    return response.data;
+  }
+
+  async deletePartner(id: string) {
+    const response = await this.client.delete<APIResponse<void>>(
+      `/partners/${id}`,
+    );
+    return response.data;
+  }
+
+  async togglePartnerStatus(id: string) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        status: "active" | "inactive";
+        message: string;
+      }>
+    >(`/partners/${id}/toggle-status`);
+    return response.data;
+  }
+
   // ============================================
   // Labor Overview (노무 관리)
   // ============================================
@@ -1320,6 +1467,88 @@ export class APIClient {
         }>;
       }>
     >("/labor/overview");
+    return response.data;
+  }
+
+  async batchSendPaystubs() {
+    const response = await this.client.post<
+      APIResponse<{
+        sent_count: number;
+        message?: string;
+      }>
+    >("/labor/paystubs/batch-send");
+    return response.data;
+  }
+
+  // ============================================
+  // Daily Labor Reporting (일용신고)
+  // ============================================
+
+  async getDailyWorkers() {
+    const response = await this.client.get<APIResponse<any[]>>("/labor/daily-workers");
+    return response.data;
+  }
+
+  async createDailyWorker(data: any) {
+    const response = await this.client.post<APIResponse<any>>("/labor/daily-workers", data);
+    return response.data;
+  }
+
+  async updateDailyWorker(id: string, data: any) {
+    const response = await this.client.patch<APIResponse<any>>(`/labor/daily-workers/${id}`, data);
+    return response.data;
+  }
+
+  async deleteDailyWorker(id: string) {
+    const response = await this.client.delete<APIResponse<any>>(`/labor/daily-workers/${id}`);
+    return response.data;
+  }
+
+  async getWorkRecords(projectId: string, year: number, month: number) {
+    const response = await this.client.get<APIResponse<any[]>>(`/labor/work-records`, {
+      params: { project_id: projectId, year, month },
+    });
+    return response.data;
+  }
+
+  async upsertWorkRecords(records: any[]) {
+    const response = await this.client.post<APIResponse<any>>("/labor/work-records/batch", { records });
+    return response.data;
+  }
+
+  async deleteWorkRecord(id: string) {
+    const response = await this.client.delete<APIResponse<any>>(`/labor/work-records/${id}`);
+    return response.data;
+  }
+
+  async generateSiteReport(projectId: string, year: number, month: number) {
+    const response = await this.client.get<APIResponse<any>>(`/labor/reports/site`, {
+      params: { project_id: projectId, year, month },
+    });
+    return response.data;
+  }
+
+  async generateConsolidatedReport(year: number, month: number) {
+    const response = await this.client.get<APIResponse<any>>(`/labor/reports/consolidated`, {
+      params: { year, month },
+    });
+    return response.data;
+  }
+
+  async getInsuranceRates(year?: number) {
+    const response = await this.client.get<APIResponse<any[]>>("/labor/insurance-rates", {
+      params: year ? { year } : {},
+    });
+    return response.data;
+  }
+
+  async updateInsuranceRates(id: string, data: any) {
+    const response = await this.client.patch<APIResponse<any>>(`/labor/insurance-rates/${id}`, data);
+    return response.data;
+  }
+
+  async createInsuranceRates(data: any) {
+    const response = await this.client.post<APIResponse<any>>("/labor/insurance-rates", data);
     return response.data;
   }
 
@@ -1349,6 +1578,40 @@ export class APIClient {
         }>;
       }>
     >("/billing/overview");
+    return response.data;
+  }
+
+  async changePaymentMethod(data: { card_number: string; expiry: string }) {
+    const response = await this.client.post<
+      APIResponse<{
+        billing_key: string;
+        payment_method: {
+          brand: string;
+          last4: string;
+          expires: string;
+        };
+        message: string;
+      }>
+    >("/billing/payment-method", data);
+    return response.data;
+  }
+
+  async getSADashboard() {
+    const response = await this.client.get<
+      APIResponse<{
+        total_tenants: number;
+        active_tenants: number;
+        total_revenue: number;
+        monthly_revenue: number;
+        recent_signups: Array<{
+          id: string;
+          company_name: string;
+          plan: string;
+          created_at: string;
+        }>;
+        subscription_breakdown: Record<string, number>;
+      }>
+    >("/admin/sa-dashboard");
     return response.data;
   }
 
@@ -1445,6 +1708,26 @@ export class APIClient {
         }>;
       }>
     >(`/workers/${workerId}/profile`);
+    return response.data;
+  }
+
+  async uploadWorkerDocument(workerId: string, docId: string, file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        document_id: string;
+        storage_path: string;
+        status: "submitted";
+        uploaded_at: string;
+      }>
+    >(`/workers/${workerId}/documents/${docId}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
     return response.data;
   }
 
@@ -1724,6 +2007,98 @@ export class APIClient {
         require_grounding: requireGrounding,
       },
     });
+    return response.data;
+  }
+
+  // ============================================
+  // Material Orders (자재 발주)
+  // ============================================
+
+  async getMaterialOrders(projectId: string) {
+    const response = await this.client.get<
+      APIResponse<
+        Array<{
+          id: string;
+          project_id: string;
+          order_number: string;
+          status: string;
+          total_amount: number;
+          requested_at?: string;
+          confirmed_at?: string;
+          delivered_at?: string;
+          created_at: string;
+        }>
+      >
+    >(`/projects/${projectId}/material-orders`);
+    return response.data;
+  }
+
+  async createMaterialOrder(
+    projectId: string,
+    data: {
+      items: Array<{
+        description: string;
+        specification?: string;
+        unit: string;
+        quantity: number;
+        unit_price: number;
+      }>;
+      notes?: string;
+    },
+  ) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        order_number: string;
+        status: string;
+        total_amount: number;
+      }>
+    >(`/projects/${projectId}/material-orders`, data);
+    return response.data;
+  }
+
+  async getMaterialOrder(orderId: string) {
+    const response = await this.client.get<
+      APIResponse<{
+        id: string;
+        project_id: string;
+        order_number: string;
+        status: string;
+        items: Array<{
+          id: string;
+          description: string;
+          specification?: string;
+          unit: string;
+          quantity: number;
+          unit_price: number;
+          amount: number;
+        }>;
+        total_amount: number;
+        requested_at?: string;
+        confirmed_at?: string;
+        delivered_at?: string;
+        notes?: string;
+        created_at: string;
+      }>
+    >(`/material-orders/${orderId}`);
+    return response.data;
+  }
+
+  async updateMaterialOrderStatus(orderId: string, status: string) {
+    const response = await this.client.patch<
+      APIResponse<{
+        id: string;
+        status: string;
+        message: string;
+      }>
+    >(`/material-orders/${orderId}`, { status });
+    return response.data;
+  }
+
+  async cancelMaterialOrder(orderId: string) {
+    const response = await this.client.delete<APIResponse<void>>(
+      `/material-orders/${orderId}`,
+    );
     return response.data;
   }
 }
