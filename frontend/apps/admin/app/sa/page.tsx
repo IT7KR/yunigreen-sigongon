@@ -17,6 +17,8 @@ import {
   TrendingUp,
   ArrowUp,
   ArrowDown,
+  AlertTriangle,
+  Calendar,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import Link from "next/link";
@@ -52,6 +54,14 @@ interface PlanDistribution {
   percentage: number;
 }
 
+interface ExpiringSubscription {
+  id: string;
+  company_name: string;
+  plan: string;
+  expires_at: string;
+  days_remaining: number;
+}
+
 export default function SADashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     total_tenants: 0,
@@ -68,7 +78,15 @@ export default function SADashboardPage() {
   const [planDistribution, setPlanDistribution] = useState<PlanDistribution[]>(
     [],
   );
+  const [expiringSubscriptions, setExpiringSubscriptions] = useState<ExpiringSubscription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Mock data for expiring subscriptions
+  const mockExpiringSubscriptions: ExpiringSubscription[] = [
+    { id: "1", company_name: "(주)삼성건설", plan: "스탠다드", expires_at: "2026-02-10", days_remaining: 4 },
+    { id: "2", company_name: "현대방수", plan: "스타터", expires_at: "2026-02-12", days_remaining: 6 },
+    { id: "3", company_name: "롯데건축", plan: "프리미엄", expires_at: "2026-02-15", days_remaining: 9 },
+  ];
 
   useEffect(() => {
     loadDashboardData();
@@ -84,6 +102,8 @@ export default function SADashboardPage() {
         setMonthlyRevenue(response.data.monthly_revenue);
         setPlanDistribution(response.data.plan_distribution);
       }
+      // Set mock expiring subscriptions
+      setExpiringSubscriptions(mockExpiringSubscriptions);
     } catch (err) {
       console.error("Failed to load dashboard data:", err);
     } finally {
@@ -291,6 +311,75 @@ export default function SADashboardPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Expiring Subscriptions Alert */}
+            {expiringSubscriptions.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-500" />
+                    구독 만료 임박 업체
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {expiringSubscriptions.map((sub) => (
+                      <div
+                        key={sub.id}
+                        className={`flex items-center justify-between rounded-lg p-3 ${
+                          sub.days_remaining <= 3
+                            ? "bg-red-50 border border-red-200"
+                            : sub.days_remaining <= 7
+                              ? "bg-amber-50 border border-amber-200"
+                              : "bg-slate-50 border border-slate-200"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                              sub.days_remaining <= 3
+                                ? "bg-red-100"
+                                : sub.days_remaining <= 7
+                                  ? "bg-amber-100"
+                                  : "bg-slate-100"
+                            }`}
+                          >
+                            <Calendar
+                              className={`h-4 w-4 ${
+                                sub.days_remaining <= 3
+                                  ? "text-red-600"
+                                  : sub.days_remaining <= 7
+                                    ? "text-amber-600"
+                                    : "text-slate-600"
+                              }`}
+                            />
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-900">
+                              {sub.company_name}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {sub.plan} 플랜 · 만료일: {sub.expires_at}
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-sm font-medium ${
+                            sub.days_remaining <= 3
+                              ? "text-red-700"
+                              : sub.days_remaining <= 7
+                                ? "text-amber-700"
+                                : "text-slate-700"
+                          }`}
+                        >
+                          D-{sub.days_remaining}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>
