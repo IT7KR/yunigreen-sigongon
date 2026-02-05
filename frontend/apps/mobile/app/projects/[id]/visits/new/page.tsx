@@ -123,7 +123,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
           setIsUploading(false);
         }
 
-        router.push(`/projects/${projectId}`);
+        router.push(`/projects/${projectId}/visits/${visitId}`);
       }
     } catch (err) {
       console.error("방문 기록 생성 실패:", err);

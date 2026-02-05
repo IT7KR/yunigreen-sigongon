@@ -2,7 +2,14 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { FileCheck, FileX, Calendar, ChevronRight } from "lucide-react";
+import {
+  FileCheck,
+  FileX,
+  Calendar,
+  ChevronRight,
+  CheckCircle2,
+  Image,
+} from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
 import {
   Card,
@@ -72,6 +79,23 @@ export default function ReportsPage({ params }: ReportsPageProps) {
   return (
     <MobileLayout title="공사 보고서" showBack>
       <div className="space-y-6 p-4">
+        <Card>
+          <CardContent className="grid grid-cols-2 gap-2 p-4">
+            <Link href={`/projects/${id}/completion/closeout-report`}>
+              <Button variant="secondary" fullWidth>
+                <CheckCircle2 className="h-4 w-4" />
+                준공/정산
+              </Button>
+            </Link>
+            <Link href={`/projects/${id}/completion/photo-album`}>
+              <Button variant="secondary" fullWidth>
+                <Image className="h-4 w-4" />
+                준공사진첩
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
         {/* 착공계 섹션 */}
         <section>
           <div className="mb-3 flex items-center justify-between">

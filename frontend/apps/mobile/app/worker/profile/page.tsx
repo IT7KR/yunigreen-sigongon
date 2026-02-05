@@ -4,10 +4,14 @@ import { Card, CardContent, Button } from "@sigongon/ui";
 import { User, FileText, CreditCard, LogOut, ChevronRight, Upload, Check, Loader2, Eye } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
+import { buildSampleFileDownloadUrl } from "@/lib/sampleFiles";
 
 export default function WorkerProfilePage() {
-  const workerId = "worker_1";
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const workerId = searchParams.get("workerId") || "worker_1";
   const [profile, setProfile] = useState<{
     id: string;
     name: string;
@@ -86,8 +90,24 @@ export default function WorkerProfilePage() {
   };
 
   const handleViewDocument = (doc: { id: string; name: string; fileName?: string }) => {
-    // Mock viewing functionality
-    alert(`서류 확인: ${doc.fileName || doc.name}`);
+    const samplePathByDocId: Record<string, string> = {
+      doc_1: "sample/1. 관공서 계약서류/4. 사업자외 서류_(주)유니그린개발.pdf",
+      doc_2:
+        "sample/3. 관공서 준공서류/3. 준공정산동의서(준공금 변동이 있을 경우에만 작성).pdf",
+    };
+    const samplePath = samplePathByDocId[doc.id];
+    if (!samplePath) {
+      return;
+    }
+
+    const anchor = document.createElement("a");
+    anchor.href = buildSampleFileDownloadUrl(samplePath);
+    anchor.download = doc.fileName || `${doc.name}.pdf`;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
   };
 
   return (
@@ -114,7 +134,7 @@ export default function WorkerProfilePage() {
         <Card>
           <CardContent className="divide-y divide-slate-100 p-0">
             <Link
-              href="/worker/contracts/1"
+              href={`/worker/contracts/1?workerId=${encodeURIComponent(workerId)}`}
               className="flex items-center justify-between p-4 hover:bg-slate-50"
             >
               <div className="flex items-center gap-3">
@@ -124,7 +144,7 @@ export default function WorkerProfilePage() {
               <ChevronRight className="h-5 w-5 text-slate-300" />
             </Link>
             <Link
-              href="/worker/paystubs"
+              href={`/worker/paystubs?workerId=${encodeURIComponent(workerId)}`}
               className="flex items-center justify-between p-4 hover:bg-slate-50"
             >
               <div className="flex items-center gap-3">
@@ -222,6 +242,7 @@ export default function WorkerProfilePage() {
           variant="ghost"
           fullWidth
           className="text-red-500 hover:bg-red-50 hover:text-red-600"
+          onClick={() => router.push("/worker/entry")}
         >
           <LogOut className="mr-2 h-4 w-4" />
           로그아웃

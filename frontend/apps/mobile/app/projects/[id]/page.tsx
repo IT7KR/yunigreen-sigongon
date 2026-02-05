@@ -9,12 +9,14 @@ import {
   User,
   Calendar,
   Camera,
+  Image,
   FileText,
   Sparkles,
   Plus,
   ChevronRight,
   ClipboardList,
   FileCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
 import {
@@ -219,6 +221,28 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
             >
               <ClipboardList className="h-5 w-5" />
               <span className="text-xs">작업일지</span>
+            </Button>
+          </Link>
+
+          <Link href={`/projects/${id}/completion/closeout-report`}>
+            <Button
+              variant="secondary"
+              fullWidth
+              className="flex-col gap-1 py-3"
+            >
+              <CheckCircle2 className="h-5 w-5" />
+              <span className="text-xs">준공/정산</span>
+            </Button>
+          </Link>
+
+          <Link href={`/projects/${id}/completion/photo-album`}>
+            <Button
+              variant="secondary"
+              fullWidth
+              className="flex-col gap-1 py-3"
+            >
+              <Image className="h-5 w-5" />
+              <span className="text-xs">준공사진첩</span>
             </Button>
           </Link>
         </div>

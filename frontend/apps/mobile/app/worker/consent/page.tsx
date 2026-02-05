@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@sigongon/ui";
 import { Shield, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -53,6 +53,8 @@ const consentSections: ConsentSection[] = [
 
 export default function WorkerConsentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const workerId = searchParams.get("workerId") || "worker_1";
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set()
   );
@@ -86,7 +88,7 @@ export default function WorkerConsentPage() {
 
   const handleSubmit = () => {
     if (allConsentsChecked) {
-      router.push("/worker/profile");
+      router.push(`/worker/profile?workerId=${encodeURIComponent(workerId)}`);
     }
   };
 

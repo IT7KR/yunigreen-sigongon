@@ -4,10 +4,12 @@ import { Card, CardContent } from "@sigongon/ui";
 import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 
 export default function WorkerPaystubsPage() {
-  const workerId = "worker_1";
+  const searchParams = useSearchParams();
+  const workerId = searchParams.get("workerId") || "worker_1";
   const [paystubs, setPaystubs] = useState<
     Array<{
       id: string;
@@ -37,7 +39,7 @@ export default function WorkerPaystubsPage() {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center gap-3">
           <Link
-            href="/worker/profile"
+            href={`/worker/profile?workerId=${encodeURIComponent(workerId)}`}
             className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -57,7 +59,10 @@ export default function WorkerPaystubsPage() {
           </div>
         ) : (
           paystubs.map((item) => (
-            <Link key={item.id} href={`/worker/paystubs/${item.id}`}>
+            <Link
+              key={item.id}
+              href={`/worker/paystubs/${item.id}?workerId=${encodeURIComponent(workerId)}`}
+            >
               <Card>
                 <CardContent className="flex items-center justify-between p-4">
                   <div>

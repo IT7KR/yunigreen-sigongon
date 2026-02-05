@@ -26,6 +26,7 @@ import {
   Badge,
   Input,
   formatCurrency,
+  toast,
 } from "@sigongon/ui";
 import {
   useEstimate,
@@ -33,10 +34,19 @@ import {
   useUpdateEstimateLine,
   useDeleteEstimateLine,
   useAddEstimateLine,
+  useCreateContract,
 } from "@/hooks";
-import type { EstimateStatus, EstimateLineSource } from "@sigongon/types";
+import type {
+  EstimateDetail,
+  EstimateStatus,
+  EstimateLineSource,
+} from "@sigongon/types";
 import { VoiceInput } from "@/components/features/VoiceInput";
 import { RAGSearchDrawer } from "@/components/features/RAGSearchDrawer";
+import {
+  MOBILE_MOCK_EXPORT_SAMPLE_FILES,
+  buildSampleFileDownloadUrl,
+} from "@/lib/sampleFiles";
 
 interface EstimateDetailPageProps {
   params: Promise<{ id: string }>;
@@ -78,6 +88,13 @@ export default function EstimateDetailPage({
   const updateLine = useUpdateEstimateLine(id);
   const deleteLine = useDeleteEstimateLine(id);
   const addLine = useAddEstimateLine(id);
+  const projectIdForEstimate =
+    (
+      data?.data as
+        | (EstimateDetail & { project_id?: string })
+        | undefined
+    )?.project_id || "";
+  const createContract = useCreateContract(projectIdForEstimate);
 
   const [editingLine, setEditingLine] = useState<EditingLine | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -152,6 +169,48 @@ export default function EstimateDetailPage({
     if (!confirm("견적서를 발행할까요?\n발행 후에는 수정할 수 없어요.")) return;
 
     await issueEstimate.mutateAsync();
+  };
+
+  const downloadSampleFile = (samplePath: string, fileName: string) => {
+    const anchor = document.createElement("a");
+    anchor.href = buildSampleFileDownloadUrl(samplePath);
+    anchor.download = fileName;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+  };
+
+  const handleDownloadEstimate = () => {
+    downloadSampleFile(
+      MOBILE_MOCK_EXPORT_SAMPLE_FILES.estimateXlsx,
+      "견적내역서_샘플.xlsx",
+    );
+  };
+
+  const handleCreateContract = async () => {
+    if (!estimate) return;
+    if (estimate.status === "draft") {
+      toast.warning("견적서를 먼저 발행해 주세요.");
+      return;
+    }
+    if (!projectIdForEstimate) {
+      toast.error("프로젝트 정보가 없어 계약서를 생성할 수 없어요.");
+      return;
+    }
+
+    const result = await createContract.mutateAsync({
+      estimate_id: estimate.id,
+    });
+
+    if (!result.success || !result.data) {
+      toast.error(result.error?.message || "계약서 생성에 실패했어요.");
+      return;
+    }
+
+    toast.success(`계약서 초안을 생성했어요 (${result.data.contract_number}).`);
+    router.push(`/projects/${projectIdForEstimate}`);
   };
 
   const handleAddRAGItem = async (item: {
@@ -439,7 +498,11 @@ export default function EstimateDetailPage({
       <div className="fixed bottom-0 left-0 right-0 border-t bg-white p-4 safe-area-bottom">
         {isDraft ? (
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => {}}>
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={handleDownloadEstimate}
+            >
               <Download className="mr-2 h-4 w-4" />
               미리보기
             </Button>
@@ -454,11 +517,23 @@ export default function EstimateDetailPage({
           </div>
         ) : (
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={handleDownloadEstimate}
+            >
               <Download className="mr-2 h-4 w-4" />
-              PDF 다운로드
+              견적서 다운로드
             </Button>
-            <Button className="flex-1"><FileSignature className="h-4 w-4" />계약서 만들기</Button>
+            <Button
+              className="flex-1"
+              onClick={handleCreateContract}
+              loading={createContract.isPending}
+              disabled={createContract.isPending}
+            >
+              <FileSignature className="h-4 w-4" />
+              계약서 만들기
+            </Button>
           </div>
         )}
       </div>

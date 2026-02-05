@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import {
   User,
   Mail,
@@ -45,10 +45,10 @@ export default function ProfilePage() {
   }
 
   const menuItems = [
-    { icon: Bell, label: "알림 설정", href: "#" },
-    { icon: Shield, label: "보안 설정", href: "#" },
-    { icon: HelpCircle, label: "도움말", href: "#" },
-    { icon: FileText, label: "이용약관", href: "#" },
+    { icon: Bell, label: "알림함", href: "/notifications" },
+    { icon: Shield, label: "비밀번호 재설정", href: "/login/reset-password" },
+    { icon: HelpCircle, label: "프로젝트 둘러보기", href: "/projects" },
+    { icon: FileText, label: "이용약관 샘플", href: "/api/sample-files?path=README.md" },
   ];
 
   return (
@@ -103,8 +103,9 @@ export default function ProfilePage() {
         <Card>
           <CardContent className="divide-y divide-slate-100 p-0">
             {menuItems.map((item) => (
-              <button
+              <Link
                 key={item.label}
+                href={item.href}
                 className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"
               >
                 <item.icon className="h-5 w-5 text-slate-400" />
@@ -112,7 +113,7 @@ export default function ProfilePage() {
                   {item.label}
                 </span>
                 <ChevronRight className="h-5 w-5 text-slate-300" />
-              </button>
+              </Link>
             ))}
           </CardContent>
         </Card>

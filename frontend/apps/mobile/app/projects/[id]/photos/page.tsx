@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, Upload, ArrowLeft } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
 import { Button } from "@sigongon/ui";
+import { api } from "@/lib/api";
 import {
   CameraCapture,
   PhotoTypeSelector,
@@ -12,8 +13,9 @@ import {
   PhotoUploader,
   OfflineBanner,
 } from "@/components/camera";
-import type { PhotoType } from "@/components/camera/PhotoTypeSelector";
+import type { PhotoType as CameraPhotoType } from "@/components/camera/PhotoTypeSelector";
 import type { PhotoItem } from "@/components/camera/PhotoThumbnails";
+import type { PhotoType as ApiPhotoType } from "@sigongon/types";
 
 interface PhotosPageProps {
   params: Promise<{ id: string }>;
@@ -24,16 +26,18 @@ export default function PhotosPage({ params }: PhotosPageProps) {
   const router = useRouter();
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [selectedType, setSelectedType] = useState<PhotoType>("current");
+  const [selectedType, setSelectedType] = useState<CameraPhotoType>("current");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [capturedPhotos, setCapturedPhotos] = useState<
     Array<{
       id: string;
       blob: Blob;
-      type: PhotoType;
+      type: CameraPhotoType;
       facingMode: "user" | "environment";
     }>
   >([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleCapture = (blob: Blob, facingMode: "user" | "environment") => {
     const photoId = `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -77,10 +81,45 @@ export default function PhotosPage({ params }: PhotosPageProps) {
     // Show error toast or notification
   };
 
-  const handleSubmit = () => {
-    // In real implementation, this would finalize the photo submission
-    console.log("Submitting photos:", photos);
-    router.back();
+  const handleSubmit = async () => {
+    if (capturedPhotos.length === 0) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const visitResponse = await api.createSiteVisit(id, {
+        visit_type: "progress",
+        visited_at: new Date().toISOString(),
+        notes: "모바일 사진 촬영 업로드",
+      });
+
+      if (!visitResponse.success || !visitResponse.data) {
+        setSubmitError(visitResponse.error?.message || "방문 기록 생성에 실패했어요.");
+        return;
+      }
+
+      const visitId = visitResponse.data.id;
+      const normalizePhotoType = (type: CameraPhotoType): ApiPhotoType => {
+        if (type === "before") return "before";
+        if (type === "detail") return "detail";
+        return "during";
+      };
+
+      for (const photo of capturedPhotos) {
+        const file = new File([photo.blob], `${photo.id}.jpg`, {
+          type: "image/jpeg",
+        });
+        await api.uploadPhoto(visitId, file, normalizePhotoType(photo.type));
+      }
+
+      router.push(`/projects/${id}/visits/${visitId}`);
+    } catch (error) {
+      console.error("사진 제출 실패:", error);
+      setSubmitError("사진 제출 중 오류가 발생했어요.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -157,6 +196,11 @@ export default function PhotosPage({ params }: PhotosPageProps) {
         {photos.length > 0 && (
           <div className="space-y-3 pt-4">
             <div className="h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+            {submitError && (
+              <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+                {submitError}
+              </div>
+            )}
 
             <div className="flex gap-3">
               <Button
@@ -171,6 +215,8 @@ export default function PhotosPage({ params }: PhotosPageProps) {
               <Button
                 variant="primary"
                 onClick={handleSubmit}
+                loading={isSubmitting}
+                disabled={isSubmitting}
                 className="flex-[2] shadow-lg shadow-brand-point-500/20"
               >
                 <Upload className="h-5 w-5" strokeWidth={2.5} />

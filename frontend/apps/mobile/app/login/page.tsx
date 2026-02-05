@@ -6,6 +6,7 @@ import { Eye, EyeOff, Droplets } from "lucide-react";
 import { Card, CardContent, Button, Input, BlurText } from "@sigongon/ui";
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
+import Link from "next/link";
 
 function LoginForm() {
   const router = useRouter();
@@ -116,12 +117,12 @@ function LoginForm() {
           </form>
 
           <div className="mt-6 text-center">
-            <button
-              type="button"
+            <Link
+              href="/login/reset-password"
               className="text-sm text-brand-primary-600 hover:text-brand-primary-700 hover:underline"
             >
               비밀번호를 잊으셨나요?
-            </button>
+            </Link>
           </div>
         </CardContent>
       </Card>

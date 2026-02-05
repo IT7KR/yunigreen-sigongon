@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Search, Sparkles, Plus, Loader2, X } from "lucide-react";
-import { Button, Badge } from "@sigongon/ui";
+import { Button, Badge, toast } from "@sigongon/ui";
 import { api } from "@/lib/api";
 
 interface RAGSearchResult {
@@ -90,7 +90,7 @@ export function RAGSearchDrawer({
         });
         onClose();
       } catch (err) {
-        alert("항목 추가에 실패했어요");
+        toast.error("항목 추가에 실패했어요");
         console.error(err);
       } finally {
         setAdding(null);

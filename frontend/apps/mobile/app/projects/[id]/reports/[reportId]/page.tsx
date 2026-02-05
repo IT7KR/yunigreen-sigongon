@@ -24,6 +24,7 @@ import {
   formatDate,
 } from "@sigongon/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
+import { buildSampleFileDownloadUrl } from "@/lib/sampleFiles";
 import type { ReportStatus } from "@sigongon/types";
 
 interface Report {
@@ -78,9 +79,24 @@ export default function ReportDetailPage({ params }: ReportDetailPageProps) {
   const handleExportPDF = async () => {
     setExporting(true);
     try {
-      // TODO: 실제 PDF 내보내기 구현
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      alert("PDF 내보내기 기능은 준비 중이에요");
+      const response = await mockApiClient.exportConstructionReportPdf(reportId);
+      if (!response.success || !response.data) {
+        return;
+      }
+
+      const samplePath = response.data.sample_file_path || response.data.pdf_url;
+      const downloadUrl = buildSampleFileDownloadUrl(samplePath);
+      const exportFileName = report?.construction_name || "공사보고서";
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl;
+      anchor.download = `${exportFileName}.pdf`;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch (error) {
+      console.error("보고서 PDF 내보내기 실패:", error);
     } finally {
       setExporting(false);
     }

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 const isDev = process.env.NODE_ENV === "development"
 
-const PUBLIC_ROUTES = ["/login", "/api"]
+const PUBLIC_ROUTES = ["/login", "/api", "/worker"]
 const AUTH_ROUTES = ["/login"]
 
 export function middleware(request: NextRequest) {

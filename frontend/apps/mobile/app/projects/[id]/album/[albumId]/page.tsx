@@ -5,6 +5,7 @@ import { FileDown, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
 import { Button, StatusBadge } from "@sigongon/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
+import { buildSampleFileDownloadUrl } from "@/lib/sampleFiles";
 
 interface AlbumDetailPageProps {
   params: Promise<{ id: string; albumId: string }>;
@@ -37,6 +38,7 @@ export default function AlbumDetailPage({ params }: AlbumDetailPageProps) {
   const { id, albumId } = use(params);
   const [album, setAlbum] = useState<AlbumDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -57,10 +59,29 @@ export default function AlbumDetailPage({ params }: AlbumDetailPageProps) {
     loadAlbum();
   }, [albumId]);
 
-  const handleDownloadPDF = () => {
-    console.log("PDF 다운로드:", albumId);
-    // TODO: Implement PDF download
-    alert("PDF 다운로드 기능은 곧 추가될 예정이에요");
+  const handleDownloadPDF = async () => {
+    try {
+      setIsDownloading(true);
+      const response = await mockApiClient.exportAlbumPdf(albumId);
+      if (!response.success || !response.data) {
+        return;
+      }
+
+      const samplePath = response.data.sample_file_path || response.data.pdf_url;
+      const downloadUrl = buildSampleFileDownloadUrl(samplePath);
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl;
+      anchor.download = `${album?.name || "앨범"}.pdf`;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch (error) {
+      console.error("앨범 PDF 다운로드 실패:", error);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handlePrevPhoto = () => {
@@ -132,6 +153,8 @@ export default function AlbumDetailPage({ params }: AlbumDetailPageProps) {
           variant="primary"
           fullWidth
           onClick={handleDownloadPDF}
+          loading={isDownloading}
+          disabled={isDownloading}
           className="shadow-lg shadow-brand-point-500/20"
         >
           <FileDown className="h-5 w-5" />
