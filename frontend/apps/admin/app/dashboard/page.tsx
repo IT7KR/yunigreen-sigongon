@@ -4,11 +4,9 @@ import Link from "next/link";
 import {
   FolderKanban,
   FileText,
-  TrendingUp,
   Clock,
   CheckCircle2,
   AlertCircle,
-  Loader2,
   Users,
   DollarSign,
   Receipt,
@@ -24,6 +22,11 @@ import {
   formatDate,
   CountUp,
   Skeleton,
+  StatCard,
+  PageHeader,
+  EmptyState,
+  AlertBox,
+  AnimatedPage,
 } from "@sigongon/ui";
 import { useDashboardStats } from "@/hooks";
 import type { ProjectStatus } from "@sigongon/types";
@@ -97,29 +100,22 @@ export default function DashboardPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">대시보드</h1>
-          <p className="mt-1 text-slate-500">오늘의 현황을 확인하세요</p>
-        </div>
+      <AnimatedPage>
+        <div className="space-y-8">
+          <PageHeader title="대시보드" description="오늘의 현황을 확인하세요" />
 
         {isLoading ? (
           <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {statCards.map((stat) => (
-                <Card key={stat.title}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="w-full">
-                        <p className="text-sm text-slate-500">{stat.title}</p>
-                        <Skeleton className="mt-1 h-9 w-16" />
-                      </div>
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-point-100">
-                        <stat.icon className="h-5 w-5 text-brand-point-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <StatCard
+                  key={stat.title}
+                  title={stat.title}
+                  value={0}
+                  icon={stat.icon}
+                  color="brand"
+                  loading
+                />
               ))}
             </div>
             <Card>
@@ -137,33 +133,26 @@ export default function DashboardPage() {
           </>
         ) : error ? (
           <Card>
-            <CardContent className="py-12 text-center">
-              <AlertCircle className="mx-auto h-12 w-12 text-red-400" />
-              <p className="mt-4 text-slate-500">
-                데이터를 불러오는데 실패했어요
-              </p>
+            <CardContent>
+              <EmptyState
+                icon={AlertCircle}
+                title="데이터를 불러오는데 실패했어요"
+                description="잠시 후 다시 시도해주세요"
+                size="lg"
+              />
             </CardContent>
           </Card>
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {statCards.map((stat) => (
-                <Card key={stat.title}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm text-slate-500">{stat.title}</p>
-                        <CountUp
-                          end={parseInt(stat.value) || 0}
-                          className="mt-1 text-3xl font-bold text-slate-900"
-                        />
-                      </div>
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-point-100">
-                        <stat.icon className="h-5 w-5 text-brand-point-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <StatCard
+                  key={stat.title}
+                  title={stat.title}
+                  value={parseInt(stat.value) || 0}
+                  icon={stat.icon}
+                  color="brand"
+                />
               ))}
             </div>
 
@@ -214,9 +203,12 @@ export default function DashboardPage() {
                     </table>
                   </div>
                 ) : (
-                  <div className="py-8 text-center text-slate-500">
-                    프로젝트가 없어요
-                  </div>
+                  <EmptyState
+                    icon={FolderKanban}
+                    title="프로젝트가 없어요"
+                    description="새 프로젝트를 만들어 시작하세요"
+                    size="sm"
+                  />
                 )}
               </CardContent>
             </Card>
@@ -224,48 +216,14 @@ export default function DashboardPage() {
             {/* Finance Stats */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {financeCards.map((card) => (
-                <Card key={card.title}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm text-slate-500">{card.title}</p>
-                        <div className="mt-1 text-2xl font-bold text-slate-900">
-                          {card.suffix ? (
-                            <>
-                              <CountUp end={card.value} />
-                              {card.suffix}
-                            </>
-                          ) : (
-                            <>{(card.value / 10000).toLocaleString()}만원</>
-                          )}
-                        </div>
-                      </div>
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                          card.color === "green"
-                            ? "bg-green-100"
-                            : card.color === "blue"
-                              ? "bg-blue-100"
-                              : card.color === "amber"
-                                ? "bg-amber-100"
-                                : "bg-purple-100"
-                        }`}
-                      >
-                        <card.icon
-                          className={`h-5 w-5 ${
-                            card.color === "green"
-                              ? "text-green-600"
-                              : card.color === "blue"
-                                ? "text-blue-600"
-                                : card.color === "amber"
-                                  ? "text-amber-600"
-                                  : "text-purple-600"
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <StatCard
+                  key={card.title}
+                  title={card.title}
+                  value={card.suffix ? card.value : Math.round(card.value / 10000)}
+                  icon={card.icon}
+                  color={card.color as "green" | "blue" | "amber" | "purple"}
+                  suffix={card.suffix || "만원"}
+                />
               ))}
             </div>
 
@@ -298,9 +256,11 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="py-8 text-center text-slate-500">
-                    최근 작업일지가 없어요
-                  </div>
+                  <EmptyState
+                    icon={ClipboardList}
+                    title="최근 작업일지가 없어요"
+                    size="sm"
+                  />
                 )}
               </CardContent>
             </Card>
@@ -315,48 +275,25 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="space-y-3">
                   {stats.inProgress > 0 && (
-                    <div className="flex items-center justify-between rounded-lg bg-blue-50 p-3">
-                      <span className="text-sm text-blue-800">
-                        {stats.inProgress}개 프로젝트가 진행 중이에요
-                      </span>
-                      <Link
-                        href="/projects?status=in_progress"
-                        className="text-sm font-medium text-blue-700 hover:underline"
-                      >
-                        확인하기
-                      </Link>
-                    </div>
+                    <AlertBox variant="info" action={{ label: "확인하기", href: "/projects?status=in_progress" }}>
+                      {stats.inProgress}개 프로젝트가 진행 중이에요
+                    </AlertBox>
                   )}
                   {mockExtendedStats.receivables > 0 && (
-                    <div className="flex items-center justify-between rounded-lg bg-red-50 p-3">
-                      <span className="text-sm text-red-800">
-                        미수금 {(mockExtendedStats.receivables / 10000).toLocaleString()}만원
-                      </span>
-                      <Link
-                        href="/billing"
-                        className="text-sm font-medium text-red-700 hover:underline"
-                      >
-                        확인하기
-                      </Link>
-                    </div>
+                    <AlertBox variant="error" action={{ label: "확인하기", href: "/billing" }}>
+                      미수금 {(mockExtendedStats.receivables / 10000).toLocaleString()}만원
+                    </AlertBox>
                   )}
-                  <div className="flex items-center justify-between rounded-lg bg-amber-50 p-3">
-                    <span className="text-sm text-amber-800">
-                      적산 자료 갱신이 필요할 수 있어요
-                    </span>
-                    <Link
-                      href="/pricebooks"
-                      className="text-sm font-medium text-amber-700 hover:underline"
-                    >
-                      확인하기
-                    </Link>
-                  </div>
+                  <AlertBox variant="warning" action={{ label: "확인하기", href: "/pricebooks" }}>
+                    적산 자료 갱신이 필요할 수 있어요
+                  </AlertBox>
                 </div>
               </CardContent>
             </Card>
           </>
         )}
-      </div>
+        </div>
+      </AnimatedPage>
     </AdminLayout>
   );
 }
