@@ -25,11 +25,9 @@ interface BillingOverview {
   billing_amount: number;
   seats_used: number;
   seats_total: number;
-  payment_method: null | {
-    brand: string;
-    last4: string;
-    expires: string;
-  };
+  /** 변경 예약된 플랜 (현재 구독 종료 후 적용) */
+  scheduled_plan?: string | null;
+  scheduled_plan_date?: string | null;
   history: Array<{
     id: string;
     date: string;
@@ -48,7 +46,8 @@ const initialOverview: BillingOverview = {
   billing_amount: 0,
   seats_used: 0,
   seats_total: 0,
-  payment_method: null,
+  scheduled_plan: null,
+  scheduled_plan_date: null,
   history: [],
 };
 
@@ -170,9 +169,24 @@ export default function BillingPage() {
                   )}
                 </div>
 
+                {overview.scheduled_plan && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-sm font-medium text-amber-800">
+                      플랜 변경 예약됨
+                    </p>
+                    <p className="mt-1 text-sm text-amber-700">
+                      현재 구독 종료 후 <strong>{overview.scheduled_plan}</strong> 플랜으로 변경됩니다.
+                      {overview.scheduled_plan_date && (
+                        <span> (적용일: {overview.scheduled_plan_date.slice(0, 10)})</span>
+                      )}
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <Button onClick={() => setShowPlanSelector(true)}>
-                    <RefreshCw className="h-4 w-4" />플랜 변경
+                    <RefreshCw className="h-4 w-4" />
+                    {overview.scheduled_plan ? "예약 변경" : "플랜 변경"}
                   </Button>
                 </div>
               </CardContent>
@@ -187,6 +201,8 @@ export default function BillingPage() {
                   <PlanSelector
                     currentPlan={overview.plan}
                     onSelectPlan={handlePlanSelect}
+                    scheduledPlan={overview.scheduled_plan}
+                    reservationMode={!!overview.plan && overview.plan !== "무료 체험"}
                   />
                 </CardContent>
               </Card>
