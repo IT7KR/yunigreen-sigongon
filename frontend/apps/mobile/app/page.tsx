@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FolderKanban, Camera, Sparkles, FileText } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Card, CardContent, Button, CountUp, Skeleton } from "@sigongon/ui";
+import { Card, CardContent, Button, CountUp, Skeleton, EmptyState, AnimatedPage } from "@sigongon/ui";
 import { useProjects } from "@/hooks";
 
 export default function HomePage() {
+  const router = useRouter();
   const { data, isLoading } = useProjects({ per_page: 5 });
 
   const recentProjects = data?.data || [];
@@ -19,7 +21,8 @@ export default function HomePage() {
 
   return (
     <MobileLayout>
-      <div className="space-y-6 p-4">
+      <AnimatedPage>
+        <div className="space-y-6 p-4">
         {/* 환영 메시지 */}
         <div className="pt-4">
           <h1 className="text-2xl font-bold text-slate-900">안녕하세요!</h1>
@@ -127,21 +130,23 @@ export default function HomePage() {
             </div>
           ) : (
             <Card>
-              <CardContent className="p-8 text-center">
-                <FolderKanban className="mx-auto h-8 w-8 text-slate-300" />
-                <p className="mt-2 text-sm text-slate-500">
-                  아직 프로젝트가 없어요
-                </p>
-                <Link href="/projects/new">
-                  <Button variant="ghost" size="sm" className="mt-2">
-                    새 프로젝트 만들기
-                  </Button>
-                </Link>
+              <CardContent>
+                <EmptyState
+                  icon={FolderKanban}
+                  title="아직 프로젝트가 없어요"
+                  description="새 프로젝트를 만들어 시작하세요"
+                  action={{
+                    label: "새 프로젝트 만들기",
+                    onClick: () => router.push("/projects/new"),
+                  }}
+                  size="sm"
+                />
               </CardContent>
             </Card>
           )}
         </div>
       </div>
+      </AnimatedPage>
     </MobileLayout>
   );
 }
