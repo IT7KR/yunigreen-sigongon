@@ -28,6 +28,15 @@ export { FileUpload, type FileUploadProps } from "./components/FileUpload"
 export { SignaturePad, type SignaturePadProps } from "./components/SignaturePad"
 export { Timeline, type TimelineProps } from "./components/Timeline"
 export { Calendar, type CalendarProps } from "./components/Calendar"
+export { EmptyState, type EmptyStateProps } from "./components/EmptyState"
+export { Select, type SelectProps } from "./components/Select"
+export { AlertBox, type AlertBoxProps } from "./components/AlertBox"
+export { StatCard, type StatCardProps } from "./components/StatCard"
+export { PageHeader, type PageHeaderProps } from "./components/PageHeader"
+export { LoadingOverlay, type LoadingOverlayProps } from "./components/LoadingOverlay"
+export { ConfirmModal, type ConfirmModalProps } from "./components/ConfirmModal"
+export { AnimatedPage, type AnimatedPageProps } from "./components/AnimatedPage"
+export { AnimatedCard, type AnimatedCardProps } from "./components/AnimatedCard"
 
 // Table
 export {
@@ -54,5 +63,10 @@ export {
   staggerContainer,
   staggerItem,
   reducedMotion,
+  pageEnter,
+  cardHover,
+  gridStagger,
+  gridItem,
+  buttonTap,
   ANIMATION_LIST_THRESHOLD
 } from "./lib/motion"
