@@ -60,14 +60,14 @@ export default function VisitsPage({
 
   function handleAddVisit() {
     window.open(
-      `http://localhost:3134/projects/${projectId}/visits/new`,
+      `http://localhost:3034/projects/${projectId}/visits/new`,
       "_blank",
     );
   }
 
   function handleViewVisit(visitId: string) {
     window.open(
-      `http://localhost:3134/projects/${projectId}/visits/${visitId}`,
+      `http://localhost:3034/projects/${projectId}/visits/${visitId}`,
       "_blank",
     );
   }
@@ -113,8 +113,7 @@ export default function VisitsPage({
                 현장 방문을 추가하고 사진을 촬영해 보세요.
               </p>
               <Button className="mt-6" onClick={handleAddVisit}>
-                <Plus className="h-4 w-4" />
-                첫 방문 추가하기
+                <Plus className="h-4 w-4" />첫 방문 추가하기
               </Button>
             </div>
           ) : (
@@ -206,9 +205,7 @@ export default function VisitsPage({
               <div className="rounded-lg border border-slate-200 p-4">
                 <p className="text-sm text-slate-500">최근 방문</p>
                 <p className="mt-2 text-sm font-medium text-slate-900">
-                  {visits.length > 0
-                    ? formatDate(visits[0].visited_at)
-                    : "-"}
+                  {visits.length > 0 ? formatDate(visits[0].visited_at) : "-"}
                 </p>
               </div>
             </div>
