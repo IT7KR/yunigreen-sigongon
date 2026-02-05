@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Filter, MoreHorizontal, Loader2, X } from "lucide-react";
+import { Plus, Search, MoreHorizontal, X, FolderKanban, AlertCircle, Loader2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import {
   Card,
@@ -19,6 +19,11 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  Select,
+  PageHeader,
+  EmptyState,
+  LoadingOverlay,
+  AnimatedPage,
 } from "@sigongon/ui";
 import { useProjects } from "@/hooks";
 import { api } from "@/lib/api";
@@ -72,16 +77,17 @@ export default function ProjectsPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">프로젝트</h1>
-            <p className="mt-1 text-slate-500">전체 {total}개 프로젝트</p>
-          </div>
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-4 w-4" />새 프로젝트
-          </Button>
-        </div>
+      <AnimatedPage>
+        <div className="space-y-6">
+          <PageHeader
+            title="프로젝트"
+            description={`전체 ${total}개 프로젝트`}
+            actions={
+              <Button onClick={() => setShowCreateModal(true)}>
+                <Plus className="h-4 w-4" />새 프로젝트
+              </Button>
+            }
+          />
 
         <Card>
           <CardContent className="p-4">
@@ -96,36 +102,28 @@ export default function ProjectsPage() {
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-4 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 />
               </div>
-              <select
+              <Select
                 value={categoryFilter}
-                onChange={(e) =>
-                  setCategoryFilter(e.target.value as ProjectCategory | "")
-                }
-                className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
-              >
-                <option value="">모든 카테고리</option>
-                {PROJECT_CATEGORIES.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
-              <select
+                onChange={(value) => setCategoryFilter(value as ProjectCategory | "")}
+                options={[
+                  { value: "", label: "모든 카테고리" },
+                  ...PROJECT_CATEGORIES.map((cat) => ({ value: cat.id, label: cat.label })),
+                ]}
+              />
+              <Select
                 value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as ProjectStatus | "")
-                }
-                className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
-              >
-                <option value="">모든 상태</option>
-                <option value="draft">초안</option>
-                <option value="diagnosing">진단중</option>
-                <option value="estimating">견적중</option>
-                <option value="quoted">견적발송</option>
-                <option value="contracted">계약완료</option>
-                <option value="in_progress">공사중</option>
-                <option value="completed">준공</option>
-              </select>
+                onChange={(value) => setStatusFilter(value as ProjectStatus | "")}
+                options={[
+                  { value: "", label: "모든 상태" },
+                  { value: "draft", label: "초안" },
+                  { value: "diagnosing", label: "진단중" },
+                  { value: "estimating", label: "견적중" },
+                  { value: "quoted", label: "견적발송" },
+                  { value: "contracted", label: "계약완료" },
+                  { value: "in_progress", label: "공사중" },
+                  { value: "completed", label: "준공" },
+                ]}
+              />
             </div>
           </CardContent>
         </Card>
@@ -133,17 +131,23 @@ export default function ProjectsPage() {
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-              </div>
+              <LoadingOverlay variant="inline" />
             ) : error ? (
-              <div className="py-12 text-center text-slate-500">
-                데이터를 불러오는데 실패했어요
-              </div>
+              <EmptyState
+                icon={AlertCircle}
+                title="데이터를 불러오는데 실패했어요"
+                description="잠시 후 다시 시도해주세요"
+              />
             ) : projects.length === 0 ? (
-              <div className="py-12 text-center text-slate-500">
-                프로젝트가 없어요
-              </div>
+              <EmptyState
+                icon={FolderKanban}
+                title="프로젝트가 없어요"
+                description="새 프로젝트를 만들어 시작하세요"
+                action={{
+                  label: "새 프로젝트",
+                  onClick: () => setShowCreateModal(true),
+                }}
+              />
             ) : (
               <Table>
                 <TableHeader>
@@ -206,7 +210,8 @@ export default function ProjectsPage() {
             )}
           </CardContent>
         </Card>
-      </div>
+        </div>
+      </AnimatedPage>
 
       <Modal
         isOpen={showCreateModal}
