@@ -811,7 +811,8 @@ export interface DailyWorker {
   visa_status?: string          // 비자유형 (외국인 근로자)
   nationality_code?: string     // 국적코드
   english_name?: string         // 영문이름 (외국인)
-  ssn: string                   // 주민번호 (마스킹: 앞6자리-뒤1자리******)
+  birth_date: string            // 생년월일 (YYMMDD 형식)
+  gender: 1 | 2 | 3 | 4         // 성별코드 (1:내국남, 2:내국여, 3:외국남, 4:외국여)
   address: string               // 주소
   daily_rate: number            // 일당
   account_number: string        // 계좌번호
@@ -819,6 +820,13 @@ export interface DailyWorker {
   phone: string                 // 연락처
   is_foreign: boolean           // 외국인 여부
   organization_id: string       // 소속 조직 ID
+  /** 근로자 가입 상태 */
+  registration_status?: "invited" | "pending_consent" | "pending_docs" | "registered"
+  /** 초대 토큰 (가입 전) */
+  invite_token?: string
+  /** 필수 서류 업로드 여부 */
+  has_id_card?: boolean
+  has_safety_cert?: boolean
 }
 
 /** 일별 근무 기록 */
