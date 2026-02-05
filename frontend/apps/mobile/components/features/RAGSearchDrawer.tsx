@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Sparkles, Plus, Loader2, X } from "lucide-react";
-import { Button, Badge, toast } from "@sigongon/ui";
+import { Search, Sparkles, Plus, Loader2, X, AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { Button, Badge, toast, cn } from "@sigongon/ui";
 import { api } from "@/lib/api";
 
 interface RAGSearchResult {
@@ -172,54 +172,90 @@ export function RAGSearchDrawer({
 
           {!loading && !error && results.length > 0 && (
             <div className="space-y-3">
-              {results.map((result) => (
-                <div
-                  key={result.id}
-                  className="rounded-lg border border-slate-200 p-4"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="font-medium text-slate-900">
-                        {result.description}
-                      </p>
-                      {result.specification && (
-                        <p className="mt-1 text-sm text-slate-500">
-                          {result.specification}
-                        </p>
-                      )}
-                    </div>
-                    <Badge
-                      variant={
-                        result.confidence >= 0.9
-                          ? "success"
-                          : result.confidence >= 0.7
-                            ? "info"
-                            : "default"
-                      }
-                      className="shrink-0"
-                    >
-                      {Math.round(result.confidence * 100)}%
-                    </Badge>
-                  </div>
-                  <div className="mt-2 flex items-center gap-3 text-sm text-slate-500">
-                    <span>단위: {result.unit}</span>
-                    <span className="text-slate-900 font-semibold">
-                      {result.unit_price.toLocaleString()}원
-                    </span>
-                  </div>
-                  <Button
-                    size="sm"
-                    fullWidth
-                    className="mt-3"
-                    onClick={() => handleAddItem(result)}
-                    loading={adding === result.id}
-                    disabled={adding !== null}
+              {results.map((result) => {
+                const isHighConfidence = result.confidence >= 0.9;
+                const isMediumConfidence = result.confidence >= 0.7 && result.confidence < 0.9;
+                const isLowConfidence = result.confidence < 0.7;
+
+                return (
+                  <div
+                    key={result.id}
+                    className={cn(
+                      "rounded-lg border p-4 transition-all",
+                      isHighConfidence && "bg-green-50 border-green-200",
+                      isMediumConfidence && "bg-amber-50 border-amber-200",
+                      isLowConfidence && "bg-red-50 border-red-300 ring-1 ring-red-200"
+                    )}
                   >
-                    <Plus className="mr-1 h-4 w-4" />
-                    추가
-                  </Button>
-                </div>
-              ))}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-900">
+                          {result.description}
+                        </p>
+                        {result.specification && (
+                          <p className="mt-1 text-sm text-slate-500">
+                            {result.specification}
+                          </p>
+                        )}
+                      </div>
+                      <Badge
+                        variant={
+                          isHighConfidence
+                            ? "success"
+                            : isMediumConfidence
+                              ? "warning"
+                              : "error"
+                        }
+                        className="shrink-0 flex items-center gap-1"
+                      >
+                        {isHighConfidence && <CheckCircle2 className="h-3 w-3" />}
+                        {isMediumConfidence && <Info className="h-3 w-3" />}
+                        {isLowConfidence && <AlertTriangle className="h-3 w-3" />}
+                        {Math.round(result.confidence * 100)}%
+                      </Badge>
+                    </div>
+                    <div className="mt-2 flex items-center gap-3 text-sm text-slate-500">
+                      <span>단위: {result.unit}</span>
+                      <span className="text-slate-900 font-semibold">
+                        {result.unit_price.toLocaleString()}원
+                      </span>
+                    </div>
+
+                    {/* Confidence guidance message */}
+                    {isHighConfidence && (
+                      <div className="mt-2 flex items-center gap-1 text-xs text-green-700">
+                        <CheckCircle2 className="h-3 w-3" />
+                        정확도 높음
+                      </div>
+                    )}
+                    {isMediumConfidence && (
+                      <div className="mt-2 flex items-center gap-1 text-xs text-amber-700">
+                        <Info className="h-3 w-3" />
+                        확인 권장
+                      </div>
+                    )}
+                    {isLowConfidence && (
+                      <div className="mt-2 flex items-center gap-1 text-xs text-red-700">
+                        <AlertTriangle className="h-3 w-3" />
+                        수동 검증 필수
+                      </div>
+                    )}
+
+                    <Button
+                      size="sm"
+                      fullWidth
+                      className="mt-3"
+                      variant={isLowConfidence ? "secondary" : "primary"}
+                      onClick={() => handleAddItem(result)}
+                      loading={adding === result.id}
+                      disabled={adding !== null}
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      {isLowConfidence ? "확인 후 추가" : "추가"}
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

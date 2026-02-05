@@ -218,7 +218,7 @@ export class MockAPIClient {
   > = {};
   private passwordResetRequests: Record<
     string,
-    { phone: string; code: string; expires_at: number }
+    { login_id: string; phone: string; code: string; expires_at: number }
   > = {};
   private passwordResetVerifications: Record<string, { phone: string }> = {};
 
@@ -1455,13 +1455,27 @@ export class MockAPIClient {
     return delay(ok({ worker_id: target.worker_id }));
   }
 
-  async requestPasswordResetOtp(phone: string) {
+  async requestPasswordResetOtp(loginId: string, phone: string) {
+    const normalizedLoginId = loginId.trim().toLowerCase();
     const normalized = phone.replace(/\D/g, "");
-    if (normalized.length < 10) {
+    if (!normalizedLoginId || normalized.length < 10) {
       return delay(
         fail<{ request_id: string; expires_in_sec: number }>(
-          "INVALID_PHONE",
-          "휴대폰 번호를 확인해 주세요",
+          "INVALID_INPUT",
+          "아이디와 휴대폰 번호를 확인해 주세요",
+        ),
+      );
+    }
+
+    const matchedUser = this.getUsers().find((user) => {
+      const userPhone = (user.phone || "").replace(/\D/g, "");
+      return user.email.toLowerCase() === normalizedLoginId && userPhone === normalized;
+    });
+    if (!matchedUser) {
+      return delay(
+        fail<{ request_id: string; expires_in_sec: number }>(
+          "USER_NOT_FOUND",
+          "아이디와 휴대폰 번호가 일치하지 않아요",
         ),
       );
     }
@@ -1469,6 +1483,7 @@ export class MockAPIClient {
     const requestId = `pwreq_${randomId("r")}`;
     const mockCode = "123456";
     this.passwordResetRequests[requestId] = {
+      login_id: normalizedLoginId,
       phone: normalized,
       code: mockCode,
       expires_at: Date.now() + 1000 * 60 * 3,
@@ -1478,6 +1493,7 @@ export class MockAPIClient {
       ok({
         request_id: requestId,
         expires_in_sec: 180,
+        channel: "alimtalk",
         mock_otp: mockCode,
       }),
     );

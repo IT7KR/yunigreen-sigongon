@@ -11,10 +11,18 @@ type PasswordResetStep = "request" | "verify" | "reset" | "done";
 
 type PasswordResetApi = {
   requestPasswordResetOtp: (
+    loginId: string,
     phone: string,
   ) => Promise<{
     success: boolean;
-    data: { request_id: string; expires_in_sec: number; mock_otp?: string } | null;
+    data:
+      | {
+          request_id: string;
+          expires_in_sec: number;
+          channel?: "alimtalk";
+          mock_otp?: string;
+        }
+      | null;
     error: { code: string; message: string } | null;
   }>;
   verifyPasswordResetOtp: (
@@ -40,6 +48,7 @@ const passwordResetApi = api as unknown as PasswordResetApi;
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [step, setStep] = useState<PasswordResetStep>("request");
+  const [loginId, setLoginId] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
@@ -54,9 +63,9 @@ export default function ResetPasswordPage() {
     setError(null);
     setIsSubmitting(true);
     try {
-      const response = await passwordResetApi.requestPasswordResetOtp(phone);
+      const response = await passwordResetApi.requestPasswordResetOtp(loginId, phone);
       if (!response.success || !response.data) {
-        setError(response.error?.message || "인증번호 요청에 실패했어요");
+        setError(response.error?.message || "알림톡 발송 요청에 실패했어요");
         return;
       }
 
@@ -64,7 +73,7 @@ export default function ResetPasswordPage() {
       setMockOtp(response.data.mock_otp || null);
       setStep("verify");
     } catch {
-      setError("인증번호 요청 중 오류가 발생했어요");
+      setError("알림톡 발송 요청 중 오류가 발생했어요");
     } finally {
       setIsSubmitting(false);
     }
@@ -130,7 +139,7 @@ export default function ResetPasswordPage() {
           <div className="space-y-1 text-center">
             <h1 className="text-xl font-bold text-slate-900">비밀번호 재설정</h1>
             <p className="text-sm text-slate-500">
-              휴대폰 OTP 인증으로 비밀번호를 재설정합니다.
+              아이디와 휴대폰 번호를 확인하고 알림톡 인증으로 재설정합니다.
             </p>
           </div>
 
@@ -143,6 +152,14 @@ export default function ResetPasswordPage() {
           {step === "request" && (
             <div className="space-y-4">
               <Input
+                type="email"
+                label="아이디(이메일)"
+                placeholder="name@company.com"
+                value={loginId}
+                onChange={(event) => setLoginId(event.target.value)}
+                required
+              />
+              <Input
                 type="tel"
                 label="휴대폰 번호"
                 placeholder="010-0000-0000"
@@ -154,10 +171,10 @@ export default function ResetPasswordPage() {
                 fullWidth
                 onClick={handleRequestOtp}
                 loading={isSubmitting}
-                disabled={isSubmitting || !phone.trim()}
+                disabled={isSubmitting || !loginId.trim() || !phone.trim()}
               >
                 <Smartphone className="h-4 w-4" />
-                인증번호 받기
+                알림톡 인증번호 받기
               </Button>
             </div>
           )}
@@ -165,7 +182,7 @@ export default function ResetPasswordPage() {
           {step === "verify" && (
             <div className="space-y-4">
               <Input
-                label="인증번호"
+                label="알림톡 인증번호"
                 placeholder="6자리 숫자"
                 value={code}
                 onChange={(event) => setCode(event.target.value)}
@@ -174,7 +191,8 @@ export default function ResetPasswordPage() {
               />
               {mockOtp && (
                 <p className="text-xs text-brand-point-700">
-                  목업 테스트 인증번호: <span className="font-semibold">{mockOtp}</span>
+                  목업 테스트 알림톡 인증번호:{" "}
+                  <span className="font-semibold">{mockOtp}</span>
                 </p>
               )}
               <Button
@@ -192,7 +210,7 @@ export default function ResetPasswordPage() {
                 onClick={handleRequestOtp}
                 disabled={isSubmitting}
               >
-                인증번호 재전송
+                알림톡 재전송
               </Button>
             </div>
           )}
