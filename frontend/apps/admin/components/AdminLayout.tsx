@@ -44,7 +44,6 @@ const navItems = [
       { href: "/labor", label: "대시보드", icon: BarChart3 },
       { href: "/labor/payroll", label: "급여/근무 관리", icon: Calculator },
       { href: "/labor/workers", label: "근로자 주소록", icon: UserCheck },
-      { href: "/labor/settings", label: "요율 설정", icon: Settings },
     ],
   },
   { href: "/users", icon: Users, label: "사용자" },
@@ -112,11 +111,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 transform bg-white shadow-lg transition-transform lg:translate-x-0 lg:shadow-none",
+          "fixed inset-y-0 left-0 z-50 flex w-64 transform flex-col bg-white shadow-lg transition-transform lg:translate-x-0 lg:shadow-none",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
           <Link href="/dashboard" className="flex items-center gap-2">
             <Image
               src="/logo-sq.png"
@@ -136,7 +135,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </button>
         </div>
 
-        <nav className="flex flex-col gap-1 p-4">
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
           {navItems.map((item) => {
             const hasChildren = "children" in item && item.children && item.children.length > 0;
             const isActive =
@@ -245,7 +244,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           )}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 p-4">
+        <div className="shrink-0 border-t border-slate-200 p-4">
           <Link
             href="/mypage"
             onClick={() => setSidebarOpen(false)}

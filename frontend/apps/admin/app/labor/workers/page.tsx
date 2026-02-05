@@ -58,7 +58,8 @@ export default function DailyWorkersPage() {
     job_type_code: "",
     team: "",
     hire_date: "",
-    ssn: "",
+    birth_date: "",
+    gender: "" as "" | "1" | "2" | "3" | "4",
     address: "",
     daily_rate: "",
     bank_name: "",
@@ -111,7 +112,8 @@ export default function DailyWorkersPage() {
       job_type_code: "",
       team: "",
       hire_date: "",
-      ssn: "",
+      birth_date: "",
+      gender: "",
       address: "",
       daily_rate: "",
       bank_name: "",
@@ -129,8 +131,12 @@ export default function DailyWorkersPage() {
       toast.error("성명을 입력하세요.");
       return;
     }
-    if (!formData.ssn.trim()) {
-      toast.error("주민번호를 입력하세요.");
+    if (!formData.birth_date || formData.birth_date.length !== 6) {
+      toast.error("생년월일을 6자리로 입력하세요.");
+      return;
+    }
+    if (!formData.gender) {
+      toast.error("성별을 선택하세요.");
       return;
     }
     if (!formData.daily_rate || Number(formData.daily_rate) <= 0) {
@@ -143,6 +149,7 @@ export default function DailyWorkersPage() {
       const payload = {
         ...formData,
         daily_rate: Number(formData.daily_rate),
+        gender: Number(formData.gender) as 1 | 2 | 3 | 4,
         organization_id: "org_1", // Hardcoded for mock
       };
 
@@ -168,7 +175,8 @@ export default function DailyWorkersPage() {
       job_type_code: worker.job_type_code,
       team: worker.team,
       hire_date: worker.hire_date,
-      ssn: worker.ssn,
+      birth_date: worker.birth_date,
+      gender: String(worker.gender) as "" | "1" | "2" | "3" | "4",
       address: worker.address,
       daily_rate: String(worker.daily_rate),
       bank_name: worker.bank_name,
@@ -189,8 +197,12 @@ export default function DailyWorkersPage() {
       toast.error("성명을 입력하세요.");
       return;
     }
-    if (!formData.ssn.trim()) {
-      toast.error("주민번호를 입력하세요.");
+    if (!formData.birth_date || formData.birth_date.length !== 6) {
+      toast.error("생년월일을 6자리로 입력하세요.");
+      return;
+    }
+    if (!formData.gender) {
+      toast.error("성별을 선택하세요.");
       return;
     }
     if (!formData.daily_rate || Number(formData.daily_rate) <= 0) {
@@ -203,6 +215,7 @@ export default function DailyWorkersPage() {
       const payload = {
         ...formData,
         daily_rate: Number(formData.daily_rate),
+        gender: Number(formData.gender) as 1 | 2 | 3 | 4,
       };
 
       const response = await api.updateDailyWorker(editingWorker.id, payload);
@@ -244,9 +257,9 @@ export default function DailyWorkersPage() {
     }
   };
 
-  const maskSSN = (ssn: string) => {
-    if (ssn.length < 8) return ssn;
-    return `${ssn.slice(0, 6)}-${ssn[6]}******`;
+  const formatMaskedSSN = (birthDate: string, gender: 1 | 2 | 3 | 4) => {
+    if (!birthDate || birthDate.length < 6) return "-";
+    return `${birthDate.slice(0, 6)}-${gender}******`;
   };
 
   const formatCurrency = (amount: number) => {
@@ -321,7 +334,7 @@ export default function DailyWorkersPage() {
                         <td className="px-4 py-4">
                           <p className="font-medium text-slate-900">{worker.name}</p>
                           <p className="text-xs text-slate-500">
-                            {maskSSN(worker.ssn)}
+                            {formatMaskedSSN(worker.birth_date, worker.gender)}
                           </p>
                         </td>
                         <td className="px-4 py-4 text-slate-600">
@@ -437,18 +450,42 @@ export default function DailyWorkersPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <Input
+              label="생년월일 (6자리) *"
+              placeholder="예: 900101"
+              value={formData.birth_date}
+              onChange={(e) =>
+                setFormData({ ...formData, birth_date: e.target.value.replace(/\D/g, "").slice(0, 6) })
+              }
+              maxLength={6}
+            />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                성별 *
+              </label>
+              <select
+                value={formData.gender}
+                onChange={(e) =>
+                  setFormData({ ...formData, gender: e.target.value as "" | "1" | "2" | "3" | "4" })
+                }
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              >
+                <option value="">선택하세요</option>
+                <option value="1">남성 (내국인)</option>
+                <option value="2">여성 (내국인)</option>
+                <option value="3">남성 (외국인)</option>
+                <option value="4">여성 (외국인)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Input
               label="입사일"
               type="date"
               value={formData.hire_date}
               onChange={(e) =>
                 setFormData({ ...formData, hire_date: e.target.value })
               }
-            />
-            <Input
-              label="주민번호 *"
-              placeholder="000000-0000000"
-              value={formData.ssn}
-              onChange={(e) => setFormData({ ...formData, ssn: e.target.value })}
             />
           </div>
 
@@ -627,18 +664,42 @@ export default function DailyWorkersPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <Input
+              label="생년월일 (6자리) *"
+              placeholder="예: 900101"
+              value={formData.birth_date}
+              onChange={(e) =>
+                setFormData({ ...formData, birth_date: e.target.value.replace(/\D/g, "").slice(0, 6) })
+              }
+              maxLength={6}
+            />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                성별 *
+              </label>
+              <select
+                value={formData.gender}
+                onChange={(e) =>
+                  setFormData({ ...formData, gender: e.target.value as "" | "1" | "2" | "3" | "4" })
+                }
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              >
+                <option value="">선택하세요</option>
+                <option value="1">남성 (내국인)</option>
+                <option value="2">여성 (내국인)</option>
+                <option value="3">남성 (외국인)</option>
+                <option value="4">여성 (외국인)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Input
               label="입사일"
               type="date"
               value={formData.hire_date}
               onChange={(e) =>
                 setFormData({ ...formData, hire_date: e.target.value })
               }
-            />
-            <Input
-              label="주민번호 *"
-              placeholder="000000-0000000"
-              value={formData.ssn}
-              onChange={(e) => setFormData({ ...formData, ssn: e.target.value })}
             />
           </div>
 

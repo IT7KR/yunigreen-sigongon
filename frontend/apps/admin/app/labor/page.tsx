@@ -11,11 +11,12 @@ import {
   Modal,
   toast,
 } from "@sigongon/ui";
-import { Plus, Download, UserPlus, Mail, Loader2, Check, Eye, Send, X, Calculator, UserCheck, Settings, ArrowRight } from "lucide-react";
+import { Plus, Download, UserPlus, Mail, Loader2, Check, Eye, Send, X, Calculator, UserCheck, Settings, ArrowRight, MessageSquare, Copy } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
+import { sendWorkerInvite } from "@/lib/aligo";
 
 export default function LaborPage() {
   const [summary, setSummary] = useState({
@@ -41,13 +42,14 @@ export default function LaborPage() {
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [isBatching, setIsBatching] = useState(false);
 
-  // Worker registration modal state
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  // Worker invitation modal state
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [workerName, setWorkerName] = useState("");
   const [workerPhone, setWorkerPhone] = useState("");
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [registerErrors, setRegisterErrors] = useState<Record<string, string>>({});
-  const [registerSuccess, setRegisterSuccess] = useState<{ message: string; isNew: boolean } | null>(null);
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
+  const [inviteSuccess, setInviteSuccess] = useState<{ inviteUrl: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,7 +73,7 @@ export default function LaborPage() {
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
   };
 
-  const handleRegisterWorker = async () => {
+  const handleInviteWorker = async () => {
     const errors: Record<string, string> = {};
 
     if (!workerName.trim()) {
@@ -84,54 +86,58 @@ export default function LaborPage() {
     }
 
     if (Object.keys(errors).length > 0) {
-      setRegisterErrors(errors);
+      setInviteErrors(errors);
       return;
     }
 
-    setIsRegistering(true);
-    setRegisterErrors({});
-    setRegisterSuccess(null);
+    setIsInviting(true);
+    setInviteErrors({});
+    setInviteSuccess(null);
 
     try {
-      const res = await api.registerWorker({
-        name: workerName.trim(),
+      // Generate invite token (mock)
+      const token = `WI${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
+      const inviteUrl = `${window.location.origin}/onboarding/worker/consent?token=${token}`;
+
+      // Send AlimTalk
+      const result = await sendWorkerInvite({
         phone: workerPhone,
+        name: workerName.trim(),
+        companyName: "(주)유니그린", // TODO: Get from current organization
+        inviteUrl,
       });
 
-      if (res.success && res.data) {
-        setRegisterSuccess({
-          message: res.data.message,
-          isNew: res.data.is_new,
-        });
-
-        // Refresh worker list
-        const response = await api.getLaborOverview();
-        if (response.success && response.data) {
-          setSummary(response.data.summary);
-          setWorkers(response.data.workers);
-        }
-
-        // Reset form after 2 seconds
-        setTimeout(() => {
-          setShowRegisterModal(false);
-          setWorkerName("");
-          setWorkerPhone("");
-          setRegisterSuccess(null);
-        }, 2000);
+      if (result.success) {
+        setInviteSuccess({ inviteUrl });
+        toast.success(`${workerName}님에게 알림톡을 발송했습니다`);
+      } else {
+        setInviteErrors({ submit: result.error_message || "알림톡 발송에 실패했습니다" });
       }
     } catch {
-      setRegisterErrors({ submit: "근로자 등록에 실패했습니다" });
+      setInviteErrors({ submit: "초대에 실패했습니다" });
     }
 
-    setIsRegistering(false);
+    setIsInviting(false);
   };
 
-  const closeModal = () => {
-    setShowRegisterModal(false);
+  const handleCopyInviteLink = async () => {
+    if (!inviteSuccess?.inviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(inviteSuccess.inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("복사에 실패했습니다");
+    }
+  };
+
+  const closeInviteModal = () => {
+    setShowInviteModal(false);
     setWorkerName("");
     setWorkerPhone("");
-    setRegisterErrors({});
-    setRegisterSuccess(null);
+    setInviteErrors({});
+    setInviteSuccess(null);
+    setCopied(false);
   };
 
   const handleBatchSend = async () => {
@@ -175,9 +181,9 @@ export default function LaborPage() {
                 신고 엑셀 다운로드
               </Button>
             </Link>
-            <Button onClick={() => setShowRegisterModal(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              근로자 등록
+            <Button onClick={() => setShowInviteModal(true)}>
+              <MessageSquare className="mr-2 h-4 w-4" />
+              근로자 초대
             </Button>
           </div>
         </div>
@@ -393,52 +399,101 @@ export default function LaborPage() {
         </div>
       </Modal>
 
-      {/* Worker Registration Modal */}
+      {/* Worker Invitation Modal */}
       <Modal
-        isOpen={showRegisterModal}
-        onClose={closeModal}
-        title="근로자 등록"
+        isOpen={showInviteModal}
+        onClose={closeInviteModal}
+        title="근로자 초대"
       >
-        {registerSuccess ? (
-          <div className="py-8 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-              <Check className="h-6 w-6 text-green-600" />
+        {inviteSuccess ? (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-green-50 p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100">
+                  <MessageSquare className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-green-800">
+                    {workerName}님에게 알림톡을 발송했습니다
+                  </p>
+                  <p className="mt-1 text-sm text-green-700">
+                    근로자가 링크를 클릭하여 직접 가입을 완료합니다.
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="text-sm text-slate-600">{registerSuccess.message}</p>
-            {registerSuccess.isNew && (
-              <p className="mt-2 text-xs text-slate-500">
-                필수 서류(신분증, 통장사본 등)를 근로자에게 요청해주세요.
-              </p>
-            )}
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="mb-2 text-xs font-medium text-slate-500">초대 링크</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 break-all rounded bg-white px-2 py-1.5 text-xs text-slate-700">
+                  {inviteSuccess.inviteUrl}
+                </code>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCopyInviteLink}
+                  className="shrink-0"
+                >
+                  {copied ? (
+                    <><Check className="h-4 w-4 text-green-500" />복사됨</>
+                  ) : (
+                    <><Copy className="h-4 w-4" />복사</>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              * 초대 링크는 7일 후 만료됩니다.
+            </p>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setInviteSuccess(null);
+                  setWorkerName("");
+                  setWorkerPhone("");
+                }}
+                fullWidth
+              >
+                다른 근로자 초대
+              </Button>
+              <Button onClick={closeInviteModal} fullWidth>
+                완료
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-slate-600">
-              근로자 정보를 입력하면 자동으로 회원가입이 진행됩니다.
+              근로자에게 알림톡으로 가입 링크를 보냅니다.
               <br />
-              임시 비밀번호는 전화번호 뒤 4자리입니다.
+              근로자가 직접 개인정보 동의 및 서류 업로드를 진행합니다.
             </p>
             <Input
               label="이름"
               placeholder="홍길동"
               value={workerName}
               onChange={(e) => setWorkerName(e.target.value)}
-              error={registerErrors.name}
+              error={inviteErrors.name}
             />
             <Input
               label="휴대폰 번호"
               placeholder="010-0000-0000"
               value={workerPhone}
               onChange={(e) => setWorkerPhone(handlePhoneFormat(e.target.value))}
-              error={registerErrors.phone}
+              error={inviteErrors.phone}
             />
-            {registerErrors.submit && (
-              <p className="text-sm text-red-600">{registerErrors.submit}</p>
+            {inviteErrors.submit && (
+              <p className="text-sm text-red-600">{inviteErrors.submit}</p>
             )}
             <div className="flex gap-3 pt-2">
-              <Button variant="secondary" onClick={closeModal} fullWidth disabled={isRegistering}><X className="h-4 w-4" />취소</Button>
-              <Button onClick={handleRegisterWorker} fullWidth disabled={isRegistering}>
-                {isRegistering ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4" />등록</>}
+              <Button variant="secondary" onClick={closeInviteModal} fullWidth disabled={isInviting}><X className="h-4 w-4" />취소</Button>
+              <Button onClick={handleInviteWorker} fullWidth disabled={isInviting}>
+                {isInviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><MessageSquare className="h-4 w-4" />알림톡 보내기</>}
               </Button>
             </div>
           </div>
