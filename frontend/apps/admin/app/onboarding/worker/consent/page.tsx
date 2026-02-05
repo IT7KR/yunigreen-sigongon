@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, Button } from "@sigongon/ui";
-import { CheckCircle2, ChevronDown, ChevronUp, ArrowRight, Shield } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp, ArrowRight, Shield, Loader2 } from "lucide-react";
 
 /**
  * 개인정보 처리방침 동의 페이지
@@ -12,6 +12,20 @@ import { CheckCircle2, ChevronDown, ChevronUp, ArrowRight, Shield } from "lucide
  * 알림톡 링크 → 동의 → 서류 업로드 → 정보 입력 → 가입 완료
  */
 export default function WorkerConsentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-50">
+          <Loader2 className="h-8 w-8 animate-spin text-brand-point-600" />
+        </div>
+      }
+    >
+      <WorkerConsentContent />
+    </Suspense>
+  );
+}
+
+function WorkerConsentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
