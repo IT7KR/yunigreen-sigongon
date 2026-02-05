@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useRef, useState, type ChangeEvent } from "react";
 import {
   FileText,
   FileSpreadsheet,
@@ -15,7 +15,7 @@ import {
   AlertCircle,
   FolderOpen,
 } from "lucide-react";
-import { Card, CardContent, Button, Badge } from "@sigongon/ui";
+import { Card, CardContent, Button, Badge, toast } from "@sigongon/ui";
 import type {
   DocumentPhase,
   DocumentGenerationType,
@@ -24,6 +24,10 @@ import type {
   ProjectDocumentItem,
   ProjectDocumentPhaseGroup,
 } from "@sigongon/types";
+import {
+  buildSampleFileDownloadUrl,
+  getSamplePathForDocument,
+} from "@/lib/sampleFiles";
 
 // ─── Phase config ───────────────────────────────────────────────────────────
 
@@ -76,6 +80,15 @@ const FORMAT_CLASS: Record<DocumentFileFormat, string> = {
   docx: "bg-indigo-50 text-indigo-700",
 };
 
+type DocumentAction = "generate" | "download" | "upload" | "external";
+
+function resolveFileExtension(format: DocumentFileFormat): string {
+  if (format === "hwp_pdf") {
+    return "pdf";
+  }
+  return format;
+}
+
 // ─── Mock data ──────────────────────────────────────────────────────────────
 
 function doc(
@@ -94,6 +107,7 @@ function doc(
 ): ProjectDocumentItem {
   const isComplete =
     status === "generated" || status === "uploaded" || status === "submitted";
+  const sampleFilePath = getSamplePathForDocument(id);
   return {
     id,
     phase,
@@ -104,7 +118,7 @@ function doc(
     is_conditional: opts?.is_conditional ?? false,
     condition_description: opts?.condition_description,
     status,
-    file_path: isComplete ? `/files/${id}.${format}` : opts?.file_path,
+    file_path: isComplete ? sampleFilePath ?? opts?.file_path : opts?.file_path,
     file_size: isComplete ? 102400 : undefined,
     generated_at: isComplete ? "2026-01-20T10:00:00Z" : undefined,
   };
@@ -206,15 +220,18 @@ export default function DocumentsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const [documentPhases, setDocumentPhases] = useState<ProjectDocumentPhaseGroup[]>(
+    MOCK_DOCUMENT_PHASES,
+  );
   const [expandedPhases, setExpandedPhases] = useState<Set<DocumentPhase>>(
-    () => new Set(MOCK_DOCUMENT_PHASES.map((g) => g.phase)),
+    () => new Set(documentPhases.map((g) => g.phase)),
   );
+  const [pendingUploadDoc, setPendingUploadDoc] =
+    useState<ProjectDocumentItem | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
-  const totalDocs = MOCK_DOCUMENT_PHASES.reduce(
-    (sum, g) => sum + g.total_count,
-    0,
-  );
-  const completedDocs = MOCK_DOCUMENT_PHASES.reduce(
+  const totalDocs = documentPhases.reduce((sum, g) => sum + g.total_count, 0);
+  const completedDocs = documentPhases.reduce(
     (sum, g) => sum + g.completed_count,
     0,
   );
@@ -233,8 +250,110 @@ export default function DocumentsPage({
     });
   }
 
-  function handleAction(actionLabel: string, docName: string) {
-    alert(`[${actionLabel}] ${docName}\n프로젝트 ID: ${id}`);
+  function updateDocument(
+    documentId: string,
+    updater: (doc: ProjectDocumentItem) => ProjectDocumentItem,
+  ) {
+    setDocumentPhases((prev) =>
+      prev.map((group) => {
+        const hasTarget = group.documents.some((docItem) => docItem.id === documentId);
+        if (!hasTarget) {
+          return group;
+        }
+        const nextDocuments = group.documents.map((docItem) =>
+          docItem.id === documentId ? updater(docItem) : docItem,
+        );
+        return makePhaseGroup(group.phase, nextDocuments);
+      }),
+    );
+  }
+
+  function triggerDownload(url: string, fileName?: string) {
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    if (fileName) {
+      anchor.download = fileName;
+    }
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+
+  function handleDownload(docItem: ProjectDocumentItem) {
+    if (!docItem.file_path) {
+      toast.error("다운로드할 파일이 없어요.");
+      return;
+    }
+    const extension = resolveFileExtension(docItem.format);
+    const fileName = `${docItem.name}.${extension}`;
+    const downloadUrl = docItem.file_path.startsWith("blob:")
+      ? docItem.file_path
+      : buildSampleFileDownloadUrl(docItem.file_path);
+    triggerDownload(downloadUrl, fileName);
+  }
+
+  function handleAction(action: DocumentAction, docItem: ProjectDocumentItem) {
+    if (action === "download") {
+      handleDownload(docItem);
+      return;
+    }
+
+    if (action === "generate") {
+      const samplePath = getSamplePathForDocument(docItem.id);
+      const generatedAt = new Date().toISOString();
+      updateDocument(docItem.id, (current) => ({
+        ...current,
+        status: "generated",
+        file_path: samplePath ?? current.file_path,
+        file_size: current.file_size ?? 102400,
+        generated_at: generatedAt,
+      }));
+      toast.success(`${docItem.name} 문서를 생성했어요.`);
+      if (samplePath) {
+        handleDownload({
+          ...docItem,
+          status: "generated",
+          file_path: samplePath,
+          generated_at: generatedAt,
+          file_size: docItem.file_size ?? 102400,
+        });
+      }
+      return;
+    }
+
+    if (action === "upload") {
+      setPendingUploadDoc(docItem);
+      uploadInputRef.current?.click();
+      return;
+    }
+
+    if (action === "external") {
+      window.open("https://www.modusign.com", "_blank", "noopener,noreferrer");
+      toast.success("외부 전자서명 페이지를 열었어요.");
+    }
+  }
+
+  function handleUploadInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.target.files?.[0];
+    const targetDoc = pendingUploadDoc;
+    setPendingUploadDoc(null);
+    event.target.value = "";
+
+    if (!targetDoc || !selectedFile) {
+      return;
+    }
+
+    const samplePath = getSamplePathForDocument(targetDoc.id);
+    updateDocument(targetDoc.id, (current) => ({
+      ...current,
+      status: "uploaded",
+      file_path: samplePath ?? current.file_path,
+      file_size: selectedFile.size,
+      generated_at: new Date().toISOString(),
+    }));
+    toast.success(`${targetDoc.name} 업로드를 완료했어요.`);
   }
 
   return (
@@ -269,7 +388,7 @@ export default function DocumentsPage({
 
       {/* Phase Sections */}
       <div className="space-y-4">
-        {MOCK_DOCUMENT_PHASES.map((group) => {
+        {documentPhases.map((group) => {
           const config = PHASE_CONFIG[group.phase];
           const Icon = config.icon;
           const isExpanded = expandedPhases.has(group.phase);
@@ -338,6 +457,14 @@ export default function DocumentsPage({
           );
         })}
       </div>
+
+      <input
+        ref={uploadInputRef}
+        type="file"
+        className="hidden"
+        accept=".pdf,.xlsx,.xls,.xlsm,.docx,.hwp"
+        onChange={handleUploadInputChange}
+      />
     </div>
   );
 }
@@ -349,7 +476,7 @@ function DocumentRow({
   onAction,
 }: {
   doc: ProjectDocumentItem;
-  onAction: (action: string, name: string) => void;
+  onAction: (action: DocumentAction, doc: ProjectDocumentItem) => void;
 }) {
   const statusCfg = STATUS_CONFIG[d.status];
   const hasFile = !!d.file_path;
@@ -424,7 +551,7 @@ function ActionButtons({
   doc: ProjectDocumentItem;
   hasFile: boolean;
   isComplete: boolean;
-  onAction: (action: string, name: string) => void;
+  onAction: (action: DocumentAction, doc: ProjectDocumentItem) => void;
 }) {
   const genType = d.generation_type;
 
@@ -435,7 +562,7 @@ function ActionButtons({
           size="sm"
           variant="secondary"
           disabled={isComplete}
-          onClick={() => onAction("생성", d.name)}
+          onClick={() => onAction("generate", d)}
           className="text-xs"
         >
           <Wand2 className="mr-1 h-3.5 w-3.5" />
@@ -445,7 +572,7 @@ function ActionButtons({
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => onAction("다운로드", d.name)}
+            onClick={() => onAction("download", d)}
             className="text-xs"
           >
             <Download className="mr-1 h-3.5 w-3.5" />
@@ -462,7 +589,7 @@ function ActionButtons({
         <Button
           size="sm"
           variant="secondary"
-          onClick={() => onAction("업로드", d.name)}
+          onClick={() => onAction("upload", d)}
           className="text-xs"
         >
           <Upload className="mr-1 h-3.5 w-3.5" />
@@ -472,7 +599,7 @@ function ActionButtons({
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => onAction("다운로드", d.name)}
+            onClick={() => onAction("download", d)}
             className="text-xs"
           >
             <Download className="mr-1 h-3.5 w-3.5" />
@@ -489,7 +616,7 @@ function ActionButtons({
         <Button
           size="sm"
           variant="secondary"
-          onClick={() => onAction("외부 연동", d.name)}
+          onClick={() => onAction("external", d)}
           className="text-xs"
         >
           <ExternalLink className="mr-1 h-3.5 w-3.5" />
@@ -499,7 +626,7 @@ function ActionButtons({
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => onAction("다운로드", d.name)}
+            onClick={() => onAction("download", d)}
             className="text-xs"
           >
             <Download className="mr-1 h-3.5 w-3.5" />

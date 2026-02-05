@@ -18,10 +18,12 @@ import {
   Button,
   Input,
   Badge,
+  toast,
 } from "@sigongon/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
 import { PhotoAlbumGrid } from "@/components/PhotoAlbumGrid";
 import { PhotoSelector } from "@/components/PhotoSelector";
+import { buildSampleFileDownloadUrl } from "@/lib/sampleFiles";
 
 interface AlbumPhoto {
   id: string;
@@ -115,10 +117,23 @@ export default function AlbumDetailPage({
       setExporting(true);
       const response = await mockApiClient.exportAlbumPdf(albumId);
       if (response.success && response.data) {
-        alert(`PDF 다운로드: ${response.data.pdf_url}`);
+        const samplePath =
+          response.data.sample_file_path || response.data.pdf_url;
+        const downloadUrl = buildSampleFileDownloadUrl(samplePath);
+        const albumName = album?.name || name || "사진첩";
+        const anchor = document.createElement("a");
+        anchor.href = downloadUrl;
+        anchor.download = `${albumName}.pdf`;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        document.body.append(anchor);
+        anchor.click();
+        anchor.remove();
+        toast.success("PDF 다운로드를 시작했어요.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("PDF 다운로드에 실패했어요.");
     } finally {
       setExporting(false);
     }

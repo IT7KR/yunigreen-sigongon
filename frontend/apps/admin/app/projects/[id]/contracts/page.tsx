@@ -26,6 +26,12 @@ import {
 import type { ContractStatus, ContractDetail } from "@sigongon/types";
 import { api } from "@/lib/api";
 import { ModusignModal } from "@/components/ModusignModal";
+import {
+  buildSampleFileDownloadUrl,
+  PROJECT_MOCK_EXPORT_SAMPLE_FILES,
+} from "@/lib/sampleFiles";
+
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 const contractStatusColors: Record<ContractStatus, string> = {
   draft: "bg-gray-100 text-gray-700",
@@ -132,6 +138,20 @@ export default function ContractsPage({
   }
 
   function handleDownloadPDF(contractId: string) {
+    if (USE_MOCKS) {
+      const downloadUrl = buildSampleFileDownloadUrl(
+        PROJECT_MOCK_EXPORT_SAMPLE_FILES.contractPdf,
+      );
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl;
+      anchor.download = `계약서_${contractId}.pdf`;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      return;
+    }
     window.open(`/api/v1/contracts/${contractId}/pdf`, "_blank");
   }
 

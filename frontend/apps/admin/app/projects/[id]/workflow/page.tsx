@@ -10,6 +10,7 @@ import {
   FileText,
   FileSpreadsheet,
   Info,
+  Download,
 } from "lucide-react";
 import {
   Card,
@@ -20,6 +21,7 @@ import {
   cn,
 } from "@sigongon/ui";
 import { useProject } from "@/hooks";
+import { buildSampleFileDownloadUrl, buildSamplePath } from "@/lib/sampleFiles";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -572,12 +574,30 @@ function DocumentList({ documents }: { documents: SampleDocument[] }) {
             </p>
           )}
           <ul className="mt-1.5 space-y-1">
-            {doc.files.map((file) => (
-              <li key={file} className="flex items-center gap-1.5">
-                <FileIcon fileName={file} />
-                <span className="text-xs text-slate-500">{file}</span>
-              </li>
-            ))}
+            {doc.files.map((file) => {
+              const sampleFilePath = buildSamplePath(doc.samplePath, file);
+              return (
+                <li
+                  key={file}
+                  className="flex items-center justify-between gap-2 rounded px-1 py-0.5 hover:bg-slate-100/80"
+                >
+                  <div className="min-w-0 flex items-center gap-1.5">
+                    <FileIcon fileName={file} />
+                    <span className="truncate text-xs text-slate-500">{file}</span>
+                  </div>
+                  {sampleFilePath && (
+                    <a
+                      href={buildSampleFileDownloadUrl(sampleFilePath)}
+                      download
+                      className="inline-flex shrink-0 items-center gap-1 rounded border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                    >
+                      <Download className="h-3 w-3" />
+                      다운로드
+                    </a>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       ))}
