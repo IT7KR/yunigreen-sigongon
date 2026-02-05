@@ -46,7 +46,9 @@ export default function ForgotPasswordPage() {
         setMaskedPhone(res.data.masked_phone);
         setStep("verify");
       } else {
-        setErrors({ username: res.error?.message || "등록된 사용자를 찾을 수 없어요" });
+        setErrors({
+          username: res.error?.message || "등록된 사용자를 찾을 수 없어요",
+        });
       }
     } catch {
       setErrors({ username: "등록된 사용자를 찾을 수 없어요" });
@@ -98,7 +100,11 @@ export default function ForgotPasswordPage() {
     setErrors({});
 
     try {
-      const res = await api.confirmPasswordReset(otpRequestId, verificationCode, newPassword);
+      const res = await api.confirmPasswordReset(
+        otpRequestId,
+        verificationCode,
+        newPassword,
+      );
       if (res.success) {
         setStep("complete");
       } else {
@@ -140,7 +146,9 @@ export default function ForgotPasswordPage() {
           {step === "username" && (
             <div className="space-y-4">
               <div className="text-center">
-                <h1 className="text-xl font-bold text-slate-900">비밀번호 찾기</h1>
+                <h1 className="text-xl font-bold text-slate-900">
+                  비밀번호 찾기
+                </h1>
                 <p className="mt-2 text-sm text-slate-600">
                   가입 시 등록한 아이디를 입력하시면
                   <br />
@@ -183,9 +191,13 @@ export default function ForgotPasswordPage() {
           {step === "verify" && (
             <div className="space-y-4">
               <div className="text-center">
-                <h1 className="text-xl font-bold text-slate-900">인증번호 확인</h1>
+                <h1 className="text-xl font-bold text-slate-900">
+                  인증번호 확인
+                </h1>
                 <p className="mt-2 text-sm text-slate-600">
-                  <span className="font-medium text-slate-900">{maskedPhone}</span>
+                  <span className="font-medium text-slate-900">
+                    {maskedPhone}
+                  </span>
                   <br />
                   으로 발송된 6자리 인증번호를 입력하세요.
                 </p>
@@ -241,7 +253,9 @@ export default function ForgotPasswordPage() {
           {step === "reset" && (
             <div className="space-y-4">
               <div className="text-center">
-                <h1 className="text-xl font-bold text-slate-900">새 비밀번호 설정</h1>
+                <h1 className="text-xl font-bold text-slate-900">
+                  새 비밀번호 설정
+                </h1>
                 <p className="mt-2 text-sm text-slate-600">
                   새로운 비밀번호를 입력해주세요.
                 </p>
