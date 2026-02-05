@@ -27,6 +27,7 @@ import type {
 } from "@sigongon/types";
 import { mockDb, type Project, type User, type Tenant, type Invitation, type InvitationStatus, type NotificationPrefs, type ActivityLog } from "./db";
 import { buildWorkerEntry } from "@/lib/labor/calculations";
+import { PROJECT_MOCK_EXPORT_SAMPLE_FILES } from "@/lib/sampleFiles";
 
 const DELAY = 200;
 
@@ -3363,8 +3364,14 @@ export class MockAPIClient {
       return delay(fail<any>("NOT_FOUND", "앨범을 찾을 수 없어요"));
     }
 
-    const pdf_url = `mock://pdf/${albumId}.pdf`;
-    return delay(ok({ pdf_url, message: "PDF를 생성했어요" }));
+    const sample_file_path = PROJECT_MOCK_EXPORT_SAMPLE_FILES.albumPdf;
+    return delay(
+      ok({
+        pdf_url: sample_file_path,
+        sample_file_path,
+        message: "PDF를 생성했어요",
+      }),
+    );
   }
 
   // ========== Invitation APIs ==========
