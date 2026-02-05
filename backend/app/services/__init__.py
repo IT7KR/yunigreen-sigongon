@@ -1,9 +1,26 @@
-from app.services.diagnosis import DiagnosisService
-from app.services.estimation import EstimationService
-from app.services.rag import RAGService
-
 __all__ = [
     "DiagnosisService",
     "EstimationService",
+    "HwpxTemplateEngine",
     "RAGService",
 ]
+
+
+def __getattr__(name: str):
+    if name == "DiagnosisService":
+        from app.services.diagnosis import DiagnosisService
+
+        return DiagnosisService
+    if name == "EstimationService":
+        from app.services.estimation import EstimationService
+
+        return EstimationService
+    if name == "HwpxTemplateEngine":
+        from app.services.hwpx_template_engine import HwpxTemplateEngine
+
+        return HwpxTemplateEngine
+    if name == "RAGService":
+        from app.services.rag import RAGService
+
+        return RAGService
+    raise AttributeError(f"module 'app.services' has no attribute '{name}'")
