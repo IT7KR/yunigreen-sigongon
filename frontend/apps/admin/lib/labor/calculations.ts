@@ -11,10 +11,49 @@ import type { LaborInsuranceRates, DailyWorker, SitePayrollWorkerEntry, DailyWor
 // ============================================
 
 /**
- * 주민번호로 만 나이 계산
- * 7번째 자리: 1,2 = 1900년대 / 3,4 = 2000년대
+ * 생년월일과 성별코드로 만 나이 계산
+ *
+ * @param birthDate - 생년월일 (YYMMDD 형식)
+ * @param gender - 성별코드 (1:내국남-1900년대, 2:내국여-1900년대, 3:외국남-2000년대, 4:외국여-2000년대)
+ * @param referenceDate - 기준일 (기본: 오늘)
  */
-export function calculateAge(ssn: string, referenceDate: Date = new Date()): number {
+export function calculateAge(
+  birthDate: string,
+  gender: 1 | 2 | 3 | 4,
+  referenceDate: Date = new Date()
+): number {
+  if (!birthDate || birthDate.length < 6) return 0;
+
+  const twoDigitYear = parseInt(birthDate.slice(0, 2), 10);
+  let birthYear: number;
+
+  // 성별코드로 세기 판별: 1,2 = 1900년대 / 3,4 = 2000년대
+  if (gender === 1 || gender === 2) {
+    birthYear = 1900 + twoDigitYear;
+  } else {
+    birthYear = 2000 + twoDigitYear;
+  }
+
+  const birthMonth = parseInt(birthDate.slice(2, 4), 10);
+  const birthDay = parseInt(birthDate.slice(4, 6), 10);
+
+  const refYear = referenceDate.getFullYear();
+  const refMonth = referenceDate.getMonth() + 1;
+  const refDay = referenceDate.getDate();
+
+  let age = refYear - birthYear;
+  if (refMonth < birthMonth || (refMonth === birthMonth && refDay < birthDay)) {
+    age--;
+  }
+
+  return age;
+}
+
+/**
+ * (하위 호환용) 주민번호로 만 나이 계산
+ * @deprecated Use calculateAge(birthDate, gender) instead
+ */
+export function calculateAgeFromSSN(ssn: string, referenceDate: Date = new Date()): number {
   const cleaned = ssn.replace(/-/g, "");
   if (cleaned.length < 7) return 0;
 
@@ -142,7 +181,7 @@ export interface DeductionResult {
  * - 고용보험 = 일당 × 0.9% × 일수
  */
 export function calculateWorkerDeductions(
-  worker: Pick<DailyWorker, "daily_rate" | "ssn" | "is_foreign" | "visa_status">,
+  worker: Pick<DailyWorker, "daily_rate" | "birth_date" | "gender" | "is_foreign" | "visa_status">,
   totalManDays: number,
   totalWorkDays: number,
   rates: LaborInsuranceRates,
@@ -150,7 +189,7 @@ export function calculateWorkerDeductions(
 ): DeductionResult {
   const dailyRate = worker.daily_rate;
   const totalLaborCost = dailyRate * totalManDays;
-  const age = calculateAge(worker.ssn, referenceDate);
+  const age = calculateAge(worker.birth_date, worker.gender, referenceDate);
 
   // === 갑근세 (소득세) ===
   // (일당 - 소득공제금액) × 속산세율 → 10원 미만 절사 → × 일수
@@ -247,7 +286,7 @@ export function buildWorkerEntry(
     referenceDate,
   );
 
-  const ssnMasked = maskSSN(worker.ssn);
+  const ssnMasked = formatMaskedSSN(worker.birth_date, worker.gender);
 
   return {
     worker_id: worker.id,
@@ -265,7 +304,20 @@ export function buildWorkerEntry(
 }
 
 /**
- * 주민번호 마스킹 (앞6자리-뒤1자리******)
+ * 생년월일과 성별로 마스킹된 주민번호 형식 생성
+ * 출력 형식: YYMMDD-G****** (예: 900101-1******)
+ *
+ * @param birthDate - 생년월일 (YYMMDD)
+ * @param gender - 성별코드 (1,2,3,4)
+ */
+export function formatMaskedSSN(birthDate: string, gender: 1 | 2 | 3 | 4): string {
+  if (!birthDate || birthDate.length < 6) return "";
+  return `${birthDate.slice(0, 6)}-${gender}******`;
+}
+
+/**
+ * (하위 호환용) 주민번호 마스킹 (앞6자리-뒤1자리******)
+ * @deprecated Use formatMaskedSSN(birthDate, gender) instead
  */
 export function maskSSN(ssn: string): string {
   const cleaned = ssn.replace(/-/g, "");
