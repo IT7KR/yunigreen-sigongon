@@ -23,6 +23,7 @@ export default function ProjectDetailLayout({
   const tabs = [
     { name: "개요", href: `/projects/${id}`, exact: true },
     { name: "현장방문", href: `/projects/${id}/visits` },
+    { name: "AI 진단", href: `/projects/${id}/diagnoses` },
     { name: "견적", href: `/projects/${id}/estimates` },
     { name: "계약", href: `/projects/${id}/contracts` },
     // { name: "서류", href: `/projects/${id}/documents` },

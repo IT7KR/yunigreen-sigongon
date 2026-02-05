@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Sparkles, Plus, Loader2, X } from "lucide-react";
-import { Button, Card } from "@sigongon/ui";
+import { Search, Sparkles, Plus, Loader2, X, AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { Button, Card, cn } from "@sigongon/ui";
 import { api } from "@/lib/api";
 
 interface RAGSearchResult {
@@ -154,54 +154,91 @@ export function RAGSearchPanel({
 
           {!loading && !error && results.length > 0 && (
             <div className="space-y-3">
-              {results.map((result) => (
-                <Card key={result.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <p className="font-medium text-slate-900">
-                          {result.description}
-                        </p>
-                        <span
-                          className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                            result.confidence >= 0.9
-                              ? "bg-green-100 text-green-700"
-                              : result.confidence >= 0.7
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          {Math.round(result.confidence * 100)}%
-                        </span>
-                      </div>
-                      {result.specification && (
-                        <p className="mt-1 text-sm text-slate-500">
-                          {result.specification}
-                        </p>
-                      )}
-                      <div className="mt-2 flex items-center gap-4 text-sm">
-                        <span className="text-slate-500">
-                          단위: <span className="font-medium">{result.unit}</span>
-                        </span>
-                        <span className="text-slate-900">
-                          단가:{" "}
-                          <span className="font-semibold">
-                            {result.unit_price.toLocaleString()}원
+              {results.map((result) => {
+                const isHighConfidence = result.confidence >= 0.9;
+                const isMediumConfidence = result.confidence >= 0.7 && result.confidence < 0.9;
+                const isLowConfidence = result.confidence < 0.7;
+
+                return (
+                  <Card
+                    key={result.id}
+                    className={cn(
+                      "p-4 transition-all",
+                      isHighConfidence && "bg-green-50 border-green-200",
+                      isMediumConfidence && "bg-amber-50 border-amber-200",
+                      isLowConfidence && "bg-red-50 border-red-300 ring-1 ring-red-200"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between">
+                          <p className="font-medium text-slate-900">
+                            {result.description}
+                          </p>
+                          <span
+                            className={cn(
+                              "ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                              isHighConfidence && "bg-green-200 text-green-800",
+                              isMediumConfidence && "bg-amber-200 text-amber-800",
+                              isLowConfidence && "bg-red-200 text-red-800"
+                            )}
+                          >
+                            {isHighConfidence && <CheckCircle2 className="h-3 w-3" />}
+                            {isMediumConfidence && <Info className="h-3 w-3" />}
+                            {isLowConfidence && <AlertTriangle className="h-3 w-3" />}
+                            {Math.round(result.confidence * 100)}%
                           </span>
-                        </span>
+                        </div>
+                        {result.specification && (
+                          <p className="mt-1 text-sm text-slate-500">
+                            {result.specification}
+                          </p>
+                        )}
+                        <div className="mt-2 flex items-center gap-4 text-sm">
+                          <span className="text-slate-500">
+                            단위: <span className="font-medium">{result.unit}</span>
+                          </span>
+                          <span className="text-slate-900">
+                            단가:{" "}
+                            <span className="font-semibold">
+                              {result.unit_price.toLocaleString()}원
+                            </span>
+                          </span>
+                        </div>
+
+                        {/* Confidence guidance message */}
+                        {isHighConfidence && (
+                          <div className="mt-2 flex items-center gap-1 text-xs text-green-700">
+                            <CheckCircle2 className="h-3 w-3" />
+                            정확도 높음 - 바로 추가해도 좋아요
+                          </div>
+                        )}
+                        {isMediumConfidence && (
+                          <div className="mt-2 flex items-center gap-1 text-xs text-amber-700">
+                            <Info className="h-3 w-3" />
+                            확인 권장 - 규격과 단가를 확인해 주세요
+                          </div>
+                        )}
+                        {isLowConfidence && (
+                          <div className="mt-2 flex items-center gap-1 text-xs text-red-700">
+                            <AlertTriangle className="h-3 w-3" />
+                            수동 검증 필수 - 정확한 자재인지 확인이 필요해요
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="mt-3 w-full"
-                    onClick={() => handleAddItem(result)}
-                  >
-                    <Plus className="mr-1 h-4 w-4" />
-                    추가
-                  </Button>
-                </Card>
-              ))}
+                    <Button
+                      size="sm"
+                      className="mt-3 w-full"
+                      variant={isLowConfidence ? "secondary" : "primary"}
+                      onClick={() => handleAddItem(result)}
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      {isLowConfidence ? "확인 후 추가" : "추가"}
+                    </Button>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>

@@ -11,6 +11,7 @@ import {
   Plus,
   Loader2,
   Eye,
+  Sparkles,
 } from "lucide-react";
 import {
   Card,
@@ -21,8 +22,11 @@ import {
   StatusBadge,
   formatDate,
 } from "@sigongon/ui";
-import type { ProjectStatus, VisitType, EstimateStatus } from "@sigongon/types";
+import type { ProjectStatus, VisitType, EstimateStatus, ContractStatus } from "@sigongon/types";
 import { api } from "@/lib/api";
+import { ProjectWorkflowTimeline } from "@/components/ProjectWorkflowTimeline";
+
+const MOBILE_APP_URL = process.env.NEXT_PUBLIC_MOBILE_APP_URL || "http://localhost:3034";
 
 interface ProjectDetail {
   id: string;
@@ -46,6 +50,11 @@ interface ProjectDetail {
     total_amount: string;
     created_at?: string;
   }>;
+  contracts?: Array<{
+    id: string;
+    status: ContractStatus;
+  }>;
+  diagnoses_count?: number;
 }
 
 const visitTypeLabels: Record<VisitType, string> = {
@@ -120,8 +129,38 @@ export default function ProjectDetailPage({
     );
   }
 
+  // Calculate workflow stats
+  const visitCount = project.site_visits?.length || 0;
+  const diagnosisCount = project.diagnoses_count || 0;
+  const hasEstimate = project.estimates?.length > 0;
+  const latestEstimate = project.estimates?.[0];
+  const hasContract = (project.contracts?.length || 0) > 0;
+  const latestContract = project.contracts?.[0];
+
   return (
     <div className="space-y-6">
+      {/* Workflow Timeline */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-brand-point-500" />
+            프로젝트 진행 현황
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <ProjectWorkflowTimeline
+            projectId={id}
+            visitCount={visitCount}
+            diagnosisCount={diagnosisCount}
+            hasEstimate={hasEstimate}
+            estimateStatus={latestEstimate?.status}
+            hasContract={hasContract}
+            contractStatus={latestContract?.status}
+            projectStatus={project.status}
+          />
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
@@ -176,7 +215,7 @@ export default function ProjectDetailPage({
               variant="secondary"
               onClick={() =>
                 window.open(
-                  `http://localhost:3134/projects/${id}/visits/new`,
+                  `${MOBILE_APP_URL}/projects/${id}/visits/new`,
                   "_blank",
                 )
               }
@@ -222,22 +261,40 @@ export default function ProjectDetailPage({
               <ClipboardCheck className="h-5 w-5 text-slate-400" />
               AI 진단
             </CardTitle>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() =>
-                window.open(`http://localhost:3134/projects/${id}`, "_blank")
-              }
-              title="Mobile 앱에서 진단 요청"
-            >
-              <Plus className="h-4 w-4" />
-              진단 요청
-            </Button>
+            <Link href={`/projects/${id}/diagnoses`}>
+              <Button size="sm" variant="secondary">
+                <Eye className="h-4 w-4" />
+                진단 목록
+              </Button>
+            </Link>
           </CardHeader>
           <CardContent>
-            <p className="py-8 text-center text-slate-500">
-              진단 정보는 현장 방문에서 확인할 수 있습니다.
-            </p>
+            {diagnosisCount > 0 ? (
+              <div className="space-y-2">
+                <p className="text-slate-600">
+                  총 <span className="font-semibold text-brand-point-600">{diagnosisCount}건</span>의 진단이 완료되었습니다.
+                </p>
+                <Link href={`/projects/${id}/diagnoses`}>
+                  <Button size="sm" variant="ghost">
+                    상세보기 →
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="py-4 text-center">
+                <p className="text-slate-500 mb-3">
+                  현장 방문 후 AI 진단을 요청할 수 있습니다.
+                </p>
+                {visitCount > 0 && (
+                  <Link href={`/projects/${id}/visits`}>
+                    <Button size="sm" variant="secondary">
+                      <Sparkles className="h-4 w-4" />
+                      방문에서 진단 요청
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

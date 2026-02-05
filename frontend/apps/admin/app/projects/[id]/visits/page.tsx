@@ -2,7 +2,8 @@
 
 import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Plus, Loader2, MapPin, FileText } from "lucide-react";
+import Link from "next/link";
+import { Camera, Plus, Loader2, MapPin, FileText, ExternalLink } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -14,6 +15,8 @@ import {
 } from "@sigongon/ui";
 import type { SiteVisitDetail, VisitType } from "@sigongon/types";
 import { api } from "@/lib/api";
+
+const MOBILE_APP_URL = process.env.NEXT_PUBLIC_MOBILE_APP_URL || "http://localhost:3034";
 
 const visitTypeLabels: Record<VisitType, string> = {
   initial: "최초 방문",
@@ -59,15 +62,22 @@ export default function VisitsPage({
   }
 
   function handleAddVisit() {
+    // 사진 촬영은 모바일 앱에서만 가능하므로 모바일 앱으로 이동
     window.open(
-      `http://localhost:3034/projects/${projectId}/visits/new`,
+      `${MOBILE_APP_URL}/projects/${projectId}/visits/new`,
       "_blank",
     );
   }
 
   function handleViewVisit(visitId: string) {
+    // Admin 앱 내에서 방문 상세 페이지로 이동
+    router.push(`/projects/${projectId}/visits/${visitId}`);
+  }
+
+  function handleViewVisitInMobile(visitId: string) {
+    // 모바일 앱에서 방문 보기 (사진 추가 등)
     window.open(
-      `http://localhost:3034/projects/${projectId}/visits/${visitId}`,
+      `${MOBILE_APP_URL}/projects/${projectId}/visits/${visitId}`,
       "_blank",
     );
   }
@@ -163,13 +173,23 @@ export default function VisitsPage({
                         )}
                       </td>
                       <td className="py-4">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleViewVisit(visit.id)}
-                        >
-                          상세보기
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleViewVisit(visit.id)}
+                          >
+                            상세보기
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleViewVisitInMobile(visit.id)}
+                            title="모바일 앱에서 열기"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -1090,6 +1090,23 @@ export class MockAPIClient {
     return delay(ok(this.diagnosesById[diagnosisId]));
   }
 
+  async getSiteVisit(visitId: string) {
+    const visit = this.visitById[visitId];
+    if (!visit) {
+      return delay(
+        fail<SiteVisitDetail>("NOT_FOUND", "방문 기록을 찾을 수 없어요"),
+      );
+    }
+    return delay(ok(visit));
+  }
+
+  async getDiagnoses(projectId: string) {
+    const diagnoses = Object.values(this.diagnosesById).filter(
+      (diagnosis) => diagnosis.project_id === projectId,
+    );
+    return delay(ok(diagnoses));
+  }
+
   async createEstimate(projectId: string, diagnosisId?: string) {
     const estimateId = randomId("e");
     const estimateIds = this.projectEstimateIds[projectId] || [];

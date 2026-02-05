@@ -269,3 +269,60 @@ export function useDeleteEstimateLine(estimateId: string) {
     },
   });
 }
+
+export function useSiteVisits(projectId: string) {
+  return useQuery({
+    queryKey: ["siteVisits", projectId],
+    queryFn: () => api.getSiteVisits(projectId),
+    enabled: !!projectId,
+  });
+}
+
+export function useSiteVisit(visitId: string) {
+  return useQuery({
+    queryKey: ["siteVisit", visitId],
+    queryFn: () => api.getSiteVisit(visitId),
+    enabled: !!visitId,
+  });
+}
+
+export function useDiagnoses(projectId: string) {
+  return useQuery({
+    queryKey: ["diagnoses", projectId],
+    queryFn: () => api.getDiagnoses(projectId),
+    enabled: !!projectId,
+  });
+}
+
+export function useDiagnosis(diagnosisId: string) {
+  return useQuery({
+    queryKey: ["diagnosis", diagnosisId],
+    queryFn: () => api.getDiagnosis(diagnosisId),
+    enabled: !!diagnosisId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.data?.status;
+      return status === "processing" ? 2000 : false;
+    },
+  });
+}
+
+export function useRequestDiagnosis() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      visitId,
+      data,
+    }: {
+      visitId: string;
+      data?: {
+        additional_notes?: string;
+        photo_ids?: string[];
+      };
+    }) => api.requestDiagnosis(visitId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["siteVisit", variables.visitId] });
+      queryClient.invalidateQueries({ queryKey: ["diagnoses"] });
+    },
+  });
+}
