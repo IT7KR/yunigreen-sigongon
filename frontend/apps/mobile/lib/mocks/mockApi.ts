@@ -20,6 +20,7 @@ import type {
   ProjectPhotoAlbum,
 } from "@sigongon/types";
 import { mockDb, type Project, type User } from "./db";
+import { MOBILE_MOCK_EXPORT_SAMPLE_FILES } from "../sampleFiles";
 
 const DELAY = 200;
 
@@ -211,6 +212,15 @@ export class MockAPIClient {
   }> = [];
 
   private workerAccessRequests: Record<string, string> = {};
+  private workerInvitations: Record<
+    string,
+    { worker_id: string; name: string; phone: string; created_at: string }
+  > = {};
+  private passwordResetRequests: Record<
+    string,
+    { phone: string; code: string; expires_at: number }
+  > = {};
+  private passwordResetVerifications: Record<string, { phone: string }> = {};
 
   private constructionReportsByProject: Record<
     string,
@@ -1393,6 +1403,146 @@ export class MockAPIClient {
     return delay(ok({ worker_id: workerId }));
   }
 
+  async createWorkerInvitation(data: {
+    name: string;
+    phone: string;
+    address?: string;
+    bank_name?: string;
+    account_number?: string;
+    residence_confirmed?: boolean;
+    has_id_card: boolean;
+    has_safety_cert: boolean;
+  }) {
+    const normalizedPhone = data.phone.replace(/\D/g, "");
+    if (!data.name.trim() || normalizedPhone.length < 10) {
+      return delay(
+        fail<{
+          worker_id: string;
+          invite_token: string;
+          invite_link: string;
+          registration_status: "invited";
+        }>("INVALID_INPUT", "이름과 휴대폰 번호를 확인해 주세요"),
+      );
+    }
+
+    const workerId = randomId("worker");
+    const inviteToken = randomId("invite");
+    this.workerInvitations[inviteToken] = {
+      worker_id: workerId,
+      name: data.name.trim(),
+      phone: normalizedPhone,
+      created_at: nowIso(),
+    };
+
+    return delay(
+      ok({
+        worker_id: workerId,
+        invite_token: inviteToken,
+        invite_link: `/worker/entry?invite=${encodeURIComponent(inviteToken)}&phone=${encodeURIComponent(normalizedPhone)}`,
+        registration_status: "invited" as const,
+      }),
+    );
+  }
+
+  async verifyWorkerInvite(inviteToken: string) {
+    const target = this.workerInvitations[inviteToken];
+    if (!target) {
+      return delay(
+        fail<{ worker_id: string }>("INVALID_INVITE", "초대 링크가 유효하지 않아요"),
+      );
+    }
+
+    return delay(ok({ worker_id: target.worker_id }));
+  }
+
+  async requestPasswordResetOtp(phone: string) {
+    const normalized = phone.replace(/\D/g, "");
+    if (normalized.length < 10) {
+      return delay(
+        fail<{ request_id: string; expires_in_sec: number }>(
+          "INVALID_PHONE",
+          "휴대폰 번호를 확인해 주세요",
+        ),
+      );
+    }
+
+    const requestId = `pwreq_${randomId("r")}`;
+    const mockCode = "123456";
+    this.passwordResetRequests[requestId] = {
+      phone: normalized,
+      code: mockCode,
+      expires_at: Date.now() + 1000 * 60 * 3,
+    };
+
+    return delay(
+      ok({
+        request_id: requestId,
+        expires_in_sec: 180,
+        mock_otp: mockCode,
+      }),
+    );
+  }
+
+  async verifyPasswordResetOtp(requestId: string, code: string) {
+    const request = this.passwordResetRequests[requestId];
+    if (!request) {
+      return delay(
+        fail<{ verification_id: string }>(
+          "REQUEST_NOT_FOUND",
+          "인증 요청을 찾을 수 없어요",
+        ),
+      );
+    }
+
+    if (Date.now() > request.expires_at) {
+      delete this.passwordResetRequests[requestId];
+      return delay(
+        fail<{ verification_id: string }>(
+          "OTP_EXPIRED",
+          "인증번호가 만료되었어요",
+        ),
+      );
+    }
+
+    if (request.code !== code.trim()) {
+      return delay(
+        fail<{ verification_id: string }>(
+          "INVALID_OTP",
+          "인증번호가 올바르지 않아요",
+        ),
+      );
+    }
+
+    const verificationId = `pwver_${randomId("v")}`;
+    this.passwordResetVerifications[verificationId] = { phone: request.phone };
+    delete this.passwordResetRequests[requestId];
+
+    return delay(ok({ verification_id: verificationId }));
+  }
+
+  async resetPasswordWithOtp(verificationId: string, newPassword: string) {
+    if (!this.passwordResetVerifications[verificationId]) {
+      return delay(
+        fail<{ success: boolean }>(
+          "VERIFICATION_NOT_FOUND",
+          "비밀번호 재설정 검증 정보가 없어요",
+        ),
+      );
+    }
+
+    if (newPassword.trim().length < 8) {
+      return delay(
+        fail<{ success: boolean }>(
+          "WEAK_PASSWORD",
+          "비밀번호는 8자 이상이어야 해요",
+        ),
+      );
+    }
+
+    delete this.passwordResetVerifications[verificationId];
+    return delay(ok({ success: true }));
+  }
+
   async getWorkerContract(contractId: string) {
     this.ensureWorkerContract(contractId);
     return delay(ok(this.workerContractsById[contractId]));
@@ -1711,6 +1861,37 @@ export class MockAPIClient {
     }
 
     return delay(ok(album));
+  }
+
+  async exportAlbumPdf(_albumId: string) {
+    const sample_file_path = MOBILE_MOCK_EXPORT_SAMPLE_FILES.albumPdf;
+    return delay(
+      ok({
+        pdf_url: sample_file_path,
+        sample_file_path,
+        message: "PDF를 생성했어요",
+      }),
+    );
+  }
+
+  async exportConstructionReportPdf(reportId: string) {
+    const reportResponse = await this.getConstructionReport(reportId);
+    if (!reportResponse.success || !reportResponse.data) {
+      return delay(fail<any>("NOT_FOUND", "보고서를 찾을 수 없어요"));
+    }
+
+    const sample_file_path =
+      reportResponse.data.report_type === "start"
+        ? MOBILE_MOCK_EXPORT_SAMPLE_FILES.startReportPdf
+        : MOBILE_MOCK_EXPORT_SAMPLE_FILES.completionReportPdf;
+
+    return delay(
+      ok({
+        report_id: reportId,
+        pdf_url: sample_file_path,
+        sample_file_path,
+      }),
+    );
   }
 
   async uploadWorkerDocument() {
