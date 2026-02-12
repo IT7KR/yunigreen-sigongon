@@ -1,7 +1,7 @@
-import type { Metadata, Viewport } from "next"
-import { Providers } from "@/lib/providers"
-import { Toaster } from "@sigongon/ui"
-import "./globals.css"
+import type { Metadata, Viewport } from "next";
+import { AppRootLayout } from "@sigongon/features";
+import { Providers } from "@/lib/providers";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "시공ON 현장",
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "시공ON",
   },
-}
+};
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -21,27 +21,12 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: "cover",
   themeColor: "#14b8a6",
-}
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  return (
-    <html lang="ko">
-      <head>
-        <link
-          rel="stylesheet"
-          as="style"
-          crossOrigin="anonymous"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
-        />
-      </head>
-      <body className="antialiased">
-        <Providers>{children}</Providers>
-        <Toaster />
-      </body>
-    </html>
-  )
+  return <AppRootLayout Providers={Providers}>{children}</AppRootLayout>;
 }
