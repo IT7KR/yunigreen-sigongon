@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, X } from "lucide-react";
-import { cn } from "@sigongon/ui";
+import { PrimitiveButton, cn } from "@sigongon/ui";
 
 interface ExistingPhoto {
   url: string;
@@ -38,13 +38,13 @@ export function DuplicateWarning({
               {similarityPercent}% 일치하는 사진이 발견되었습니다
             </p>
           </div>
-          <button
+          <PrimitiveButton
             onClick={onCancel}
             className="flex-shrink-0 rounded-lg p-1 text-yellow-600 hover:bg-yellow-100"
             aria-label="닫기"
           >
             <X className="h-5 w-5" />
-          </button>
+          </PrimitiveButton>
         </div>
 
         {/* Photo Comparison */}
@@ -73,7 +73,7 @@ export function DuplicateWarning({
 
         {/* Actions */}
         <div className="flex gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3">
-          <button
+          <PrimitiveButton
             onClick={onCancel}
             className={cn(
               "flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2.5",
@@ -82,8 +82,8 @@ export function DuplicateWarning({
             )}
           >
             취소
-          </button>
-          <button
+          </PrimitiveButton>
+          <PrimitiveButton
             onClick={onContinue}
             className={cn(
               "flex-1 rounded-lg bg-brand-point-500 px-4 py-2.5",
@@ -92,7 +92,7 @@ export function DuplicateWarning({
             )}
           >
             그래도 업로드
-          </button>
+          </PrimitiveButton>
         </div>
       </div>
     </div>

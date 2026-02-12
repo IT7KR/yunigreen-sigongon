@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X, Camera, Search, MapPin, Info } from "lucide-react";
-import { cn } from "@sigongon/ui";
+import { PrimitiveButton, cn } from "@sigongon/ui";
 import type { PhotoType } from "./PhotoTypeSelector";
 import { PhotoMetadata } from "./PhotoMetadata";
 
@@ -113,7 +113,7 @@ export function PhotoThumbnails({ photos, onDelete }: PhotoThumbnailsProps) {
 
                 {/* EXIF metadata indicator */}
                 {hasExifData && (
-                  <button
+                  <PrimitiveButton
                     onClick={() => setSelectedPhotoId(
                       selectedPhotoId === photo.id ? null : photo.id
                     )}
@@ -122,17 +122,17 @@ export function PhotoThumbnails({ photos, onDelete }: PhotoThumbnailsProps) {
                     title="메타데이터 보기"
                   >
                     <Info className="h-3.5 w-3.5" strokeWidth={2.5} />
-                  </button>
+                  </PrimitiveButton>
                 )}
 
                 {/* Delete button */}
-                <button
+                <PrimitiveButton
                   onClick={() => onDelete(photo.id)}
                   className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-lg transition-all hover:bg-red-600 hover:scale-110 group-hover:opacity-100"
                   aria-label="사진 삭제"
                 >
                   <X className="h-4 w-4" strokeWidth={2.5} />
-                </button>
+                </PrimitiveButton>
 
                 {/* Timestamp */}
                 <div className="absolute bottom-2 left-2 right-2 truncate rounded bg-black/60 px-2 py-1 text-center text-xs font-medium text-white backdrop-blur-sm">

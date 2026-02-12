@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Droplets } from "lucide-react";
-import { Card, CardContent, Button, Input, BlurText } from "@sigongon/ui";
+import { BlurText, Button, Card, CardContent, Input, PrimitiveButton } from "@sigongon/ui";
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
 import Link from "next/link";
@@ -92,7 +92,7 @@ function LoginForm() {
                 required
                 autoComplete="current-password"
               />
-              <button
+              <PrimitiveButton
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
@@ -103,7 +103,7 @@ function LoginForm() {
                 ) : (
                   <Eye className="h-5 w-5" />
                 )}
-              </button>
+              </PrimitiveButton>
             </div>
 
             <Button

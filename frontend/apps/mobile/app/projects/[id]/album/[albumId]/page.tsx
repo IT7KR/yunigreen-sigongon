@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from "react";
 import { FileDown, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Button, StatusBadge } from "@sigongon/ui";
+import { Button, PrimitiveButton, StatusBadge } from "@sigongon/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
 import { buildSampleFileDownloadUrl } from "@/lib/sampleFiles";
 
@@ -170,7 +170,7 @@ export default function AlbumDetailPage({ params }: AlbumDetailPageProps) {
         {/* Photo grid */}
         <div className={`grid ${gridCols} gap-1`}>
           {album.photos.map((photo, index) => (
-            <button
+            <PrimitiveButton
               key={photo.id}
               onClick={() => setSelectedPhotoIndex(index)}
               className="relative aspect-square overflow-hidden rounded-lg bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-point-500"
@@ -188,7 +188,7 @@ export default function AlbumDetailPage({ params }: AlbumDetailPageProps) {
                   </p>
                 </div>
               )}
-            </button>
+            </PrimitiveButton>
           ))}
         </div>
       </div>
@@ -207,13 +207,13 @@ export default function AlbumDetailPage({ params }: AlbumDetailPageProps) {
                 {selectedPhotoIndex + 1} / {album.photos.length}
               </p>
             </div>
-            <button
+            <PrimitiveButton
               onClick={() => setSelectedPhotoIndex(null)}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
               aria-label="닫기"
             >
               <X className="h-6 w-6" />
-            </button>
+            </PrimitiveButton>
           </div>
 
           {/* Photo */}
@@ -239,22 +239,22 @@ export default function AlbumDetailPage({ params }: AlbumDetailPageProps) {
 
           {/* Navigation arrows */}
           {selectedPhotoIndex > 0 && (
-            <button
+            <PrimitiveButton
               onClick={handlePrevPhoto}
               className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
               aria-label="이전 사진"
             >
               <ChevronLeft className="h-8 w-8" />
-            </button>
+            </PrimitiveButton>
           )}
           {selectedPhotoIndex < album.photos.length - 1 && (
-            <button
+            <PrimitiveButton
               onClick={handleNextPhoto}
               className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
               aria-label="다음 사진"
             >
               <ChevronRight className="h-8 w-8" />
-            </button>
+            </PrimitiveButton>
           )}
 
           {/* Touch swipe hint (mobile) */}

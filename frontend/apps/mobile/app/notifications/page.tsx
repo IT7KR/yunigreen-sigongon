@@ -1,7 +1,7 @@
 "use client";
 
 import { MobileLayout } from "@/components/MobileLayout";
-import { Card, CardContent } from "@sigongon/ui";
+import { Card, CardContent, PrimitiveButton } from "@sigongon/ui";
 import { Bell, CheckCircle, AlertTriangle, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
@@ -52,7 +52,7 @@ export default function NotificationsPage() {
           </div>
         ) : (
           notifications.map((noti) => (
-            <button
+            <PrimitiveButton
               key={noti.id}
               type="button"
               onClick={() => handleRead(noti.id)}
@@ -82,7 +82,7 @@ export default function NotificationsPage() {
                 </div>
                 <p className="mt-1 text-sm text-slate-500">{noti.message}</p>
               </div>
-            </button>
+            </PrimitiveButton>
           ))
         )}
       </div>

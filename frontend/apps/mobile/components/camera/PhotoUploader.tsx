@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Upload, CheckCircle, XCircle, RefreshCw } from "lucide-react";
-import { cn } from "@sigongon/ui";
+import { PrimitiveButton, cn } from "@sigongon/ui";
 import type { PhotoType } from "./PhotoTypeSelector";
 import { computeImageHash, compareHashes } from "../../hooks/useImageHash";
 import { DuplicateWarning } from "./DuplicateWarning";
@@ -317,13 +317,13 @@ export function PhotoUploader({
 
               {/* Retry button */}
               {task.status === "failed" && (
-                <button
+                <PrimitiveButton
                   onClick={() => retryUpload(task.id)}
                   className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-point-50 text-brand-point-600 transition-colors hover:bg-brand-point-100"
                   aria-label="재시도"
                 >
                   <RefreshCw className="h-4 w-4" />
-                </button>
+                </PrimitiveButton>
               )}
             </div>
           </div>

@@ -17,17 +17,7 @@ import {
   FileSignature,
 } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  Input,
-  formatCurrency,
-  toast,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveButton, formatCurrency, toast } from "@sigongon/ui";
 import {
   useEstimate,
   useIssueEstimate,
@@ -341,18 +331,18 @@ export default function EstimateDetailPage({
                       </div>
                       {isDraft && (
                         <div className="flex gap-1">
-                          <button
+                          <PrimitiveButton
                             className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                             onClick={() => handleStartEdit(line)}
                           >
                             <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
+                          </PrimitiveButton>
+                          <PrimitiveButton
                             className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
                             onClick={() => handleDeleteLine(line.id)}
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </PrimitiveButton>
                         </div>
                       )}
                     </div>

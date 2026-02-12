@@ -4,7 +4,7 @@ import { use, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, X } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Card, CardContent, Button, Input } from "@sigongon/ui";
+import { Button, Card, CardContent, Input, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
 import { useCreateSiteVisit } from "@/hooks";
 import { api } from "@/lib/api";
 import type { VisitType, PhotoType } from "@sigongon/types";
@@ -152,7 +152,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
             </label>
             <div className="grid grid-cols-3 gap-2">
               {visitTypes.map((type) => (
-                <button
+                <PrimitiveButton
                   key={type.value}
                   type="button"
                   onClick={() => setVisitType(type.value)}
@@ -163,7 +163,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
                   }`}
                 >
                   {type.label}
-                </button>
+                </PrimitiveButton>
               ))}
             </div>
           </CardContent>
@@ -197,7 +197,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
             {/* 사진 타입 선택 */}
             <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
               {photoTypes.map((type) => (
-                <button
+                <PrimitiveButton
                   key={type.value}
                   type="button"
                   onClick={() => setCurrentPhotoType(type.value)}
@@ -208,7 +208,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
                   }`}
                 >
                   {type.label}
-                </button>
+                </PrimitiveButton>
               ))}
             </div>
 
@@ -221,30 +221,30 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
                     alt="미리보기"
                     className="h-full w-full rounded-lg object-cover"
                   />
-                  <button
+                  <PrimitiveButton
                     type="button"
                     onClick={() => removePhoto(photo.id)}
                     className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow"
                   >
                     <X className="h-3 w-3" />
-                  </button>
+                  </PrimitiveButton>
                   <span className="absolute bottom-1 left-1 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white">
                     {photoTypes.find((t) => t.value === photo.type)?.label}
                   </span>
                 </div>
               ))}
 
-              <button
+              <PrimitiveButton
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-slate-400 hover:border-brand-point-400 hover:bg-brand-point-50 hover:text-brand-point-500"
               >
                 <Camera className="h-6 w-6" />
                 <span className="text-xs">추가</span>
-              </button>
+              </PrimitiveButton>
             </div>
 
-            <input
+            <PrimitiveInput
               ref={fileInputRef}
               type="file"
               accept="image/*"

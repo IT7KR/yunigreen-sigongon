@@ -1,7 +1,7 @@
 "use client";
 
 import { WifiOff, RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
-import { cn } from "@sigongon/ui";
+import { PrimitiveButton, cn } from "@sigongon/ui";
 import { useOnlineStatus } from "@/lib/offline/useOnlineStatus";
 
 export function OfflineBanner() {
@@ -98,13 +98,13 @@ export function OfflineBanner() {
 
           {/* Action button */}
           {isOnline && !isSyncing && pendingCount > 0 && (
-            <button
+            <PrimitiveButton
               onClick={sync}
               className="flex items-center gap-1.5 rounded-lg bg-brand-point-500 px-3 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-brand-point-600 hover:shadow-lg active:scale-95"
             >
               <RefreshCw className="h-4 w-4" />
               동기화
-            </button>
+            </PrimitiveButton>
           )}
 
           {/* Pending count badge */}

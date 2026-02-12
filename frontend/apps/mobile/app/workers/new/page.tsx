@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Card, CardContent, Button } from "@sigongon/ui";
+import { Button, Card, CardContent, PrimitiveInput, PrimitiveSelect } from "@sigongon/ui";
 import { Camera, AlertCircle, Copy, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -110,7 +110,7 @@ export default function WorkerRegisterPage() {
               <span className="text-xs text-slate-500">
                 {idCardFileName || "신분증 촬영"}
               </span>
-              <input
+              <PrimitiveInput
                 type="file"
                 accept="image/*,.pdf"
                 className="hidden"
@@ -124,7 +124,7 @@ export default function WorkerRegisterPage() {
               <span className="text-xs text-slate-500">
                 {safetyFileName || "안전교육이수증"}
               </span>
-              <input
+              <PrimitiveInput
                 type="file"
                 accept="image/*,.pdf"
                 className="hidden"
@@ -143,7 +143,7 @@ export default function WorkerRegisterPage() {
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-slate-900">이름</label>
-            <input
+            <PrimitiveInput
               type="text"
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
               placeholder="홍길동"
@@ -155,7 +155,7 @@ export default function WorkerRegisterPage() {
 
           <div>
             <label className="text-sm font-medium text-slate-900">휴대폰 번호</label>
-            <input
+            <PrimitiveInput
               type="tel"
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
               placeholder="010-0000-0000"
@@ -170,7 +170,7 @@ export default function WorkerRegisterPage() {
               주민등록번호
             </label>
             <div className="flex gap-2 items-center">
-                <input
+                <PrimitiveInput
                   type="text"
                   className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
                   placeholder="000000"
@@ -180,7 +180,7 @@ export default function WorkerRegisterPage() {
                 />
                 <span className="text-slate-400">-</span>
                 <div className="mt-1 w-full flex gap-1">
-                  <input
+                  <PrimitiveInput
                     type="text"
                     className="w-8 rounded-lg border border-slate-200 px-2 py-2 text-center"
                     placeholder="1"
@@ -197,7 +197,7 @@ export default function WorkerRegisterPage() {
 
           <div>
             <label className="text-sm font-medium text-slate-900">주소</label>
-            <input
+            <PrimitiveInput
               type="text"
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
               placeholder="주소 입력"
@@ -205,7 +205,7 @@ export default function WorkerRegisterPage() {
               onChange={(event) => setAddress(event.target.value)}
             />
             <div className="mt-2 flex items-center gap-2">
-              <input
+              <PrimitiveInput
                 type="checkbox"
                 id="residence"
                 className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
@@ -223,7 +223,7 @@ export default function WorkerRegisterPage() {
               계좌번호
             </label>
             <div className="grid grid-cols-3 gap-2 mt-1">
-              <select
+              <PrimitiveSelect
                 className="rounded-lg border border-slate-200 px-3 py-2"
                 value={bankName}
                 onChange={(event) => setBankName(event.target.value)}
@@ -233,8 +233,8 @@ export default function WorkerRegisterPage() {
                 <option>국민</option>
                 <option>신한</option>
                 <option>우리</option>
-              </select>
-              <input
+              </PrimitiveSelect>
+              <PrimitiveInput
                 type="text"
                 className="col-span-2 rounded-lg border border-slate-200 px-3 py-2"
                 placeholder="계좌번호 입력"

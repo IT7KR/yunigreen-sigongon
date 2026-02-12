@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, Search, MapPin } from "lucide-react";
-import { cn } from "@sigongon/ui";
+import { PrimitiveButton, cn } from "@sigongon/ui";
 
 export type PhotoType = "before" | "detail" | "current";
 
@@ -53,7 +53,7 @@ export function PhotoTypeSelector({
             const isSelected = selectedType === type;
 
             return (
-              <button
+              <PrimitiveButton
                 key={type}
                 onClick={() => onTypeChange(type)}
                 className={cn(
@@ -111,7 +111,7 @@ export function PhotoTypeSelector({
                     </div>
                   )}
                 </div>
-              </button>
+              </PrimitiveButton>
             );
           }
         )}

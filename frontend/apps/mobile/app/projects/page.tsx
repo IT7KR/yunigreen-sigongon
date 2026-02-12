@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Plus, Search, Filter } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Card, CardContent, Button, StatusBadge } from "@sigongon/ui";
+import { Button, Card, CardContent, PrimitiveButton, PrimitiveInput, StatusBadge } from "@sigongon/ui";
 import { formatRelativeTime } from "@sigongon/ui";
 import { useProjects } from "@/hooks";
 import type { ProjectStatus } from "@sigongon/types";
@@ -21,15 +21,15 @@ export default function ProjectsPage() {
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
+            <PrimitiveInput
               type="search"
               placeholder="프로젝트 검색..."
               className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-4 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             />
           </div>
-          <button className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50">
+          <PrimitiveButton className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50">
             <Filter className="h-4 w-4 text-slate-600" />
-          </button>
+          </PrimitiveButton>
         </div>
 
         {/* 프로젝트 목록 */}
