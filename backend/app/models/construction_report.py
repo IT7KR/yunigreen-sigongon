@@ -1,10 +1,12 @@
 """ConstructionReport models for 착공계 (Start Report) and 준공계 (Completion Report)."""
-import uuid
 from datetime import datetime, date
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, TYPE_CHECKING
+from sqlalchemy import BigInteger
 from sqlmodel import SQLModel, Field, Relationship
+
+from app.core.snowflake import generate_snowflake_id
 
 if TYPE_CHECKING:
     from app.models.project import Project
@@ -48,8 +50,8 @@ class ConstructionReport(ConstructionReportBase, table=True):
     """ConstructionReport model - Start and completion reports for construction projects."""
     __tablename__ = "construction_report"
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    project_id: uuid.UUID = Field(foreign_key="project.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
 
     # Auto-generated report number
     report_number: Optional[str] = Field(default=None, max_length=50, index=True)
@@ -64,8 +66,8 @@ class ConstructionReport(ConstructionReportBase, table=True):
     approved_at: Optional[datetime] = Field(default=None)
 
     # Audit
-    created_by: uuid.UUID = Field(foreign_key="user.id")
-    approved_by: Optional[uuid.UUID] = Field(default=None, foreign_key="user.id")
+    created_by: int = Field(foreign_key="user.id", sa_type=BigInteger)
+    approved_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
 
     # Relationships
     project: Optional["Project"] = Relationship()
@@ -73,7 +75,7 @@ class ConstructionReport(ConstructionReportBase, table=True):
 
 class ConstructionReportCreate(SQLModel):
     """Schema for creating construction report."""
-    project_id: uuid.UUID
+    project_id: int
     report_type: ReportType
     notes: Optional[str] = None
 
@@ -93,16 +95,16 @@ class ConstructionReportCreate(SQLModel):
 
 class ConstructionReportRead(ConstructionReportBase):
     """Schema for reading construction report."""
-    id: uuid.UUID
-    project_id: uuid.UUID
+    id: int
+    project_id: int
     report_number: Optional[str]
     status: ReportStatus
     created_at: datetime
     updated_at: datetime
     submitted_at: Optional[datetime]
     approved_at: Optional[datetime]
-    created_by: uuid.UUID
-    approved_by: Optional[uuid.UUID]
+    created_by: int
+    approved_by: Optional[int]
 
 
 class ConstructionReportUpdate(SQLModel):

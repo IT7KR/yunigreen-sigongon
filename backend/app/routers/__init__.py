@@ -6,6 +6,8 @@ from app.routers.diagnoses import router as diagnoses_router
 from app.routers.estimates import router as estimates_router
 from app.routers.pricebooks import router as pricebooks_router
 from app.routers.rag import router as rag_router
+from app.routers.cases import router as cases_router
+from app.routers.harness import router as harness_router
 
 __all__ = [
     "auth_router",
@@ -15,4 +17,6 @@ __all__ = [
     "estimates_router",
     "pricebooks_router",
     "rag_router",
+    "cases_router",
+    "harness_router",
 ]

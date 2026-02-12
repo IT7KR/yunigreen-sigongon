@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.database import init_db, close_db
 from app.core.exceptions import SigongOnException
+from app.core.snowflake import set_snowflake_worker
 
 
 @asynccontextmanager
@@ -16,6 +17,7 @@ async def lifespan(app: FastAPI):
     """애플리케이션 라이프사이클 관리."""
     # Startup
     print(f"🚀 {settings.app_name} v{settings.app_version} 시작...")
+    set_snowflake_worker(settings.snowflake_worker_id)
     
     if settings.debug:
         # 개발 환경에서만 테이블 자동 생성
@@ -114,6 +116,8 @@ from app.routers import (
     estimates_router,
     pricebooks_router,
     rag_router,
+    cases_router,
+    harness_router,
 )
 from app.routers.contracts import router as contracts_router, project_contracts_router
 from app.routers.labor_contracts import router as labor_contracts_router, project_labor_router
@@ -132,6 +136,8 @@ app.include_router(diagnoses_router, prefix="/api/v1", tags=["AI 진단"])
 app.include_router(estimates_router, prefix="/api/v1", tags=["견적서"])
 app.include_router(pricebooks_router, prefix="/api/v1/pricebooks", tags=["단가표"])
 app.include_router(rag_router, prefix="/api/v1/rag", tags=["RAG 검색"])
+app.include_router(harness_router, prefix="/api/v1/harness", tags=["Harness 운영"])
+app.include_router(cases_router, prefix="/api/v1", tags=["시즌/케이스 견적"])
 app.include_router(contracts_router, prefix="/api/v1", tags=["계약"])
 app.include_router(project_contracts_router, prefix="/api/v1", tags=["계약"])
 app.include_router(labor_contracts_router, prefix="/api/v1", tags=["노무비"])

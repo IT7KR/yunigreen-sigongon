@@ -1,5 +1,4 @@
 """RAG (Retrieval-Augmented Generation) 서비스."""
-import uuid
 import math
 from typing import Optional
 
@@ -20,7 +19,7 @@ class RAGService:
         self,
         query: str,
         top_k: int = 5,
-        revision_id: Optional[uuid.UUID] = None,
+        revision_id: Optional[int] = None,
         category: Optional[str] = None,
     ) -> list[dict]:
         query_embedding = await self._get_embedding(query)
@@ -67,7 +66,7 @@ class RAGService:
         self,
         query_embedding: list[float],
         top_k: int,
-        revision_id: Optional[uuid.UUID] = None,
+        revision_id: Optional[int] = None,
         category: Optional[str] = None,
     ) -> list[tuple[DocumentChunk, float]]:
         base_query = select(DocumentChunk)
@@ -112,7 +111,7 @@ class RAGService:
         text: str,
         source_file: str,
         source_page: int,
-        revision_id: uuid.UUID,
+        revision_id: int,
         category: Optional[str] = None,
     ) -> DocumentChunk:
         embedding = await self._get_embedding(text)

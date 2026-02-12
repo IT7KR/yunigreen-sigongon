@@ -1,5 +1,4 @@
 """단가표 관리 API 라우터 (관리자 전용)."""
-import uuid
 import tempfile
 import os
 from datetime import datetime, date
@@ -15,6 +14,7 @@ from sqlmodel import select
 from app.core.database import get_async_db
 from app.core.security import get_current_user, get_current_active_admin
 from app.core.exceptions import NotFoundException
+from app.core.snowflake import generate_snowflake_id
 from app.models.user import User
 from app.models.pricebook import (
     Pricebook,
@@ -61,7 +61,7 @@ class ActivateResponse(PricebookRevisionRead):
 
 
 class UploadResponse(BaseModel):
-    id: uuid.UUID
+    id: int
     version_label: str
     status: RevisionStatus
     processing_status: str
@@ -77,7 +77,7 @@ class UploadResponse(BaseModel):
 async def list_revisions(
     db: DBSession,
     admin: AdminUser,
-    pricebook_id: Optional[uuid.UUID] = None,
+    pricebook_id: Optional[int] = None,
 ):
     """단가표 버전 목록 조회.
     
@@ -131,7 +131,7 @@ async def upload_revision(
     file: UploadFile = File(...),
     version_label: str = Form(...),
     effective_from: date = Form(...),
-    pricebook_id: Optional[uuid.UUID] = Form(default=None),
+    pricebook_id: Optional[int] = Form(default=None),
 ):
     """단가표 PDF 업로드.
     
@@ -222,7 +222,7 @@ async def upload_revision(
     response_model=APIResponse[RevisionWithStats],
 )
 async def get_revision(
-    revision_id: uuid.UUID,
+    revision_id: int,
     db: DBSession,
     admin: AdminUser,
 ):
@@ -263,7 +263,7 @@ async def get_revision(
     response_model=APIResponse[ActivateResponse],
 )
 async def activate_revision(
-    revision_id: uuid.UUID,
+    revision_id: int,
     db: DBSession,
     admin: AdminUser,
 ):
@@ -378,7 +378,7 @@ async def list_catalog_items(
     response_model=APIResponse[list],
 )
 async def get_item_prices(
-    item_id: uuid.UUID,
+    item_id: int,
     db: DBSession,
     admin: AdminUser,
 ):
@@ -422,7 +422,7 @@ async def get_item_prices(
     response_model=PaginatedResponse[PriceStagingRead],
 )
 async def list_staging_items(
-    revision_id: uuid.UUID,
+    revision_id: int,
     db: DBSession,
     admin: AdminUser,
     page: int = Query(default=1, ge=1),
@@ -479,7 +479,7 @@ async def list_staging_items(
     response_model=APIResponse[PriceStagingSummary],
 )
 async def get_staging_summary(
-    revision_id: uuid.UUID,
+    revision_id: int,
     db: DBSession,
     admin: AdminUser,
 ):
@@ -548,7 +548,7 @@ async def get_staging_summary(
     response_model=APIResponse[PriceStagingRead],
 )
 async def review_staging_item(
-    staging_id: uuid.UUID,
+    staging_id: int,
     review: PriceStagingReviewRequest,
     db: DBSession,
     admin: AdminUser,
@@ -590,7 +590,7 @@ async def review_staging_item(
     response_model=APIResponse[dict],
 )
 async def bulk_review_staging(
-    revision_id: uuid.UUID,
+    revision_id: int,
     bulk_review: PriceStagingBulkReviewRequest,
     db: DBSession,
     admin: AdminUser,
@@ -627,7 +627,7 @@ async def bulk_review_staging(
     response_model=APIResponse[dict],
 )
 async def auto_approve_staging(
-    revision_id: uuid.UUID,
+    revision_id: int,
     db: DBSession,
     admin: AdminUser,
     min_confidence: float = Query(default=0.9, ge=0.7, le=1.0),
@@ -671,7 +671,7 @@ async def auto_approve_staging(
     response_model=APIResponse[dict],
 )
 async def promote_approved_staging(
-    revision_id: uuid.UUID,
+    revision_id: int,
     db: DBSession,
     admin: AdminUser,
 ):
@@ -708,7 +708,7 @@ async def promote_approved_staging(
         
         # 가격 레코드 생성
         price = CatalogItemPrice(
-            id=uuid.uuid4(),
+            id=generate_snowflake_id(),
             pricebook_revision_id=revision_id,
             catalog_item_id=catalog_item.id,
             unit_price=staging.unit_price_extracted,
@@ -735,7 +735,7 @@ async def promote_approved_staging(
 
 async def process_pricebook_pdf(
     db: AsyncSession,
-    revision_id: uuid.UUID,
+    revision_id: int,
     pdf_path: str,
     filename: str,
 ) -> int:
@@ -799,7 +799,7 @@ async def _get_or_create_catalog_item(
     item_type = _determine_item_type(item_name)
     
     new_item = CatalogItem(
-        id=uuid.uuid4(),
+        id=generate_snowflake_id(),
         item_type=item_type,
         name_ko=item_name,
         specification=specification,

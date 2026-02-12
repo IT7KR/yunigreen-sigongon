@@ -1,10 +1,12 @@
 """Project, SiteVisit, and Photo models."""
-import uuid
 from datetime import datetime, date
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, List, TYPE_CHECKING
+from sqlalchemy import BigInteger
 from sqlmodel import SQLModel, Field, Relationship
+
+from app.core.snowflake import generate_snowflake_id
 
 if TYPE_CHECKING:
     from app.models.user import User, Organization
@@ -53,15 +55,15 @@ class Project(ProjectBase, table=True):
     """Project model - A single construction job."""
     __tablename__ = "project"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    organization_id: uuid.UUID = Field(foreign_key="organization.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    organization_id: int = Field(foreign_key="organization.id", sa_type=BigInteger, index=True)
     
     # Status tracking
     status: ProjectStatus = Field(default=ProjectStatus.DRAFT, index=True)
     
     # Pricebook version pinning (CRITICAL for accurate estimates)
-    pricebook_revision_id: Optional[uuid.UUID] = Field(
-        default=None, foreign_key="pricebook_revision.id"
+    pricebook_revision_id: Optional[int] = Field(
+        default=None, foreign_key="pricebook_revision.id", sa_type=BigInteger
     )
     
     # Dates
@@ -73,7 +75,7 @@ class Project(ProjectBase, table=True):
     warranty_expires_at: Optional[datetime] = Field(default=None)  # completed_at + 3 years
     
     # Audit
-    created_by: Optional[uuid.UUID] = Field(default=None, foreign_key="user.id")
+    created_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
     
     # Relationships
     site_visits: List["SiteVisit"] = Relationship(back_populates="project")
@@ -83,15 +85,15 @@ class Project(ProjectBase, table=True):
 
 class ProjectCreate(ProjectBase):
     """Schema for creating project."""
-    organization_id: uuid.UUID
+    organization_id: int
 
 
 class ProjectRead(ProjectBase):
     """Schema for reading project."""
-    id: uuid.UUID
-    organization_id: uuid.UUID
+    id: int
+    organization_id: int
     status: ProjectStatus
-    pricebook_revision_id: Optional[uuid.UUID]
+    pricebook_revision_id: Optional[int]
     created_at: datetime
     contracted_at: Optional[datetime]
     completed_at: Optional[datetime]
@@ -120,9 +122,9 @@ class SiteVisit(SiteVisitBase, table=True):
     """Site Visit model - A single field visit by technician."""
     __tablename__ = "site_visit"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    project_id: uuid.UUID = Field(foreign_key="project.id", index=True)
-    technician_id: uuid.UUID = Field(foreign_key="user.id")
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
+    technician_id: int = Field(foreign_key="user.id", sa_type=BigInteger)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
@@ -132,14 +134,14 @@ class SiteVisit(SiteVisitBase, table=True):
 
 class SiteVisitCreate(SiteVisitBase):
     """Schema for creating site visit."""
-    project_id: uuid.UUID
+    project_id: int
 
 
 class SiteVisitRead(SiteVisitBase):
     """Schema for reading site visit."""
-    id: uuid.UUID
-    project_id: uuid.UUID
-    technician_id: uuid.UUID
+    id: int
+    project_id: int
+    technician_id: int
     created_at: datetime
     photo_count: int = 0
 
@@ -155,8 +157,8 @@ class Photo(PhotoBase, table=True):
     """Photo model - Images captured during site visits."""
     __tablename__ = "photo"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    site_visit_id: uuid.UUID = Field(foreign_key="site_visit.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    site_visit_id: int = Field(foreign_key="site_visit.id", sa_type=BigInteger, index=True)
     
     # File storage
     storage_path: str = Field(max_length=500)
@@ -177,7 +179,7 @@ class Photo(PhotoBase, table=True):
 
 class PhotoCreate(PhotoBase):
     """Schema for creating photo."""
-    site_visit_id: uuid.UUID
+    site_visit_id: int
     storage_path: str
     original_filename: Optional[str] = None
     file_size_bytes: Optional[int] = None
@@ -186,8 +188,8 @@ class PhotoCreate(PhotoBase):
 
 class PhotoRead(PhotoBase):
     """Schema for reading photo."""
-    id: uuid.UUID
-    site_visit_id: uuid.UUID
+    id: int
+    site_visit_id: int
     storage_path: str
     original_filename: Optional[str]
     taken_at: Optional[datetime]
@@ -207,8 +209,8 @@ class ASRequest(SQLModel, table=True):
     """AS Request model - After-service requests during warranty period."""
     __tablename__ = "as_request"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    project_id: uuid.UUID = Field(foreign_key="project.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
     
     description: str
     status: ASRequestStatus = Field(default=ASRequestStatus.PENDING)
@@ -218,7 +220,7 @@ class ASRequest(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     resolved_at: Optional[datetime] = Field(default=None)
     
-    created_by: Optional[uuid.UUID] = Field(default=None, foreign_key="user.id")
+    created_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
 
 
 class ASRequestCreate(SQLModel):
@@ -229,7 +231,7 @@ class ASRequestCreate(SQLModel):
 
 class ASRequestRead(SQLModel):
     """Schema for reading AS request."""
-    id: uuid.UUID
+    id: int
     description: str
     status: ASRequestStatus
     created_at: datetime

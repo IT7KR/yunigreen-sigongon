@@ -1,5 +1,4 @@
 """준공사진첩 API 라우터."""
-import uuid
 from datetime import datetime
 from typing import Annotated, Optional, List
 
@@ -38,8 +37,8 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 # Response Schemas
 class PhotoAlbumListItem(BaseModel):
     """앨범 목록 아이템."""
-    id: uuid.UUID
-    project_id: uuid.UUID
+    id: int
+    project_id: int
     name: str
     description: Optional[str]
     layout: str
@@ -63,8 +62,8 @@ class AlbumPhotoDetail(BaseModel):
 
 class PhotoAlbumDetail(BaseModel):
     """앨범 상세 정보."""
-    id: uuid.UUID
-    project_id: uuid.UUID
+    id: int
+    project_id: int
     name: str
     description: Optional[str]
     layout: str
@@ -91,12 +90,12 @@ class UpdateAlbumRequest(BaseModel):
 
 class AddPhotosRequest(BaseModel):
     """사진 추가 요청."""
-    photo_ids: List[uuid.UUID]
+    photo_ids: List[int]
 
 
 class ReorderPhotosItem(BaseModel):
     """사진 순서 변경 아이템."""
-    photo_id: uuid.UUID
+    photo_id: int
     sort_order: int
 
 
@@ -105,7 +104,7 @@ class ReorderPhotosRequest(BaseModel):
     photos: List[ReorderPhotosItem]
 
 
-async def _get_album_photos(db: DBSession, album_id: uuid.UUID) -> List[AlbumPhotoDetail]:
+async def _get_album_photos(db: DBSession, album_id: int) -> List[AlbumPhotoDetail]:
     """Get photos for an album with full details."""
     album_photos_result = await db.execute(
         select(AlbumPhoto)
@@ -136,7 +135,7 @@ async def _get_album_photos(db: DBSession, album_id: uuid.UUID) -> List[AlbumPho
 
 @router.get("/projects/{project_id}/albums", response_model=PaginatedResponse[PhotoAlbumListItem])
 async def list_project_albums(
-    project_id: uuid.UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
     page: int = Query(default=1, ge=1),
@@ -203,7 +202,7 @@ async def list_project_albums(
 
 @router.post("/projects/{project_id}/albums", response_model=APIResponse[PhotoAlbumDetail], status_code=status.HTTP_201_CREATED)
 async def create_album(
-    project_id: uuid.UUID,
+    project_id: int,
     album_data: CreateAlbumRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -253,7 +252,7 @@ async def create_album(
 
 @router.get("/albums/{album_id}", response_model=APIResponse[PhotoAlbumDetail])
 async def get_album(
-    album_id: uuid.UUID,
+    album_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -300,7 +299,7 @@ async def get_album(
 
 @router.put("/albums/{album_id}", response_model=APIResponse[PhotoAlbumDetail])
 async def update_album(
-    album_id: uuid.UUID,
+    album_id: int,
     album_data: UpdateAlbumRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -360,7 +359,7 @@ async def update_album(
 
 @router.delete("/albums/{album_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_album(
-    album_id: uuid.UUID,
+    album_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -403,7 +402,7 @@ async def delete_album(
 
 @router.post("/albums/{album_id}/photos", response_model=APIResponse[PhotoAlbumDetail])
 async def add_photos_to_album(
-    album_id: uuid.UUID,
+    album_id: int,
     photos_data: AddPhotosRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -490,8 +489,8 @@ async def add_photos_to_album(
 
 @router.delete("/albums/{album_id}/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_photo_from_album(
-    album_id: uuid.UUID,
-    photo_id: uuid.UUID,
+    album_id: int,
+    photo_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -535,7 +534,7 @@ async def remove_photo_from_album(
 
 @router.put("/albums/{album_id}/photos/reorder", response_model=APIResponse[PhotoAlbumDetail])
 async def reorder_album_photos(
-    album_id: uuid.UUID,
+    album_id: int,
     reorder_data: ReorderPhotosRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -597,7 +596,7 @@ async def reorder_album_photos(
 
 @router.get("/albums/{album_id}/export")
 async def export_album_as_pdf(
-    album_id: uuid.UUID,
+    album_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):

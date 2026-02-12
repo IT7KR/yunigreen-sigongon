@@ -1,5 +1,4 @@
 """AI 진단 API 라우터."""
-import uuid
 from datetime import datetime
 from typing import Annotated, Optional
 
@@ -33,7 +32,7 @@ router = APIRouter()
 
 
 async def run_ai_diagnosis_background(
-    diagnosis_id: uuid.UUID,
+    diagnosis_id: int,
     photo_paths: list[str],
     additional_notes: str | None,
 ):
@@ -67,13 +66,13 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 class DiagnosisRequestResponse(BaseModel):
-    diagnosis_id: uuid.UUID
+    diagnosis_id: int
     status: DiagnosisStatus
     message: str
 
 
 class DiagnosisDetailResponse(AIDiagnosisRead):
-    project_id: uuid.UUID
+    project_id: int
     suggested_materials: list[AIMaterialSuggestionRead] = []
 
 
@@ -83,7 +82,7 @@ class DiagnosisDetailResponse(AIDiagnosisRead):
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def request_diagnosis(
-    visit_id: uuid.UUID,
+    visit_id: int,
     request_data: AIDiagnosisCreate,
     background_tasks: BackgroundTasks,
     db: DBSession,
@@ -167,7 +166,7 @@ async def request_diagnosis(
     response_model=APIResponse[DiagnosisDetailResponse],
 )
 async def get_diagnosis(
-    diagnosis_id: uuid.UUID,
+    diagnosis_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -228,7 +227,7 @@ async def get_diagnosis(
     response_model=APIResponse[list[AIDiagnosisRead]],
 )
 async def list_diagnoses(
-    visit_id: uuid.UUID,
+    visit_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -271,8 +270,8 @@ async def list_diagnoses(
     response_model=APIResponse[AIMaterialSuggestionRead],
 )
 async def update_suggestion(
-    diagnosis_id: uuid.UUID,
-    suggestion_id: uuid.UUID,
+    diagnosis_id: int,
+    suggestion_id: int,
     update_data: AIMaterialSuggestionUpdate,
     db: DBSession,
     current_user: CurrentUser,

@@ -1,5 +1,4 @@
 """착공계/준공계 API 라우터."""
-import uuid
 from datetime import datetime, date
 from typing import Annotated, Optional, List
 from decimal import Decimal
@@ -35,8 +34,8 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 # Response Schemas
 class ConstructionReportListItem(BaseModel):
     """보고서 목록 아이템."""
-    id: uuid.UUID
-    project_id: uuid.UUID
+    id: int
+    project_id: int
     report_type: str
     report_number: Optional[str]
     status: str
@@ -50,8 +49,8 @@ class ConstructionReportListItem(BaseModel):
 
 class ConstructionReportDetail(BaseModel):
     """보고서 상세 정보."""
-    id: uuid.UUID
-    project_id: uuid.UUID
+    id: int
+    project_id: int
     report_type: str
     report_number: Optional[str]
     status: str
@@ -73,8 +72,8 @@ class ConstructionReportDetail(BaseModel):
     submitted_at: Optional[datetime]
     approved_at: Optional[datetime]
     # Audit
-    created_by: uuid.UUID
-    approved_by: Optional[uuid.UUID]
+    created_by: int
+    approved_by: Optional[int]
 
 
 class CreateStartReportRequest(BaseModel):
@@ -110,7 +109,7 @@ class UpdateReportRequest(BaseModel):
     defect_warranty_period: Optional[int] = None
 
 
-def _generate_report_number(report_type: ReportType, project_id: uuid.UUID) -> str:
+def _generate_report_number(report_type: ReportType, project_id: int) -> str:
     """Generate report number like SCR-20260126-abc123 or CCR-20260126-abc123."""
     prefix = "SCR" if report_type == ReportType.START else "CCR"
     date_str = datetime.utcnow().strftime("%Y%m%d")
@@ -120,7 +119,7 @@ def _generate_report_number(report_type: ReportType, project_id: uuid.UUID) -> s
 
 @router.get("/projects/{project_id}/construction-reports", response_model=PaginatedResponse[ConstructionReportListItem])
 async def list_project_reports(
-    project_id: uuid.UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
     page: int = Query(default=1, ge=1),
@@ -193,7 +192,7 @@ async def list_project_reports(
 
 @router.post("/projects/{project_id}/construction-reports/start", response_model=APIResponse[ConstructionReportDetail], status_code=status.HTTP_201_CREATED)
 async def create_start_report(
-    project_id: uuid.UUID,
+    project_id: int,
     report_data: CreateStartReportRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -249,7 +248,7 @@ async def create_start_report(
 
 @router.post("/projects/{project_id}/construction-reports/completion", response_model=APIResponse[ConstructionReportDetail], status_code=status.HTTP_201_CREATED)
 async def create_completion_report(
-    project_id: uuid.UUID,
+    project_id: int,
     report_data: CreateCompletionReportRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -329,7 +328,7 @@ async def create_completion_report(
 
 @router.get("/construction-reports/{report_id}", response_model=APIResponse[ConstructionReportDetail])
 async def get_report(
-    report_id: uuid.UUID,
+    report_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -359,7 +358,7 @@ async def get_report(
 
 @router.put("/construction-reports/{report_id}", response_model=APIResponse[ConstructionReportDetail])
 async def update_report(
-    report_id: uuid.UUID,
+    report_id: int,
     report_data: UpdateReportRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -406,7 +405,7 @@ async def update_report(
 
 @router.post("/construction-reports/{report_id}/submit", response_model=APIResponse[ConstructionReportDetail])
 async def submit_report(
-    report_id: uuid.UUID,
+    report_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -449,7 +448,7 @@ async def submit_report(
 
 @router.post("/construction-reports/{report_id}/approve", response_model=APIResponse[ConstructionReportDetail])
 async def approve_report(
-    report_id: uuid.UUID,
+    report_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -493,7 +492,7 @@ async def approve_report(
 
 @router.post("/construction-reports/{report_id}/reject", response_model=APIResponse[ConstructionReportDetail])
 async def reject_report(
-    report_id: uuid.UUID,
+    report_id: int,
     db: DBSession,
     current_user: CurrentUser,
     reason: Optional[str] = Query(default=None),
@@ -538,7 +537,7 @@ async def reject_report(
 
 @router.get("/construction-reports/{report_id}/export", response_model=APIResponse[dict])
 async def export_report(
-    report_id: uuid.UUID,
+    report_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):

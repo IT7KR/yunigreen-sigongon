@@ -1,5 +1,4 @@
 """RAG 검색 API 라우터."""
-import uuid
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -24,7 +23,7 @@ class RAGSearchRequest(BaseModel):
     """RAG 검색 요청."""
     query: str
     top_k: int = 5
-    pricebook_revision_id: Optional[uuid.UUID] = None
+    pricebook_revision_id: Optional[int] = None
 
 
 class RAGSearchResult(BaseModel):

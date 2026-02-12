@@ -1,9 +1,11 @@
 """PhotoAlbum models for 준공사진첩 (completion photo album) feature."""
-import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Optional, List, TYPE_CHECKING
+from sqlalchemy import BigInteger
 from sqlmodel import SQLModel, Field, Relationship
+
+from app.core.snowflake import generate_snowflake_id
 
 if TYPE_CHECKING:
     from app.models.project import Project, Photo
@@ -34,15 +36,15 @@ class PhotoAlbum(PhotoAlbumBase, table=True):
     """PhotoAlbum model - Completion photo album for projects."""
     __tablename__ = "photo_album"
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    project_id: uuid.UUID = Field(foreign_key="project.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Audit
-    created_by: uuid.UUID = Field(foreign_key="user.id")
+    created_by: int = Field(foreign_key="user.id", sa_type=BigInteger)
 
     # Relationships
     album_photos: List["AlbumPhoto"] = Relationship(back_populates="album")
@@ -50,16 +52,16 @@ class PhotoAlbum(PhotoAlbumBase, table=True):
 
 class PhotoAlbumCreate(PhotoAlbumBase):
     """Schema for creating photo album."""
-    project_id: uuid.UUID
+    project_id: int
 
 
 class PhotoAlbumRead(PhotoAlbumBase):
     """Schema for reading photo album."""
-    id: uuid.UUID
-    project_id: uuid.UUID
+    id: int
+    project_id: int
     created_at: datetime
     updated_at: datetime
-    created_by: uuid.UUID
+    created_by: int
 
 
 class PhotoAlbumUpdate(SQLModel):
@@ -81,9 +83,9 @@ class AlbumPhoto(AlbumPhotoBase, table=True):
     """AlbumPhoto model - Junction table for album-photo relationship."""
     __tablename__ = "album_photo"
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    album_id: uuid.UUID = Field(foreign_key="photo_album.id", index=True)
-    photo_id: uuid.UUID = Field(foreign_key="photo.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    album_id: int = Field(foreign_key="photo_album.id", sa_type=BigInteger, index=True)
+    photo_id: int = Field(foreign_key="photo.id", sa_type=BigInteger, index=True)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -93,13 +95,13 @@ class AlbumPhoto(AlbumPhotoBase, table=True):
 
 class AlbumPhotoCreate(AlbumPhotoBase):
     """Schema for creating album photo."""
-    album_id: uuid.UUID
-    photo_id: uuid.UUID
+    album_id: int
+    photo_id: int
 
 
 class AlbumPhotoRead(AlbumPhotoBase):
     """Schema for reading album photo."""
-    id: uuid.UUID
-    album_id: uuid.UUID
-    photo_id: uuid.UUID
+    id: int
+    album_id: int
+    photo_id: int
     created_at: datetime

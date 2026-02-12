@@ -6,7 +6,6 @@
 - 신뢰도 < 0.9: 후보 제시 → 사용자 선택 → alias 저장 (학습 루프)
 """
 import re
-import uuid
 from decimal import Decimal
 from typing import Optional
 from dataclasses import dataclass
@@ -15,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, or_, and_
 from sqlmodel import select
 
+from app.core.snowflake import generate_snowflake_id
 from app.models.pricebook import (
     CatalogItem,
     CatalogItemAlias,
@@ -27,7 +27,7 @@ from app.models.pricebook import (
 @dataclass
 class MatchCandidate:
     """매칭 후보."""
-    catalog_item_id: uuid.UUID
+    catalog_item_id: int
     name_ko: str
     specification: Optional[str]
     unit: str
@@ -95,7 +95,7 @@ class MaterialMatcher:
         suggested_name: str,
         suggested_spec: Optional[str] = None,
         suggested_unit: Optional[str] = None,
-        revision_id: Optional[uuid.UUID] = None,
+        revision_id: Optional[int] = None,
     ) -> MatchResult:
         """자재명을 단가표 품목과 매칭.
         
@@ -152,8 +152,8 @@ class MaterialMatcher:
     async def confirm_match(
         self,
         original_text: str,
-        catalog_item_id: uuid.UUID,
-        user_id: Optional[uuid.UUID] = None,
+        catalog_item_id: int,
+        user_id: Optional[int] = None,
     ) -> CatalogItemAlias:
         """사용자가 선택한 매칭을 alias로 저장 (학습 루프).
         
@@ -171,7 +171,7 @@ class MaterialMatcher:
             return existing.scalar_one()
         
         alias = CatalogItemAlias(
-            id=uuid.uuid4(),
+            id=generate_snowflake_id(),
             catalog_item_id=catalog_item_id,
             alias_text=original_text,
             normalized_text=normalized,
@@ -367,8 +367,8 @@ class MaterialMatcher:
     
     async def _get_price(
         self,
-        catalog_item_id: uuid.UUID,
-        revision_id: uuid.UUID,
+        catalog_item_id: int,
+        revision_id: int,
     ) -> Optional[Decimal]:
         """품목의 가격 조회."""
         result = await self.db.execute(

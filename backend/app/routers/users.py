@@ -1,5 +1,4 @@
 """사용자 관리 API 라우터 (관리자 전용)."""
-import uuid
 from datetime import datetime
 from typing import Annotated, Optional
 
@@ -30,7 +29,7 @@ class UserCreateRequest(BaseModel):
     password: str
     name: str
     phone: Optional[str] = None
-    role: UserRole = UserRole.TECHNICIAN
+    role: UserRole = UserRole.SITE_MANAGER
 
 
 class UserUpdateRequest(BaseModel):
@@ -41,7 +40,7 @@ class UserUpdateRequest(BaseModel):
 
 
 class UserCreateResponse(BaseModel):
-    id: uuid.UUID
+    id: int
     email: str
     name: str
     role: UserRole
@@ -133,7 +132,7 @@ async def create_user(
 
 @router.get("/{user_id}", response_model=APIResponse[UserListItem])
 async def get_user(
-    user_id: uuid.UUID,
+    user_id: int,
     db: DBSession,
     admin: AdminUser,
 ):
@@ -152,7 +151,7 @@ async def get_user(
 
 @router.patch("/{user_id}", response_model=APIResponse[UserListItem])
 async def update_user(
-    user_id: uuid.UUID,
+    user_id: int,
     user_data: UserUpdateRequest,
     db: DBSession,
     admin: AdminUser,
@@ -180,7 +179,7 @@ async def update_user(
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
-    user_id: uuid.UUID,
+    user_id: int,
     db: DBSession,
     admin: AdminUser,
 ):

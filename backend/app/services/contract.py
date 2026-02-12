@@ -1,4 +1,3 @@
-import uuid
 import base64
 from datetime import datetime
 from decimal import Decimal
@@ -8,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.core.exceptions import NotFoundException
+from app.core.snowflake import generate_snowflake_id
 from app.models.contract import Contract, ContractStatus, ContractCreate, ContractUpdate
 from app.models.estimate import Estimate
 from app.services.storage import storage_service
@@ -18,7 +18,7 @@ class ContractService:
     def __init__(self, db: AsyncSession):
         self.db = db
     
-    async def get_by_id(self, contract_id: uuid.UUID) -> Contract:
+    async def get_by_id(self, contract_id: int) -> Contract:
         result = await self.db.execute(
             select(Contract).where(Contract.id == contract_id)
         )
@@ -27,7 +27,7 @@ class ContractService:
             raise NotFoundException("계약서를 찾을 수 없어요")
         return contract
     
-    async def get_by_project(self, project_id: uuid.UUID) -> list[Contract]:
+    async def get_by_project(self, project_id: int) -> list[Contract]:
         result = await self.db.execute(
             select(Contract)
             .where(Contract.project_id == project_id)
@@ -37,8 +37,8 @@ class ContractService:
     
     async def create(
         self,
-        project_id: uuid.UUID,
-        estimate_id: uuid.UUID,
+        project_id: int,
+        estimate_id: int,
         start_date: Optional[datetime] = None,
         expected_end_date: Optional[datetime] = None,
         notes: Optional[str] = None,
@@ -53,7 +53,7 @@ class ContractService:
         contract_number = await self._generate_contract_number()
         
         contract = Contract(
-            id=uuid.uuid4(),
+            id=generate_snowflake_id(),
             project_id=project_id,
             estimate_id=estimate_id,
             contract_number=contract_number,
@@ -72,7 +72,7 @@ class ContractService:
     
     async def update(
         self,
-        contract_id: uuid.UUID,
+        contract_id: int,
         update_data: ContractUpdate,
     ) -> Contract:
         contract = await self.get_by_id(contract_id)
@@ -86,7 +86,7 @@ class ContractService:
         
         return contract
     
-    async def send_for_signature(self, contract_id: uuid.UUID) -> Contract:
+    async def send_for_signature(self, contract_id: int) -> Contract:
         contract = await self.get_by_id(contract_id)
         
         if contract.status != ContractStatus.DRAFT:
@@ -102,7 +102,7 @@ class ContractService:
     
     async def sign(
         self,
-        contract_id: uuid.UUID,
+        contract_id: int,
         signature_data: str,
         signer_type: str,
     ) -> Contract:

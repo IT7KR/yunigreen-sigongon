@@ -6,7 +6,6 @@
 - 검증 실패 시 수동 검토로 전환
 """
 import re
-import uuid
 import json
 from decimal import Decimal
 from datetime import datetime
@@ -17,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import AIServiceException
+from app.core.snowflake import generate_snowflake_id
 from app.models.price_staging import (
     PriceStaging,
     StagingStatus,
@@ -90,7 +90,7 @@ class PriceExtractor:
         self,
         pages: list[tuple[int, str]],  # [(page_num, text), ...]
         source_file: str,
-        revision_id: uuid.UUID,
+        revision_id: int,
     ) -> list[PriceStaging]:
         """여러 페이지에서 가격 추출 및 staging 저장.
         
@@ -130,7 +130,7 @@ class PriceExtractor:
                 
                 # Staging 생성
                 staging = PriceStaging(
-                    id=uuid.uuid4(),
+                    id=generate_snowflake_id(),
                     pricebook_revision_id=revision_id,
                     item_name=item.item_name,
                     specification=item.specification,

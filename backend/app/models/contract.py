@@ -1,10 +1,12 @@
 """Contract and LaborContract models."""
-import uuid
 from datetime import datetime, date
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, List, TYPE_CHECKING
+from sqlalchemy import BigInteger
 from sqlmodel import SQLModel, Field, Relationship
+
+from app.core.snowflake import generate_snowflake_id
 
 if TYPE_CHECKING:
     from app.models.project import Project
@@ -41,9 +43,9 @@ class Contract(ContractBase, table=True):
     """Contract model - Legal contract based on estimate."""
     __tablename__ = "contract"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    project_id: uuid.UUID = Field(foreign_key="project.id", index=True)
-    estimate_id: uuid.UUID = Field(foreign_key="estimate.id")
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
+    estimate_id: int = Field(foreign_key="estimate.id", sa_type=BigInteger)
     
     # Contract details
     contract_amount: Decimal = Field(max_digits=15, decimal_places=2)
@@ -72,8 +74,8 @@ class Contract(ContractBase, table=True):
 
 class ContractCreate(SQLModel):
     """Schema for creating contract."""
-    project_id: uuid.UUID
-    estimate_id: uuid.UUID
+    project_id: int
+    estimate_id: int
     contract_amount: Decimal
     start_date: Optional[date] = None
     expected_end_date: Optional[date] = None
@@ -81,9 +83,9 @@ class ContractCreate(SQLModel):
 
 class ContractRead(ContractBase):
     """Schema for reading contract."""
-    id: uuid.UUID
-    project_id: uuid.UUID
-    estimate_id: uuid.UUID
+    id: int
+    project_id: int
+    estimate_id: int
     contract_amount: Decimal
     status: ContractStatus
     created_at: datetime
@@ -116,8 +118,8 @@ class LaborContract(LaborContractBase, table=True):
     """Labor Contract model - 일용직 계약."""
     __tablename__ = "labor_contract"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    project_id: uuid.UUID = Field(foreign_key="project.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
     
     # Worker info (sensitive - should be encrypted in production)
     worker_id_number: Optional[str] = Field(default=None, max_length=20)  # 주민등록번호
@@ -130,18 +132,18 @@ class LaborContract(LaborContractBase, table=True):
     signed_at: Optional[datetime] = Field(default=None)
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    created_by: Optional[uuid.UUID] = Field(default=None, foreign_key="user.id")
+    created_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
 
 
 class LaborContractCreate(LaborContractBase):
     """Schema for creating labor contract."""
-    project_id: uuid.UUID
+    project_id: int
 
 
 class LaborContractRead(LaborContractBase):
     """Schema for reading labor contract."""
-    id: uuid.UUID
-    project_id: uuid.UUID
+    id: int
+    project_id: int
     status: LaborContractStatus
     signed_at: Optional[datetime]
     created_at: datetime

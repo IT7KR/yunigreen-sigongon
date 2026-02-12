@@ -1,5 +1,4 @@
 import io
-import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Optional
@@ -59,7 +58,7 @@ class IssueResponse(EstimateRead):
     response_model=APIResponse[list[EstimateRead]],
 )
 async def list_estimates(
-    project_id: uuid.UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -93,7 +92,7 @@ async def list_estimates(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_estimate(
-    project_id: uuid.UUID,
+    project_id: int,
     estimate_data: EstimateCreate,
     db: DBSession,
     current_user: CurrentUser,
@@ -220,7 +219,7 @@ async def create_estimate(
     response_model=APIResponse[EstimateWithLines],
 )
 async def get_estimate(
-    estimate_id: uuid.UUID,
+    estimate_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -275,7 +274,7 @@ async def get_estimate(
     status_code=status.HTTP_201_CREATED,
 )
 async def add_estimate_line(
-    estimate_id: uuid.UUID,
+    estimate_id: int,
     line_data: EstimateLineCreate,
     db: DBSession,
     current_user: CurrentUser,
@@ -320,8 +319,8 @@ async def add_estimate_line(
     response_model=APIResponse[EstimateLineRead],
 )
 async def update_estimate_line(
-    estimate_id: uuid.UUID,
-    line_id: uuid.UUID,
+    estimate_id: int,
+    line_id: int,
     line_data: EstimateLineUpdate,
     db: DBSession,
     current_user: CurrentUser,
@@ -371,8 +370,8 @@ async def update_estimate_line(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_estimate_line(
-    estimate_id: uuid.UUID,
-    line_id: uuid.UUID,
+    estimate_id: int,
+    line_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -408,7 +407,7 @@ async def delete_estimate_line(
     response_model=APIResponse[IssueResponse],
 )
 async def issue_estimate(
-    estimate_id: uuid.UUID,
+    estimate_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -457,7 +456,7 @@ async def issue_estimate(
     "/estimates/{estimate_id}/export",
 )
 async def export_estimate(
-    estimate_id: uuid.UUID,
+    estimate_id: int,
     db: DBSession,
     current_user: CurrentUser,
     format: str = Query(default="pdf", pattern="^(xlsx|pdf)$"),
@@ -529,7 +528,7 @@ async def export_estimate(
 # === Helper Functions ===
 
 async def _get_editable_estimate(
-    estimate_id: uuid.UUID,
+    estimate_id: int,
     current_user: User,
     db: AsyncSession,
 ) -> Estimate:

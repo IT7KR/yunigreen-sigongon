@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     upload_dir: str = "/app/uploads"
     max_upload_size_mb: int = 10
     allowed_image_types: list[str] = ["image/jpeg", "image/png", "image/webp"]
+    harness_data_dir: str = ".runtime/harness_runs"
     
     # CORS
     cors_origins: list[str] = [
@@ -44,6 +45,9 @@ class Settings(BaseSettings):
         "http://localhost:3133",
         "http://localhost:3134",
     ]
+
+    # Snowflake ID
+    snowflake_worker_id: int = 1
 
     # Toss Payments (토스페이먼츠)
     toss_client_key: Optional[str] = None

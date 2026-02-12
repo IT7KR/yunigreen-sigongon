@@ -3,7 +3,6 @@
 CRITICAL: 모든 금액 계산은 이 서비스에서 RDB 기반으로 수행.
 AI는 절대 금액 계산에 관여하지 않음.
 """
-import uuid
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime
 from typing import Optional
@@ -50,8 +49,8 @@ class EstimationService:
     
     async def get_item_price(
         self,
-        catalog_item_id: uuid.UUID,
-        revision_id: uuid.UUID,
+        catalog_item_id: int,
+        revision_id: int,
     ) -> Decimal:
         """품목의 단가 조회.
         

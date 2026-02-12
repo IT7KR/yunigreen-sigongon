@@ -1,6 +1,5 @@
 """일용 계약 관리 API 라우터."""
 from typing import Annotated, Optional
-from uuid import UUID
 from datetime import date
 from decimal import Decimal
 
@@ -87,7 +86,7 @@ async def register_worker(
 
 @router.post("/{labor_contract_id}/send", response_model=APIResponse)
 async def send_labor_contract_for_signature(
-    labor_contract_id: UUID,
+    labor_contract_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -105,7 +104,7 @@ async def send_labor_contract_for_signature(
 
 @router.post("/{labor_contract_id}/sign", response_model=APIResponse)
 async def sign_labor_contract(
-    labor_contract_id: UUID,
+    labor_contract_id: int,
     signature_data: str,
     db: DBSession,
     current_user: CurrentUser,
@@ -124,7 +123,7 @@ async def sign_labor_contract(
 
 @router.patch("/{labor_contract_id}", response_model=APIResponse)
 async def update_labor_contract(
-    labor_contract_id: UUID,
+    labor_contract_id: int,
     db: DBSession,
     current_user: CurrentUser,
     status: Optional[LaborContractStatus] = None,
@@ -146,7 +145,7 @@ project_labor_router = APIRouter(prefix="/projects/{project_id}/labor-contracts"
 
 @project_labor_router.get("", response_model=APIResponse)
 async def get_project_labor_contracts(
-    project_id: UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -159,7 +158,7 @@ async def get_project_labor_contracts(
 
 @project_labor_router.post("", response_model=APIResponse)
 async def create_labor_contract(
-    project_id: UUID,
+    project_id: int,
     worker_name: str,
     work_date: date,
     daily_rate: Decimal,
@@ -183,7 +182,7 @@ async def create_labor_contract(
 
 @project_labor_router.get("/summary", response_model=APIResponse)
 async def get_labor_contracts_summary(
-    project_id: UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):

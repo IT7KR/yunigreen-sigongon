@@ -1,8 +1,9 @@
 """Base model configuration and mixins."""
-import uuid
 from datetime import datetime
-from typing import Optional
+from sqlalchemy import BigInteger
 from sqlmodel import SQLModel, Field
+
+from app.core.snowflake import generate_snowflake_id
 
 
 class TimestampMixin(SQLModel):
@@ -12,5 +13,5 @@ class TimestampMixin(SQLModel):
 
 
 class BaseModel(TimestampMixin):
-    """Base model with UUID primary key and timestamps."""
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    """Base model with Snowflake primary key and timestamps."""
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)

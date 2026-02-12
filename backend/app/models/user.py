@@ -1,9 +1,11 @@
 """User and Organization models."""
-import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Optional, List, TYPE_CHECKING
+from sqlalchemy import BigInteger
 from sqlmodel import SQLModel, Field, Relationship
+
+from app.core.snowflake import generate_snowflake_id
 
 
 class UserRole(str, Enum):
@@ -31,7 +33,7 @@ TENANT_ROLES = {UserRole.COMPANY_ADMIN, UserRole.SITE_MANAGER}
 SYSTEM_ROLES = {UserRole.SUPER_ADMIN, UserRole.WORKER}
 
 
-def validate_user_role_organization(role: UserRole, organization_id: Optional["uuid.UUID"]) -> None:
+def validate_user_role_organization(role: UserRole, organization_id: Optional[int]) -> None:
     """Validate role and organization_id consistency.
 
     Args:
@@ -68,7 +70,7 @@ class Organization(OrganizationBase, table=True):
     """Organization model - Multi-tenant support."""
     __tablename__ = "organization"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
@@ -83,7 +85,7 @@ class OrganizationCreate(OrganizationBase):
 
 class OrganizationRead(OrganizationBase):
     """Schema for reading organization."""
-    id: uuid.UUID
+    id: int
     created_at: datetime
 
 
@@ -105,10 +107,10 @@ class User(UserBase, table=True):
     """
     __tablename__ = "user"
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    organization_id: Optional[uuid.UUID] = Field(
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    organization_id: Optional[int] = Field(
         default=None,
-        foreign_key="organization.id",
+        foreign_key="organization.id", sa_type=BigInteger,
         index=True
     )
     password_hash: str = Field(max_length=255)
@@ -132,14 +134,14 @@ class UserCreate(SQLModel):
     password: str
     phone: Optional[str] = None
     role: UserRole = UserRole.SITE_MANAGER
-    organization_id: Optional[uuid.UUID] = None
+    organization_id: Optional[int] = None
 
 
 class UserRead(UserBase):
     """Schema for reading user."""
-    id: uuid.UUID
+    id: int
     username: str
-    organization_id: Optional[uuid.UUID]
+    organization_id: Optional[int]
     created_at: datetime
     last_login_at: Optional[datetime]
 

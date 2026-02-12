@@ -3,7 +3,6 @@
 CRITICAL: 단가 계산은 절대 AI에게 맡기지 않음.
 AI는 이미지 분석과 자재 추천만 담당함.
 """
-import uuid
 import time
 import logging
 from decimal import Decimal
@@ -60,7 +59,7 @@ class DiagnosisService:
     
     async def run_diagnosis(
         self,
-        diagnosis_id: uuid.UUID,
+        diagnosis_id: int,
         photo_paths: list[str],
         additional_notes: Optional[str] = None,
     ) -> AIDiagnosis:

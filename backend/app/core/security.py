@@ -1,5 +1,4 @@
 """보안 관련 유틸리티 (JWT, 비밀번호 해싱)."""
-import uuid
 from datetime import datetime, timedelta
 from typing import Optional, Any
 
@@ -160,12 +159,21 @@ async def get_current_user(
             detail="로그인 정보가 잘못됐어요. 다시 로그인해 주세요.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    try:
+        user_id_int = int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="로그인 정보가 잘못됐어요. 다시 로그인해 주세요.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
     # 사용자 조회 (순환 임포트 방지를 위해 여기서 임포트)
     from app.models.user import User
     
     result = await db.execute(
-        select(User).where(User.id == uuid.UUID(user_id))
+        select(User).where(User.id == user_id_int)
     )
     user = result.scalar_one_or_none()
     

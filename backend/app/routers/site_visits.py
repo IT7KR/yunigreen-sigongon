@@ -1,5 +1,4 @@
 """현장 방문 및 사진 API 라우터."""
-import uuid
 import os
 from datetime import datetime
 from typing import Annotated, Optional
@@ -56,7 +55,7 @@ class SiteVisitWithPhotos(SiteVisitRead):
     status_code=status.HTTP_201_CREATED,
 )
 async def create_site_visit(
-    project_id: uuid.UUID,
+    project_id: int,
     visit_data: SiteVisitCreate,
     db: DBSession,
     current_user: CurrentUser,
@@ -108,7 +107,7 @@ async def create_site_visit(
     response_model=APIResponse[list[SiteVisitWithPhotos]],
 )
 async def list_site_visits(
-    project_id: uuid.UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -161,7 +160,7 @@ async def list_site_visits(
     response_model=APIResponse[SiteVisitWithPhotos],
 )
 async def get_site_visit(
-    visit_id: uuid.UUID,
+    visit_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -211,7 +210,7 @@ async def get_site_visit(
     status_code=status.HTTP_201_CREATED,
 )
 async def upload_photo(
-    visit_id: uuid.UUID,
+    visit_id: int,
     db: DBSession,
     current_user: CurrentUser,
     file: UploadFile = File(...),
@@ -279,7 +278,7 @@ async def upload_photo(
     response_model=APIResponse[list[PhotoRead]],
 )
 async def list_photos(
-    visit_id: uuid.UUID,
+    visit_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -321,7 +320,7 @@ async def list_photos(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_photo(
-    photo_id: uuid.UUID,
+    photo_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):

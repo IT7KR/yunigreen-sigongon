@@ -1,5 +1,4 @@
 """세금계산서 API 라우터 - Popbill 연동."""
-import uuid
 from datetime import datetime, date
 from typing import Annotated, Optional, List
 from decimal import Decimal
@@ -35,8 +34,8 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 # Response Schemas
 class TaxInvoiceListItem(BaseModel):
     """세금계산서 목록 아이템."""
-    id: uuid.UUID
-    project_id: uuid.UUID
+    id: int
+    project_id: int
     mgtkey: str
     invoice_type: str
     status: str
@@ -51,9 +50,9 @@ class TaxInvoiceListItem(BaseModel):
 
 class TaxInvoiceDetail(BaseModel):
     """세금계산서 상세 정보."""
-    id: uuid.UUID
-    project_id: uuid.UUID
-    organization_id: uuid.UUID
+    id: int
+    project_id: int
+    organization_id: int
     mgtkey: str
     issue_id: Optional[str]
 
@@ -90,7 +89,7 @@ class TaxInvoiceDetail(BaseModel):
     updated_at: datetime
     issued_at: Optional[datetime]
     cancelled_at: Optional[datetime]
-    created_by: uuid.UUID
+    created_by: int
 
 
 class CreateTaxInvoiceRequest(BaseModel):
@@ -147,7 +146,7 @@ class PopbillUrlResponse(BaseModel):
 
 @router.get("/projects/{project_id}/tax-invoices", response_model=PaginatedResponse[TaxInvoiceListItem])
 async def list_project_tax_invoices(
-    project_id: uuid.UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
     page: int = Query(default=1, ge=1),
@@ -216,7 +215,7 @@ async def list_project_tax_invoices(
 
 @router.post("/projects/{project_id}/tax-invoices", response_model=APIResponse[TaxInvoiceDetail], status_code=status.HTTP_201_CREATED)
 async def create_tax_invoice(
-    project_id: uuid.UUID,
+    project_id: int,
     invoice_data: CreateTaxInvoiceRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -299,7 +298,7 @@ async def create_tax_invoice(
 
 @router.get("/tax-invoices/{invoice_id}", response_model=APIResponse[TaxInvoiceDetail])
 async def get_tax_invoice(
-    invoice_id: uuid.UUID,
+    invoice_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -324,7 +323,7 @@ async def get_tax_invoice(
 
 @router.put("/tax-invoices/{invoice_id}", response_model=APIResponse[TaxInvoiceDetail])
 async def update_tax_invoice(
-    invoice_id: uuid.UUID,
+    invoice_id: int,
     invoice_data: UpdateTaxInvoiceRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -366,7 +365,7 @@ async def update_tax_invoice(
 
 @router.post("/tax-invoices/{invoice_id}/issue", response_model=APIResponse[TaxInvoiceDetail])
 async def issue_tax_invoice(
-    invoice_id: uuid.UUID,
+    invoice_id: int,
     issue_data: IssueTaxInvoiceRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -435,7 +434,7 @@ async def issue_tax_invoice(
 
 @router.post("/tax-invoices/{invoice_id}/cancel", response_model=APIResponse[TaxInvoiceDetail])
 async def cancel_tax_invoice(
-    invoice_id: uuid.UUID,
+    invoice_id: int,
     db: DBSession,
     current_user: CurrentUser,
     reason: Optional[str] = Query(default=None),
@@ -496,7 +495,7 @@ async def cancel_tax_invoice(
 
 @router.post("/tax-invoices/{invoice_id}/retry", response_model=APIResponse[TaxInvoiceDetail])
 async def retry_tax_invoice(
-    invoice_id: uuid.UUID,
+    invoice_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -535,7 +534,7 @@ async def retry_tax_invoice(
 
 @router.get("/tax-invoices/{invoice_id}/popup-url", response_model=APIResponse[PopbillUrlResponse])
 async def get_popbill_popup_url(
-    invoice_id: uuid.UUID,
+    invoice_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):

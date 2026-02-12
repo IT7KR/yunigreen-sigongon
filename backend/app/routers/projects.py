@@ -1,5 +1,4 @@
 """프로젝트 API 라우터."""
-import uuid
 from datetime import datetime
 from typing import Annotated, Optional
 
@@ -173,7 +172,7 @@ async def create_project(
 
 @router.get("/{project_id}", response_model=APIResponse[ProjectDetail])
 async def get_project(
-    project_id: uuid.UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -217,7 +216,7 @@ async def get_project(
 
 @router.patch("/{project_id}", response_model=APIResponse[ProjectRead])
 async def update_project(
-    project_id: uuid.UUID,
+    project_id: int,
     project_data: ProjectUpdate,
     db: DBSession,
     current_user: CurrentUser,
@@ -250,7 +249,7 @@ async def update_project(
 
 @router.patch("/{project_id}/status", response_model=APIResponse[ProjectRead])
 async def update_project_status(
-    project_id: uuid.UUID,
+    project_id: int,
     status_data: StatusUpdateRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -297,7 +296,7 @@ async def update_project_status(
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
-    project_id: uuid.UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -328,21 +327,21 @@ async def delete_project(
 
 
 class PhotoAlbumPhoto(BaseModel):
-    id: uuid.UUID
+    id: int
     storage_path: str
     caption: Optional[str]
     taken_at: Optional[datetime]
 
 
 class ProjectPhotoAlbum(BaseModel):
-    project_id: uuid.UUID
+    project_id: int
     project_name: str
     photos: dict
 
 
 @router.get("/{project_id}/photo-album", response_model=APIResponse[ProjectPhotoAlbum])
 async def get_project_photo_album(
-    project_id: uuid.UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -402,7 +401,7 @@ async def get_project_photo_album(
 
 
 class WarrantyASRequest(BaseModel):
-    id: uuid.UUID
+    id: int
     description: str
     status: str
     created_at: datetime
@@ -410,7 +409,7 @@ class WarrantyASRequest(BaseModel):
 
 
 class WarrantyInfo(BaseModel):
-    project_id: uuid.UUID
+    project_id: int
     warranty_expires_at: Optional[datetime]
     days_remaining: int
     is_expired: bool
@@ -419,7 +418,7 @@ class WarrantyInfo(BaseModel):
 
 @router.get("/{project_id}/warranty", response_model=APIResponse[WarrantyInfo])
 async def get_warranty_info(
-    project_id: uuid.UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -483,14 +482,14 @@ class ASRequestCreateRequest(BaseModel):
 
 
 class ASRequestResponse(BaseModel):
-    id: uuid.UUID
+    id: int
     status: str
     message: str
 
 
 @router.post("/{project_id}/warranty/as-requests", response_model=APIResponse[ASRequestResponse])
 async def create_as_request(
-    project_id: uuid.UUID,
+    project_id: int,
     request_data: ASRequestCreateRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -548,7 +547,7 @@ async def create_as_request(
 
 
 class CompleteProjectResponse(BaseModel):
-    id: uuid.UUID
+    id: int
     status: ProjectStatus
     completed_at: datetime
     warranty_expires_at: datetime
@@ -556,7 +555,7 @@ class CompleteProjectResponse(BaseModel):
 
 @router.post("/{project_id}/complete", response_model=APIResponse[CompleteProjectResponse])
 async def complete_project(
-    project_id: uuid.UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):

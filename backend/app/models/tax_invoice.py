@@ -1,10 +1,12 @@
 """TaxInvoice models for Popbill tax invoice integration (팝빌 세금계산서 연동)."""
-import uuid
 from datetime import datetime, date
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, TYPE_CHECKING
+from sqlalchemy import BigInteger
 from sqlmodel import SQLModel, Field, Relationship
+
+from app.core.snowflake import generate_snowflake_id
 
 if TYPE_CHECKING:
     from app.models.project import Project
@@ -63,9 +65,9 @@ class TaxInvoice(TaxInvoiceBase, table=True):
     """TaxInvoice model - Popbill tax invoice integration."""
     __tablename__ = "tax_invoice"
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    project_id: uuid.UUID = Field(foreign_key="project.id", index=True)
-    organization_id: uuid.UUID = Field(foreign_key="organization.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
+    organization_id: int = Field(foreign_key="organization.id", sa_type=BigInteger, index=True)
 
     # Popbill issue ID (set after successful issue)
     issue_id: Optional[str] = Field(default=None, max_length=50, unique=True, index=True)
@@ -80,7 +82,7 @@ class TaxInvoice(TaxInvoiceBase, table=True):
     cancelled_at: Optional[datetime] = Field(default=None)
 
     # Audit
-    created_by: uuid.UUID = Field(foreign_key="user.id")
+    created_by: int = Field(foreign_key="user.id", sa_type=BigInteger)
 
     # Relationships
     project: Optional["Project"] = Relationship()
@@ -88,7 +90,7 @@ class TaxInvoice(TaxInvoiceBase, table=True):
 
 class TaxInvoiceCreate(SQLModel):
     """Schema for creating tax invoice."""
-    project_id: uuid.UUID
+    project_id: int
     mgtkey: str
 
     # Invoice details
@@ -121,16 +123,16 @@ class TaxInvoiceCreate(SQLModel):
 
 class TaxInvoiceRead(TaxInvoiceBase):
     """Schema for reading tax invoice."""
-    id: uuid.UUID
-    project_id: uuid.UUID
-    organization_id: uuid.UUID
+    id: int
+    project_id: int
+    organization_id: int
     issue_id: Optional[str]
     status: TaxInvoiceStatus
     created_at: datetime
     updated_at: datetime
     issued_at: Optional[datetime]
     cancelled_at: Optional[datetime]
-    created_by: uuid.UUID
+    created_by: int
 
 
 class TaxInvoiceUpdate(SQLModel):

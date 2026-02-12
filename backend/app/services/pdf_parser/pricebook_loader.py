@@ -8,6 +8,7 @@ from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.core.snowflake import generate_snowflake_id
 from app.models.pricebook import (
     Pricebook,
     PricebookRevision,
@@ -76,7 +77,7 @@ class PricebookLoader:
         
         if pricebook is None:
             pricebook = Pricebook(
-                id=uuid.uuid4(),
+                id=generate_snowflake_id(),
                 name=name,
                 description=f"{name} 단가표",
                 is_active=True,
@@ -88,14 +89,14 @@ class PricebookLoader:
     
     async def _create_revision(
         self,
-        pricebook_id: uuid.UUID,
+        pricebook_id: int,
         revision_code: str,
         effective_from: datetime,
         effective_until: Optional[datetime],
         source_files: list[str],
     ) -> PricebookRevision:
         revision = PricebookRevision(
-            id=uuid.uuid4(),
+            id=generate_snowflake_id(),
             pricebook_id=pricebook_id,
             version_label=revision_code,
             effective_from=effective_from.date() if isinstance(effective_from, datetime) else effective_from,
@@ -109,7 +110,7 @@ class PricebookLoader:
     async def _load_price_items(
         self,
         pdf_path: str,
-        revision_id: uuid.UUID,
+        revision_id: int,
     ) -> int:
         """단가 항목 DB 적재."""
         try:
@@ -124,7 +125,7 @@ class PricebookLoader:
             catalog_item = await self._get_or_create_catalog_item(item)
             
             price = CatalogItemPrice(
-                id=uuid.uuid4(),
+                id=generate_snowflake_id(),
                 catalog_item_id=catalog_item.id,
                 pricebook_revision_id=revision_id,
                 unit_price=item.unit_price,
@@ -147,7 +148,7 @@ class PricebookLoader:
         
         if catalog_item is None:
             catalog_item = CatalogItem(
-                id=uuid.uuid4(),
+                id=generate_snowflake_id(),
                 code=self._generate_item_code(item),
                 name_ko=item.item_name,
                 specification=item.specification,
@@ -173,7 +174,7 @@ class PricebookLoader:
     async def _load_text_chunks(
         self,
         pdf_path: str,
-        revision_id: uuid.UUID,
+        revision_id: int,
     ) -> int:
         """텍스트 청크 DB 적재 (RAG용)."""
         try:
@@ -186,7 +187,7 @@ class PricebookLoader:
         count = 0
         for chunk in chunks:
             doc_chunk = DocumentChunk(
-                id=uuid.uuid4(),
+                id=generate_snowflake_id(),
                 pricebook_revision_id=revision_id,
                 chunk_text=chunk.content,
                 source_file=chunk.source_file,

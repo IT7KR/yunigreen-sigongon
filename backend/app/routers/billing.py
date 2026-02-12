@@ -60,8 +60,8 @@ class ChangePlanRequest(BaseModel):
 
 class SubscriptionDetail(BaseModel):
     """구독 상세 정보."""
-    id: uuid.UUID
-    organization_id: uuid.UUID
+    id: int
+    organization_id: int
     plan: str
     status: str
     started_at: datetime
@@ -73,7 +73,7 @@ class SubscriptionDetail(BaseModel):
 
 class PaymentListItem(BaseModel):
     """결제 목록 아이템."""
-    id: uuid.UUID
+    id: int
     order_id: str
     amount: Decimal
     method: Optional[str]
@@ -87,9 +87,9 @@ class PaymentListItem(BaseModel):
 
 class PaymentDetail(BaseModel):
     """결제 상세 정보."""
-    id: uuid.UUID
-    subscription_id: uuid.UUID
-    organization_id: uuid.UUID
+    id: int
+    subscription_id: int
+    organization_id: int
     payment_key: str
     order_id: str
     amount: Decimal
@@ -525,7 +525,7 @@ async def handle_webhook(
             if customer_key.startswith("org-"):
                 org_id_str = customer_key[4:]
                 try:
-                    org_id = uuid.UUID(org_id_str)
+                    org_id = int(org_id_str)
                     result = await db.execute(
                         select(Subscription).where(Subscription.organization_id == org_id)
                     )
@@ -537,7 +537,7 @@ async def handle_webhook(
                         subscription.updated_at = datetime.utcnow()
                         await db.commit()
                 except ValueError:
-                    pass  # Invalid UUID format
+                    pass  # Invalid int format
 
     return {"status": "ok", "received": event_type}
 

@@ -40,6 +40,20 @@ from app.models.billing import (
     SubscriptionCreate, SubscriptionRead, SubscriptionUpdate,
     PaymentCreate, PaymentRead
 )
+from app.models.case import (
+    Season,
+    SeasonDocument,
+    TraceChunk,
+    CostItem,
+    Case,
+    CaseImage,
+    VisionResult,
+    CaseEstimate,
+    EstimateExport,
+    DocumentStatus,
+    CaseStatus,
+    ExportFileType,
+)
 
 __all__ = [
     # Base
@@ -127,4 +141,17 @@ __all__ = [
     "SubscriptionUpdate",
     "PaymentCreate",
     "PaymentRead",
+    # Case/Season
+    "Season",
+    "SeasonDocument",
+    "TraceChunk",
+    "CostItem",
+    "Case",
+    "CaseImage",
+    "VisionResult",
+    "CaseEstimate",
+    "EstimateExport",
+    "DocumentStatus",
+    "CaseStatus",
+    "ExportFileType",
 ]

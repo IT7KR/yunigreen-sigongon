@@ -1,11 +1,12 @@
 """Pricebook, Revision, CatalogItem, and Price models."""
-import uuid
 from datetime import datetime, date
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, List, Any, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship, Column
-from sqlalchemy import JSON
+from sqlalchemy import BigInteger, JSON
+
+from app.core.snowflake import generate_snowflake_id
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -44,7 +45,7 @@ class Pricebook(PricebookBase, table=True):
     """Pricebook model - Master record for a pricing source."""
     __tablename__ = "pricebook"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
@@ -58,7 +59,7 @@ class PricebookCreate(PricebookBase):
 
 class PricebookRead(PricebookBase):
     """Schema for reading pricebook."""
-    id: uuid.UUID
+    id: int
     created_at: datetime
 
 
@@ -74,8 +75,8 @@ class PricebookRevision(PricebookRevisionBase, table=True):
     """Pricebook Revision model - A specific version (e.g., 2025년 하반기)."""
     __tablename__ = "pricebook_revision"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    pricebook_id: uuid.UUID = Field(foreign_key="pricebook.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    pricebook_id: int = Field(foreign_key="pricebook.id", sa_type=BigInteger, index=True)
     
     # Status
     status: RevisionStatus = Field(default=RevisionStatus.DRAFT, index=True)
@@ -84,7 +85,7 @@ class PricebookRevision(PricebookRevisionBase, table=True):
     source_files: Optional[List[dict]] = Field(default=None, sa_column=Column(JSON))
     
     # Metadata
-    created_by: Optional[uuid.UUID] = Field(default=None, foreign_key="user.id")
+    created_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     activated_at: Optional[datetime] = Field(default=None)
     deprecated_at: Optional[datetime] = Field(default=None)
@@ -97,13 +98,13 @@ class PricebookRevision(PricebookRevisionBase, table=True):
 
 class PricebookRevisionCreate(PricebookRevisionBase):
     """Schema for creating pricebook revision."""
-    pricebook_id: uuid.UUID
+    pricebook_id: int
 
 
 class PricebookRevisionRead(PricebookRevisionBase):
     """Schema for reading pricebook revision."""
-    id: uuid.UUID
-    pricebook_id: uuid.UUID
+    id: int
+    pricebook_id: int
     status: RevisionStatus
     created_at: datetime
     activated_at: Optional[datetime]
@@ -128,7 +129,7 @@ class CatalogItem(CatalogItemBase, table=True):
     """Catalog Item model - A single item that can be priced."""
     __tablename__ = "catalog_item"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
@@ -144,7 +145,7 @@ class CatalogItemCreate(CatalogItemBase):
 
 class CatalogItemRead(CatalogItemBase):
     """Schema for reading catalog item."""
-    id: uuid.UUID
+    id: int
     created_at: datetime
 
 
@@ -160,9 +161,9 @@ class CatalogItemPrice(CatalogItemPriceBase, table=True):
     """Catalog Item Price model - Price for a specific item in a specific revision."""
     __tablename__ = "catalog_item_price"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    pricebook_revision_id: uuid.UUID = Field(foreign_key="pricebook_revision.id", index=True)
-    catalog_item_id: uuid.UUID = Field(foreign_key="catalog_item.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    pricebook_revision_id: int = Field(foreign_key="pricebook_revision.id", sa_type=BigInteger, index=True)
+    catalog_item_id: int = Field(foreign_key="catalog_item.id", sa_type=BigInteger, index=True)
     
     # Source reference (for audit)
     source_pdf_page: Optional[int] = Field(default=None)
@@ -177,16 +178,16 @@ class CatalogItemPrice(CatalogItemPriceBase, table=True):
 
 class CatalogItemPriceCreate(CatalogItemPriceBase):
     """Schema for creating catalog item price."""
-    pricebook_revision_id: uuid.UUID
-    catalog_item_id: uuid.UUID
+    pricebook_revision_id: int
+    catalog_item_id: int
     source_pdf_page: Optional[int] = None
 
 
 class CatalogItemPriceRead(CatalogItemPriceBase):
     """Schema for reading catalog item price."""
-    id: uuid.UUID
-    pricebook_revision_id: uuid.UUID
-    catalog_item_id: uuid.UUID
+    id: int
+    pricebook_revision_id: int
+    catalog_item_id: int
     created_at: datetime
 
 
@@ -202,8 +203,8 @@ class CatalogItemAlias(CatalogItemAliasBase, table=True):
     """Catalog Item Alias model - Aliases help map AI suggestions to catalog items."""
     __tablename__ = "catalog_item_alias"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    catalog_item_id: uuid.UUID = Field(foreign_key="catalog_item.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    catalog_item_id: int = Field(foreign_key="catalog_item.id", sa_type=BigInteger, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
@@ -212,7 +213,7 @@ class CatalogItemAlias(CatalogItemAliasBase, table=True):
 
 class CatalogItemAliasCreate(CatalogItemAliasBase):
     """Schema for creating catalog item alias."""
-    catalog_item_id: uuid.UUID
+    catalog_item_id: int
 
 
 # Import DocumentChunk here to avoid circular import

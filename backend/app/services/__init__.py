@@ -3,6 +3,7 @@ __all__ = [
     "EstimationService",
     "HwpxTemplateEngine",
     "RAGService",
+    "HarnessService",
 ]
 
 
@@ -23,4 +24,8 @@ def __getattr__(name: str):
         from app.services.rag import RAGService
 
         return RAGService
+    if name == "HarnessService":
+        from app.services.harness import HarnessService
+
+        return HarnessService
     raise AttributeError(f"module 'app.services' has no attribute '{name}'")

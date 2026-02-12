@@ -1,6 +1,5 @@
 import io
 from typing import Annotated, Optional
-from uuid import UUID
 from datetime import date
 from urllib.parse import quote
 
@@ -33,7 +32,7 @@ class SignRequest(BaseModel):
 
 @router.get("/{contract_id}", response_model=APIResponse)
 async def get_contract(
-    contract_id: UUID,
+    contract_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -64,7 +63,7 @@ async def get_contract(
 
 @router.post("/{contract_id}/send", response_model=APIResponse)
 async def send_contract_for_signature(
-    contract_id: UUID,
+    contract_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -90,7 +89,7 @@ async def send_contract_for_signature(
 
 @router.post("/{contract_id}/sign", response_model=APIResponse)
 async def sign_contract(
-    contract_id: UUID,
+    contract_id: int,
     sign_request: SignRequest,
     db: DBSession,
     current_user: CurrentUser,
@@ -120,7 +119,7 @@ async def sign_contract(
 
 @router.patch("/{contract_id}", response_model=APIResponse)
 async def update_contract(
-    contract_id: UUID,
+    contract_id: int,
     update_data: ContractUpdate,
     db: DBSession,
     current_user: CurrentUser,
@@ -143,7 +142,7 @@ async def update_contract(
 
 @router.get("/{contract_id}/export")
 async def export_contract(
-    contract_id: UUID,
+    contract_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -199,7 +198,7 @@ project_contracts_router = APIRouter(prefix="/projects/{project_id}/contracts", 
 
 @project_contracts_router.get("", response_model=APIResponse)
 async def get_project_contracts(
-    project_id: UUID,
+    project_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
@@ -222,7 +221,7 @@ async def get_project_contracts(
 
 
 class CreateContractRequest(BaseModel):
-    estimate_id: UUID
+    estimate_id: int
     start_date: Optional[date] = None
     expected_end_date: Optional[date] = None
     notes: Optional[str] = None
@@ -230,7 +229,7 @@ class CreateContractRequest(BaseModel):
 
 @project_contracts_router.post("", response_model=APIResponse)
 async def create_contract(
-    project_id: UUID,
+    project_id: int,
     request: CreateContractRequest,
     db: DBSession,
     current_user: CurrentUser,

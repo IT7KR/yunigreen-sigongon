@@ -1,11 +1,12 @@
 """Price Staging models - 추출된 단가의 임시 저장 및 검증용."""
-import uuid
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Column
-from sqlalchemy import JSON
+from sqlalchemy import BigInteger, JSON
+
+from app.core.snowflake import generate_snowflake_id
 
 
 class StagingStatus(str, Enum):
@@ -38,8 +39,8 @@ class PriceStaging(SQLModel, table=True):
     """
     __tablename__ = "price_staging"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    pricebook_revision_id: uuid.UUID = Field(foreign_key="pricebook_revision.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    pricebook_revision_id: int = Field(foreign_key="pricebook_revision.id", sa_type=BigInteger, index=True)
     
     # 추출된 데이터
     item_name: str = Field(max_length=255, index=True)
@@ -66,18 +67,18 @@ class PriceStaging(SQLModel, table=True):
     status: StagingStatus = Field(default=StagingStatus.PENDING, index=True)
     
     # 기존 카탈로그 매칭 (선택)
-    matched_catalog_item_id: Optional[uuid.UUID] = Field(
-        default=None, foreign_key="catalog_item.id"
+    matched_catalog_item_id: Optional[int] = Field(
+        default=None, foreign_key="catalog_item.id", sa_type=BigInteger
     )
     
     # 감사 추적
     created_at: datetime = Field(default_factory=datetime.utcnow)
     reviewed_at: Optional[datetime] = Field(default=None)
-    reviewed_by: Optional[uuid.UUID] = Field(default=None, foreign_key="user.id")
+    reviewed_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
     review_note: Optional[str] = Field(default=None)
     
     # 승인 후 생성된 정식 가격 레코드 ID
-    promoted_price_id: Optional[uuid.UUID] = Field(default=None)
+    promoted_price_id: Optional[int] = Field(default=None)
 
 
 # ============================================================
@@ -85,7 +86,7 @@ class PriceStaging(SQLModel, table=True):
 # ============================================================
 class PriceStagingCreate(SQLModel):
     """Price staging 생성 스키마 (내부용)."""
-    pricebook_revision_id: uuid.UUID
+    pricebook_revision_id: int
     item_name: str
     specification: Optional[str] = None
     unit: str
@@ -99,8 +100,8 @@ class PriceStagingCreate(SQLModel):
 
 class PriceStagingRead(SQLModel):
     """Price staging 조회 스키마."""
-    id: uuid.UUID
-    pricebook_revision_id: uuid.UUID
+    id: int
+    pricebook_revision_id: int
     item_name: str
     specification: Optional[str]
     unit: str
@@ -113,7 +114,7 @@ class PriceStagingRead(SQLModel):
     is_grounded: bool
     anomaly_flags: Optional[List[str]]
     status: StagingStatus
-    matched_catalog_item_id: Optional[uuid.UUID]
+    matched_catalog_item_id: Optional[int]
     created_at: datetime
     reviewed_at: Optional[datetime]
 
@@ -130,14 +131,14 @@ class PriceStagingReviewRequest(SQLModel):
 
 class PriceStagingBulkReviewRequest(SQLModel):
     """일괄 검토 요청 스키마."""
-    staging_ids: List[uuid.UUID]
+    staging_ids: List[int]
     action: StagingStatus
     review_note: Optional[str] = None
 
 
 class PriceStagingSummary(SQLModel):
     """Revision별 staging 요약."""
-    revision_id: uuid.UUID
+    revision_id: int
     total_items: int
     pending_count: int
     approved_count: int

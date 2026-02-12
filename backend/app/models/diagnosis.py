@@ -1,11 +1,12 @@
 """AI Diagnosis and Material Suggestion models."""
-import uuid
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, List, Any, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship, Column
-from sqlalchemy import JSON
+from sqlalchemy import BigInteger, JSON
+
+from app.core.snowflake import generate_snowflake_id
 
 if TYPE_CHECKING:
     from app.models.project import SiteVisit
@@ -39,8 +40,8 @@ class AIDiagnosis(AIDiagnosisBase, table=True):
     """AI Diagnosis model - Gemini analysis results."""
     __tablename__ = "ai_diagnosis"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    site_visit_id: uuid.UUID = Field(foreign_key="site_visit.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    site_visit_id: int = Field(foreign_key="site_visit.id", sa_type=BigInteger, index=True)
     
     # Output
     leak_opinion_text: str  # 누수소견서 본문
@@ -63,15 +64,15 @@ class AIDiagnosis(AIDiagnosisBase, table=True):
 
 class AIDiagnosisCreate(SQLModel):
     """Schema for creating AI diagnosis."""
-    site_visit_id: uuid.UUID
+    site_visit_id: int
     additional_notes: Optional[str] = None
-    photo_ids: Optional[List[uuid.UUID]] = None
+    photo_ids: Optional[List[int]] = None
 
 
 class AIDiagnosisRead(AIDiagnosisBase):
     """Schema for reading AI diagnosis."""
-    id: uuid.UUID
-    site_visit_id: uuid.UUID
+    id: int
+    site_visit_id: int
     leak_opinion_text: str
     confidence_score: Optional[Decimal]
     status: DiagnosisStatus
@@ -91,19 +92,19 @@ class AIMaterialSuggestion(AIMaterialSuggestionBase, table=True):
     """AI Material Suggestion model - Materials recommended by AI."""
     __tablename__ = "ai_material_suggestion"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    ai_diagnosis_id: uuid.UUID = Field(foreign_key="ai_diagnosis.id", index=True)
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    ai_diagnosis_id: int = Field(foreign_key="ai_diagnosis.id", sa_type=BigInteger, index=True)
     
     # Matching to our catalog
-    matched_catalog_item_id: Optional[uuid.UUID] = Field(
-        default=None, foreign_key="catalog_item.id"
+    matched_catalog_item_id: Optional[int] = Field(
+        default=None, foreign_key="catalog_item.id", sa_type=BigInteger
     )
     match_confidence: Optional[Decimal] = Field(default=None, max_digits=3, decimal_places=2)
     match_method: Optional[MatchMethod] = Field(default=None)
     
     # For review
     is_confirmed: bool = Field(default=False)
-    confirmed_by: Optional[uuid.UUID] = Field(default=None, foreign_key="user.id")
+    confirmed_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
     confirmed_at: Optional[datetime] = Field(default=None)
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -114,9 +115,9 @@ class AIMaterialSuggestion(AIMaterialSuggestionBase, table=True):
 
 class AIMaterialSuggestionRead(AIMaterialSuggestionBase):
     """Schema for reading AI material suggestion."""
-    id: uuid.UUID
-    ai_diagnosis_id: uuid.UUID
-    matched_catalog_item_id: Optional[uuid.UUID]
+    id: int
+    ai_diagnosis_id: int
+    matched_catalog_item_id: Optional[int]
     match_confidence: Optional[Decimal]
     match_method: Optional[MatchMethod]
     is_confirmed: bool
@@ -125,5 +126,5 @@ class AIMaterialSuggestionRead(AIMaterialSuggestionBase):
 
 class AIMaterialSuggestionUpdate(SQLModel):
     """Schema for updating AI material suggestion (confirmation)."""
-    matched_catalog_item_id: Optional[uuid.UUID] = None
+    matched_catalog_item_id: Optional[int] = None
     is_confirmed: bool = False

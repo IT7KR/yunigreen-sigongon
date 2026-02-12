@@ -1,10 +1,12 @@
 """Billing and Payment models for Toss Payments integration."""
-import uuid
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, TYPE_CHECKING
+from sqlalchemy import BigInteger
 from sqlmodel import SQLModel, Field, Relationship
+
+from app.core.snowflake import generate_snowflake_id
 
 if TYPE_CHECKING:
     from app.models.user import Organization
@@ -44,9 +46,9 @@ class Subscription(SubscriptionBase, table=True):
     """Subscription model - Organization subscription with Toss Payments billing."""
     __tablename__ = "subscription"
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    organization_id: uuid.UUID = Field(
-        foreign_key="organization.id",
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    organization_id: int = Field(
+        foreign_key="organization.id", sa_type=BigInteger,
         unique=True,
         index=True
     )
@@ -69,7 +71,7 @@ class Subscription(SubscriptionBase, table=True):
 
 class SubscriptionCreate(SQLModel):
     """Schema for creating subscription."""
-    organization_id: uuid.UUID
+    organization_id: int
     plan: SubscriptionPlan
     expires_at: datetime
     billing_key: Optional[str] = None
@@ -77,8 +79,8 @@ class SubscriptionCreate(SQLModel):
 
 class SubscriptionRead(SubscriptionBase):
     """Schema for reading subscription."""
-    id: uuid.UUID
-    organization_id: uuid.UUID
+    id: int
+    organization_id: int
     started_at: datetime
     expires_at: datetime
     cancelled_at: Optional[datetime]
@@ -105,13 +107,13 @@ class Payment(PaymentBase, table=True):
     """Payment model - Toss Payments transaction records."""
     __tablename__ = "payment"
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    subscription_id: uuid.UUID = Field(
-        foreign_key="subscription.id",
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    subscription_id: int = Field(
+        foreign_key="subscription.id", sa_type=BigInteger,
         index=True
     )
-    organization_id: uuid.UUID = Field(
-        foreign_key="organization.id",
+    organization_id: int = Field(
+        foreign_key="organization.id", sa_type=BigInteger,
         index=True
     )
 
@@ -138,8 +140,8 @@ class Payment(PaymentBase, table=True):
 
 class PaymentCreate(SQLModel):
     """Schema for creating payment."""
-    subscription_id: uuid.UUID
-    organization_id: uuid.UUID
+    subscription_id: int
+    organization_id: int
     payment_key: str
     order_id: str
     amount: Decimal
@@ -148,9 +150,9 @@ class PaymentCreate(SQLModel):
 
 class PaymentRead(PaymentBase):
     """Schema for reading payment."""
-    id: uuid.UUID
-    subscription_id: uuid.UUID
-    organization_id: uuid.UUID
+    id: int
+    subscription_id: int
+    organization_id: int
     payment_key: str
     order_id: str
     status: PaymentStatus

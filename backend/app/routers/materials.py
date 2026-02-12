@@ -6,7 +6,6 @@
 3. 신뢰도 < 0.9: 사용자에게 후보 제시 → 선택 → confirm_match()
 4. 선택 결과가 alias로 저장 → 다음부터 자동 매칭
 """
-import uuid
 from typing import Annotated, Optional, List
 from decimal import Decimal
 
@@ -29,7 +28,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 class MatchCandidateResponse(SQLModel):
     """매칭 후보 응답."""
-    catalog_item_id: uuid.UUID
+    catalog_item_id: int
     name_ko: str
     specification: Optional[str]
     unit: str
@@ -53,19 +52,19 @@ class MatchRequest(SQLModel):
     suggested_name: str
     suggested_spec: Optional[str] = None
     suggested_unit: Optional[str] = None
-    revision_id: Optional[uuid.UUID] = None
+    revision_id: Optional[int] = None
 
 
 class ConfirmMatchRequest(SQLModel):
     """매칭 확정 요청."""
     original_text: str
-    catalog_item_id: uuid.UUID
+    catalog_item_id: int
 
 
 class BatchMatchRequest(SQLModel):
     """일괄 매칭 요청."""
     items: List[MatchRequest]
-    revision_id: Optional[uuid.UUID] = None
+    revision_id: Optional[int] = None
 
 
 class BatchConfirmRequest(SQLModel):
