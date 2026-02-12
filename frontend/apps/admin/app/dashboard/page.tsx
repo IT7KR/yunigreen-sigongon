@@ -20,13 +20,13 @@ import {
   CardTitle,
   StatusBadge,
   formatDate,
-  CountUp,
   Skeleton,
   StatCard,
   PageHeader,
   EmptyState,
   AlertBox,
-  AnimatedPage,
+  PageTransition,
+  StaggerGrid,
 } from "@sigongon/ui";
 import { useDashboardStats } from "@/hooks";
 import type { ProjectStatus } from "@sigongon/types";
@@ -100,7 +100,7 @@ export default function DashboardPage() {
 
   return (
     <AdminLayout>
-      <AnimatedPage>
+      <PageTransition>
         <div className="space-y-8">
           <PageHeader title="대시보드" description="오늘의 현황을 확인하세요" />
 
@@ -214,18 +214,20 @@ export default function DashboardPage() {
             </Card>
 
             {/* Finance Stats */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {financeCards.map((card) => (
+            <StaggerGrid
+              items={financeCards}
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+              keyExtractor={(card) => card.title}
+              renderItem={(card) => (
                 <StatCard
-                  key={card.title}
                   title={card.title}
                   value={card.suffix ? card.value : Math.round(card.value / 10000)}
                   icon={card.icon}
                   color={card.color as "green" | "blue" | "amber" | "purple"}
                   suffix={card.suffix || "만원"}
                 />
-              ))}
-            </div>
+              )}
+            />
 
             {/* Recent Work Logs */}
             <Card>
@@ -235,12 +237,14 @@ export default function DashboardPage() {
                   최근 작업일지
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {mockExtendedStats.recentLogs.length > 0 ? (
-                  <div className="space-y-3">
-                    {mockExtendedStats.recentLogs.map((log) => (
+                <CardContent>
+                  {mockExtendedStats.recentLogs.length > 0 ? (
+                  <StaggerGrid
+                    items={mockExtendedStats.recentLogs}
+                    className="space-y-3"
+                    keyExtractor={(log) => log.id}
+                    renderItem={(log) => (
                       <div
-                        key={log.id}
                         className="flex items-start justify-between rounded-lg border border-slate-100 p-3"
                       >
                         <div>
@@ -253,8 +257,8 @@ export default function DashboardPage() {
                         </div>
                         <span className="text-sm text-slate-500">{log.date}</span>
                       </div>
-                    ))}
-                  </div>
+                    )}
+                  />
                 ) : (
                   <EmptyState
                     icon={ClipboardList}
@@ -293,7 +297,7 @@ export default function DashboardPage() {
           </>
         )}
         </div>
-      </AnimatedPage>
+      </PageTransition>
     </AdminLayout>
   );
 }

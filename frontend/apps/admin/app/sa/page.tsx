@@ -7,7 +7,8 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CountUp,
+  MotionNumber,
+  PageTransition,
   Skeleton,
 } from "@sigongon/ui";
 import {
@@ -16,7 +17,6 @@ import {
   DollarSign,
   TrendingUp,
   ArrowUp,
-  ArrowDown,
   AlertTriangle,
   Calendar,
 } from "lucide-react";
@@ -115,7 +115,7 @@ export default function SADashboardPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-8">
+      <PageTransition className="space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
             최고관리자 대시보드
@@ -141,8 +141,8 @@ export default function SADashboardPage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-slate-500">전체 고객사</p>
-                      <CountUp
-                        end={stats.total_tenants}
+                      <MotionNumber
+                        value={stats.total_tenants}
                         className="mt-1 text-3xl font-bold text-slate-900"
                       />
                       <div className="mt-2 flex items-center gap-1 text-sm">
@@ -165,8 +165,8 @@ export default function SADashboardPage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-slate-500">활성 사용자</p>
-                      <CountUp
-                        end={stats.total_users}
+                      <MotionNumber
+                        value={stats.total_users}
                         className="mt-1 text-3xl font-bold text-slate-900"
                       />
                       <div className="mt-2 flex items-center gap-1 text-sm">
@@ -212,8 +212,8 @@ export default function SADashboardPage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-slate-500">신규 가입</p>
-                      <CountUp
-                        end={stats.new_signups}
+                      <MotionNumber
+                        value={stats.new_signups}
                         className="mt-1 text-3xl font-bold text-slate-900"
                       />
                       <div className="mt-2 flex items-center gap-1 text-sm">
@@ -441,7 +441,7 @@ export default function SADashboardPage() {
             </Card>
           </>
         )}
-      </div>
+      </PageTransition>
     </AdminLayout>
   );
 }

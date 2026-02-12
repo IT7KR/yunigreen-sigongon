@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Search, MoreHorizontal, X, FolderKanban, AlertCircle, Loader2, Pencil, Trash2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { AnimatedPage, Button, Card, CardContent, ConfirmModal, EmptyState, Input, LoadingOverlay, Modal, PageHeader, PrimitiveButton, PrimitiveInput, Select, StatusBadge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
+import { Button, Card, CardContent, ConfirmModal, EmptyState, Input, LoadingOverlay, Modal, PageHeader, PageTransition, PrimitiveButton, PrimitiveInput, Select, StatusBadge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
 import { useProjects } from "@/hooks";
 import { api } from "@/lib/api";
 import type { ProjectStatus, ProjectCategory } from "@sigongon/types";
@@ -115,7 +115,7 @@ export default function ProjectsPage() {
 
   return (
     <AdminLayout>
-      <AnimatedPage>
+      <PageTransition>
         <div className="space-y-6">
           <PageHeader
             title="프로젝트"
@@ -293,7 +293,7 @@ export default function ProjectsPage() {
           </CardContent>
         </Card>
         </div>
-      </AnimatedPage>
+      </PageTransition>
 
       <Modal
         isOpen={showCreateModal}

@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
-import { BlurText, Button, Card, CardContent, Input, PrimitiveButton } from "@sigongon/ui";
+import { BlurText, Button, Card, CardContent, Input, PageTransition, PrimitiveButton, Reveal } from "@sigongon/ui";
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
 
@@ -56,7 +56,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-100 p-4">
+    <PageTransition className="flex min-h-screen flex-col items-center justify-center bg-slate-100 p-4">
       <div className="mb-8 flex flex-col items-center">
         <Image
           src="/logo-sq.png"
@@ -65,12 +65,14 @@ function LoginForm() {
           height={80}
           className="object-contain"
         />
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">
-          <BlurText text="시공ON 관리자" />
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <Reveal className="mt-4" delay={0.04}>
+          <h1 className="text-2xl font-bold text-slate-900">
+            <BlurText text="시공ON 관리자" />
+          </h1>
+        </Reveal>
+        <Reveal className="mt-1 text-sm text-slate-500" delay={0.1}>
           관리자 계정으로 로그인하세요
-        </p>
+        </Reveal>
       </div>
 
       <Card className="w-full max-w-sm">
@@ -194,7 +196,7 @@ function LoginForm() {
       <p className="mt-8 text-xs text-slate-400">
         © 2026 시공ON. All rights reserved.
       </p>
-    </div>
+    </PageTransition>
   );
 }
 
