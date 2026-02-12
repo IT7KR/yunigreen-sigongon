@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -23,7 +23,7 @@ import {
   CardTitle,
   Button,
   Badge,
-  formatDate,
+  toast,
 } from "@sigongon/ui";
 import { useDiagnosis } from "@/hooks";
 import { api } from "@/lib/api";
@@ -68,13 +68,19 @@ export default function DiagnosisDetailPage({
 }: DiagnosisDetailPageProps) {
   const { id } = use(params);
   const router = useRouter();
-  const { data, isLoading, error } = useDiagnosis(id);
+  const { data, isLoading, error, refetch } = useDiagnosis(id);
   const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(
     new Set(),
   );
   const [isCreatingEstimate, setIsCreatingEstimate] = useState(false);
+  const [fieldOpinion, setFieldOpinion] = useState("");
+  const [isSavingFieldOpinion, setIsSavingFieldOpinion] = useState(false);
 
   const diagnosis = data?.data;
+
+  useEffect(() => {
+    setFieldOpinion(diagnosis?.field_opinion_text || "");
+  }, [diagnosis?.id, diagnosis?.field_opinion_text]);
 
   const handleToggleMaterial = (materialId: string) => {
     setSelectedMaterials((prev) => {
@@ -97,6 +103,29 @@ export default function DiagnosisDetailPage({
       setSelectedMaterials(
         new Set(diagnosis.suggested_materials.map((m) => m.id)),
       );
+    }
+  };
+
+  const handleSaveFieldOpinion = async () => {
+    if (!diagnosis) return;
+
+    try {
+      setIsSavingFieldOpinion(true);
+      const result = await api.updateDiagnosisFieldOpinion(
+        diagnosis.id,
+        { field_opinion_text: fieldOpinion.trim() },
+      );
+      if (result.success) {
+        toast.success("현장 소견을 저장했어요.");
+        await refetch();
+      } else {
+        toast.error(result.error?.message || "현장 소견 저장에 실패했어요.");
+      }
+    } catch (err) {
+      console.error("현장 소견 저장 실패:", err);
+      toast.error("현장 소견 저장에 실패했어요.");
+    } finally {
+      setIsSavingFieldOpinion(false);
     }
   };
 
@@ -176,23 +205,29 @@ export default function DiagnosisDetailPage({
                     {diagnosis.leak_opinion_text}
                   </p>
                 </div>
+              </CardContent>
+            </Card>
 
-                {diagnosis.confidence_score && (
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="text-xs text-slate-500">신뢰도</span>
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
-                      <div
-                        className="h-full rounded-full bg-brand-point-500 transition-all"
-                        style={{
-                          width: `${diagnosis.confidence_score * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <span className="text-xs font-medium text-brand-point-600">
-                      {Math.round(diagnosis.confidence_score * 100)}%
-                    </span>
-                  </div>
-                )}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">현장 소견 (수기)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 pt-0">
+                <textarea
+                  value={fieldOpinion}
+                  onChange={(event) => setFieldOpinion(event.target.value)}
+                  rows={4}
+                  placeholder="현장 확인 결과를 수기로 보완해 주세요."
+                  className="w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+                />
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={handleSaveFieldOpinion}
+                  disabled={isSavingFieldOpinion}
+                >
+                  {isSavingFieldOpinion ? "저장 중..." : "현장 소견 저장"}
+                </Button>
               </CardContent>
             </Card>
 

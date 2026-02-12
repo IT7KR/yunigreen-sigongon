@@ -37,7 +37,7 @@ export function EstimateCard({ estimate }: EstimateCardProps) {
   return (
     <Link
       href={`/estimates/${estimate.id}`}
-      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3 transition-colors hover:border-teal-200 hover:bg-slate-100"
+      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3 transition-colors hover:border-brand-point-200 hover:bg-slate-100"
     >
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white">
@@ -50,7 +50,7 @@ export function EstimateCard({ estimate }: EstimateCardProps) {
             </span>
             <Badge variant={config.variant}>{config.label}</Badge>
           </div>
-          <p className="mt-0.5 text-sm font-semibold text-teal-600">
+          <p className="mt-0.5 text-sm font-semibold text-brand-point-600">
             {formatCurrency(estimate.total_amount)}
           </p>
         </div>

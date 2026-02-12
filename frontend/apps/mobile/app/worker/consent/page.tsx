@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@sigongon/ui";
+import { Button, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
 import { Shield, ChevronDown, ChevronUp } from "lucide-react";
 
 interface ConsentSection {
@@ -51,7 +51,7 @@ const consentSections: ConsentSection[] = [
   },
 ];
 
-export default function WorkerConsentPage() {
+function WorkerConsentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const workerId = searchParams.get("workerId") || "worker_1";
@@ -108,7 +108,7 @@ export default function WorkerConsentPage() {
           {/* All Consent Checkbox */}
           <div className="rounded-lg border-2 border-brand-point-500 bg-white p-4">
             <label className="flex cursor-pointer items-center gap-3">
-              <input
+              <PrimitiveInput
                 type="checkbox"
                 checked={allConsentsChecked}
                 onChange={toggleAllConsents}
@@ -134,7 +134,7 @@ export default function WorkerConsentPage() {
                 key={section.id}
                 className="overflow-hidden rounded-lg border border-slate-200 bg-white"
               >
-                <button
+                <PrimitiveButton
                   onClick={() => toggleSection(section.id)}
                   className="flex w-full items-center justify-between p-4 text-left hover:bg-slate-50"
                 >
@@ -146,7 +146,7 @@ export default function WorkerConsentPage() {
                   ) : (
                     <ChevronDown className="h-5 w-5 text-slate-400" />
                   )}
-                </button>
+                </PrimitiveButton>
                 {expandedSections.has(section.id) && (
                   <div className="border-t border-slate-100 bg-slate-50 p-4">
                     <ul className="space-y-2 text-sm text-slate-700">
@@ -165,7 +165,7 @@ export default function WorkerConsentPage() {
             {/* Individual Consent Checkboxes */}
             <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
               <label className="flex cursor-pointer items-start gap-3">
-                <input
+                <PrimitiveInput
                   type="checkbox"
                   checked={consents.collection}
                   onChange={(e) =>
@@ -180,7 +180,7 @@ export default function WorkerConsentPage() {
               </label>
 
               <label className="flex cursor-pointer items-start gap-3">
-                <input
+                <PrimitiveInput
                   type="checkbox"
                   checked={consents.thirdParty}
                   onChange={(e) =>
@@ -195,7 +195,7 @@ export default function WorkerConsentPage() {
               </label>
 
               <label className="flex cursor-pointer items-start gap-3">
-                <input
+                <PrimitiveInput
                   type="checkbox"
                   checked={consents.sensitive}
                   onChange={(e) =>
@@ -237,5 +237,22 @@ export default function WorkerConsentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ConsentPageFallback() {
+  return (
+    <div className="flex min-h-screen flex-col bg-slate-50 p-4">
+      <div className="mx-auto mt-16 h-6 w-56 animate-pulse rounded bg-slate-200" />
+      <div className="mx-auto mt-8 h-4 w-72 animate-pulse rounded bg-slate-200" />
+    </div>
+  );
+}
+
+export default function WorkerConsentPage() {
+  return (
+    <Suspense fallback={<ConsentPageFallback />}>
+      <WorkerConsentContent />
+    </Suspense>
   );
 }

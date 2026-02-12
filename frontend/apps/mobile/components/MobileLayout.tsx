@@ -81,7 +81,7 @@ export function MobileLayout({
                 className={cn(
                   "flex flex-col items-center gap-1 px-4 py-2",
                   isActive
-                    ? "text-teal-600"
+                    ? "text-brand-point-600"
                     : "text-slate-500 hover:text-slate-700",
                 )}
               >

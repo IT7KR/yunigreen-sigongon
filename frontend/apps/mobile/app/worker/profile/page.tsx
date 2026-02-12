@@ -1,14 +1,14 @@
 "use client";
 
-import { Card, CardContent, Button } from "@sigongon/ui";
+import { Button, Card, CardContent, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
 import { User, FileText, CreditCard, LogOut, ChevronRight, Upload, Check, Loader2, Eye } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { buildSampleFileDownloadUrl } from "@/lib/sampleFiles";
 
-export default function WorkerProfilePage() {
+function WorkerProfileContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const workerId = searchParams.get("workerId") || "worker_1";
@@ -160,7 +160,7 @@ export default function WorkerProfilePage() {
           <CardContent className="p-4 space-y-4">
             <div>
               <h3 className="font-bold text-slate-900">제출 서류</h3>
-              <p className="mt-1 text-xs text-amber-600">
+              <p className="mt-1 text-sm text-amber-600">
                 필수 서류가 제출되어야 지급 및 계약이 원활합니다.
               </p>
             </div>
@@ -202,27 +202,27 @@ export default function WorkerProfilePage() {
                               <Check className="h-4 w-4" />
                               <span className="text-xs font-medium">제출완료</span>
                             </div>
-                            <button
+                            <PrimitiveButton
                               onClick={() => handleViewDocument(doc)}
                               className="text-xs px-2 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 inline-flex items-center gap-1.5"
                             >
                               <Eye className="h-3 w-3" />확인
-                            </button>
+                            </PrimitiveButton>
                           </>
                         ) : (
-                          <button
+                          <PrimitiveButton
                             onClick={() => handleUploadClick(doc.id)}
                             className="text-sm px-3 py-1 rounded-lg bg-brand-point-500 text-white hover:bg-brand-point-600 transition-colors flex items-center gap-1"
                           >
                             <Upload className="h-3 w-3" />
                             업로드
-                          </button>
+                          </PrimitiveButton>
                         )}
                       </div>
                     </div>
                   );
                 })}
-                <input
+                <PrimitiveInput
                   ref={fileInputRef}
                   type="file"
                   accept="image/*,.pdf"
@@ -249,5 +249,21 @@ export default function WorkerProfilePage() {
         </Button>
       </main>
     </div>
+  );
+}
+
+function WorkerProfileFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="h-6 w-40 animate-pulse rounded bg-slate-200" />
+    </div>
+  );
+}
+
+export default function WorkerProfilePage() {
+  return (
+    <Suspense fallback={<WorkerProfileFallback />}>
+      <WorkerProfileContent />
+    </Suspense>
   );
 }

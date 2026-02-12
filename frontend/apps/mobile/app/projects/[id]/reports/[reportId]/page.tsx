@@ -189,7 +189,7 @@ export default function ReportDetailPage({ params }: ReportDetailPageProps) {
               <div className="flex items-start gap-3">
                 <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
                 <div>
-                  <p className="text-xs text-slate-500">현장 주소</p>
+                  <p className="text-sm text-slate-500">현장 주소</p>
                   <p className="text-sm text-slate-700">{report.site_address}</p>
                 </div>
               </div>
@@ -199,7 +199,7 @@ export default function ReportDetailPage({ params }: ReportDetailPageProps) {
               <div className="flex items-start gap-3">
                 <Calendar className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
                 <div>
-                  <p className="text-xs text-slate-500">착공일</p>
+                  <p className="text-sm text-slate-500">착공일</p>
                   <p className="text-sm text-slate-700">{report.start_date}</p>
                 </div>
               </div>
@@ -209,7 +209,7 @@ export default function ReportDetailPage({ params }: ReportDetailPageProps) {
               <div className="flex items-start gap-3">
                 <Calendar className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
                 <div>
-                  <p className="text-xs text-slate-500">준공 예정일</p>
+                  <p className="text-sm text-slate-500">준공 예정일</p>
                   <p className="text-sm text-slate-700">
                     {report.expected_end_date}
                   </p>
@@ -221,7 +221,7 @@ export default function ReportDetailPage({ params }: ReportDetailPageProps) {
               <div className="flex items-start gap-3">
                 <Calendar className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
                 <div>
-                  <p className="text-xs text-slate-500">실제 준공일</p>
+                  <p className="text-sm text-slate-500">실제 준공일</p>
                   <p className="text-sm text-slate-700">
                     {report.actual_end_date}
                   </p>
@@ -242,7 +242,7 @@ export default function ReportDetailPage({ params }: ReportDetailPageProps) {
                 <div className="flex items-center gap-3">
                   <User className="h-4 w-4 flex-shrink-0 text-slate-400" />
                   <div>
-                    <p className="text-xs text-slate-500">현장 책임자</p>
+                    <p className="text-sm text-slate-500">현장 책임자</p>
                     <p className="text-sm text-slate-700">
                       {report.supervisor_name}
                     </p>
@@ -254,7 +254,7 @@ export default function ReportDetailPage({ params }: ReportDetailPageProps) {
                 <div className="flex items-center gap-3">
                   <Phone className="h-4 w-4 flex-shrink-0 text-slate-400" />
                   <div>
-                    <p className="text-xs text-slate-500">연락처</p>
+                    <p className="text-sm text-slate-500">연락처</p>
                     <a
                       href={`tel:${report.supervisor_phone}`}
                       className="text-sm text-brand-point-600 hover:underline"
@@ -279,7 +279,7 @@ export default function ReportDetailPage({ params }: ReportDetailPageProps) {
                 <div className="flex items-start gap-3">
                   <DollarSign className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
                   <div>
-                    <p className="text-xs text-slate-500">최종 공사 금액</p>
+                    <p className="text-sm text-slate-500">최종 공사 금액</p>
                     <p className="text-sm font-medium text-slate-900">
                       {Number(report.final_amount).toLocaleString()}원
                     </p>
@@ -291,7 +291,7 @@ export default function ReportDetailPage({ params }: ReportDetailPageProps) {
                 <div className="flex items-start gap-3">
                   <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
                   <div>
-                    <p className="text-xs text-slate-500">하자보증 기간</p>
+                    <p className="text-sm text-slate-500">하자보증 기간</p>
                     <p className="text-sm text-slate-700">
                       {report.defect_warranty_period}개월
                     </p>

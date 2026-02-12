@@ -3,11 +3,11 @@
 import { Card, CardContent } from "@sigongon/ui";
 import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 
-export default function WorkerPaystubsPage() {
+function WorkerPaystubsContent() {
   const searchParams = useSearchParams();
   const workerId = searchParams.get("workerId") || "worker_1";
   const [paystubs, setPaystubs] = useState<
@@ -92,5 +92,21 @@ export default function WorkerPaystubsPage() {
         )}
       </main>
     </div>
+  );
+}
+
+function WorkerPaystubsFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="h-6 w-40 animate-pulse rounded bg-slate-200" />
+    </div>
+  );
+}
+
+export default function WorkerPaystubsPage() {
+  return (
+    <Suspense fallback={<WorkerPaystubsFallback />}>
+      <WorkerPaystubsContent />
+    </Suspense>
   );
 }

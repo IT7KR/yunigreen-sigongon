@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@sigongon/ui";
+import { Button, PrimitiveInput } from "@sigongon/ui";
 import { Droplets, ShieldCheck, Smartphone } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 
@@ -26,7 +26,7 @@ type WorkerAccessApi = {
 
 const workerAccessApi = api as unknown as WorkerAccessApi;
 
-export default function WorkerEntryPage() {
+function WorkerEntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [phone, setPhone] = useState("");
@@ -139,7 +139,7 @@ export default function WorkerEntryPage() {
             <label className="text-sm font-medium text-slate-900">
               휴대폰 번호
             </label>
-            <input
+            <PrimitiveInput
               type="tel"
               placeholder="010-0000-0000"
               value={phone}
@@ -153,7 +153,7 @@ export default function WorkerEntryPage() {
               <label className="text-sm font-medium text-slate-900">
                 인증번호
               </label>
-              <input
+              <PrimitiveInput
                 type="text"
                 placeholder="6자리 숫자"
                 value={otpCode}
@@ -216,5 +216,21 @@ export default function WorkerEntryPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function WorkerEntryFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="h-6 w-40 animate-pulse rounded bg-slate-200" />
+    </div>
+  );
+}
+
+export default function WorkerEntryPage() {
+  return (
+    <Suspense fallback={<WorkerEntryFallback />}>
+      <WorkerEntryContent />
+    </Suspense>
   );
 }

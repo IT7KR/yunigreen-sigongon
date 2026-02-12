@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FolderKanban, Camera, Sparkles, FileText } from "lucide-react";
+import { FolderKanban, Camera } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
 import { Card, CardContent, Button, CountUp, Skeleton, EmptyState, AnimatedPage } from "@sigongon/ui";
 import { useProjects } from "@/hooks";

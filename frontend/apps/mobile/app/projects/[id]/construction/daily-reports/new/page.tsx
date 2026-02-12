@@ -1,12 +1,36 @@
 "use client";
 
-import { use, useState, useRef } from "react";
+import { use, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Button, Input, Card, CardContent } from "@sigongon/ui";
-import { Loader2, Camera, X, CheckCircle } from "lucide-react";
+import { Button, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
+import { Loader2, Camera, X, CheckCircle, LocateFixed } from "lucide-react";
 import { api } from "@/lib/api";
 import { VoiceInput } from "@/components/features/VoiceInput";
+
+const WEATHER_OPTIONS = [
+  { label: "맑음", value: "sunny" },
+  { label: "흐림", value: "cloudy" },
+  { label: "비", value: "rain" },
+  { label: "눈", value: "snow" },
+] as const;
+
+function mapWeatherCodeToValue(code: number) {
+  if (code <= 1) return "sunny";
+  if ([2, 3, 45, 48].includes(code)) return "cloudy";
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return "snow";
+  return "rain";
+}
+
+function getCurrentPosition() {
+  return new Promise<GeolocationPosition>((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 600000,
+    });
+  });
+}
 
 export default function NewDailyReportPage({
   params,
@@ -19,7 +43,13 @@ export default function NewDailyReportPage({
   const [photos, setPhotos] = useState<string[]>([]);
   const [weather, setWeather] = useState<string>("");
   const [temperature, setTemperature] = useState<string>("");
+  const [autoWeatherLoading, setAutoWeatherLoading] = useState(false);
+  const [autoWeatherMessage, setAutoWeatherMessage] = useState<string>("");
   const workDescriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    void handleAutoFillWeather();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -59,6 +89,51 @@ export default function NewDailyReportPage({
     }
   }
 
+  async function handleAutoFillWeather() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setAutoWeatherMessage("위치 기능을 사용할 수 없어 날씨를 수동 선택해 주세요.");
+      return;
+    }
+
+    try {
+      setAutoWeatherLoading(true);
+      setAutoWeatherMessage("");
+
+      const position = await getCurrentPosition();
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code,temperature_2m&timezone=auto`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Weather request failed: ${response.status}`);
+      }
+
+      const data = (await response.json()) as {
+        current?: { weather_code?: number; temperature_2m?: number };
+      };
+      const weatherCode = data.current?.weather_code;
+      const currentTemperature = data.current?.temperature_2m;
+
+      if (typeof weatherCode !== "number") {
+        throw new Error("Weather code is missing");
+      }
+
+      setWeather(mapWeatherCodeToValue(weatherCode));
+      if (typeof currentTemperature === "number") {
+        setTemperature(String(Math.round(currentTemperature)));
+      }
+
+      setAutoWeatherMessage("현재 위치 기준으로 날씨를 자동 반영했어요.");
+    } catch (error) {
+      console.error("Failed to auto-fill weather:", error);
+      setAutoWeatherMessage("날씨 자동 입력에 실패해 수동 선택으로 전환했어요.");
+    } finally {
+      setAutoWeatherLoading(false);
+    }
+  }
+
   return (
     <MobileLayout title="작업일지 작성" showBack>
       <form onSubmit={handleSubmit} className="space-y-6 p-4">
@@ -67,7 +142,7 @@ export default function NewDailyReportPage({
             <label className="mb-2 block text-sm font-medium text-slate-900">
               작업일자
             </label>
-            <input
+            <PrimitiveInput
               type="date"
               name="work_date"
               defaultValue={new Date().toISOString().split("T")[0]}
@@ -79,15 +154,27 @@ export default function NewDailyReportPage({
             <label className="mb-2 block text-sm font-medium text-slate-900">
               날씨
             </label>
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                자동 입력 후 수동으로 변경 가능
+              </span>
+              <PrimitiveButton
+                type="button"
+                onClick={handleAutoFillWeather}
+                disabled={autoWeatherLoading}
+                className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {autoWeatherLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <LocateFixed className="h-3.5 w-3.5" />
+                )}
+                자동 입력
+              </PrimitiveButton>
+            </div>
             <div className="flex flex-wrap gap-2 mb-3">
-              {[
-                { emoji: "☀️", label: "맑음", value: "sunny" },
-                { emoji: "⛅", label: "흐림", value: "cloudy" },
-                { emoji: "🌧️", label: "비", value: "rain" },
-                { emoji: "❄️", label: "눈", value: "snow" },
-                { emoji: "💨", label: "강풍", value: "wind" },
-              ].map((w) => (
-                <button
+              {WEATHER_OPTIONS.map((w) => (
+                <PrimitiveButton
                   key={w.value}
                   type="button"
                   onClick={() => setWeather(w.value)}
@@ -97,14 +184,16 @@ export default function NewDailyReportPage({
                       : "bg-white border-slate-300 text-slate-700 hover:border-slate-400"
                   }`}
                 >
-                  <span className="mr-1">{w.emoji}</span>
                   {w.label}
-                </button>
+                </PrimitiveButton>
               ))}
             </div>
+            {autoWeatherMessage && (
+              <p className="mb-2 text-xs text-slate-500">{autoWeatherMessage}</p>
+            )}
             <div className="flex items-center gap-2">
               <label className="text-sm text-slate-700">기온:</label>
-              <input
+              <PrimitiveInput
                 type="number"
                 value={temperature}
                 onChange={(e) => setTemperature(e.target.value)}
@@ -155,7 +244,7 @@ export default function NewDailyReportPage({
                   key={i}
                   className="relative aspect-square rounded-lg bg-slate-200"
                 >
-                  <button
+                  <PrimitiveButton
                     type="button"
                     onClick={() =>
                       setPhotos(photos.filter((_, idx) => idx !== i))
@@ -163,20 +252,20 @@ export default function NewDailyReportPage({
                     className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white"
                   >
                     <X className="h-3 w-3" />
-                  </button>
+                  </PrimitiveButton>
                   <div className="flex h-full w-full items-center justify-center text-xs text-slate-500">
                     사진 {i + 1}
                   </div>
                 </div>
               ))}
-              <button
+              <PrimitiveButton
                 type="button"
                 onClick={handleAddPhoto}
                 className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-slate-500"
               >
                 <Camera className="h-6 w-6" />
                 <span className="text-xs">추가</span>
-              </button>
+              </PrimitiveButton>
             </div>
           </div>
         </div>

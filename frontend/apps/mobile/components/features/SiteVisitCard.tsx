@@ -34,7 +34,7 @@ export function SiteVisitCard({ visit, projectId }: SiteVisitCardProps) {
   return (
     <Link
       href={`/projects/${projectId}/visits/${visit.id}`}
-      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3 transition-colors hover:border-teal-200 hover:bg-slate-100"
+      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3 transition-colors hover:border-brand-point-200 hover:bg-slate-100"
     >
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white">

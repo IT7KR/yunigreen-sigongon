@@ -1,14 +1,14 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { Suspense, use, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Button, Badge, SignaturePad, Modal } from "@sigongon/ui";
+import { Badge, Button, Modal, PrimitiveInput, SignaturePad } from "@sigongon/ui";
 import { ArrowLeft, CheckCircle, PenTool } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { toast } from "@sigongon/ui";
 
-export default function WorkerContractPage({
+function WorkerContractContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -111,25 +111,25 @@ export default function WorkerContractPage({
             ) : contract ? (
               <div className="grid grid-cols-2 gap-4 rounded-lg bg-slate-50 p-4">
                 <div>
-                  <p className="text-xs text-slate-400">현장명</p>
+                  <p className="text-sm text-slate-400">현장명</p>
                   <p className="font-medium text-slate-900">
                     {contract.project_name}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">일급</p>
+                  <p className="text-sm text-slate-400">일급</p>
                   <p className="font-medium text-slate-900">
                     {contract.daily_rate.toLocaleString()}원
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">근로일자</p>
+                  <p className="text-sm text-slate-400">근로일자</p>
                   <p className="font-medium text-slate-900">
                     {contract.work_date}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">직종</p>
+                  <p className="text-sm text-slate-400">직종</p>
                   <p className="font-medium text-slate-900">{contract.role}</p>
                 </div>
               </div>
@@ -139,7 +139,7 @@ export default function WorkerContractPage({
               </div>
             )}
 
-            <div className="h-64 overflow-y-auto rounded border border-slate-200 p-4 text-xs leading-relaxed">
+            <div className="h-64 overflow-y-auto rounded border border-slate-200 p-4 text-sm leading-relaxed">
               <p className="font-bold">제1조 (목적)</p>
               <p>{contract?.content || "계약 내용을 불러오는 중입니다."}</p>
               <br />
@@ -151,7 +151,7 @@ export default function WorkerContractPage({
 
             {contract?.status !== "signed" && (
               <label className="flex items-center gap-2">
-                <input
+                <PrimitiveInput
                   type="checkbox"
                   checked={hasReadContract}
                   onChange={(e) => setHasReadContract(e.target.checked)}
@@ -216,5 +216,25 @@ export default function WorkerContractPage({
         </div>
       </Modal>
     </div>
+  );
+}
+
+function WorkerContractFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="h-6 w-48 animate-pulse rounded bg-slate-200" />
+    </div>
+  );
+}
+
+export default function WorkerContractPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={<WorkerContractFallback />}>
+      <WorkerContractContent params={params} />
+    </Suspense>
   );
 }

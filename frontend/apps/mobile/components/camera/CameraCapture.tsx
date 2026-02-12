@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { X, Camera, FlipHorizontal, Zap, ZapOff } from "lucide-react";
-import { cn } from "@sigongon/ui";
+import { PrimitiveButton, cn } from "@sigongon/ui";
 
 interface CameraCaptureProps {
   onCapture: (blob: Blob, facingMode: "user" | "environment") => void;
@@ -57,6 +57,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   }, [facingMode]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     startCamera();
 
     return () => {
@@ -148,12 +149,12 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
         <div className="absolute inset-0 flex items-center justify-center bg-black/80">
           <div className="mx-4 max-w-md rounded-xl bg-slate-900 p-6 text-center">
             <p className="text-white">{error}</p>
-            <button
+            <PrimitiveButton
               onClick={onClose}
               className="mt-4 rounded-lg bg-brand-point-500 px-6 py-2 text-white"
             >
               닫기
-            </button>
+            </PrimitiveButton>
           </div>
         </div>
       )}
@@ -161,17 +162,17 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       {/* Top controls */}
       <div className="absolute left-0 right-0 top-0 flex items-start justify-between p-4">
         {/* Close button */}
-        <button
+        <PrimitiveButton
           onClick={onClose}
           className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
           aria-label="닫기"
         >
           <X className="h-6 w-6 text-white" />
-        </button>
+        </PrimitiveButton>
 
         {/* Flash toggle */}
         {hasFlash && (
-          <button
+          <PrimitiveButton
             onClick={toggleFlash}
             className={cn(
               "flex h-12 w-12 items-center justify-center rounded-full backdrop-blur-sm transition-all",
@@ -186,7 +187,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
             ) : (
               <ZapOff className="h-5 w-5" />
             )}
-          </button>
+          </PrimitiveButton>
         )}
       </div>
 
@@ -197,7 +198,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
           <div className="h-14 w-14" />
 
           {/* Capture button */}
-          <button
+          <PrimitiveButton
             onClick={handleCapture}
             disabled={isCapturing || !!error}
             className="group relative h-20 w-20 disabled:opacity-50"
@@ -210,16 +211,16 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
                 <Camera className="h-8 w-8 animate-pulse text-brand-point-500" />
               </div>
             )}
-          </button>
+          </PrimitiveButton>
 
           {/* Flip camera button */}
-          <button
+          <PrimitiveButton
             onClick={handleFlipCamera}
             className="flex h-14 w-14 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
             aria-label="카메라 전환"
           >
             <FlipHorizontal className="h-6 w-6 text-white" />
-          </button>
+          </PrimitiveButton>
         </div>
       </div>
 

@@ -17,9 +17,14 @@ export function VoiceInput({
 }: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [interimText, setInterimText] = useState("");
-  const [isSupported, setIsSupported] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
+  const isSupported =
+    typeof window !== "undefined" &&
+    Boolean(
+      (window as any).webkitSpeechRecognition ||
+      (window as any).SpeechRecognition,
+    );
 
   useEffect(() => {
     // Check if speech recognition is supported
@@ -28,7 +33,6 @@ export function VoiceInput({
       (window as any).SpeechRecognition;
 
     if (!SpeechRecognition) {
-      setIsSupported(false);
       return;
     }
 

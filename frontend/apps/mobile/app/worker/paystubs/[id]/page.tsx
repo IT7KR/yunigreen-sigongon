@@ -1,13 +1,13 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { Suspense, use, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@sigongon/ui";
 import { ArrowLeft, CheckCircle, Download } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 
-export default function WorkerPaystubDetailPage({
+function WorkerPaystubDetailContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -148,5 +148,25 @@ export default function WorkerPaystubDetailPage({
         </div>
       )}
     </div>
+  );
+}
+
+function WorkerPaystubDetailFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="h-6 w-48 animate-pulse rounded bg-slate-200" />
+    </div>
+  );
+}
+
+export default function WorkerPaystubDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={<WorkerPaystubDetailFallback />}>
+      <WorkerPaystubDetailContent params={params} />
+    </Suspense>
   );
 }

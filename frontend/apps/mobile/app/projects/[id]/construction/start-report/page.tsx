@@ -2,21 +2,18 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { StartReportActionsCard } from "@sigongon/features";
 import {
   Card,
   CardContent,
-  Button,
   StatusBadge,
   formatDate,
 } from "@sigongon/ui";
 import { MobileLayout } from "@/components/MobileLayout";
 import { mockApiClient } from "@/lib/mocks/mockApi";
-import {
-  MOBILE_MOCK_EXPORT_SAMPLE_FILES,
-  buildSampleFileDownloadUrl,
-} from "@/lib/sampleFiles";
+import { MOBILE_MOCK_EXPORT_SAMPLE_FILES } from "@/lib/sampleFiles";
 import type { ReportStatus } from "@sigongon/types";
-import { FileCheck2, Download, ChevronRight, Loader2 } from "lucide-react";
+import { FileCheck2, ChevronRight, Loader2 } from "lucide-react";
 
 interface StartReportItem {
   id: string;
@@ -57,40 +54,19 @@ export default function MobileStartReportPage({
     }
   }
 
-  function downloadSample() {
-    const anchor = document.createElement("a");
-    anchor.href = buildSampleFileDownloadUrl(
-      MOBILE_MOCK_EXPORT_SAMPLE_FILES.startReportPdf,
-    );
-    anchor.download = "착공서류_샘플.pdf";
-    anchor.target = "_blank";
-    anchor.rel = "noopener noreferrer";
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-  }
-
   return (
     <MobileLayout title="착공계" showBack>
       <div className="space-y-4 p-4">
-        <Card>
-          <CardContent className="space-y-3 p-4">
-            <p className="text-sm text-slate-600">
-              모바일에서는 착공계 확인과 샘플 다운로드를 지원합니다.
-            </p>
-            <div className="flex gap-2">
-              <Link href={`/projects/${projectId}/reports`} className="flex-1">
-                <Button variant="secondary" fullWidth>
-                  전체 보고서
-                </Button>
-              </Link>
-              <Button variant="secondary" onClick={downloadSample}>
-                <Download className="h-4 w-4" />
-                샘플
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <StartReportActionsCard
+          title="착공계"
+          description="모바일에서는 착공계 확인과 샘플 다운로드를 지원합니다."
+          projectId={projectId}
+          reportListPath="/projects/{projectId}/reports"
+          samplePath={MOBILE_MOCK_EXPORT_SAMPLE_FILES.startReportPdf}
+          createReportPath={undefined}
+          listLabel="전체 보고서"
+          sampleLabel="샘플"
+        />
 
         {loading ? (
           <div className="flex h-40 items-center justify-center">
@@ -143,4 +119,3 @@ export default function MobileStartReportPage({
     </MobileLayout>
   );
 }
-

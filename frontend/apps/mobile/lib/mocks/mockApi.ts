@@ -18,6 +18,13 @@ import type {
   LaborContractListItem,
   LaborContractStatus,
   ProjectPhotoAlbum,
+  SeasonInfo,
+  SeasonDocumentInfo,
+  SeasonDocumentStatusInfo,
+  DiagnosisCase,
+  DiagnosisCaseImage,
+  VisionResultDetail,
+  DiagnosisCaseEstimate,
 } from "@sigongon/types";
 import { mockDb, type Project, type User } from "./db";
 import { MOBILE_MOCK_EXPORT_SAMPLE_FILES } from "../sampleFiles";
@@ -32,6 +39,12 @@ const nowIso = () => new Date().toISOString();
 
 const randomId = (prefix: string) => {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+};
+
+let snowflakeSeq = 0;
+const nextSnowflake = () => {
+  snowflakeSeq = (snowflakeSeq + 1) % 1000;
+  return Date.now() * 1000 + snowflakeSeq;
 };
 
 const ok = <T>(data: T | null): APIResponse<T> => {
@@ -221,6 +234,28 @@ export class MockAPIClient {
     { login_id: string; phone: string; code: string; expires_at: number }
   > = {};
   private passwordResetVerifications: Record<string, { phone: string }> = {};
+  private dailyReportsByProject: Record<
+    string,
+    Array<{
+      id: string;
+      project_id: string;
+      work_date: string;
+      weather?: string;
+      temperature?: string;
+      work_description: string;
+      tomorrow_plan?: string;
+      photo_count: number;
+      created_at: string;
+    }>
+  > = {};
+  private seasons: SeasonInfo[] = [
+    { id: 202601010001, name: "2026H1", is_active: true, created_at: "2026-01-01T00:00:00Z" },
+  ];
+  private seasonDocuments: SeasonDocumentInfo[] = [];
+  private diagnosisCases: DiagnosisCase[] = [];
+  private caseImagesByCaseId: Record<number, DiagnosisCaseImage[]> = {};
+  private visionByCaseId: Record<number, VisionResultDetail> = {};
+  private estimateByCaseId: Record<number, DiagnosisCaseEstimate> = {};
 
   private constructionReportsByProject: Record<
     string,
@@ -698,6 +733,7 @@ export class MockAPIClient {
       status,
       leak_opinion_text:
         "누수 가능성이 있어요. 방수층과 배관 주변을 우선 확인해 주세요.",
+      field_opinion_text: "",
       confidence_score: 0.72,
       processing_time_ms: 1200,
       suggested_materials: [
@@ -755,6 +791,33 @@ export class MockAPIClient {
     this.diagnosisPolls[diagnosisId] = polls + 1;
 
     return delay(ok(this.diagnosesById[diagnosisId]));
+  }
+
+  async updateDiagnosisFieldOpinion(
+    diagnosisId: string,
+    data: { field_opinion_text: string },
+  ) {
+    const diagnosis = this.diagnosesById[diagnosisId];
+    if (!diagnosis) {
+      return delay(
+        fail<{ id: string; field_opinion_text: string }>(
+          "NOT_FOUND",
+          "진단 결과를 찾을 수 없어요",
+        ),
+      );
+    }
+
+    this.diagnosesById[diagnosisId] = {
+      ...diagnosis,
+      field_opinion_text: data.field_opinion_text,
+    };
+
+    return delay(
+      ok({
+        id: diagnosisId,
+        field_opinion_text: data.field_opinion_text,
+      }),
+    );
   }
 
   async createEstimate(projectId: string, diagnosisId?: string) {
@@ -1771,19 +1834,61 @@ export class MockAPIClient {
     },
   ) {
     const reportId = randomId("dr");
-    return delay(
-      ok({
-        id: reportId,
-        project_id: projectId,
-        work_date: data.work_date,
-        weather: data.weather,
-        temperature: data.temperature,
-        work_description: data.work_description,
-        tomorrow_plan: data.tomorrow_plan,
-        photos: data.photos || [],
-        created_at: nowIso(),
-      }),
-    );
+    const report = {
+      id: reportId,
+      project_id: projectId,
+      work_date: data.work_date,
+      weather: data.weather,
+      temperature: data.temperature,
+      work_description: data.work_description,
+      tomorrow_plan: data.tomorrow_plan,
+      photo_count: data.photos?.length ?? 0,
+      created_at: nowIso(),
+    };
+
+    this.dailyReportsByProject[projectId] = [
+      report,
+      ...(this.dailyReportsByProject[projectId] || []),
+    ];
+
+    return delay(ok(report));
+  }
+
+  async getDailyReports(projectId: string) {
+    if (!this.dailyReportsByProject[projectId]) {
+      this.dailyReportsByProject[projectId] = [
+        {
+          id: randomId("dr"),
+          project_id: projectId,
+          work_date: "2026-02-01",
+          weather: "sunny",
+          temperature: "8°C",
+          work_description: "균열 보수 및 방수 프라이머 도포",
+          tomorrow_plan: "우레탄 1차 도포",
+          photo_count: 6,
+          created_at: "2026-02-01T17:00:00Z",
+        },
+      ];
+    }
+
+    return delay(ok(this.dailyReportsByProject[projectId]));
+  }
+
+  async searchRAG(query: string, limit: number = 10) {
+    const normalized = query.trim().toLowerCase();
+    const catalog = [
+      { id: "rag_1", description: "우레탄 방수 보수", specification: "2회 도포", unit: "m2", unit_price: 35000, confidence: 0.92 },
+      { id: "rag_2", description: "실리콘 코킹 보수", specification: "중성 실란트", unit: "m", unit_price: 12000, confidence: 0.88 },
+      { id: "rag_3", description: "균열 보강 메쉬 시공", specification: "유리섬유 메쉬", unit: "m2", unit_price: 18000, confidence: 0.84 },
+    ];
+
+    const filtered = normalized
+      ? catalog.filter((item) =>
+          `${item.description} ${item.specification}`.toLowerCase().includes(normalized),
+        )
+      : catalog;
+
+    return delay(ok(filtered.slice(0, limit)));
   }
 
   async getPhotoAlbum(albumId: string) {
@@ -1910,11 +2015,272 @@ export class MockAPIClient {
     );
   }
 
-  async uploadWorkerDocument() {
+  async getSeasons(): Promise<APIResponse<SeasonInfo[]>> {
+    return delay(ok([...this.seasons]));
+  }
+
+  async getActiveSeason(): Promise<APIResponse<SeasonInfo>> {
+    const active = this.seasons.find((s) => s.is_active) || this.seasons[0];
+    if (!active) return delay(fail("NOT_FOUND", "활성 시즌이 없습니다"));
+    return delay(ok(active));
+  }
+
+  async createSeason(data: { name: string; is_active?: boolean }): Promise<APIResponse<SeasonInfo>> {
+    const id = nextSnowflake();
+    const season: SeasonInfo = { id, name: data.name, is_active: !!data.is_active, created_at: nowIso() };
+    if (season.is_active) this.seasons = this.seasons.map((s) => ({ ...s, is_active: false }));
+    this.seasons = [season, ...this.seasons];
+    return delay(ok(season));
+  }
+
+  async updateSeason(seasonId: number, data: { is_active: boolean }): Promise<APIResponse<SeasonInfo>> {
+    const target = this.seasons.find((s) => s.id === seasonId);
+    if (!target) return delay(fail("NOT_FOUND", "시즌을 찾을 수 없습니다"));
+    this.seasons = this.seasons.map((s) => ({ ...s, is_active: data.is_active && s.id === seasonId }));
+    return delay(ok(this.seasons.find((s) => s.id === seasonId)!));
+  }
+
+  async getAdminDocuments(seasonId?: number): Promise<APIResponse<SeasonDocumentInfo[]>> {
+    const docs = seasonId ? this.seasonDocuments.filter((d) => d.season_id === seasonId) : this.seasonDocuments;
+    return delay(ok([...docs]));
+  }
+
+  async createAdminDocument(data: {
+    season_id: number;
+    category: string;
+    title: string;
+    file_name: string;
+  }): Promise<APIResponse<SeasonDocumentInfo>> {
+    const id = nextSnowflake();
+    const doc: SeasonDocumentInfo = {
+      id,
+      season_id: data.season_id,
+      category: data.category,
+      title: data.title,
+      file_url: `pricebooks/${data.season_id}/${data.file_name}`,
+      version_hash: randomId("vh"),
+      status: "queued",
+      uploaded_at: nowIso(),
+      upload_url: `/api/v1/admin/documents/${id}/upload`,
+    };
+    this.seasonDocuments = [doc, ...this.seasonDocuments];
+    return delay(ok(doc));
+  }
+
+  async ingestAdminDocument(documentId: number): Promise<APIResponse<SeasonDocumentStatusInfo>> {
+    const idx = this.seasonDocuments.findIndex((d) => d.id === documentId);
+    if (idx === -1) return delay(fail("NOT_FOUND", "문서를 찾을 수 없습니다"));
+    this.seasonDocuments[idx] = { ...this.seasonDocuments[idx], status: "done" };
+    return delay(ok({
+      id: documentId,
+      status: "done",
+      uploaded_at: this.seasonDocuments[idx].uploaded_at,
+      trace_chunk_count: 2,
+      cost_item_count: 3,
+    }));
+  }
+
+  async getAdminDocumentStatus(documentId: number): Promise<APIResponse<SeasonDocumentStatusInfo>> {
+    const doc = this.seasonDocuments.find((d) => d.id === documentId);
+    if (!doc) return delay(fail("NOT_FOUND", "문서를 찾을 수 없습니다"));
+    return delay(ok({
+      id: doc.id,
+      status: doc.status,
+      uploaded_at: doc.uploaded_at,
+      trace_chunk_count: doc.status === "done" ? 2 : 0,
+      cost_item_count: doc.status === "done" ? 3 : 0,
+    }));
+  }
+
+  async listCases(): Promise<APIResponse<DiagnosisCase[]>> {
+    return delay(ok([...this.diagnosisCases].sort((a, b) => b.id - a.id)));
+  }
+
+  async createCase(data?: { season_id?: number }): Promise<APIResponse<DiagnosisCase>> {
+    const season =
+      (data?.season_id ? this.seasons.find((s) => s.id === data.season_id) : undefined) ||
+      this.seasons.find((s) => s.is_active) ||
+      this.seasons[0];
+    if (!season) return delay(fail("NOT_FOUND", "시즌이 없습니다"));
+    const caseId = nextSnowflake();
+    const row: DiagnosisCase = {
+      id: caseId,
+      user_id: "u_site_manager",
+      season_id: season.id,
+      status: "draft",
+      created_at: nowIso(),
+      updated_at: nowIso(),
+    };
+    this.diagnosisCases = [row, ...this.diagnosisCases];
+    this.caseImagesByCaseId[caseId] = [];
+    return delay(ok(row));
+  }
+
+  async getCase(caseId: number): Promise<APIResponse<DiagnosisCase>> {
+    const item = this.diagnosisCases.find((c) => c.id === caseId);
+    if (!item) return delay(fail("NOT_FOUND", "케이스를 찾을 수 없습니다"));
+    return delay(ok(item));
+  }
+
+  async getCaseImages(caseId: number): Promise<APIResponse<DiagnosisCaseImage[]>> {
+    return delay(ok(this.caseImagesByCaseId[caseId] || []));
+  }
+
+  async uploadCaseImage(
+    caseId: number,
+    file: File,
+    metaJson?: Record<string, unknown>,
+  ): Promise<APIResponse<DiagnosisCaseImage>> {
+    const target = this.diagnosisCases.find((c) => c.id === caseId);
+    if (!target) return delay(fail("NOT_FOUND", "케이스를 찾을 수 없습니다"));
+    const item: DiagnosisCaseImage = {
+      id: nextSnowflake(),
+      case_id: caseId,
+      file_url: URL.createObjectURL(file),
+      meta_json: metaJson,
+      created_at: nowIso(),
+    };
+    this.caseImagesByCaseId[caseId] = [...(this.caseImagesByCaseId[caseId] || []), item];
+    return delay(ok(item));
+  }
+
+  async runCaseVision(
+    caseId: number,
+    _data?: { extra_context?: string },
+  ): Promise<APIResponse<VisionResultDetail>> {
+    const target = this.diagnosisCases.find((c) => c.id === caseId);
+    if (!target) return delay(fail("NOT_FOUND", "케이스를 찾을 수 없습니다"));
+    const vision: VisionResultDetail = {
+      id: nextSnowflake(),
+      case_id: caseId,
+      model: "gemini-3.0-flash",
+      result_json: {
+        findings: [
+          {
+            location: "옥상 배수구 인접부",
+            observed: "균열 및 변색이 확인됨",
+            hypothesis: "방수층 노후화 가능성",
+            severity: "med",
+            next_checks: ["우천 시 재촬영", "배관 관통부 추가 촬영"],
+          },
+        ],
+        work_items: [{ name: "우레탄 방수 보수", required: true, rationale: "균열 구간 보강" }],
+        materials: [
+          { name: "우레탄 방수제", spec_hint: "2회 도포", unit_hint: "m2", qty_hint: "20" },
+          { name: "실리콘 실란트", spec_hint: "중성", unit_hint: "ea", qty_hint: "4" },
+        ],
+        confidence: 0.75,
+        questions_for_user: ["누수 발생 위치를 더 알려주세요."],
+      },
+      confidence: 0.75,
+      created_at: nowIso(),
+      updated_at: nowIso(),
+    };
+    this.visionByCaseId[caseId] = vision;
+    this.diagnosisCases = this.diagnosisCases.map((c) =>
+      c.id === caseId ? { ...c, status: "vision_ready", updated_at: nowIso() } : c,
+    );
+    return delay(ok(vision));
+  }
+
+  async updateCaseVision(
+    caseId: number,
+    data: { result_json: VisionResultDetail["result_json"]; confidence?: number },
+  ): Promise<APIResponse<VisionResultDetail>> {
+    const prev = this.visionByCaseId[caseId];
+    if (!prev) return delay(fail("NOT_FOUND", "진단 결과가 없습니다"));
+    const updated: VisionResultDetail = {
+      ...prev,
+      result_json: data.result_json,
+      confidence: data.confidence ?? prev.confidence,
+      updated_at: nowIso(),
+    };
+    this.visionByCaseId[caseId] = updated;
+    return delay(ok(updated));
+  }
+
+  async createCaseEstimate(caseId: number): Promise<APIResponse<DiagnosisCaseEstimate>> {
+    const target = this.diagnosisCases.find((c) => c.id === caseId);
+    if (!target) return delay(fail("NOT_FOUND", "케이스를 찾을 수 없습니다"));
+    const season = this.seasons.find((s) => s.id === target.season_id);
+    const estimate: DiagnosisCaseEstimate = {
+      id: nextSnowflake(),
+      case_id: caseId,
+      version: 1,
+      items: [
+        {
+          work: "work",
+          item_name: "우레탄 도막 방수",
+          spec: "2회 도포",
+          unit: "m2",
+          quantity: 20,
+          unit_price: 35000,
+          amount: 700000,
+          optional: false,
+          evidence: [
+            {
+              doc_title: "종합적산정보 공통",
+              season_name: season?.name || "2026H1",
+              page: 11,
+              table_id: "T-11",
+              row_id: "R-07",
+              row_text: "우레탄 도막 방수 2회 도포 m2 35,000",
+            },
+          ],
+        },
+      ],
+      totals: {
+        subtotal: 700000,
+        vat_amount: 70000,
+        total_amount: 770000,
+      },
+      version_hash_snapshot: randomId("vh"),
+      created_at: nowIso(),
+    };
+    this.estimateByCaseId[caseId] = estimate;
+    this.diagnosisCases = this.diagnosisCases.map((c) =>
+      c.id === caseId ? { ...c, status: "estimated", updated_at: nowIso() } : c,
+    );
+    return delay(ok(estimate));
+  }
+
+  async getCaseEstimate(caseId: number): Promise<APIResponse<DiagnosisCaseEstimate>> {
+    const estimate = this.estimateByCaseId[caseId];
+    if (!estimate) return delay(fail("NOT_FOUND", "견적 결과가 없습니다"));
+    return delay(ok(estimate));
+  }
+
+  async downloadCaseEstimateCsv(caseId: number): Promise<Blob> {
+    const estimate = this.estimateByCaseId[caseId];
+    const header = "공종,품목명,규격,단위,수량,단가,금액,근거\n";
+    const lines =
+      estimate?.items
+        .map((line: any) => {
+          const ev = line.evidence[0];
+          return `${line.work || ""},${line.item_name},${line.spec || ""},${line.unit},${line.quantity},${line.unit_price},${line.amount},${ev.doc_title}/p.${ev.page}/${ev.table_id}/${ev.row_id}`;
+        })
+        .join("\n") || "";
+    return new Blob([header + lines], { type: "text/csv;charset=utf-8;" });
+  }
+
+  async downloadCaseEstimateXlsx(caseId: number): Promise<Blob> {
+    const estimate = this.estimateByCaseId[caseId];
+    const payload = JSON.stringify(estimate ?? {}, null, 2);
+    return new Blob([payload], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+  }
+
+  async uploadWorkerDocument(
+    _workerId: string,
+    documentId: string,
+    file: File,
+  ) {
     return delay(
       ok({
-        id: "doc_1",
+        id: documentId,
         status: "submitted",
+        file_name: file.name,
       })
     );
   }
