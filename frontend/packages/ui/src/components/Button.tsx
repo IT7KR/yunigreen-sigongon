@@ -15,6 +15,7 @@ const buttonVariants = cva(
           "border border-brand-point-500 text-brand-point-600 hover:bg-brand-point-50 active:bg-brand-point-100",
         ghost: "text-brand-point-600 hover:bg-brand-point-50 active:bg-brand-point-100",
         destructive: "bg-red-500 text-white hover:bg-red-600 active:bg-red-700",
+        outline: "border border-slate-300 text-slate-700 hover:bg-slate-50 active:bg-slate-100",
       },
       size: {
         sm: "h-8 px-3 text-sm",

@@ -29,16 +29,21 @@ function ConfirmModal({
   loading = false,
 }: ConfirmModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} description={description} size="sm">
-      {variant === "destructive" && (
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-          <AlertTriangle className="h-6 w-6 text-red-600" />
-        </div>
-      )}
-      <div className="flex gap-3 pt-2">
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
+      <div className="flex items-start gap-3">
+        {variant === "destructive" && (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+          </div>
+        )}
+        {description && (
+          <p className="pt-2 text-sm leading-relaxed text-slate-600">{description}</p>
+        )}
+      </div>
+      <div className="mt-6 border-t border-slate-100 pt-5 flex gap-3">
         <Button
           type="button"
-          variant="secondary"
+          variant="outline"
           className="flex-1"
           onClick={onClose}
           disabled={loading}

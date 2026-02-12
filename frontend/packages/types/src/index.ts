@@ -79,16 +79,38 @@ export type TaxInvoiceType = "regular" | "simplified"
 // Material Orders (자재 발주)
 export type MaterialOrderStatus = "draft" | "requested" | "confirmed" | "shipped" | "delivered" | "cancelled"
 
-// Project Categories (건설업 신고 기준)
+// Case/Season Estimation
+export type SeasonDocumentStatus = "queued" | "running" | "done" | "failed"
+export type DiagnosisCaseStatus = "draft" | "vision_ready" | "estimated"
+export type EstimateExportType = "csv" | "xlsx"
+
+// Project Categories (건물 용도 분류)
 export const PROJECT_CATEGORIES = [
-  { id: "architecture", label: "건축공사업" },
-  { id: "civil", label: "토목공사업" },
-  { id: "landscape", label: "조경공사업" },
-  { id: "waterproof", label: "방수공사업" },
-  { id: "plumbing", label: "설비공사업" },
-  { id: "electrical", label: "전기공사업" },
-  { id: "interior", label: "실내건축공사업" },
-  { id: "steel", label: "철강재설치공사업" },
+  { id: "detached_house", label: "단독주택 및 연립주택" },
+  { id: "low_rise_apt", label: "저층아파트(5층이하)" },
+  { id: "mid_rise_apt", label: "고층아파트(6~15층이하)" },
+  { id: "high_rise_apt", label: "초고층아파트(16층이상)" },
+  { id: "mixed_use", label: "주거·상업용겸용건물" },
+  { id: "commercial", label: "상가·백화점·쇼핑센타" },
+  { id: "office", label: "사무실빌딩" },
+  { id: "officetel", label: "오피스텔" },
+  { id: "intelligent", label: "인텔리전트빌딩" },
+  { id: "gov_low", label: "관공서건물(11층이하)" },
+  { id: "gov_high", label: "관공서건물(12층이상)" },
+  { id: "hotel", label: "호텔숙박시설" },
+  { id: "school", label: "학교" },
+  { id: "hospital", label: "병원" },
+  { id: "religious", label: "교회·사찰 등 종교용 건물" },
+  { id: "traditional", label: "전통양식건축" },
+  { id: "heritage", label: "기타문화재,유적건물" },
+  { id: "performance", label: "공연, 집회장소" },
+  { id: "stadium", label: "경기장·운동장" },
+  { id: "exhibition", label: "전시시설" },
+  { id: "factory", label: "공장,작업장용건물" },
+  { id: "machinery", label: "기계기구설치(플랜트제외)" },
+  { id: "power_plant", label: "변,발전소용건물" },
+  { id: "warehouse", label: "창고,차고,터미널건물" },
+  { id: "hazmat", label: "위험물저장소" },
   { id: "other", label: "기타" },
 ] as const
 
@@ -163,6 +185,7 @@ export interface AIDiagnosis {
   site_visit_id: string
   model_name: string
   leak_opinion_text: string
+  field_opinion_text?: string
   confidence_score?: number
   status: DiagnosisStatus
   created_at: string
@@ -405,6 +428,118 @@ export interface MaterialOrderItem {
   amount: number
 }
 
+export interface SeasonInfo {
+  id: number
+  name: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface SeasonDocumentInfo {
+  id: number
+  season_id: number
+  category: string
+  title: string
+  file_url: string
+  version_hash: string
+  status: SeasonDocumentStatus
+  uploaded_at: string
+  upload_url?: string
+}
+
+export interface SeasonDocumentStatusInfo {
+  id: number
+  status: SeasonDocumentStatus
+  uploaded_at: string
+  last_error?: string
+  trace_chunk_count: number
+  cost_item_count: number
+}
+
+export interface DiagnosisCase {
+  id: number
+  user_id: string
+  season_id: number
+  status: DiagnosisCaseStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface DiagnosisCaseImage {
+  id: number
+  case_id: number
+  file_url: string
+  meta_json?: Record<string, unknown>
+  created_at: string
+}
+
+export interface VisionResultDetail {
+  id: number
+  case_id: number
+  model: string
+  result_json: {
+    findings: Array<{
+      location?: string
+      observed?: string
+      hypothesis?: string
+      severity?: "low" | "med" | "high"
+      next_checks?: string[]
+    }>
+    work_items: Array<{
+      name: string
+      required?: boolean
+      rationale?: string
+    }>
+    materials: Array<{
+      name: string
+      spec_hint?: string | null
+      unit_hint?: string | null
+      qty_hint?: string
+      quantity?: number
+    }>
+    confidence: number
+    questions_for_user: string[]
+  }
+  confidence?: number
+  created_at: string
+  updated_at: string
+}
+
+export interface EstimateEvidence {
+  doc_title: string
+  season_name: string
+  page: number
+  table_id?: string | null
+  row_id?: string | null
+  row_text: string
+}
+
+export interface DiagnosisCaseEstimateLine {
+  work?: string
+  item_name: string
+  spec?: string
+  unit: string
+  quantity: number
+  unit_price: number
+  amount: number
+  optional?: boolean
+  evidence: EstimateEvidence[]
+}
+
+export interface DiagnosisCaseEstimate {
+  id: number
+  case_id: number
+  version: number
+  items: DiagnosisCaseEstimateLine[]
+  totals: {
+    subtotal: number
+    vat_amount: number
+    total_amount: number
+  }
+  version_hash_snapshot: string
+  created_at: string
+}
+
 // ============================================
 // API Response Types
 // ============================================
@@ -466,6 +601,7 @@ export interface ProjectDetail {
   name: string
   address: string
   status: ProjectStatus
+  category?: ProjectCategory
   client_name?: string
   client_phone?: string
   notes?: string
@@ -484,6 +620,16 @@ export interface ProjectDetail {
     created_at?: string
     issued_at?: string
   }>
+  contracts?: Array<{
+    id: string
+    status: ContractStatus
+  }>
+  diagnoses_count?: number
+}
+
+export interface ProjectAccessPolicy {
+  project_id: string
+  manager_ids: string[]
 }
 
 export interface SiteVisitDetail {
@@ -506,6 +652,7 @@ export interface DiagnosisDetail {
   project_id: string
   status: DiagnosisStatus
   leak_opinion_text: string
+  field_opinion_text?: string
   confidence_score?: number
   suggested_materials: Array<{
     id: string

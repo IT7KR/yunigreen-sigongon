@@ -34,7 +34,7 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
   },
   warranty: {
     label: "하자보증",
-    className: "bg-teal-50 text-teal-700 before:bg-teal-500",
+    className: "bg-brand-point-50 text-brand-point-700 before:bg-brand-point-500",
   },
   closed: {
     label: "완결",

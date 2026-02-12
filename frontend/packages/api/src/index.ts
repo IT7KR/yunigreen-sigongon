@@ -15,4 +15,11 @@ export type {
   SiteVisitDetail,
   DiagnosisDetail,
   EstimateDetail,
+  SeasonInfo,
+  SeasonDocumentInfo,
+  SeasonDocumentStatusInfo,
+  DiagnosisCase,
+  DiagnosisCaseImage,
+  VisionResultDetail,
+  DiagnosisCaseEstimate,
 } from "@sigongon/types";

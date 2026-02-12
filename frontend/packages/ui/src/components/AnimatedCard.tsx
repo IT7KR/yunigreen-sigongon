@@ -37,7 +37,7 @@ const AnimatedCard = forwardRef<HTMLDivElement, AnimatedCardProps>(
           "rounded-xl border border-slate-200 bg-white shadow-sm",
           className
         )}
-        whileHover={{ scale: hoverScale, boxShadow: hoverShadow ? "0 4px 12px rgba(0,0,0,0.1)" : undefined }}
+        whileHover={{ scale: hoverScale, boxShadow: hoverShadow ? "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)" : undefined }}
         transition={{ duration: 0.2 }}
         {...(props as any)}
       >

@@ -9,6 +9,7 @@ import type {
   LoginResponse,
   ProjectListItem,
   ProjectDetail,
+  ProjectAccessPolicy,
   SiteVisitDetail,
   DiagnosisDetail,
   EstimateDetail,
@@ -41,6 +42,14 @@ import type {
   TaxInvoiceDetail,
   TaxInvoiceType,
   TaxInvoiceStatus,
+  // Case / Season
+  SeasonInfo,
+  SeasonDocumentInfo,
+  SeasonDocumentStatusInfo,
+  DiagnosisCase,
+  DiagnosisCaseImage,
+  VisionResultDetail,
+  DiagnosisCaseEstimate,
 } from "@sigongon/types";
 
 export class NetworkError extends Error {
@@ -499,6 +508,20 @@ export class APIClient {
     const response = await this.client.get<APIResponse<DiagnosisDetail>>(
       `/diagnoses/${diagnosisId}`,
     );
+    return response.data;
+  }
+
+  async updateDiagnosisFieldOpinion(
+    diagnosisId: string,
+    data: { field_opinion_text: string },
+  ) {
+    const response = await this.client.patch<
+      APIResponse<{
+        id: string;
+        field_opinion_text: string;
+        updated_at: string;
+      }>
+    >(`/diagnoses/${diagnosisId}/field-opinion`, data);
     return response.data;
   }
 
@@ -1177,6 +1200,10 @@ export class APIClient {
     return response.data;
   }
 
+  async getTaxInvoiceDetail(invoiceId: string) {
+    return this.getTaxInvoice(invoiceId);
+  }
+
   async createTaxInvoice(
     projectId: string,
     data: {
@@ -1265,6 +1292,24 @@ export class APIClient {
         expires_at: string;
       }>
     >(`/tax-invoices/${invoiceId}/popup-url`);
+    return response.data;
+  }
+
+  async getProjectAccess(projectId: string) {
+    const response = await this.client.get<APIResponse<ProjectAccessPolicy>>(
+      `/projects/${projectId}/access`,
+    );
+    return response.data;
+  }
+
+  async updateProjectAccess(
+    projectId: string,
+    data: { manager_ids: string[] },
+  ) {
+    const response = await this.client.put<APIResponse<ProjectAccessPolicy>>(
+      `/projects/${projectId}/access`,
+      data,
+    );
     return response.data;
   }
 
@@ -1612,6 +1657,119 @@ export class APIClient {
         subscription_breakdown: Record<string, number>;
       }>
     >("/admin/sa-dashboard");
+    return response.data;
+  }
+
+  async getTenants(params?: { page?: number; search?: string }) {
+    const response = await this.client.get<
+      PaginatedResponse<{
+        id: string;
+        name: string;
+        plan: "trial" | "basic" | "pro";
+        users_count: number;
+        projects_count: number;
+        created_at: string;
+        billing_amount?: number;
+      }>
+    >("/admin/tenants", { params });
+    return response.data;
+  }
+
+  async getTenant(tenantId: string) {
+    const response = await this.client.get<
+      APIResponse<{
+        id: string;
+        name: string;
+        plan: "trial" | "basic" | "pro";
+        users_count: number;
+        projects_count: number;
+        created_at: string;
+        business_number?: string;
+        representative?: string;
+        rep_phone?: string;
+        rep_email?: string;
+        contact_name?: string;
+        contact_phone?: string;
+        contact_position?: string;
+        subscription_start_date: string;
+        subscription_end_date: string;
+        is_custom_trial: boolean;
+        billing_amount: number;
+        is_active?: boolean;
+      }>
+    >(`/admin/tenants/${tenantId}`);
+    return response.data;
+  }
+
+  async setCustomTrialPeriod(
+    tenantId: string,
+    data: {
+      end_date: string;
+      reason?: string;
+    },
+  ) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        subscription_end_date: string;
+        is_custom_trial: boolean;
+      }>
+    >(`/admin/tenants/${tenantId}/custom-trial`, data);
+    return response.data;
+  }
+
+  async createInvitation(data: {
+    phone: string;
+    name: string;
+    role: string;
+  }) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        token: string;
+        invite_url: string;
+      }>
+    >("/invitations", data);
+    return response.data;
+  }
+
+  async getInvitations(params?: {
+    status?: "pending" | "accepted" | "expired" | "revoked";
+    page?: number;
+    per_page?: number;
+  }) {
+    const response = await this.client.get<
+      PaginatedResponse<{
+        id: string;
+        phone: string;
+        name: string;
+        role: string;
+        status: "pending" | "accepted" | "expired" | "revoked";
+        created_at: string;
+        expires_at: string;
+      }>
+    >("/invitations", { params });
+    return response.data;
+  }
+
+  async resendInvitation(invitationId: string) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        token: string;
+        invite_url: string;
+      }>
+    >(`/invitations/${invitationId}/resend`);
+    return response.data;
+  }
+
+  async revokeInvitation(invitationId: string) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        status: "revoked";
+      }>
+    >(`/invitations/${invitationId}/revoke`);
     return response.data;
   }
 
@@ -2007,6 +2165,165 @@ export class APIClient {
         require_grounding: requireGrounding,
       },
     });
+    return response.data;
+  }
+
+  // ============================================
+  // Case / Season Estimation
+  // ============================================
+
+  async getSeasons() {
+    const response = await this.client.get<APIResponse<SeasonInfo[]>>("/seasons");
+    return response.data;
+  }
+
+  async getActiveSeason() {
+    const response = await this.client.get<APIResponse<SeasonInfo>>("/seasons/active");
+    return response.data;
+  }
+
+  async createSeason(data: { name: string; is_active?: boolean }) {
+    const response = await this.client.post<APIResponse<SeasonInfo>>(
+      "/admin/seasons",
+      data,
+    );
+    return response.data;
+  }
+
+  async updateSeason(seasonId: number, data: { is_active: boolean }) {
+    const response = await this.client.patch<APIResponse<SeasonInfo>>(
+      `/admin/seasons/${seasonId}`,
+      data,
+    );
+    return response.data;
+  }
+
+  async getAdminDocuments(seasonId?: number) {
+    const response = await this.client.get<APIResponse<SeasonDocumentInfo[]>>(
+      "/admin/documents",
+      { params: { season_id: seasonId } },
+    );
+    return response.data;
+  }
+
+  async createAdminDocument(data: {
+    season_id: number;
+    category: string;
+    title: string;
+    file_name: string;
+  }) {
+    const response = await this.client.post<APIResponse<SeasonDocumentInfo>>(
+      "/admin/documents",
+      data,
+    );
+    return response.data;
+  }
+
+  async ingestAdminDocument(documentId: number) {
+    const response = await this.client.post<APIResponse<SeasonDocumentStatusInfo>>(
+      `/admin/documents/${documentId}/ingest`,
+    );
+    return response.data;
+  }
+
+  async getAdminDocumentStatus(documentId: number) {
+    const response = await this.client.get<APIResponse<SeasonDocumentStatusInfo>>(
+      `/admin/documents/${documentId}/status`,
+    );
+    return response.data;
+  }
+
+  async listCases() {
+    const response = await this.client.get<APIResponse<DiagnosisCase[]>>("/cases");
+    return response.data;
+  }
+
+  async createCase(data?: { season_id?: number }) {
+    const response = await this.client.post<APIResponse<DiagnosisCase>>(
+      "/cases",
+      data || {},
+    );
+    return response.data;
+  }
+
+  async getCase(caseId: number) {
+    const response = await this.client.get<APIResponse<DiagnosisCase>>(
+      `/cases/${caseId}`,
+    );
+    return response.data;
+  }
+
+  async getCaseImages(caseId: number) {
+    const response = await this.client.get<APIResponse<DiagnosisCaseImage[]>>(
+      `/cases/${caseId}/images`,
+    );
+    return response.data;
+  }
+
+  async uploadCaseImage(
+    caseId: number,
+    file: File,
+    metaJson?: Record<string, unknown>,
+  ) {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (metaJson) {
+      formData.append("meta_json", JSON.stringify(metaJson));
+    }
+    const response = await this.client.post<APIResponse<DiagnosisCaseImage>>(
+      `/cases/${caseId}/images`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return response.data;
+  }
+
+  async runCaseVision(caseId: number, data?: { extra_context?: string }) {
+    const response = await this.client.post<APIResponse<VisionResultDetail>>(
+      `/cases/${caseId}/vision`,
+      data || {},
+    );
+    return response.data;
+  }
+
+  async updateCaseVision(
+    caseId: number,
+    data: { result_json: VisionResultDetail["result_json"]; confidence?: number },
+  ) {
+    const response = await this.client.patch<APIResponse<VisionResultDetail>>(
+      `/cases/${caseId}/vision`,
+      data,
+    );
+    return response.data;
+  }
+
+  async createCaseEstimate(caseId: number) {
+    const response = await this.client.post<APIResponse<DiagnosisCaseEstimate>>(
+      `/cases/${caseId}/estimate`,
+    );
+    return response.data;
+  }
+
+  async getCaseEstimate(caseId: number) {
+    const response = await this.client.get<APIResponse<DiagnosisCaseEstimate>>(
+      `/cases/${caseId}/estimate`,
+    );
+    return response.data;
+  }
+
+  async downloadCaseEstimateCsv(caseId: number) {
+    const response = await this.client.get<Blob>(
+      `/cases/${caseId}/estimate.csv`,
+      { responseType: "blob" },
+    );
+    return response.data;
+  }
+
+  async downloadCaseEstimateXlsx(caseId: number) {
+    const response = await this.client.get<Blob>(
+      `/cases/${caseId}/estimate.xlsx`,
+      { responseType: "blob" },
+    );
     return response.data;
   }
 
