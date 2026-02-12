@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FolderKanban, Camera } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Card, CardContent, Button, CountUp, Skeleton, EmptyState, AnimatedPage } from "@sigongon/ui";
+import { Card, CardContent, MotionNumber, Skeleton, EmptyState, InteractiveCard, PageTransition, StaggerGrid } from "@sigongon/ui";
 import { useProjects } from "@/hooks";
 
 export default function HomePage() {
@@ -21,7 +21,7 @@ export default function HomePage() {
 
   return (
     <MobileLayout>
-      <AnimatedPage>
+      <PageTransition>
         <div className="space-y-6 p-4">
         {/* 환영 메시지 */}
         <div className="pt-4">
@@ -32,25 +32,25 @@ export default function HomePage() {
         {/* 빠른 액션 */}
         <div className="grid grid-cols-2 gap-3">
           <Link href="/projects/new">
-            <Card className="h-full hover:border-brand-point-200">
+            <InteractiveCard className="h-full hover:border-brand-point-200">
               <CardContent className="flex flex-col items-center justify-center gap-2 p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-point-100">
                   <FolderKanban className="h-6 w-6 text-brand-point-600" />
                 </div>
                 <span className="font-medium text-slate-900">새 프로젝트</span>
               </CardContent>
-            </Card>
+            </InteractiveCard>
           </Link>
 
           <Link href="/projects">
-            <Card className="h-full hover:border-brand-primary-200">
+            <InteractiveCard className="h-full hover:border-brand-primary-200">
               <CardContent className="flex flex-col items-center justify-center gap-2 p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
                   <Camera className="h-6 w-6 text-blue-600" />
                 </div>
                 <span className="font-medium text-slate-900">현장방문</span>
               </CardContent>
-            </Card>
+            </InteractiveCard>
           </Link>
         </div>
 
@@ -70,22 +70,22 @@ export default function HomePage() {
             ) : (
               <div className="mt-4 grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <CountUp
-                    end={inProgressCount}
+                  <MotionNumber
+                    value={inProgressCount}
                     className="text-2xl font-bold text-brand-point-600"
                   />
                   <p className="mt-1 text-xs text-slate-500">진행 중</p>
                 </div>
                 <div>
-                  <CountUp
-                    end={0}
+                  <MotionNumber
+                    value={0}
                     className="text-2xl font-bold text-amber-600"
                   />
                   <p className="mt-1 text-xs text-slate-500">오늘 방문</p>
                 </div>
                 <div>
-                  <CountUp
-                    end={0}
+                  <MotionNumber
+                    value={0}
                     className="text-2xl font-bold text-blue-600"
                   />
                   <p className="mt-1 text-xs text-slate-500">AI 진단</p>
@@ -105,10 +105,13 @@ export default function HomePage() {
           </div>
 
           {recentProjects.length > 0 ? (
-            <div className="space-y-2">
-              {recentProjects.slice(0, 3).map((project) => (
+            <StaggerGrid
+              items={recentProjects.slice(0, 3)}
+              className="space-y-2"
+              keyExtractor={(project) => project.id}
+              renderItem={(project) => (
                 <Link key={project.id} href={`/projects/${project.id}`}>
-                  <Card className="hover:border-brand-point-200">
+                  <InteractiveCard className="hover:border-brand-point-200">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
@@ -124,10 +127,10 @@ export default function HomePage() {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
+                  </InteractiveCard>
                 </Link>
-              ))}
-            </div>
+              )}
+            />
           ) : (
             <Card>
               <CardContent>
@@ -145,8 +148,8 @@ export default function HomePage() {
             </Card>
           )}
         </div>
-      </div>
-      </AnimatedPage>
+        </div>
+      </PageTransition>
     </MobileLayout>
   );
 }
