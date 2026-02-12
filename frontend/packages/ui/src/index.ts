@@ -20,7 +20,9 @@ export {
 } from "./components/Skeleton"
 export { Modal, type ModalProps } from "./components/Modal"
 export { CountUp } from "./components/CountUp"
+export { MotionNumber, type MotionNumberProps } from "./components/MotionNumber"
 export { BlurText } from "./components/BlurText"
+export { Reveal, type RevealProps, type RevealDirection } from "./components/Reveal"
 export { Stepper, type StepperProps } from "./components/Stepper"
 export { FileUpload, type FileUploadProps } from "./components/FileUpload"
 export { SignaturePad, type SignaturePadProps } from "./components/SignaturePad"
@@ -34,6 +36,9 @@ export { PageHeader, type PageHeaderProps } from "./components/PageHeader"
 export { LoadingOverlay, type LoadingOverlayProps } from "./components/LoadingOverlay"
 export { ConfirmModal, type ConfirmModalProps } from "./components/ConfirmModal"
 export { AnimatedPage, type AnimatedPageProps } from "./components/AnimatedPage"
+export { PageTransition, type PageTransitionProps, type PageTransitionStyle } from "./components/PageTransition"
+export { StaggerGrid, type StaggerGridProps } from "./components/StaggerGrid"
+export { InteractiveCard, type InteractiveCardProps } from "./components/InteractiveCard"
 export { PrimitiveButton, type PrimitiveButtonProps } from "./components/PrimitiveButton"
 export { PrimitiveInput, type PrimitiveInputProps } from "./components/PrimitiveInput"
 export { PrimitiveSelect, type PrimitiveSelectProps } from "./components/PrimitiveSelect"
@@ -68,5 +73,9 @@ export {
   gridStagger,
   gridItem,
   buttonTap,
-  ANIMATION_LIST_THRESHOLD
+  ANIMATION_LIST_THRESHOLD,
+  motionDurations,
+  motionEasings,
+  motionStagger,
+  motionThresholds,
 } from "./lib/motion"

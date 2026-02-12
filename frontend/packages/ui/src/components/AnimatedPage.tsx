@@ -1,30 +1,11 @@
 "use client"
 
-import { type ReactNode } from "react"
-import { motion } from "framer-motion"
-import { useReducedMotion } from "../hooks"
-import { pageEnter, reducedMotion } from "../lib/motion"
-import { cn } from "../lib/utils"
+import { type PageTransitionProps, PageTransition } from "./PageTransition"
 
-interface AnimatedPageProps {
-  children: ReactNode
-  className?: string
-}
+interface AnimatedPageProps extends Omit<PageTransitionProps, "styleType"> {}
 
-function AnimatedPage({ children, className }: AnimatedPageProps) {
-  const prefersReducedMotion = useReducedMotion()
-  const variants = prefersReducedMotion ? reducedMotion : pageEnter
-
-  return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={variants}
-      className={cn(className)}
-    >
-      {children}
-    </motion.div>
-  )
+function AnimatedPage(props: AnimatedPageProps) {
+  return <PageTransition styleType="slide-up" {...props} />
 }
 
 export { AnimatedPage, type AnimatedPageProps }

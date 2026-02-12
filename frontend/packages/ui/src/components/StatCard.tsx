@@ -3,7 +3,7 @@
 import { forwardRef, type HTMLAttributes, type ComponentType } from "react"
 import { TrendingUp, TrendingDown } from "lucide-react"
 import { cn } from "../lib/utils"
-import { CountUp } from "./CountUp"
+import { MotionNumber } from "./MotionNumber"
 import { Skeleton } from "./Skeleton"
 
 interface StatCardProps extends HTMLAttributes<HTMLDivElement> {
@@ -54,7 +54,10 @@ const StatCard = forwardRef<HTMLDivElement, StatCardProps>(
               <div className="mt-1 flex items-baseline gap-1">
                 {prefix && <span className="text-lg font-bold text-slate-900">{prefix}</span>}
                 {animate && typeof value === "number" ? (
-                  <CountUp end={value} className="text-3xl font-bold text-slate-900" />
+                  <MotionNumber
+                    value={value}
+                    className="text-3xl font-bold text-slate-900"
+                  />
                 ) : (
                   <span className="text-3xl font-bold text-slate-900">{value}</span>
                 )}
