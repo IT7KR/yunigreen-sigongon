@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { User, Lock, Bell, Clock, Shield } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Card, CardContent } from "@sigongon/ui";
+import { Card, CardContent, PrimitiveButton } from "@sigongon/ui";
 import { useAuth } from "@/lib/auth";
 import { ProfileSection } from "@/components/mypage/ProfileSection";
 import { PasswordSection } from "@/components/mypage/PasswordSection";
@@ -26,8 +26,8 @@ export default function MyPage() {
   const getRoleBadge = (role: string) => {
     const roleMap: Record<string, { label: string; color: string }> = {
       super_admin: { label: "최고관리자", color: "bg-purple-100 text-purple-700" },
-      company_admin: { label: "대표", color: "bg-teal-100 text-teal-700" },
-      site_manager: { label: "현장소장", color: "bg-teal-100 text-teal-700" },
+      company_admin: { label: "대표", color: "bg-brand-point-100 text-brand-point-700" },
+      site_manager: { label: "현장소장", color: "bg-brand-point-100 text-brand-point-700" },
       worker: { label: "작업자", color: "bg-slate-100 text-slate-700" },
     };
 
@@ -71,7 +71,7 @@ export default function MyPage() {
                   const isActive = activeSection === section.id;
 
                   return (
-                    <button
+                    <PrimitiveButton
                       key={section.id}
                       onClick={() => setActiveSection(section.id)}
                       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -82,7 +82,7 @@ export default function MyPage() {
                     >
                       <Icon className="h-5 w-5" />
                       {section.label}
-                    </button>
+                    </PrimitiveButton>
                   );
                 })}
               </nav>

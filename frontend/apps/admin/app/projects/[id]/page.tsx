@@ -2,15 +2,9 @@
 
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   User,
-  Camera,
-  FileText,
-  ClipboardCheck,
-  Plus,
   Loader2,
-  Eye,
   Sparkles,
 } from "lucide-react";
 import {
@@ -19,14 +13,15 @@ import {
   CardHeader,
   CardTitle,
   Button,
-  StatusBadge,
   formatDate,
 } from "@sigongon/ui";
 import type { ProjectStatus, VisitType, EstimateStatus, ContractStatus } from "@sigongon/types";
 import { api } from "@/lib/api";
 import { ProjectWorkflowTimeline } from "@/components/ProjectWorkflowTimeline";
-
-const MOBILE_APP_URL = process.env.NEXT_PUBLIC_MOBILE_APP_URL || "http://localhost:3034";
+import {
+  getAssignmentByProjectId,
+  getRepresentativeById,
+} from "@/lib/fieldRepresentatives";
 
 interface ProjectDetail {
   id: string;
@@ -57,26 +52,41 @@ interface ProjectDetail {
   diagnoses_count?: number;
 }
 
-const visitTypeLabels: Record<VisitType, string> = {
-  initial: "최초 방문",
-  progress: "진행 점검",
-  completion: "준공 확인",
-};
-
 export default function ProjectDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const router = useRouter();
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [creatingEstimate, setCreatingEstimate] = useState(false);
+  const [representativeInfo, setRepresentativeInfo] = useState<{
+    name: string;
+    phone: string;
+    effectiveDate: string;
+  } | null>(null);
 
   useEffect(() => {
     loadProject();
+  }, [id]);
+
+  useEffect(() => {
+    const assignment = getAssignmentByProjectId(id);
+    if (!assignment) {
+      setRepresentativeInfo(null);
+      return;
+    }
+    const representative = getRepresentativeById(assignment.representativeId);
+    if (!representative) {
+      setRepresentativeInfo(null);
+      return;
+    }
+    setRepresentativeInfo({
+      name: representative.name,
+      phone: representative.phone,
+      effectiveDate: assignment.effectiveDate,
+    });
   }, [id]);
 
   async function loadProject() {
@@ -92,21 +102,6 @@ export default function ProjectDetailPage({
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleCreateEstimate() {
-    if (!project) return;
-    try {
-      setCreatingEstimate(true);
-      const result = await api.createEstimate(id);
-      if (result.success && result.data) {
-        router.push(`/estimates/${result.data.id}`);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setCreatingEstimate(false);
     }
   }
 
@@ -191,7 +186,41 @@ export default function ProjectDetailPage({
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>현장대리인</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {representativeInfo ? (
+              <>
+                <div>
+                  <p className="text-sm text-slate-500">이름</p>
+                  <p className="font-medium text-slate-900">
+                    {representativeInfo.name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">연락처</p>
+                  <p className="font-medium text-slate-900">
+                    {representativeInfo.phone}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">적용 기준일</p>
+                  <p className="font-medium text-slate-900">
+                    {representativeInfo.effectiveDate}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-slate-500">
+                배정된 현장대리인이 없습니다.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>메모</CardTitle>
           </CardHeader>
@@ -202,174 +231,6 @@ export default function ProjectDetailPage({
           </CardContent>
         </Card>
       </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Camera className="h-5 w-5 text-slate-400" />
-              현장 방문
-            </CardTitle>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() =>
-                window.open(
-                  `${MOBILE_APP_URL}/projects/${id}/visits/new`,
-                  "_blank",
-                )
-              }
-            >
-              <Plus className="h-4 w-4" />
-              방문 추가
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {project.site_visits.length === 0 ? (
-              <p className="py-8 text-center text-slate-500">
-                아직 현장 방문 기록이 없습니다.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {project.site_visits.map((visit) => (
-                  <div
-                    key={visit.id}
-                    className="flex items-center justify-between rounded-lg border border-slate-200 p-4 hover:bg-slate-50"
-                  >
-                    <div>
-                      <p className="font-medium text-slate-900">
-                        {visitTypeLabels[visit.visit_type]}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {formatDate(visit.visited_at)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                      <Camera className="h-4 w-4" />
-                      {visit.photo_count}장
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardCheck className="h-5 w-5 text-slate-400" />
-              AI 진단
-            </CardTitle>
-            <Link href={`/projects/${id}/diagnoses`}>
-              <Button size="sm" variant="secondary">
-                <Eye className="h-4 w-4" />
-                진단 목록
-              </Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {diagnosisCount > 0 ? (
-              <div className="space-y-2">
-                <p className="text-slate-600">
-                  총 <span className="font-semibold text-brand-point-600">{diagnosisCount}건</span>의 진단이 완료되었습니다.
-                </p>
-                <Link href={`/projects/${id}/diagnoses`}>
-                  <Button size="sm" variant="ghost">
-                    상세보기 →
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <div className="py-4 text-center">
-                <p className="text-slate-500 mb-3">
-                  현장 방문 후 AI 진단을 요청할 수 있습니다.
-                </p>
-                {visitCount > 0 && (
-                  <Link href={`/projects/${id}/visits`}>
-                    <Button size="sm" variant="secondary">
-                      <Sparkles className="h-4 w-4" />
-                      방문에서 진단 요청
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-slate-400" />
-            견적서
-          </CardTitle>
-          <Button
-            size="sm"
-            onClick={handleCreateEstimate}
-            disabled={creatingEstimate}
-          >
-            {creatingEstimate ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
-            )}
-            견적서 생성
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {project.estimates.length === 0 ? (
-            <p className="py-8 text-center text-slate-500">
-              아직 견적서가 없습니다.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                    <th className="pb-3 font-medium">버전</th>
-                    <th className="pb-3 font-medium">상태</th>
-                    <th className="pb-3 font-medium">금액</th>
-                    <th className="pb-3 font-medium">생성일</th>
-                    <th className="pb-3 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {project.estimates.map((estimate) => (
-                    <tr
-                      key={estimate.id}
-                      className="border-b border-slate-100 last:border-0"
-                    >
-                      <td className="py-4 font-medium text-slate-900">
-                        v{estimate.version}
-                      </td>
-                      <td className="py-4">
-                        <StatusBadge status={estimate.status} />
-                      </td>
-                      <td className="py-4 text-slate-900">
-                        {Number(estimate.total_amount).toLocaleString()}원
-                      </td>
-                      <td className="py-4 text-slate-500">
-                        {estimate.created_at
-                          ? formatDate(estimate.created_at)
-                          : "-"}
-                      </td>
-                      <td className="py-4">
-                        <Link href={`/estimates/${estimate.id}`}>
-                          <Button size="sm" variant="secondary">
-                            <Eye className="h-3.5 w-3.5" />상세보기
-                          </Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

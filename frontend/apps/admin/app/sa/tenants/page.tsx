@@ -3,20 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AdminLayout } from "@/components/AdminLayout";
-import {
-  Card,
-  CardContent,
-  Button,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  Badge,
-  formatDate,
-  Pagination,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, Pagination, PrimitiveInput, PrimitiveSelect, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
 import { Search, Building2, Users, FolderKanban, Loader2, Eye } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -28,6 +15,7 @@ interface TenantItem {
   users_count: number;
   projects_count: number;
   created_at: string;
+  billing_amount?: number;
   status?: "active" | "inactive";
 }
 
@@ -115,7 +103,7 @@ export default function TenantsPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
+                <PrimitiveInput
                   type="search"
                   placeholder="고객사명으로 검색..."
                   value={searchQuery}
@@ -125,7 +113,7 @@ export default function TenantsPage() {
               </div>
 
               <div className="flex gap-2">
-                <select
+                <PrimitiveSelect
                   value={filterPlan}
                   onChange={(e) => setFilterPlan(e.target.value)}
                   className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
@@ -134,9 +122,9 @@ export default function TenantsPage() {
                   <option value="trial">무료 체험</option>
                   <option value="basic">Basic</option>
                   <option value="pro">Pro</option>
-                </select>
+                </PrimitiveSelect>
 
-                <select
+                <PrimitiveSelect
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
@@ -144,7 +132,7 @@ export default function TenantsPage() {
                   <option value="all">모든 상태</option>
                   <option value="active">활성</option>
                   <option value="inactive">비활성</option>
-                </select>
+                </PrimitiveSelect>
               </div>
             </div>
           </CardContent>
@@ -163,6 +151,7 @@ export default function TenantsPage() {
                     <TableRow>
                       <TableHead>회사명</TableHead>
                       <TableHead>요금제</TableHead>
+                      <TableHead>요금 금액</TableHead>
                       <TableHead>사용자 수</TableHead>
                       <TableHead>프로젝트 수</TableHead>
                       <TableHead>가입일</TableHead>
@@ -173,7 +162,7 @@ export default function TenantsPage() {
                   <TableBody>
                     {filteredTenants.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">
+                        <TableCell colSpan={8} className="text-center">
                           <div className="py-12 text-slate-500">
                             고객사가 없어요
                           </div>
@@ -201,6 +190,11 @@ export default function TenantsPage() {
                               >
                                 {plan.label}
                               </span>
+                            </TableCell>
+                            <TableCell className="text-slate-700">
+                              {tenant.billing_amount
+                                ? `${tenant.billing_amount.toLocaleString()}원`
+                                : "무료"}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1.5 text-slate-600">

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { cn, StatusBadge, Button } from "@sigongon/ui";
+import { PROJECT_CATEGORIES } from "@sigongon/types";
 import { useProject } from "@/hooks";
 
 export default function ProjectDetailLayout({
@@ -22,6 +23,7 @@ export default function ProjectDetailLayout({
 
   const tabs = [
     { name: "개요", href: `/projects/${id}`, exact: true },
+    { name: "접근권한", href: `/projects/${id}/access` },
     { name: "현장방문", href: `/projects/${id}/visits` },
     { name: "AI 진단", href: `/projects/${id}/diagnoses` },
     { name: "견적", href: `/projects/${id}/estimates` },
@@ -57,6 +59,11 @@ export default function ProjectDetailLayout({
                     {project.name}
                   </h1>
                   <StatusBadge status={project.status} />
+                  {project.category && (
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                      {PROJECT_CATEGORIES.find((c) => c.id === project.category)?.label || project.category}
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1 flex items-center gap-1 text-slate-500">
                   <MapPin className="h-4 w-4" />

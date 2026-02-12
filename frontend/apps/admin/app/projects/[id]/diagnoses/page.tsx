@@ -131,7 +131,6 @@ export default function DiagnosesPage({
                   <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
                     <th className="pb-3 font-medium">진단 ID</th>
                     <th className="pb-3 font-medium">상태</th>
-                    <th className="pb-3 font-medium">신뢰도</th>
                     <th className="pb-3 font-medium">진단 내용</th>
                     <th className="pb-3 font-medium"></th>
                   </tr>
@@ -160,33 +159,6 @@ export default function DiagnosesPage({
                             <span className="sr-only" role="status" aria-live="polite">
                               AI가 진단을 분석 중입니다
                             </span>
-                          )}
-                        </td>
-                        <td className="py-4">
-                          {diagnosis.confidence_score !== undefined &&
-                          diagnosis.confidence_score !== null ? (
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="h-2 w-24 overflow-hidden rounded-full bg-slate-200"
-                                role="progressbar"
-                                aria-valuenow={Math.round(diagnosis.confidence_score * 100)}
-                                aria-valuemin={0}
-                                aria-valuemax={100}
-                                aria-label={`신뢰도 ${Math.round(diagnosis.confidence_score * 100)}%`}
-                              >
-                                <div
-                                  className="h-full bg-brand-point-500 transition-all"
-                                  style={{
-                                    width: `${Math.round(diagnosis.confidence_score * 100)}%`,
-                                  }}
-                                />
-                              </div>
-                              <span className="text-sm text-slate-600" aria-hidden="true">
-                                {Math.round(diagnosis.confidence_score * 100)}%
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">-</span>
                           )}
                         </td>
                         <td className="py-4 text-slate-500">
@@ -262,22 +234,12 @@ export default function DiagnosesPage({
                 </p>
               </div>
               <div className="rounded-lg border border-slate-200 p-4">
-                <p className="text-sm text-slate-500">평균 신뢰도</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">
-                  {diagnoses.filter((d) => d.confidence_score).length > 0
-                    ? Math.round(
-                        (diagnoses
-                          .filter((d) => d.confidence_score)
-                          .reduce(
-                            (sum, d) => sum + (d.confidence_score || 0),
-                            0
-                          ) /
-                          diagnoses.filter((d) => d.confidence_score)
-                            .length) *
-                          100
-                      )
-                    : 0}
-                  %
+                <p className="text-sm text-slate-500">실패</p>
+                <p className="mt-2 text-2xl font-bold text-red-600">
+                  {
+                    diagnoses.filter((d) => d.status === "failed")
+                      .length
+                  }건
                 </p>
               </div>
             </div>

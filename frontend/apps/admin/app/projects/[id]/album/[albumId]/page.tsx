@@ -10,16 +10,7 @@ import {
   Loader2,
   LayoutGrid,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-  Badge,
-  toast,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveButton, toast } from "@sigongon/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
 import { PhotoAlbumGrid } from "@/components/PhotoAlbumGrid";
 import { PhotoSelector } from "@/components/PhotoSelector";
@@ -239,7 +230,7 @@ export default function AlbumDetailPage({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="앨범 설명을 입력하세요 (선택)"
-              className="min-h-[80px] w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+              className="min-h-[80px] w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             />
           </div>
 
@@ -249,28 +240,28 @@ export default function AlbumDetailPage({
                 레이아웃
               </label>
               <div className="flex gap-2">
-                <button
+                <PrimitiveButton
                   onClick={() => setLayout("three_column")}
                   className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 transition-colors ${
                     layout === "three_column"
-                      ? "border-teal-500 bg-teal-50 text-teal-700"
+                      ? "border-brand-point-500 bg-brand-point-50 text-brand-point-700"
                       : "border-slate-200 hover:border-slate-300"
                   }`}
                 >
                   <LayoutGrid className="h-5 w-5" />
                   3열
-                </button>
-                <button
+                </PrimitiveButton>
+                <PrimitiveButton
                   onClick={() => setLayout("four_column")}
                   className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 transition-colors ${
                     layout === "four_column"
-                      ? "border-teal-500 bg-teal-50 text-teal-700"
+                      ? "border-brand-point-500 bg-brand-point-50 text-brand-point-700"
                       : "border-slate-200 hover:border-slate-300"
                   }`}
                 >
                   <LayoutGrid className="h-5 w-5" />
                   4열
-                </button>
+                </PrimitiveButton>
               </div>
             </div>
 
@@ -279,26 +270,26 @@ export default function AlbumDetailPage({
                 상태
               </label>
               <div className="flex gap-2">
-                <button
+                <PrimitiveButton
                   onClick={() => setStatus("draft")}
                   className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 transition-colors ${
                     status === "draft"
-                      ? "border-teal-500 bg-teal-50 text-teal-700"
+                      ? "border-brand-point-500 bg-brand-point-50 text-brand-point-700"
                       : "border-slate-200 hover:border-slate-300"
                   }`}
                 >
                   초안
-                </button>
-                <button
+                </PrimitiveButton>
+                <PrimitiveButton
                   onClick={() => setStatus("published")}
                   className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 transition-colors ${
                     status === "published"
-                      ? "border-teal-500 bg-teal-50 text-teal-700"
+                      ? "border-brand-point-500 bg-brand-point-50 text-brand-point-700"
                       : "border-slate-200 hover:border-slate-300"
                   }`}
                 >
                   발행
-                </button>
+                </PrimitiveButton>
               </div>
             </div>
           </div>

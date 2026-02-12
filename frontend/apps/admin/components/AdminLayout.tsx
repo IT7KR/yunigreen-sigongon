@@ -22,8 +22,9 @@ import {
   UserCheck,
   ChevronDown,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
-import { cn, Button } from "@sigongon/ui";
+import { Button, PrimitiveButton, cn } from "@sigongon/ui";
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
 
@@ -44,6 +45,8 @@ const navItems = [
       { href: "/labor", label: "대시보드", icon: BarChart3 },
       { href: "/labor/payroll", label: "급여/근무 관리", icon: Calculator },
       { href: "/labor/workers", label: "근로자 주소록", icon: UserCheck },
+      { href: "/labor/representatives", label: "현장대리인 관리", icon: FileText },
+      { href: "/labor/settings", label: "보험요율 설정", icon: Settings },
     ],
   },
   { href: "/users", icon: Users, label: "사용자" },
@@ -57,6 +60,7 @@ const saNavItems = [
   { href: "/sa", icon: BarChart3, label: "플랫폼 현황", exact: true },
   { href: "/sa/tenants", icon: Building2, label: "고객사 관리" },
   { href: "/sa/users", icon: Users, label: "전체 사용자" },
+  { href: "/sa/seasons", icon: Sparkles, label: "시즌 관리" },
   { href: "/sa/pricebooks", icon: FileSpreadsheet, label: "적산 자료" },
   { href: "/sa/labor", icon: HardHat, label: "노무 관리" },
 ];
@@ -85,14 +89,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     <div className="min-h-screen bg-slate-50">
       {/* Mobile header */}
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
-        <button
+        <PrimitiveButton
           onClick={() => setSidebarOpen(true)}
           className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
         >
           <Menu className="h-6 w-6" />
-        </button>
+        </PrimitiveButton>
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-point-500 text-white">
             <Droplets className="h-4 w-4" />
           </div>
           <span className="font-semibold text-slate-900">시공ON</span>
@@ -127,12 +131,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             <span className="font-semibold text-slate-900">시공ON 관리자</span>
           </Link>
 
-          <button
+          <PrimitiveButton
             onClick={() => setSidebarOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100 lg:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 lg:hidden"
           >
             <X className="h-5 w-5" />
-          </button>
+          </PrimitiveButton>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
@@ -146,12 +150,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             if (hasChildren) {
               return (
                 <div key={item.href}>
-                  <button
+                  <PrimitiveButton
                     onClick={() => setExpandedMenu(isExpanded ? null : item.href)}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-teal-50 text-teal-700"
+                        ? "bg-brand-point-50 text-brand-point-700"
                         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                     )}
                   >
@@ -162,7 +166,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     ) : (
                       <ChevronRight className="ml-auto h-4 w-4" />
                     )}
-                  </button>
+                  </PrimitiveButton>
                   {isExpanded && (
                     <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-slate-200 pl-3">
                       {item.children!.map((child) => {
@@ -175,7 +179,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                             className={cn(
                               "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
                               isChildActive
-                                ? "bg-teal-50 font-medium text-teal-700"
+                                ? "bg-brand-point-50 font-medium text-brand-point-700"
                                 : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
                             )}
                           >
@@ -198,7 +202,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-teal-50 text-teal-700"
+                    ? "bg-brand-point-50 text-brand-point-700"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                 )}
               >
@@ -250,7 +254,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             onClick={() => setSidebarOpen(false)}
             className="mb-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-slate-100"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-point-100 text-sm font-bold text-brand-point-700">
               {user?.name?.charAt(0) || "?"}
             </div>
             <div className="min-w-0 flex-1">

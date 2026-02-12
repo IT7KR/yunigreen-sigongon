@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, Button } from "@sigongon/ui";
 import { ConstructionReportForm } from "@/components/ConstructionReportForm";
 import { api } from "@/lib/api";
 
+const DEFAULT_WARRANTY_PERIOD_MONTHS = "6";
+
 interface CompletionReportData {
   id?: string;
   construction_name?: string;
@@ -77,16 +79,21 @@ export default function CompletionReportPage({
   }
 
   async function handleSubmit(data: any, isDraft: boolean) {
+    const normalizedData = {
+      ...data,
+      defect_warranty_period: DEFAULT_WARRANTY_PERIOD_MONTHS,
+    };
+
     try {
       if (reportId) {
         // Update existing report
-        await api.updateConstructionReport(reportId, data);
+        await api.updateConstructionReport(reportId, normalizedData);
         if (!isDraft) {
           await api.submitConstructionReport(reportId);
         }
       } else {
         // Create new report
-        const response = await api.createCompletionReport(id, data);
+        const response = await api.createCompletionReport(id, normalizedData);
         if (response.success && response.data && !isDraft) {
           await api.submitConstructionReport(response.data.id);
         }
@@ -99,11 +106,16 @@ export default function CompletionReportPage({
   }
 
   async function handleSave(data: any) {
+    const normalizedData = {
+      ...data,
+      defect_warranty_period: DEFAULT_WARRANTY_PERIOD_MONTHS,
+    };
+
     try {
       if (reportId) {
-        await api.updateConstructionReport(reportId, data);
+        await api.updateConstructionReport(reportId, normalizedData);
       } else {
-        await api.createCompletionReport(id, data);
+        await api.createCompletionReport(id, normalizedData);
       }
       alert("저장했어요");
       router.push(`/projects/${id}/reports`);
@@ -204,9 +216,7 @@ export default function CompletionReportPage({
                 <div>
                   <p className="text-sm text-slate-500">하자보증기간</p>
                   <p className="font-medium text-slate-900">
-                    {reportData?.defect_warranty_period
-                      ? `${reportData.defect_warranty_period}개월`
-                      : "-"}
+                    {DEFAULT_WARRANTY_PERIOD_MONTHS}개월
                   </p>
                 </div>
                 <div>

@@ -3,16 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { AdminLayout } from "@/components/AdminLayout";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  Modal,
-  formatDate,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Modal, PrimitiveInput, formatDate } from "@sigongon/ui";
 import {
   Building2,
   Users,
@@ -113,67 +104,53 @@ export default function TenantDetailPage() {
       const response = await api.getTenant(tenantId);
 
       if (response.success && response.data) {
+        const tenantData = response.data;
+        const tenantAny = tenantData as any;
         // 남은 일수 계산
         const now = new Date();
-        const endDate = new Date(response.data.subscription_end_date);
+        const endDate = new Date(tenantData.subscription_end_date);
         const diffTime = endDate.getTime() - now.getTime();
         const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
-        // Mock extended data for SA detail view
-        const mockDetail: TenantDetail = {
-          id: response.data.id,
-          name: response.data.name,
-          plan: response.data.plan as "trial" | "basic" | "pro",
-          users_count: response.data.users_count,
-          projects_count: response.data.projects_count,
-          created_at: response.data.created_at,
-          subscription_start_date: response.data.subscription_start_date,
-          subscription_end_date: response.data.subscription_end_date,
-          is_custom_trial: response.data.is_custom_trial,
-          billing_amount: response.data.billing_amount || 0,
+        // API가 상세 필드를 제공하지 않는 경우를 고려한 안전 매핑
+        const mappedDetail: TenantDetail = {
+          id: tenantData.id,
+          name: tenantData.name,
+          plan: tenantData.plan as "trial" | "basic" | "pro",
+          users_count: tenantData.users_count,
+          projects_count: tenantData.projects_count,
+          created_at: tenantData.created_at,
+          subscription_start_date: tenantData.subscription_start_date,
+          subscription_end_date: tenantData.subscription_end_date,
+          is_custom_trial: tenantData.is_custom_trial,
+          billing_amount: tenantData.billing_amount || 0,
           days_remaining: daysRemaining,
-          business_number: "123-45-67890",
-          representative: "홍길동",
-          rep_phone: "010-1111-2222",
-          rep_email: "ceo@sigongon.com",
-          contact_name: "박실무",
-          contact_phone: "010-3333-4444",
-          contact_position: "과장",
-          payment_history: (response.data.billing_amount || 0) > 0 ? [
+          business_number:
+            tenantAny.business_number || tenantAny.businessNumber || "-",
+          representative: tenantAny.representative || "미등록",
+          rep_phone: tenantAny.rep_phone || "-",
+          rep_email: tenantAny.rep_email || "-",
+          contact_name: tenantAny.contact_name,
+          contact_phone: tenantAny.contact_phone,
+          contact_position: tenantAny.contact_position,
+          payment_history: (tenantData.billing_amount || 0) > 0 ? [
             {
               id: "p1",
-              date: response.data.subscription_start_date?.slice(0, 10) || "2026-01-24",
-              amount: response.data.billing_amount || 0,
+              date: tenantData.subscription_start_date?.slice(0, 10) || "-",
+              amount: tenantData.billing_amount || 0,
               status: "paid" as const,
             },
           ] : [],
-          users: [
-            {
-              id: "u1",
-              name: "이중호",
-              phone: "010-1234-5678",
-              email: "admin@sigongon.com",
-              role: "company_admin",
-              last_login_at: "2026-01-24T10:30:00Z",
-            },
-            {
-              id: "u2",
-              name: "김대표",
-              phone: "010-9876-5432",
-              email: "ceo@partner.com",
-              role: "site_manager",
-              last_login_at: "2026-01-23T15:20:00Z",
-            },
-          ],
+          users: [],
           project_stats: {
-            draft: 3,
-            in_progress: 5,
-            completed: 4,
-            total: 12,
+            draft: 0,
+            in_progress: 0,
+            completed: tenantData.projects_count,
+            total: tenantData.projects_count,
           },
-          is_active: true,
+          is_active: tenantAny.is_active ?? true,
         };
-        setTenant(mockDetail);
+        setTenant(mappedDetail);
       }
     } catch (err) {
       console.error("Failed to load tenant detail:", err);
@@ -584,7 +561,7 @@ export default function TenantDetailPage() {
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               종료일 <span className="text-red-500">*</span>
             </label>
-            <input
+            <PrimitiveInput
               type="date"
               value={customEndDate}
               onChange={(e) => setCustomEndDate(e.target.value)}

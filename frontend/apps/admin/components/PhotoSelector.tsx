@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, CheckSquare, Square } from "lucide-react";
-import { Button, Modal } from "@sigongon/ui";
+import { Button, Modal, PrimitiveButton } from "@sigongon/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
 
 interface ProjectPhoto {
@@ -108,7 +108,7 @@ export function PhotoSelector({
             const isDisabled = isExisting;
 
             return (
-              <button
+              <PrimitiveButton
                 key={photo.id}
                 onClick={() => togglePhoto(photo.id)}
                 disabled={isDisabled}
@@ -116,7 +116,7 @@ export function PhotoSelector({
                   isDisabled
                     ? "cursor-not-allowed border-slate-200 opacity-50"
                     : isSelected
-                      ? "border-teal-500 ring-2 ring-teal-200"
+                      ? "border-brand-point-500 ring-2 ring-brand-point-200"
                       : "border-slate-200 hover:border-slate-300"
                 }`}
               >
@@ -130,7 +130,7 @@ export function PhotoSelector({
                 {/* Selection indicator */}
                 <div className="absolute right-2 top-2">
                   {isSelected ? (
-                    <CheckSquare className="h-5 w-5 text-teal-500" />
+                    <CheckSquare className="h-5 w-5 text-brand-point-500" />
                   ) : isDisabled ? (
                     <div className="rounded bg-white/80 px-1.5 py-0.5 text-xs text-slate-500">
                       추가됨
@@ -139,7 +139,7 @@ export function PhotoSelector({
                     <Square className="h-5 w-5 text-slate-400 opacity-0 group-hover:opacity-100" />
                   )}
                 </div>
-              </button>
+              </PrimitiveButton>
             );
           })}
         </div>

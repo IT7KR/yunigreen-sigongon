@@ -1,15 +1,7 @@
 "use client";
 
 import { use, useEffect, useMemo, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  toast,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, toast } from "@sigongon/ui";
 import { Eye, EyeOff, Loader2, ShieldCheck, Users } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -37,20 +29,42 @@ export default function ProjectAccessPage({
 
   useEffect(() => {
     loadManagers();
-  }, []);
+  }, [projectId]);
 
   async function loadManagers() {
     try {
       setLoading(true);
-      const response = await api.getUsers({ role: "site_manager", per_page: 50 });
-      if (response.success && response.data) {
+      const usersResponse = await api.getUsers({
+        role: "site_manager",
+        per_page: 50,
+      });
+      let accessResponse: Awaited<
+        ReturnType<typeof api.getProjectAccess>
+      > | null = null;
+      try {
+        accessResponse = await api.getProjectAccess(projectId);
+      } catch {
+        accessResponse = null;
+      }
+
+      if (usersResponse.success && usersResponse.data) {
+        const visibleIds = new Set(
+          accessResponse?.success && accessResponse.data
+            ? accessResponse.data.manager_ids
+            : [],
+        );
+
         setManagers(
-          response.data.map((user, index) => ({
-            id: user.id,
-            name: user.name,
-            phone: user.phone,
-            visible: index < 2,
-          })),
+          usersResponse.data.map((user, index) => {
+            const defaultVisible = index < 2;
+            return {
+              id: user.id,
+              name: user.name,
+              phone: user.phone,
+              visible:
+                visibleIds.size > 0 ? visibleIds.has(user.id) : defaultVisible,
+            };
+          }),
         );
       }
     } catch (error) {
@@ -78,7 +92,18 @@ export default function ProjectAccessPage({
   async function handleSave() {
     try {
       setSaving(true);
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      const managerIds = managers
+        .filter((manager) => manager.visible)
+        .map((manager) => manager.id);
+
+      const response = await api.updateProjectAccess(projectId, {
+        manager_ids: managerIds,
+      });
+
+      if (!response.success) {
+        throw new Error(response.error?.message || "접근권한 저장 실패");
+      }
+
       toast.success(
         `프로젝트 공개 대상을 저장했어요. (${visibleCount}/${managers.length}명)`,
       );
@@ -167,7 +192,7 @@ export default function ProjectAccessPage({
                     <p className="font-medium text-slate-900">{manager.name}</p>
                     <p className="text-xs text-slate-500">{manager.phone || "-"}</p>
                   </div>
-                  <button
+                  <PrimitiveButton
                     type="button"
                     onClick={() => toggleVisibility(manager.id)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-point-500 focus:ring-offset-2 ${
@@ -180,7 +205,7 @@ export default function ProjectAccessPage({
                         manager.visible ? "translate-x-6" : "translate-x-1"
                       }`}
                     />
-                  </button>
+                  </PrimitiveButton>
                 </div>
               ))}
             </div>

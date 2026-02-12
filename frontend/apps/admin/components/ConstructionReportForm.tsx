@@ -24,6 +24,8 @@ interface ConstructionReportFormProps {
   onSave?: (data: any) => Promise<void>;
 }
 
+const DEFAULT_WARRANTY_PERIOD_MONTHS = "6";
+
 export function ConstructionReportForm({
   reportType,
   initialData = {},
@@ -39,7 +41,10 @@ export function ConstructionReportForm({
     supervisor_name: initialData.supervisor_name || "",
     supervisor_phone: initialData.supervisor_phone || "",
     final_amount: initialData.final_amount || "",
-    defect_warranty_period: initialData.defect_warranty_period || "",
+    defect_warranty_period:
+      reportType === "completion"
+        ? DEFAULT_WARRANTY_PERIOD_MONTHS
+        : initialData.defect_warranty_period || DEFAULT_WARRANTY_PERIOD_MONTHS,
     notes: initialData.notes || "",
   });
 
@@ -85,8 +90,6 @@ export function ConstructionReportForm({
         newErrors.actual_end_date = "준공일을 입력해 주세요";
       if (!formData.final_amount)
         newErrors.final_amount = "최종 금액을 입력해 주세요";
-      if (!formData.defect_warranty_period)
-        newErrors.defect_warranty_period = "하자보증기간을 입력해 주세요";
     }
 
     setErrors(newErrors);
@@ -219,13 +222,8 @@ export function ConstructionReportForm({
             />
             <Input
               label="하자보증기간 (개월)"
-              name="defect_warranty_period"
-              type="number"
-              value={formData.defect_warranty_period}
-              onChange={handleChange}
-              error={errors.defect_warranty_period}
-              placeholder="12"
-              required
+              value={DEFAULT_WARRANTY_PERIOD_MONTHS}
+              disabled
             />
             <Input
               label="감독자명"

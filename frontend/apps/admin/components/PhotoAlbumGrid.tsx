@@ -1,5 +1,7 @@
 "use client";
 
+import { PrimitiveButton } from "@sigongon/ui";
+
 import { useState } from "react";
 import { GripVertical, X } from "lucide-react";
 
@@ -82,7 +84,7 @@ export function PhotoAlbumGrid({
             draggedIndex === index
               ? "scale-95 opacity-50"
               : dragOverIndex === index
-                ? "border-teal-500"
+                ? "border-brand-point-500"
                 : "border-slate-200"
           } ${onReorder ? "cursor-move" : ""}`}
         >
@@ -109,13 +111,13 @@ export function PhotoAlbumGrid({
 
           {/* Remove button */}
           {onRemove && (
-            <button
+            <PrimitiveButton
               onClick={() => onRemove(photo.id)}
               className="absolute right-2 top-2 rounded bg-white/80 p-1 opacity-0 shadow-sm transition-opacity hover:bg-red-50 group-hover:opacity-100"
               title="제거"
             >
               <X className="h-4 w-4 text-red-500" />
-            </button>
+            </PrimitiveButton>
           )}
         </div>
       ))}

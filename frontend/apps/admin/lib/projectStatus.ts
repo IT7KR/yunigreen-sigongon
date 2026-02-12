@@ -106,7 +106,7 @@ export function getStatusColorClass(status: ProjectStatus): string {
     green: "bg-green-50 text-green-700",
     purple: "bg-purple-50 text-purple-700",
     emerald: "bg-emerald-50 text-emerald-700",
-    teal: "bg-teal-50 text-teal-700",
+    teal: "bg-brand-point-50 text-brand-point-700",
   };
   return colorMap[config?.color || "gray"] || colorMap.gray;
 }

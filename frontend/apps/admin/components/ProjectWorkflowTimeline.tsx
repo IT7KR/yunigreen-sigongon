@@ -135,7 +135,7 @@ export function ProjectWorkflowTimeline({
   const getStatusIcon = (status: WorkflowStage["status"]) => {
     switch (status) {
       case "completed":
-        return <CheckCircle2 className="h-5 w-5 text-teal-600" />;
+        return <CheckCircle2 className="h-5 w-5 text-brand-point-600" />;
       case "in_progress":
         return <Loader2 className="h-5 w-5 animate-spin text-blue-600" />;
       case "pending":
@@ -148,20 +148,20 @@ export function ProjectWorkflowTimeline({
   const getStatusLabel = (status: WorkflowStage["status"]) => {
     switch (status) {
       case "completed":
-        return "✅";
+        return "완료";
       case "in_progress":
-        return "🔄";
+        return "진행중";
       case "pending":
-        return "⏳";
+        return "대기";
       case "not_started":
-        return "-";
+        return "미시작";
     }
   };
 
   const getStageColor = (status: WorkflowStage["status"]) => {
     switch (status) {
       case "completed":
-        return "bg-teal-50 border-teal-200 text-teal-900";
+        return "bg-brand-point-50 border-brand-point-200 text-brand-point-900";
       case "in_progress":
         return "bg-blue-50 border-blue-300 text-blue-900";
       case "pending":
@@ -180,7 +180,7 @@ export function ProjectWorkflowTimeline({
             <Link
               href={stage.href}
               className={cn(
-                "group flex flex-col items-center rounded-lg border-2 px-4 py-3 transition-all hover:shadow-md min-w-[100px] md:min-w-[120px]",
+                "group flex flex-col items-center justify-between rounded-lg border-2 px-4 py-3 transition-all hover:shadow-md min-w-[100px] md:min-w-[120px] min-h-[88px] md:min-h-[96px]",
                 getStageColor(stage.status),
                 stage.status === "in_progress" && "ring-2 ring-blue-300 ring-offset-2",
               )}
@@ -193,38 +193,27 @@ export function ProjectWorkflowTimeline({
                 {stage.label}
               </div>
 
-              {/* Count Badge */}
-              {stage.count !== undefined && stage.count > 0 && (
-                <div
-                  className={cn(
-                    "text-xs font-medium",
-                    stage.status === "completed" && "text-teal-700",
-                    stage.status === "in_progress" && "text-blue-700",
-                    stage.status === "pending" && "text-amber-700",
-                    stage.status === "not_started" && "text-slate-500",
-                  )}
-                >
-                  {stage.count}건
-                </div>
-              )}
-
-              {/* Status Label */}
-              {stage.count === undefined && (
-                <div className="text-xs font-medium opacity-70">
-                  {getStatusLabel(stage.status)}
-                </div>
-              )}
-
-              {/* Quick Action on Hover */}
+              {/* Status Info */}
               <div
                 className={cn(
-                  "mt-2 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity",
-                  stage.status === "not_started" && "hidden",
+                  "text-xs font-medium",
+                  stage.status === "completed" && "text-brand-point-700",
+                  stage.status === "in_progress" && "text-blue-700",
+                  stage.status === "pending" && "text-amber-700",
+                  stage.status === "not_started" && "text-slate-500",
                 )}
               >
+                {stage.count !== undefined && stage.count > 0
+                  ? `${stage.count}건`
+                  : getStatusLabel(stage.status)}
+              </div>
+
+              {/* Quick Action on Hover */}
+              <div className="mt-1 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                 {stage.status === "completed" && "보기 →"}
                 {stage.status === "in_progress" && "진행중 →"}
                 {stage.status === "pending" && "시작하기 →"}
+                {stage.status === "not_started" && "\u00A0"}
               </div>
             </Link>
 
@@ -233,7 +222,7 @@ export function ProjectWorkflowTimeline({
               <div
                 className={cn(
                   "mx-1 md:mx-2 h-0.5 w-4 md:w-8",
-                  stage.status === "completed" ? "bg-teal-300" : "bg-slate-200",
+                  stage.status === "completed" ? "bg-brand-point-300" : "bg-slate-200",
                 )}
               />
             )}

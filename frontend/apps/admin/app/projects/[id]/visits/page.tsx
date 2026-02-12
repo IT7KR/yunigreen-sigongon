@@ -2,7 +2,6 @@
 
 import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Camera, Plus, Loader2, MapPin, FileText, ExternalLink } from "lucide-react";
 import {
   Card,
@@ -62,11 +61,11 @@ export default function VisitsPage({
   }
 
   function handleAddVisit() {
-    // 사진 촬영은 모바일 앱에서만 가능하므로 모바일 앱으로 이동
-    window.open(
-      `${MOBILE_APP_URL}/projects/${projectId}/visits/new`,
-      "_blank",
-    );
+    router.push(`/projects/${projectId}/visits/new`);
+  }
+
+  function handleAddVisitInMobile() {
+    window.open(`${MOBILE_APP_URL}/projects/${projectId}/visits/new`, "_blank");
   }
 
   function handleViewVisit(visitId: string) {
@@ -107,10 +106,16 @@ export default function VisitsPage({
             <Camera className="h-5 w-5 text-slate-400" />
             현장 방문 목록
           </CardTitle>
-          <Button onClick={handleAddVisit}>
-            <Plus className="h-4 w-4" />
-            방문 추가
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={handleAddVisitInMobile}>
+              <ExternalLink className="h-4 w-4" />
+              모바일 등록
+            </Button>
+            <Button onClick={handleAddVisit}>
+              <Plus className="h-4 w-4" />
+              웹에서 방문 추가
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {visits.length === 0 ? (
@@ -122,9 +127,16 @@ export default function VisitsPage({
               <p className="mt-1 text-sm text-slate-400">
                 현장 방문을 추가하고 사진을 촬영해 보세요.
               </p>
-              <Button className="mt-6" onClick={handleAddVisit}>
-                <Plus className="h-4 w-4" />첫 방문 추가하기
-              </Button>
+              <div className="mt-6 flex justify-center gap-2">
+                <Button variant="secondary" onClick={handleAddVisitInMobile}>
+                  <ExternalLink className="h-4 w-4" />
+                  모바일 등록
+                </Button>
+                <Button onClick={handleAddVisit}>
+                  <Plus className="h-4 w-4" />
+                  웹에서 첫 방문 추가
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">

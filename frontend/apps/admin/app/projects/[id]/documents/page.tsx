@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useRef, useState, type ChangeEvent } from "react";
+import { use, useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   FileText,
   FileSpreadsheet,
@@ -15,7 +15,7 @@ import {
   AlertCircle,
   FolderOpen,
 } from "lucide-react";
-import { Card, CardContent, Button, Badge, toast } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, PrimitiveButton, PrimitiveInput, toast } from "@sigongon/ui";
 import type {
   DocumentPhase,
   DocumentGenerationType,
@@ -28,6 +28,11 @@ import {
   buildSampleFileDownloadUrl,
   getSamplePathForDocument,
 } from "@/lib/sampleFiles";
+import {
+  getProjectDocumentOverrides,
+  upsertProjectDocumentOverride,
+  type ProjectDocumentOverride,
+} from "@/lib/projectDocumentState";
 
 // ─── Phase config ───────────────────────────────────────────────────────────
 
@@ -212,6 +217,25 @@ const MOCK_DOCUMENT_PHASES: ProjectDocumentPhaseGroup[] = [
   ]),
 ];
 
+function applyDocumentOverrides(
+  phases: ProjectDocumentPhaseGroup[],
+  overrides: Record<string, ProjectDocumentOverride>,
+) {
+  return phases.map((group) =>
+    makePhaseGroup(
+      group.phase,
+      group.documents.map((docItem) => {
+        const override = overrides[docItem.id];
+        if (!override) return docItem;
+        return {
+          ...docItem,
+          ...override,
+        };
+      }),
+    ),
+  );
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function DocumentsPage({
@@ -221,7 +245,11 @@ export default function DocumentsPage({
 }) {
   const { id } = use(params);
   const [documentPhases, setDocumentPhases] = useState<ProjectDocumentPhaseGroup[]>(
-    MOCK_DOCUMENT_PHASES,
+    () =>
+      applyDocumentOverrides(
+        MOCK_DOCUMENT_PHASES,
+        getProjectDocumentOverrides(id),
+      ),
   );
   const [expandedPhases, setExpandedPhases] = useState<Set<DocumentPhase>>(
     () => new Set(documentPhases.map((g) => g.phase)),
@@ -237,6 +265,15 @@ export default function DocumentsPage({
   );
   const progressPercent =
     totalDocs > 0 ? Math.round((completedDocs / totalDocs) * 100) : 0;
+
+  useEffect(() => {
+    setDocumentPhases(
+      applyDocumentOverrides(
+        MOCK_DOCUMENT_PHASES,
+        getProjectDocumentOverrides(id),
+      ),
+    );
+  }, [id]);
 
   function togglePhase(phase: DocumentPhase) {
     setExpandedPhases((prev) => {
@@ -261,7 +298,18 @@ export default function DocumentsPage({
           return group;
         }
         const nextDocuments = group.documents.map((docItem) =>
-          docItem.id === documentId ? updater(docItem) : docItem,
+          docItem.id === documentId
+            ? (() => {
+                const nextDoc = updater(docItem);
+                upsertProjectDocumentOverride(id, nextDoc.id, {
+                  status: nextDoc.status,
+                  file_path: nextDoc.file_path,
+                  file_size: nextDoc.file_size,
+                  generated_at: nextDoc.generated_at,
+                });
+                return nextDoc;
+              })()
+            : docItem,
         );
         return makePhaseGroup(group.phase, nextDocuments);
       }),
@@ -402,7 +450,7 @@ export default function DocumentsPage({
           return (
             <Card key={group.phase}>
               {/* Phase Header */}
-              <button
+              <PrimitiveButton
                 type="button"
                 className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition-colors rounded-t-lg"
                 onClick={() => togglePhase(group.phase)}
@@ -437,7 +485,7 @@ export default function DocumentsPage({
                     <ChevronDown className="h-5 w-5 text-slate-400" />
                   )}
                 </div>
-              </button>
+              </PrimitiveButton>
 
               {/* Phase Content */}
               {isExpanded && (
@@ -458,7 +506,7 @@ export default function DocumentsPage({
         })}
       </div>
 
-      <input
+      <PrimitiveInput
         ref={uploadInputRef}
         type="file"
         className="hidden"

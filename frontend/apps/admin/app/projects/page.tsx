@@ -1,30 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Search, MoreHorizontal, X, FolderKanban, AlertCircle, Loader2 } from "lucide-react";
+import { Plus, Search, MoreHorizontal, X, FolderKanban, AlertCircle, Loader2, Pencil, Trash2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import {
-  Card,
-  CardContent,
-  Button,
-  StatusBadge,
-  formatDate,
-  Input,
-  Modal,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  Select,
-  PageHeader,
-  EmptyState,
-  LoadingOverlay,
-  AnimatedPage,
-} from "@sigongon/ui";
+import { AnimatedPage, Button, Card, CardContent, ConfirmModal, EmptyState, Input, LoadingOverlay, Modal, PageHeader, PrimitiveButton, PrimitiveInput, Select, StatusBadge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
 import { useProjects } from "@/hooks";
 import { api } from "@/lib/api";
 import type { ProjectStatus, ProjectCategory } from "@sigongon/types";
@@ -37,6 +18,12 @@ export default function ProjectsPage() {
   const [categoryFilter, setCategoryFilter] = useState<ProjectCategory | "">("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [editProject, setEditProject] = useState<{ id: string; name: string; address: string; client_name: string; category: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, error, refetch } = useProjects({
     status: statusFilter || undefined,
@@ -50,6 +37,56 @@ export default function ProjectsPage() {
     : allProjects;
   const total = projects.length;
 
+  const categoryMap = Object.fromEntries(PROJECT_CATEGORIES.map((c) => [c.id, c.label]));
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    }
+    if (openMenuId) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [openMenuId]);
+
+  async function handleUpdateProject(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editProject) return;
+    const formData = new FormData(e.currentTarget);
+    try {
+      setUpdating(true);
+      await api.updateProject(editProject.id, {
+        name: formData.get("name") as string,
+        address: formData.get("address") as string,
+        category: (formData.get("category") as string) || undefined,
+        client_name: (formData.get("client_name") as string) || undefined,
+        client_phone: (formData.get("client_phone") as string) || undefined,
+      });
+      setEditProject(null);
+      refetch();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  async function handleDeleteProject() {
+    if (!deleteTarget) return;
+    try {
+      setDeleting(true);
+      await api.deleteProject(deleteTarget.id);
+      setDeleteTarget(null);
+      refetch();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   async function handleCreateProject(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -59,6 +96,7 @@ export default function ProjectsPage() {
       const result = await api.createProject({
         name: formData.get("name") as string,
         address: formData.get("address") as string,
+        category: (formData.get("category") as string) || undefined,
         client_name: (formData.get("client_name") as string) || undefined,
         client_phone: (formData.get("client_phone") as string) || undefined,
       });
@@ -94,7 +132,7 @@ export default function ProjectsPage() {
             <div className="flex flex-wrap gap-4">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
+                <PrimitiveInput
                   type="search"
                   placeholder="프로젝트명, 주소, 고객명으로 검색..."
                   value={search}
@@ -153,6 +191,7 @@ export default function ProjectsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>프로젝트</TableHead>
+                    <TableHead>카테고리</TableHead>
                     <TableHead>상태</TableHead>
                     <TableHead>고객</TableHead>
                     <TableHead>방문</TableHead>
@@ -181,6 +220,9 @@ export default function ProjectsPage() {
                           </p>
                         </Link>
                       </TableCell>
+                      <TableCell className="text-sm text-slate-600">
+                        {project.category ? categoryMap[project.category] || "-" : "-"}
+                      </TableCell>
                       <TableCell>
                         <StatusBadge status={project.status} />
                       </TableCell>
@@ -199,9 +241,49 @@ export default function ProjectsPage() {
                         {formatDate(project.created_at)}
                       </TableCell>
                       <TableCell>
-                        <button className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100">
-                          <MoreHorizontal className="h-4 w-4 text-slate-400" />
-                        </button>
+                        <div className="relative" ref={openMenuId === project.id ? menuRef : undefined}>
+                          <PrimitiveButton
+                            className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(openMenuId === project.id ? null : project.id);
+                            }}
+                          >
+                            <MoreHorizontal className="h-4 w-4 text-slate-400" />
+                          </PrimitiveButton>
+                          {openMenuId === project.id && (
+                            <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                              <PrimitiveButton
+                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(null);
+                                  setEditProject({
+                                    id: project.id,
+                                    name: project.name,
+                                    address: project.address,
+                                    client_name: project.client_name || "",
+                                    category: project.category || "",
+                                  });
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                                수정
+                              </PrimitiveButton>
+                              <PrimitiveButton
+                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(null);
+                                  setDeleteTarget({ id: project.id, name: project.name });
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                삭제
+                              </PrimitiveButton>
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -232,6 +314,13 @@ export default function ProjectsPage() {
             placeholder="서울시 강남구..."
             required
           />
+          <Select
+            name="category"
+            label="카테고리"
+            placeholder="카테고리 선택"
+            required
+            options={PROJECT_CATEGORIES.map((cat) => ({ value: cat.id, label: cat.label }))}
+          />
           <Input name="client_name" label="고객명" placeholder="홍길동" />
           <Input
             name="client_phone"
@@ -257,6 +346,79 @@ export default function ProjectsPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Edit Project Modal */}
+      <Modal
+        isOpen={!!editProject}
+        onClose={() => setEditProject(null)}
+        title="프로젝트 수정"
+        size="md"
+      >
+        {editProject && (
+          <form onSubmit={handleUpdateProject} className="space-y-4">
+            <Input
+              name="name"
+              label="프로젝트명 *"
+              defaultValue={editProject.name}
+              required
+            />
+            <Input
+              name="address"
+              label="주소 *"
+              defaultValue={editProject.address}
+              required
+            />
+            <Select
+              name="category"
+              label="카테고리"
+              placeholder="카테고리 선택"
+              value={editProject.category}
+              required
+              options={PROJECT_CATEGORIES.map((cat) => ({ value: cat.id, label: cat.label }))}
+            />
+            <Input
+              name="client_name"
+              label="고객명"
+              defaultValue={editProject.client_name}
+            />
+            <Input
+              name="client_phone"
+              label="고객 연락처"
+              placeholder="010-1234-5678"
+            />
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setEditProject(null)}
+              >
+                취소
+              </Button>
+              <Button type="submit" className="flex-1" disabled={updating}>
+                {updating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "저장"
+                )}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Delete Confirm Modal */}
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteProject}
+        title="프로젝트 삭제"
+        description={`"${deleteTarget?.name}" 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        cancelLabel="취소"
+        variant="destructive"
+        loading={deleting}
+      />
     </AdminLayout>
   );
 }

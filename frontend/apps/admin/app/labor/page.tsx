@@ -11,7 +11,7 @@ import {
   Modal,
   toast,
 } from "@sigongon/ui";
-import { Plus, Download, UserPlus, Mail, Loader2, Check, Eye, Send, X, Calculator, UserCheck, Settings, ArrowRight, MessageSquare, Copy } from "lucide-react";
+import { Plus, Download, UserPlus, Mail, Loader2, Check, Eye, Send, X, Calculator, UserCheck, Settings, ArrowRight, MessageSquare, Copy, FileText } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
@@ -238,7 +238,7 @@ export default function LaborPage() {
         </div>
 
         {/* Quick Navigation Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <Link href="/labor/payroll">
             <Card className="cursor-pointer transition-shadow hover:shadow-md">
               <CardContent className="flex items-center gap-4 p-4">
@@ -262,6 +262,20 @@ export default function LaborPage() {
                 <div className="flex-1">
                   <p className="font-medium text-slate-900">근로자 주소록</p>
                   <p className="text-xs text-slate-500">일용 근로자 등록 및 관리</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-slate-400" />
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/labor/representatives">
+            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+              <CardContent className="flex items-center gap-4 p-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+                  <FileText className="h-5 w-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-slate-900">현장대리인 관리</p>
+                  <p className="text-xs text-slate-500">자격서류 만료일 및 프로젝트 배정 관리</p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-slate-400" />
               </CardContent>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Loader2, MessageSquare, Copy, Check } from "lucide-react";
-import { Button, Modal } from "@sigongon/ui";
+import { Button, Modal, PrimitiveInput, PrimitiveSelect } from "@sigongon/ui";
 import type { UserRole } from "@sigongon/types";
 
 interface InviteUserModalProps {
@@ -225,11 +225,11 @@ export function InviteUserModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             이름 *
           </label>
-          <input
+          <PrimitiveInput
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             placeholder="홍길동"
             autoFocus
           />
@@ -239,11 +239,11 @@ export function InviteUserModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             전화번호 *
           </label>
-          <input
+          <PrimitiveInput
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             placeholder="010-0000-0000"
           />
         </div>
@@ -252,18 +252,18 @@ export function InviteUserModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             역할
           </label>
-          <select
+          <PrimitiveSelect
             value={role}
             onChange={(e) => setRole(e.target.value as UserRole)}
             disabled={availableRoles.length <= 1}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200 disabled:bg-slate-100"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200 disabled:bg-slate-100"
           >
             {availableRoles.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
-          </select>
+          </PrimitiveSelect>
           {availableRoles.length > 0 && (
             <p className="mt-1 text-xs text-slate-500">
               {availableRoles.find((r) => r.value === role)?.description}

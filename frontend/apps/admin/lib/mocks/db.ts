@@ -45,6 +45,7 @@ export interface Project {
   endDate?: string;
   organization_id: string;
   visibleToSiteManager: boolean;
+  siteManagerVisibility?: string[];
   createdAt: string;
 }
 
@@ -236,6 +237,9 @@ const normalizeProject = (raw: any): Project => {
       typeof raw?.visibleToSiteManager === "boolean"
         ? raw.visibleToSiteManager
         : true,
+    siteManagerVisibility: Array.isArray(raw?.siteManagerVisibility)
+      ? raw.siteManagerVisibility.map((item: unknown) => String(item))
+      : undefined,
     createdAt: String(raw?.createdAt || raw?.created_at || nowIso()),
   };
 };
@@ -290,7 +294,7 @@ const INITIAL_DATA: MockSchema = {
       name: "서울 강남구 삼성동 누수 공사",
       address: "서울 강남구 삼성동 123-45",
       status: "draft",
-      category: "waterproof",
+      category: "low_rise_apt",
       clientName: "홍길동",
       clientPhone: "010-1234-5678",
       organization_id: "org_1",
@@ -301,7 +305,7 @@ const INITIAL_DATA: MockSchema = {
       id: "p2",
       name: "경기도 성남시 판교 아파트",
       address: "경기도 성남시 분당구 판교동 555",
-      category: "architecture",
+      category: "mid_rise_apt",
       status: "in_progress",
       clientName: "이순신",
       clientPhone: "010-9876-5432",
@@ -315,7 +319,7 @@ const INITIAL_DATA: MockSchema = {
       id: "p3",
       name: "인천 송도 조경공사",
       address: "인천 연수구 송도동 11-22",
-      category: "landscape",
+      category: "commercial",
       status: "estimating",
       clientName: "김철수",
       clientPhone: "010-1111-2222",
@@ -327,7 +331,7 @@ const INITIAL_DATA: MockSchema = {
       id: "p4",
       name: "대전 유성 전기공사",
       address: "대전 유성구 대학로 33-44",
-      category: "electrical",
+      category: "office",
       status: "completed",
       clientName: "박영희",
       clientPhone: "010-3333-4444",
@@ -341,7 +345,7 @@ const INITIAL_DATA: MockSchema = {
       id: "p5",
       name: "부산 해운대 설비공사",
       address: "부산 해운대구 우동 77-88",
-      category: "plumbing",
+      category: "high_rise_apt",
       status: "contracted",
       clientName: "최민수",
       clientPhone: "010-5555-6666",
@@ -354,7 +358,7 @@ const INITIAL_DATA: MockSchema = {
       id: "p6",
       name: "서초구 방배동 학교 균열보수",
       address: "서울 서초구 방배동 456-78",
-      category: "architecture" as ProjectCategory,
+      category: "school",
       status: "diagnosing",
       clientName: "방배초등학교",
       clientPhone: "02-1234-5678",
@@ -366,7 +370,7 @@ const INITIAL_DATA: MockSchema = {
       id: "p7",
       name: "마포구 연남동 방수공사",
       address: "서울 마포구 연남동 223-11",
-      category: "waterproof" as ProjectCategory,
+      category: "detached_house",
       status: "quoted",
       clientName: "정대현",
       clientPhone: "010-7777-8888",
@@ -378,7 +382,7 @@ const INITIAL_DATA: MockSchema = {
       id: "p8",
       name: "송파구 잠실 아파트 하자보수",
       address: "서울 송파구 잠실동 100-1",
-      category: "waterproof" as ProjectCategory,
+      category: "high_rise_apt",
       status: "warranty",
       clientName: "잠실래미안 관리사무소",
       clientPhone: "02-9999-0000",
@@ -506,6 +510,18 @@ const INITIAL_DATA: MockSchema = {
   dailyWorkRecords: (() => {
     const records: DailyWorkRecord[] = [];
     let idx = 0;
+    // 2025년 12월 근무기록 - p2 현장 (연도 경계 테스트)
+    const dec2025Workers = [
+      { wid: "dw_1", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26, 29, 30, 31] },
+      { wid: "dw_2", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24] },
+      { wid: "dw_3", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19] },
+      { wid: "dw_4", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26, 29, 30, 31] },
+    ];
+    for (const w of dec2025Workers) {
+      for (const day of w.days) {
+        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p2", work_date: `2025-12-${String(day).padStart(2, "0")}`, man_days: 1 });
+      }
+    }
     // 2026년 1월 근무기록 - p2 현장
     const jan2026Workers = [
       { wid: "dw_1", days: [13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31] },
@@ -533,14 +549,29 @@ const INITIAL_DATA: MockSchema = {
     }
     // 2026년 2월 근무기록 - p2 현장
     const feb2026Workers = [
-      { wid: "dw_1", days: [2, 3, 4, 5, 6] },
-      { wid: "dw_2", days: [2, 3, 4, 5, 6] },
-      { wid: "dw_4", days: [2, 3, 4, 5, 6] },
-      { wid: "dw_7", days: [2, 3, 4, 5] },
+      { wid: "dw_1", days: [2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20] },
+      { wid: "dw_2", days: [2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20] },
+      { wid: "dw_3", days: [3, 4, 5, 6, 9, 10, 11, 12, 16, 17, 18, 19] },
+      { wid: "dw_4", days: [2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20] },
+      { wid: "dw_5", days: [3, 4, 5, 6, 10, 11, 12, 13, 17, 18, 19, 20] },
+      { wid: "dw_6", days: [2, 3, 4, 5, 6, 9, 10, 11, 12, 13] },
+      { wid: "dw_7", days: [2, 3, 4, 5, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20] },
     ];
     for (const w of feb2026Workers) {
       for (const day of w.days) {
         records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p2", work_date: `2026-02-${String(day).padStart(2, "0")}`, man_days: 1 });
+      }
+    }
+    // 2026년 2월 근무기록 - p5 현장
+    const feb2026P5 = [
+      { wid: "dw_1", days: [2, 3, 4, 5, 6, 9, 10] },
+      { wid: "dw_3", days: [2, 3, 4, 5, 6, 9, 10] },
+      { wid: "dw_5", days: [2, 3, 4, 5, 6] },
+      { wid: "dw_7", days: [3, 4, 5, 6, 9, 10] },
+    ];
+    for (const w of feb2026P5) {
+      for (const day of w.days) {
+        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p5", work_date: `2026-02-${String(day).padStart(2, "0")}`, man_days: 1 });
       }
     }
     return records;

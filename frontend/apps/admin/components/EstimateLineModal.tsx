@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { Button, Modal } from "@sigongon/ui";
+import { Button, Modal, PrimitiveInput } from "@sigongon/ui";
 
 interface LineData {
   id?: string;
@@ -112,11 +112,11 @@ export function EstimateLineModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             품목명 *
           </label>
-          <input
+          <PrimitiveInput
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             placeholder="예: 우레탄 도막방수재"
           />
         </div>
@@ -125,11 +125,11 @@ export function EstimateLineModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             규격
           </label>
-          <input
+          <PrimitiveInput
             type="text"
             value={specification}
             onChange={(e) => setSpecification(e.target.value)}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             placeholder="예: 1액형, KS F 4911"
           />
         </div>
@@ -139,11 +139,11 @@ export function EstimateLineModal({
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               단위 *
             </label>
-            <input
+            <PrimitiveInput
               type="text"
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
               placeholder="예: kg"
             />
           </div>
@@ -151,12 +151,12 @@ export function EstimateLineModal({
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               수량 *
             </label>
-            <input
+            <PrimitiveInput
               type="number"
               step="0.01"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
               placeholder="0"
             />
           </div>
@@ -166,20 +166,20 @@ export function EstimateLineModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             단가 *
           </label>
-          <input
+          <PrimitiveInput
             type="number"
             step="1"
             value={unitPrice}
             onChange={(e) => setUnitPrice(e.target.value)}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             placeholder="0"
           />
         </div>
 
-        <div className="rounded-lg bg-teal-50 p-4">
+        <div className="rounded-lg bg-brand-point-50 p-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-teal-700">금액</span>
-            <span className="text-lg font-bold text-teal-700">
+            <span className="text-sm font-medium text-brand-point-700">금액</span>
+            <span className="text-lg font-bold text-brand-point-700">
               {calculatedAmount.toLocaleString()}원
             </span>
           </div>

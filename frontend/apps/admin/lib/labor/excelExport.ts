@@ -68,6 +68,56 @@ function applyCellStyle(
 }
 
 /**
+ * Create report header with title and information block
+ */
+function createReportHeader(
+  worksheet: ExcelJS.Worksheet,
+  options: {
+    title: string
+    companyName?: string
+    projectName?: string
+    year: number
+    month: number
+    extraInfo?: Array<[string, string]>
+  }
+): number {
+  // Title row - merged across columns A to G
+  const titleRow = worksheet.addRow([options.title])
+  worksheet.mergeCells(titleRow.number, 1, titleRow.number, 7)
+  const titleCell = titleRow.getCell(1)
+  titleCell.font = { bold: true, size: 16 }
+  titleCell.alignment = { horizontal: "center", vertical: "middle" }
+  titleRow.height = 30
+
+  // Empty row after title
+  worksheet.addRow([])
+
+  // Info block
+  const infoRows: Array<[string, string | number]> = []
+  if (options.companyName) infoRows.push(["회사명:", options.companyName])
+  if (options.projectName) infoRows.push(["현장명:", options.projectName])
+  infoRows.push(["년도:", options.year])
+  infoRows.push(["월:", `${options.month}월`])
+  if (options.extraInfo) {
+    for (const [label, value] of options.extraInfo) {
+      infoRows.push([label, value])
+    }
+  }
+
+  for (const [label, value] of infoRows) {
+    const row = worksheet.addRow([label, value])
+    row.getCell(1).font = { bold: true, size: 10 }
+    row.getCell(2).font = { size: 10 }
+    row.height = 18
+  }
+
+  // Empty row before data
+  worksheet.addRow([])
+
+  return worksheet.rowCount
+}
+
+/**
  * Create header row for payroll reports
  */
 function createPayrollHeaders(worksheet: ExcelJS.Worksheet) {
@@ -152,24 +202,19 @@ export async function generateSitePayrollExcel(report: SitePayrollReport) {
   const worksheet = workbook.addWorksheet("현장별 일용신고명세서")
 
   // Header information
-  worksheet.addRow(["회사명:", report.organization_name])
-  worksheet.addRow(["년도:", report.year])
-  worksheet.addRow(["월:", report.month])
-  worksheet.addRow(["현장명:", report.project_name])
-  worksheet.addRow([]) // Empty row
-
-  // Style header rows
-  for (let i = 1; i <= 4; i++) {
-    const row = worksheet.getRow(i)
-    row.getCell(1).font = { bold: true }
-    row.height = 18
-  }
+  createReportHeader(worksheet, {
+    title: "일용노무비 지급명세서",
+    companyName: report.organization_name,
+    projectName: report.project_name,
+    year: report.year,
+    month: report.month,
+  })
 
   // Create column headers
   createPayrollHeaders(worksheet)
 
   // Freeze panes at header row
-  worksheet.views = [{ state: "frozen", xSplit: 0, ySplit: 6 }]
+  worksheet.views = [{ state: "frozen", xSplit: 0, ySplit: worksheet.rowCount }]
 
   // Add worker entries
   let rowIndex = 1
@@ -216,12 +261,8 @@ export async function generateSitePayrollExcel(report: SitePayrollReport) {
     })
 
     // Apply number format to currency columns
-    for (let i = 5; i <= 46; i++) {
-      if (i >= 5 && i <= 4) continue // Skip daily rate already formatted
-      if (i >= 38) {
-        // Currency columns
-        row.getCell(i).numFmt = "#,##0"
-      }
+    for (let i = 38; i <= 46; i++) {
+      row.getCell(i).numFmt = "#,##0"
     }
 
     row.getCell(5).numFmt = "#,##0" // Daily rate
@@ -282,28 +323,22 @@ export async function generateConsolidatedExcel(
   const worksheet = workbook.addWorksheet("월별 통합본")
 
   // Header information
-  worksheet.addRow(["회사명:", report.organization_name])
-  worksheet.addRow(["년도:", report.year])
-  worksheet.addRow(["월:", report.month])
-  worksheet.addRow(["구분:", "통합본"])
-  worksheet.addRow([
-    "포함 현장:",
-    report.projects.map((p) => p.name).join(", "),
-  ])
-  worksheet.addRow([]) // Empty row
-
-  // Style header rows
-  for (let i = 1; i <= 5; i++) {
-    const row = worksheet.getRow(i)
-    row.getCell(1).font = { bold: true }
-    row.height = 18
-  }
+  createReportHeader(worksheet, {
+    title: "월별 일용노무비 통합 명세서",
+    companyName: report.organization_name,
+    year: report.year,
+    month: report.month,
+    extraInfo: [
+      ["구분:", "통합본"],
+      ["포함 현장:", report.projects.map((p) => p.name).join(", ")],
+    ],
+  })
 
   // Create column headers
   createPayrollHeaders(worksheet)
 
   // Freeze panes at header row
-  worksheet.views = [{ state: "frozen", xSplit: 0, ySplit: 7 }]
+  worksheet.views = [{ state: "frozen", xSplit: 0, ySplit: worksheet.rowCount }]
 
   // Add worker entries
   let rowIndex = 1
@@ -411,6 +446,14 @@ export async function generateKWDIReportExcel(report: SitePayrollReport) {
   // Sheet 1: Insurance Report (★보험)
   const insuranceSheet = workbook.addWorksheet("★보험")
 
+  createReportHeader(insuranceSheet, {
+    title: "근로복지공단 일용근로자 신고서",
+    companyName: report.organization_name,
+    projectName: report.project_name,
+    year: report.year,
+    month: report.month,
+  })
+
   // Header row
   const insuranceHeaders = [
     "이름",
@@ -452,7 +495,7 @@ export async function generateKWDIReportExcel(report: SitePayrollReport) {
   report.entries.forEach((entry, index) => {
     const row = insuranceSheet.addRow([
       entry.worker_name,
-      "", // Empty SSN for manual entry
+      entry.ssn_masked,
       "", // 취득일 (to be filled manually)
       "", // 상실일 (to be filled manually)
       entry.total_days,
@@ -481,6 +524,14 @@ export async function generateKWDIReportExcel(report: SitePayrollReport) {
 
   // Sheet 2: Work History (★근로내역)
   const workHistorySheet = workbook.addWorksheet("★근로내역")
+
+  createReportHeader(workHistorySheet, {
+    title: "근로내역 신고서",
+    companyName: report.organization_name,
+    projectName: report.project_name,
+    year: report.year,
+    month: report.month,
+  })
 
   // Header row
   const workHistoryHeaders = [
@@ -511,7 +562,7 @@ export async function generateKWDIReportExcel(report: SitePayrollReport) {
   report.entries.forEach((entry, index) => {
     const rowData: (string | number)[] = [
       entry.worker_name,
-      "", // Empty SSN for manual entry
+      entry.ssn_masked,
     ]
 
     // Add work days (1-31)
@@ -548,6 +599,14 @@ export async function generateNationalTaxExcel(report: SitePayrollReport) {
   const workbook = new ExcelJS.Workbook()
   const worksheet = workbook.addWorksheet("★국세")
 
+  createReportHeader(worksheet, {
+    title: "국세청 일용근로소득 신고서",
+    companyName: report.organization_name,
+    projectName: report.project_name,
+    year: report.year,
+    month: report.month,
+  })
+
   // Header row
   const headers = ["이름", "주민번호", "지급총액", "소득세", "지방소득세"]
 
@@ -575,7 +634,7 @@ export async function generateNationalTaxExcel(report: SitePayrollReport) {
   report.entries.forEach((entry, index) => {
     const row = worksheet.addRow([
       entry.worker_name,
-      "", // Empty SSN for manual entry
+      entry.ssn_masked,
       entry.total_labor_cost,
       entry.income_tax,
       entry.resident_tax,

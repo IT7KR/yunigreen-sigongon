@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Loader2 } from "lucide-react";
-import { Button, Modal } from "@sigongon/ui";
+import { Button, Modal, PrimitiveInput, PrimitiveSelect } from "@sigongon/ui";
 import type { UserRole } from "@sigongon/types";
 
 interface UserData {
@@ -127,11 +127,11 @@ export function UserModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             이름 *
           </label>
-          <input
+          <PrimitiveInput
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             placeholder="홍길동"
           />
         </div>
@@ -140,12 +140,12 @@ export function UserModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             이메일 *
           </label>
-          <input
+          <PrimitiveInput
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={isEditMode}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200 disabled:bg-slate-100"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200 disabled:bg-slate-100"
             placeholder="user@example.com"
           />
         </div>
@@ -155,11 +155,11 @@ export function UserModal({
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               비밀번호 *
             </label>
-            <input
+            <PrimitiveInput
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
               placeholder="••••••••"
             />
           </div>
@@ -169,11 +169,11 @@ export function UserModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             전화번호
           </label>
-          <input
+          <PrimitiveInput
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             placeholder="010-1234-5678"
           />
         </div>
@@ -182,18 +182,18 @@ export function UserModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             역할
           </label>
-          <select
+          <PrimitiveSelect
             value={role}
             onChange={(e) => setRole(e.target.value as UserRole)}
             disabled={availableRoles.length <= 1}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200 disabled:bg-slate-100"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200 disabled:bg-slate-100"
           >
             {availableRoles.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
-          </select>
+          </PrimitiveSelect>
           {currentUserRole === "company_admin" && (
             <p className="mt-1 text-xs text-slate-500">
               회사 대표는 현장소장만 추가할 수 있습니다

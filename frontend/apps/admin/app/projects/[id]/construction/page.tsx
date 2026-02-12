@@ -6,12 +6,12 @@ import { useRouter } from "next/navigation";
 import {
   HardHat,
   Calendar,
-  TrendingUp,
   FileText,
   Users,
   CheckCircle,
-  Clock,
+  Loader2,
   ArrowRight,
+  ExternalLink,
 } from "lucide-react";
 import {
   Card,
@@ -19,12 +19,11 @@ import {
   CardHeader,
   CardTitle,
   Button,
-  StatusBadge,
   formatDate,
+  ConfirmModal,
 } from "@sigongon/ui";
 import type { ProjectStatus } from "@sigongon/types";
-import { api } from "@/lib/api";
-import { canTransition, PROJECT_STATUSES } from "@/lib/projectStatus";
+import { canTransition } from "@/lib/projectStatus";
 
 interface ConstructionOverview {
   project_id: string;
@@ -40,6 +39,40 @@ interface ConstructionOverview {
   has_start_report: boolean;
 }
 
+function parseDate(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function calculateProgressPercentage(overview: ConstructionOverview) {
+  if (overview.project_status === "completed" || overview.actual_end_date) {
+    return 100;
+  }
+
+  if (!overview.start_date || !overview.expected_end_date) {
+    return undefined;
+  }
+
+  const startDate = parseDate(overview.start_date);
+  const expectedEndDate = parseDate(overview.expected_end_date);
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(expectedEndDate.getTime())) {
+    return undefined;
+  }
+
+  const totalDuration = expectedEndDate.getTime() - startDate.getTime();
+  if (totalDuration <= 0) {
+    return undefined;
+  }
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const elapsed = today.getTime() - startDate.getTime();
+  const rawProgress = elapsed / totalDuration;
+  const clamped = Math.max(0, Math.min(rawProgress, 0.99));
+  return Math.round(clamped * 100);
+}
+
 export default function ConstructionPage({
   params,
 }: {
@@ -50,6 +83,7 @@ export default function ConstructionPage({
   const [overview, setOverview] = useState<ConstructionOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [completingConstruction, setCompletingConstruction] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   useEffect(() => {
     loadConstructionOverview();
@@ -65,7 +99,6 @@ export default function ConstructionPage({
         project_status: "in_progress",
         start_date: "2026-01-10",
         expected_end_date: "2026-02-28",
-        progress_percentage: 45,
         daily_report_count: 12,
         total_workers: 8,
         total_labor_cost: "12000000",
@@ -79,27 +112,15 @@ export default function ConstructionPage({
     }
   }
 
-  async function handleCompleteConstruction() {
-    if (!overview) return;
-
-    if (!canTransition(overview.project_status, "completed")) {
-      alert("현재 상태에서 준공 처리할 수 없습니다.");
-      return;
-    }
-
-    if (!confirm("시공을 완료하고 준공 상태로 변경하시겠습니까?")) {
-      return;
-    }
-
+  async function confirmCompleteConstruction() {
     try {
       setCompletingConstruction(true);
       // Replace with actual API call
       // await api.updateProjectStatus(id, "completed");
-      alert("준공 처리가 완료되었습니다.");
+      setShowCompleteModal(false);
       router.push(`/projects/${id}`);
     } catch (err) {
       console.error(err);
-      alert("준공 처리 중 오류가 발생했습니다.");
     } finally {
       setCompletingConstruction(false);
     }
@@ -108,7 +129,7 @@ export default function ConstructionPage({
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Clock className="h-8 w-8 animate-spin text-brand-point-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
       </div>
     );
   }
@@ -122,11 +143,13 @@ export default function ConstructionPage({
   }
 
   const canComplete = canTransition(overview.project_status, "completed");
+  const progressPercentage =
+    overview.progress_percentage ?? calculateProgressPercentage(overview);
 
   return (
     <div className="space-y-6">
       {/* 시공 현황 개요 */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -161,20 +184,6 @@ export default function ConstructionPage({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">진행률</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">
-                  {overview.progress_percentage || 0}%
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
                 <p className="text-sm font-medium text-slate-500">일일보고</p>
                 <p className="mt-1 text-2xl font-bold text-slate-900">
                   {overview.daily_report_count}건
@@ -187,19 +196,19 @@ export default function ConstructionPage({
       </div>
 
       {/* 진행 상태 바 */}
-      {overview.progress_percentage !== undefined && (
+      {progressPercentage !== undefined && (
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-medium text-slate-700">시공 진행도</p>
               <p className="text-sm font-medium text-brand-point-600">
-                {overview.progress_percentage}%
+                {progressPercentage}%
               </p>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-3">
               <div
                 className="bg-brand-point-500 h-3 rounded-full transition-all duration-300"
-                style={{ width: `${overview.progress_percentage}%` }}
+                style={{ width: `${progressPercentage}%` }}
               />
             </div>
           </CardContent>
@@ -226,7 +235,7 @@ export default function ConstructionPage({
                       : "날짜 미정"}
                   </p>
                 </div>
-                <Link href={`/projects/${id}/construction/start-report`}>
+                <Link href={`/projects/${id}/reports/start`}>
                   <Button size="sm" variant="secondary">
                     상세보기
                     <ArrowRight className="ml-1 h-4 w-4" />
@@ -236,7 +245,7 @@ export default function ConstructionPage({
             ) : (
               <div className="py-8 text-center">
                 <p className="mb-4 text-slate-500">아직 착공계가 없습니다.</p>
-                <Link href={`/projects/${id}/construction/start-report`}>
+                <Link href={`/projects/${id}/reports/start`}>
                   <Button>착공계 작성</Button>
                 </Link>
               </div>
@@ -275,11 +284,15 @@ export default function ConstructionPage({
 
       {/* 배정된 일용직 요약 */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-slate-400" />
             배정된 일용직
           </CardTitle>
+          <Link href={`/projects/${id}/labor`} className="text-sm text-brand-point-600 hover:text-brand-point-700 flex items-center gap-1">
+            상세
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
@@ -295,14 +308,6 @@ export default function ConstructionPage({
                 {Number(overview.total_labor_cost).toLocaleString()}원
               </p>
             </div>
-          </div>
-          <div className="mt-4">
-            <Link href={`/projects/${id}/labor`}>
-              <Button variant="secondary" className="w-full">
-                노무 관리로 이동
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
           </div>
         </CardContent>
       </Card>
@@ -321,7 +326,7 @@ export default function ConstructionPage({
                 </p>
               </div>
               <Button
-                onClick={handleCompleteConstruction}
+                onClick={() => setShowCompleteModal(true)}
                 disabled={!canComplete || completingConstruction}
                 size="lg"
               >
@@ -332,6 +337,16 @@ export default function ConstructionPage({
           </CardContent>
         </Card>
       )}
+
+      <ConfirmModal
+        isOpen={showCompleteModal}
+        onClose={() => setShowCompleteModal(false)}
+        onConfirm={confirmCompleteConstruction}
+        title="시공 완료 처리"
+        description="모든 작업이 완료되었다면 준공 상태로 변경합니다. 이 작업은 되돌릴 수 없습니다."
+        confirmLabel="시공 완료"
+        loading={completingConstruction}
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Upload, File, Loader2, CheckCircle } from "lucide-react";
-import { Button, Modal } from "@sigongon/ui";
+import { Button, Modal, PrimitiveInput } from "@sigongon/ui";
 import { api } from "@/lib/api";
 
 interface PdfUploadModalProps {
@@ -132,11 +132,11 @@ export function PdfUploadModal({
           onClick={() => fileInputRef.current?.click()}
           className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
             dragOver
-              ? "border-teal-500 bg-teal-50"
+              ? "border-brand-point-500 bg-brand-point-50"
               : "border-slate-300 hover:border-slate-400"
           }`}
         >
-          <input
+          <PrimitiveInput
             ref={fileInputRef}
             type="file"
             accept=".pdf"
@@ -146,7 +146,7 @@ export function PdfUploadModal({
 
           {file ? (
             <div className="flex items-center justify-center gap-3">
-              <File className="h-8 w-8 text-teal-500" />
+              <File className="h-8 w-8 text-brand-point-500" />
               <div className="text-left">
                 <p className="font-medium text-slate-900">{file.name}</p>
                 <p className="text-sm text-slate-500">
@@ -169,11 +169,11 @@ export function PdfUploadModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             버전명 *
           </label>
-          <input
+          <PrimitiveInput
             type="text"
             value={versionLabel}
             onChange={(e) => setVersionLabel(e.target.value)}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             placeholder="예: 2026-01"
           />
         </div>
@@ -182,11 +182,11 @@ export function PdfUploadModal({
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
             적용일 *
           </label>
-          <input
+          <PrimitiveInput
             type="date"
             value={effectiveFrom}
             onChange={(e) => setEffectiveFrom(e.target.value)}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
           />
         </div>
 

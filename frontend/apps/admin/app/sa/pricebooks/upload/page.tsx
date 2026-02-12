@@ -3,16 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/AdminLayout";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-  FileUpload,
-  Calendar,
-} from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, FileUpload, Input, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
 import { Upload, ArrowLeft, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -56,10 +47,11 @@ export default function PricebookUploadPage() {
         });
       }, 200);
 
-      const response = await api.uploadPricebook(file, {
-        version_label: versionLabel,
-        effective_from: effectiveFrom,
-      });
+      const response = await api.uploadPricebookPdf(
+        file,
+        versionLabel,
+        effectiveFrom,
+      );
 
       clearInterval(progressInterval);
       setUploadProgress(100);
@@ -83,12 +75,12 @@ export default function PricebookUploadPage() {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <button
+          <PrimitiveButton
             onClick={() => router.back()}
             className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
           >
             <ArrowLeft className="h-5 w-5 text-slate-600" />
-          </button>
+          </PrimitiveButton>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
               적산정보 업로드
@@ -127,7 +119,7 @@ export default function PricebookUploadPage() {
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 적용 시작일
               </label>
-              <input
+              <PrimitiveInput
                 type="date"
                 value={effectiveFrom}
                 onChange={(e) => setEffectiveFrom(e.target.value)}

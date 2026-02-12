@@ -4,9 +4,15 @@ import { use, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, Button } from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveInput } from "@sigongon/ui";
 import { ConstructionReportForm } from "@/components/ConstructionReportForm";
 import { api } from "@/lib/api";
+import {
+  getAssignmentByProjectId,
+  getRepresentativeById,
+} from "@/lib/fieldRepresentatives";
+import { getSamplePathForDocument } from "@/lib/sampleFiles";
+import { upsertProjectDocumentOverride } from "@/lib/projectDocumentState";
 
 interface StartReportData {
   id?: string;
@@ -32,12 +38,46 @@ export default function StartReportPage({
 
   const [reportData, setReportData] = useState<StartReportData | null>(null);
   const [loading, setLoading] = useState(!!reportId);
+  const [autoLinkRepresentativeDocs, setAutoLinkRepresentativeDocs] = useState(true);
+  const [assignedRepresentative, setAssignedRepresentative] = useState<{
+    name: string;
+    phone: string;
+    effectiveDate: string;
+  } | null>(null);
 
   useEffect(() => {
     if (reportId) {
       loadReport();
     }
   }, [reportId]);
+
+  useEffect(() => {
+    const assignment = getAssignmentByProjectId(id);
+    if (!assignment) {
+      setAssignedRepresentative(null);
+      return;
+    }
+    const representative = getRepresentativeById(assignment.representativeId);
+    if (!representative) {
+      setAssignedRepresentative(null);
+      return;
+    }
+    setAssignedRepresentative({
+      name: representative.name,
+      phone: representative.phone,
+      effectiveDate: assignment.effectiveDate,
+    });
+  }, [id]);
+
+  function syncRepresentativeDocument() {
+    if (!autoLinkRepresentativeDocs || !assignedRepresentative) return;
+    upsertProjectDocumentOverride(id, "m3", {
+      status: "uploaded",
+      file_path: getSamplePathForDocument("m3"),
+      file_size: 102400,
+      generated_at: new Date().toISOString(),
+    });
+  }
 
   async function loadReport() {
     if (!reportId) return;
@@ -57,6 +97,7 @@ export default function StartReportPage({
 
   async function handleSubmit(data: any, isDraft: boolean) {
     try {
+      syncRepresentativeDocument();
       if (reportId) {
         // Update existing report
         await api.updateConstructionReport(reportId, data);
@@ -79,6 +120,7 @@ export default function StartReportPage({
 
   async function handleSave(data: any) {
     try {
+      syncRepresentativeDocument();
       if (reportId) {
         await api.updateConstructionReport(reportId, data);
       } else {
@@ -121,6 +163,28 @@ export default function StartReportPage({
           <CardTitle>착공계</CardTitle>
         </CardHeader>
         <CardContent>
+          {!isReadOnly && assignedRepresentative && (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-medium text-amber-900">
+                배정된 현장대리인: {assignedRepresentative.name} ({assignedRepresentative.phone})
+              </p>
+              <p className="mt-1 text-xs text-amber-800">
+                적용 기준일: {assignedRepresentative.effectiveDate}
+              </p>
+              <label className="mt-3 flex items-center gap-2 text-sm text-amber-900">
+                <PrimitiveInput
+                  type="checkbox"
+                  checked={autoLinkRepresentativeDocs}
+                  onChange={(event) =>
+                    setAutoLinkRepresentativeDocs(event.target.checked)
+                  }
+                  className="h-4 w-4 rounded border-amber-300 text-brand-point-600 focus:ring-brand-point-500"
+                />
+                현장대리인 서류를 착공계에 자동 연동
+              </label>
+            </div>
+          )}
+
           {isReadOnly ? (
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

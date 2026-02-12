@@ -3,15 +3,7 @@
 import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  FileText,
-  Plus,
-  Loader2,
-  Check,
-  X,
-  Clock,
-  Send,
-} from "lucide-react";
+import { FileText, Plus, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -21,6 +13,7 @@ import {
   formatDate,
   StatusBadge,
   Badge,
+  Select,
 } from "@sigongon/ui";
 import type { EstimateStatus } from "@sigongon/types";
 import { api } from "@/lib/api";
@@ -34,22 +27,6 @@ interface EstimateListItem {
   issued_at?: string;
 }
 
-const estimateStatusIcons: Record<EstimateStatus, React.ReactNode> = {
-  draft: <Clock className="h-4 w-4" />,
-  issued: <Send className="h-4 w-4" />,
-  accepted: <Check className="h-4 w-4" />,
-  rejected: <X className="h-4 w-4" />,
-  void: <X className="h-4 w-4" />,
-};
-
-const estimateStatusColors: Record<EstimateStatus, string> = {
-  draft: "bg-gray-100 text-gray-700",
-  issued: "bg-blue-100 text-blue-700",
-  accepted: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
-  void: "bg-slate-100 text-slate-500",
-};
-
 export default function EstimatesPage({
   params,
 }: {
@@ -61,6 +38,7 @@ export default function EstimatesPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creatingEstimate, setCreatingEstimate] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<EstimateStatus | "">("");
 
   useEffect(() => {
     loadEstimates();
@@ -119,6 +97,9 @@ export default function EstimatesPage({
   }
 
   const sortedEstimates = [...estimates].sort((a, b) => b.version - a.version);
+  const filteredEstimates = statusFilter
+    ? sortedEstimates.filter((estimate) => estimate.status === statusFilter)
+    : sortedEstimates;
   const latestEstimate = sortedEstimates[0];
 
   return (
@@ -129,25 +110,33 @@ export default function EstimatesPage({
             <FileText className="h-5 w-5 text-slate-400" />
             견적서 버전 목록
           </CardTitle>
-          <Button
-            onClick={handleCreateEstimate}
-            disabled={creatingEstimate}
-          >
-            {creatingEstimate ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
-            )}
-            견적서 생성
-          </Button>
+          <div className="flex items-center gap-2">
+            <Select
+              value={statusFilter}
+              onChange={(value) => setStatusFilter(value as EstimateStatus | "")}
+              options={[
+                { value: "", label: "모든 상태" },
+                { value: "draft", label: "초안" },
+                { value: "issued", label: "발행" },
+                { value: "accepted", label: "수락" },
+                { value: "rejected", label: "거절" },
+              ]}
+            />
+            <Button onClick={handleCreateEstimate} disabled={creatingEstimate}>
+              {creatingEstimate ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              견적서 생성
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {estimates.length === 0 ? (
             <div className="py-16 text-center">
               <FileText className="mx-auto h-12 w-12 text-slate-300" />
-              <p className="mt-4 text-slate-500">
-                아직 견적서가 없습니다.
-              </p>
+              <p className="mt-4 text-slate-500">아직 견적서가 없습니다.</p>
               <p className="mt-1 text-sm text-slate-400">
                 견적서를 생성하고 고객에게 발송해 보세요.
               </p>
@@ -170,7 +159,7 @@ export default function EstimatesPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedEstimates.map((estimate) => (
+                  {filteredEstimates.map((estimate) => (
                     <tr
                       key={estimate.id}
                       className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
@@ -188,18 +177,7 @@ export default function EstimatesPage({
                         </div>
                       </td>
                       <td className="py-4">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            className={
-                              estimateStatusColors[estimate.status]
-                            }
-                          >
-                            <span className="flex items-center gap-1">
-                              {estimateStatusIcons[estimate.status]}
-                              <StatusBadge status={estimate.status} />
-                            </span>
-                          </Badge>
-                        </div>
+                        <StatusBadge status={estimate.status} />
                       </td>
                       <td className="py-4 font-medium text-slate-900">
                         {Number(estimate.total_amount).toLocaleString()}원
@@ -225,6 +203,11 @@ export default function EstimatesPage({
                   ))}
                 </tbody>
               </table>
+              {filteredEstimates.length === 0 && (
+                <p className="py-6 text-center text-sm text-slate-500">
+                  선택한 상태의 견적서가 없습니다.
+                </p>
+              )}
             </div>
           )}
         </CardContent>
@@ -239,29 +222,21 @@ export default function EstimatesPage({
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">
-                    총 견적서 수
-                  </span>
+                  <span className="text-sm text-slate-500">총 견적서 수</span>
                   <span className="font-medium text-slate-900">
                     {estimates.length}개
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">
-                    최신 버전
-                  </span>
+                  <span className="text-sm text-slate-500">최신 버전</span>
                   <span className="font-medium text-slate-900">
                     v{latestEstimate?.version}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">
-                    최신 견적 금액
-                  </span>
+                  <span className="text-sm text-slate-500">최신 견적 금액</span>
                   <span className="text-lg font-bold text-brand-point-600">
-                    {Number(
-                      latestEstimate?.total_amount || 0,
-                    ).toLocaleString()}
+                    {Number(latestEstimate?.total_amount || 0).toLocaleString()}
                     원
                   </span>
                 </div>
@@ -285,11 +260,7 @@ export default function EstimatesPage({
                         key={status}
                         className="flex items-center justify-between"
                       >
-                        <div className="flex items-center gap-2">
-                          <Badge className={estimateStatusColors[status]}>
-                            <StatusBadge status={status} />
-                          </Badge>
-                        </div>
+                        <StatusBadge status={status} />
                         <span className="font-medium text-slate-900">
                           {count}개
                         </span>
