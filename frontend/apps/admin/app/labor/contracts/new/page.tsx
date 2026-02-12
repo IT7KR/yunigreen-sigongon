@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-} from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveButton, PrimitiveInput, PrimitiveSelect } from "@sigongon/ui";
 import { ArrowLeft, Send, Save } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useState } from "react";
@@ -150,7 +143,7 @@ export default function NewLaborContractPage() {
                 <CardTitle>프로젝트 선택</CardTitle>
               </CardHeader>
               <CardContent>
-                <select
+                <PrimitiveSelect
                   className="w-full rounded-lg border border-slate-300 px-3 py-2"
                   value={selectedProject}
                   onChange={(e) => setSelectedProject(e.target.value)}
@@ -161,7 +154,7 @@ export default function NewLaborContractPage() {
                       {project.name}
                     </option>
                   ))}
-                </select>
+                </PrimitiveSelect>
               </CardContent>
             </Card>
 
@@ -279,14 +272,14 @@ export default function NewLaborContractPage() {
                         {workDates
                           .sort((a, b) => a.getTime() - b.getTime())
                           .map((date, index) => (
-                            <button
+                            <PrimitiveButton
                               key={index}
                               onClick={() => handleDateSelect(date)}
                               className="rounded-lg bg-brand-point-100 px-3 py-1.5 text-sm text-brand-point-700 hover:bg-brand-point-200 transition-colors"
                             >
                               {date.toLocaleDateString("ko-KR")}
                               <span className="ml-1 text-xs">×</span>
-                            </button>
+                            </PrimitiveButton>
                           ))}
                       </div>
                     </div>
@@ -333,7 +326,7 @@ export default function NewLaborContractPage() {
               <CardContent>
                 <div className="space-y-2">
                   <label className="flex items-center gap-2">
-                    <input
+                    <PrimitiveInput
                       type="radio"
                       name="sendMethod"
                       value="sms"
@@ -343,7 +336,7 @@ export default function NewLaborContractPage() {
                     <span className="text-sm text-slate-700">SMS</span>
                   </label>
                   <label className="flex items-center gap-2">
-                    <input
+                    <PrimitiveInput
                       type="radio"
                       name="sendMethod"
                       value="kakao"

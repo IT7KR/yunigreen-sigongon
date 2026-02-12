@@ -11,14 +11,7 @@ import {
   Save,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-} from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveButton, PrimitiveInput, PrimitiveSelect } from "@sigongon/ui";
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState("organization");
@@ -49,7 +42,7 @@ export default function SettingsPage() {
                   const isActive = activeSection === section.id;
 
                   return (
-                    <button
+                    <PrimitiveButton
                       key={section.id}
                       onClick={() => setActiveSection(section.id)}
                       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -60,7 +53,7 @@ export default function SettingsPage() {
                     >
                       <Icon className="h-5 w-5" />
                       {section.label}
-                    </button>
+                    </PrimitiveButton>
                   );
                 })}
               </nav>
@@ -113,7 +106,7 @@ export default function SettingsPage() {
                       </p>
                     </div>
                     <label className="relative inline-flex cursor-pointer items-center">
-                      <input
+                      <PrimitiveInput
                         type="checkbox"
                         defaultChecked
                         className="peer sr-only"
@@ -131,7 +124,7 @@ export default function SettingsPage() {
                       </p>
                     </div>
                     <label className="relative inline-flex cursor-pointer items-center">
-                      <input
+                      <PrimitiveInput
                         type="checkbox"
                         defaultChecked
                         className="peer sr-only"
@@ -149,7 +142,7 @@ export default function SettingsPage() {
                       </p>
                     </div>
                     <label className="relative inline-flex cursor-pointer items-center">
-                      <input
+                      <PrimitiveInput
                         type="checkbox"
                         defaultChecked
                         className="peer sr-only"
@@ -165,7 +158,7 @@ export default function SettingsPage() {
                       </p>
                     </div>
                     <label className="relative inline-flex cursor-pointer items-center">
-                      <input type="checkbox" className="peer sr-only" />
+                      <PrimitiveInput type="checkbox" className="peer sr-only" />
                       <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-brand-point-500 peer-checked:after:translate-x-full"></div>
                     </label>
                   </div>
@@ -185,7 +178,7 @@ export default function SettingsPage() {
                     </h3>
                     <div className="mt-3 space-y-3">
                       <div className="flex items-center gap-2">
-                        <input
+                        <PrimitiveInput
                           type="checkbox"
                           defaultChecked
                           className="rounded border-slate-300"
@@ -195,7 +188,7 @@ export default function SettingsPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input
+                        <PrimitiveInput
                           type="checkbox"
                           defaultChecked
                           className="rounded border-slate-300"
@@ -205,7 +198,7 @@ export default function SettingsPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input
+                        <PrimitiveInput
                           type="checkbox"
                           defaultChecked
                           className="rounded border-slate-300"
@@ -215,7 +208,7 @@ export default function SettingsPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input
+                        <PrimitiveInput
                           type="checkbox"
                           className="rounded border-slate-300"
                         />
@@ -231,12 +224,12 @@ export default function SettingsPage() {
                       <label className="text-sm text-slate-600">
                         자동 로그아웃 시간
                       </label>
-                      <select className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
+                      <PrimitiveSelect className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
                         <option value="30">30분</option>
                         <option value="60">1시간</option>
                         <option value="120">2시간</option>
                         <option value="480">8시간</option>
-                      </select>
+                      </PrimitiveSelect>
                     </div>
                   </div>
                   <div className="flex justify-end pt-4">
@@ -260,7 +253,7 @@ export default function SettingsPage() {
                       Gemini API 키
                     </label>
                     <div className="mt-1 flex gap-2">
-                      <input
+                      <PrimitiveInput
                         type="password"
                         defaultValue="AIza..."
                         className="h-10 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm"

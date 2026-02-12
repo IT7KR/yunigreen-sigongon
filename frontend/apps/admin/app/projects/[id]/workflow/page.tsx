@@ -12,14 +12,7 @@ import {
   Info,
   Download,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  cn,
-} from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, cn } from "@sigongon/ui";
 import { useProject } from "@/hooks";
 import { buildSampleFileDownloadUrl, buildSamplePath } from "@/lib/sampleFiles";
 
@@ -703,7 +696,7 @@ function StepCard({
               </Link>
             )}
             {hasDocuments && (
-              <button
+              <PrimitiveButton
                 type="button"
                 onClick={() => setExpanded(!expanded)}
                 className={cn(
@@ -720,7 +713,7 @@ function StepCard({
                 ) : (
                   <ChevronDown className="h-3 w-3" />
                 )}
-              </button>
+              </PrimitiveButton>
             )}
           </div>
         </div>

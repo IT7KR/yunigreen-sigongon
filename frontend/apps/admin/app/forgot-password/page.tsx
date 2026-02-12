@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Input, Card, CardContent } from "@sigongon/ui";
+import { Button, Card, CardContent, Input, PrimitiveButton } from "@sigongon/ui";
 import { Droplets, ArrowLeft, Check, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -229,23 +229,23 @@ export default function ForgotPasswordPage() {
               </Button>
 
               <div className="text-center">
-                <button
+                <PrimitiveButton
                   type="button"
                   onClick={handleResendCode}
                   disabled={loading}
                   className="text-sm text-brand-point-600 hover:text-brand-point-700"
                 >
                   인증번호 다시 받기
-                </button>
+                </PrimitiveButton>
               </div>
 
-              <button
+              <PrimitiveButton
                 onClick={() => setStep("username")}
                 className="flex w-full items-center justify-center gap-1 text-sm text-slate-500 hover:text-slate-700"
               >
                 <ArrowLeft className="h-4 w-4" />
                 아이디 다시 입력
-              </button>
+              </PrimitiveButton>
             </div>
           )}
 

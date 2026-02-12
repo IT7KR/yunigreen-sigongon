@@ -13,16 +13,7 @@ import {
 } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  formatDate,
-  Badge,
-  Modal,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Modal, PrimitiveSelect, formatDate } from "@sigongon/ui";
 import type { ContractStatus, ContractDetail } from "@sigongon/types";
 import { api } from "@/lib/api";
 import { ModusignModal } from "@/components/ModusignModal";
@@ -392,7 +383,7 @@ export default function ContractsPage({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700">견적서 선택</label>
-              <select
+              <PrimitiveSelect
                 value={selectedEstimateId}
                 onChange={(e) => setSelectedEstimateId(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
@@ -402,7 +393,7 @@ export default function ContractsPage({
                     v{estimate.version} - {Number(estimate.total_amount).toLocaleString()}원
                   </option>
                 ))}
-              </select>
+              </PrimitiveSelect>
             </div>
           </div>
         )}

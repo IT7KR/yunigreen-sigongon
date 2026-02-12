@@ -20,19 +20,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { UserModal } from "@/components/UserModal";
 import { InviteUserModal } from "@/components/InviteUserModal";
 import { useAuth } from "@/lib/auth";
-import {
-  Card,
-  CardContent,
-  Button,
-  formatDate,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  Badge,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, PrimitiveButton, PrimitiveInput, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
 import type { UserRole } from "@sigongon/types";
 import { api } from "@/lib/api";
 import type { InvitationStatus } from "@/lib/mocks/db";
@@ -293,7 +281,7 @@ export default function UsersPage() {
         {/* Tabs */}
         <div className="border-b border-slate-200">
           <nav className="-mb-px flex gap-6">
-            <button
+            <PrimitiveButton
               onClick={() => setActiveTab("users")}
               className={`border-b-2 py-3 text-sm font-medium ${
                 activeTab === "users"
@@ -305,8 +293,8 @@ export default function UsersPage() {
               <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs">
                 {users.length}
               </span>
-            </button>
-            <button
+            </PrimitiveButton>
+            <PrimitiveButton
               onClick={() => setActiveTab("invitations")}
               className={`border-b-2 py-3 text-sm font-medium ${
                 activeTab === "invitations"
@@ -320,7 +308,7 @@ export default function UsersPage() {
                   {pendingInvitations.length}
                 </span>
               )}
-            </button>
+            </PrimitiveButton>
           </nav>
         </div>
 
@@ -328,7 +316,7 @@ export default function UsersPage() {
           <CardContent className="p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
+              <PrimitiveInput
                 type="search"
                 placeholder={
                   activeTab === "users"
@@ -416,18 +404,18 @@ export default function UsersPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <button
+                            <PrimitiveButton
                               onClick={() => openEditModal(user)}
                               className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                             >
                               <Edit2 className="h-4 w-4 text-slate-400" />
-                            </button>
-                            <button
+                            </PrimitiveButton>
+                            <PrimitiveButton
                               onClick={() => handleDelete(user.id)}
                               className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
                             >
                               <Trash2 className="h-4 w-4 text-red-400" />
-                            </button>
+                            </PrimitiveButton>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -513,22 +501,22 @@ export default function UsersPage() {
                         <TableCell>
                           <div className="flex gap-1">
                             {canResend && (
-                              <button
+                              <PrimitiveButton
                                 onClick={() => handleResendInvitation(invitation.id)}
                                 className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                                 title="재발송"
                               >
                                 <RotateCcw className="h-4 w-4 text-slate-400" />
-                              </button>
+                              </PrimitiveButton>
                             )}
                             {canRevoke && (
-                              <button
+                              <PrimitiveButton
                                 onClick={() => handleRevokeInvitation(invitation.id)}
                                 className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
                                 title="취소"
                               >
                                 <X className="h-4 w-4 text-red-400" />
-                              </button>
+                              </PrimitiveButton>
                             )}
                           </div>
                         </TableCell>

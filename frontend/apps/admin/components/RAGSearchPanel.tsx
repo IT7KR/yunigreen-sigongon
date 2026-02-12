@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Search, Sparkles, Plus, Loader2, X, AlertTriangle, CheckCircle2, Info } from "lucide-react";
-import { Button, Card, cn } from "@sigongon/ui";
+import { Button, Card, PrimitiveButton, PrimitiveInput, cn } from "@sigongon/ui";
 import { api } from "@/lib/api";
 
 interface RAGSearchResult {
@@ -100,19 +100,19 @@ export function RAGSearchPanel({
             <Sparkles className="h-5 w-5 text-brand-point-600" />
             <h2 className="text-lg font-semibold text-slate-900">적산 검색</h2>
           </div>
-          <button
+          <PrimitiveButton
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
           >
             <X className="h-5 w-5 text-slate-500" />
-          </button>
+          </PrimitiveButton>
         </div>
 
         {/* Search Input */}
         <div className="border-b border-slate-200 p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
+            <PrimitiveInput
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

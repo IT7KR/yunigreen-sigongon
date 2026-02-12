@@ -17,14 +17,7 @@ import {
   Archive,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  formatDate,
-} from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, formatDate } from "@sigongon/ui";
 import { api } from "@/lib/api";
 import { PdfUploadModal } from "@/components/PdfUploadModal";
 
@@ -274,7 +267,7 @@ export default function PricebooksPage() {
         </div>
 
         <div className="flex gap-2 border-b border-slate-200">
-          <button
+          <PrimitiveButton
             onClick={() => setActiveTab("revisions")}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "revisions"
@@ -283,8 +276,8 @@ export default function PricebooksPage() {
             }`}
           >
             버전 관리
-          </button>
-          <button
+          </PrimitiveButton>
+          <PrimitiveButton
             onClick={() => setActiveTab("staging")}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "staging"
@@ -298,7 +291,7 @@ export default function PricebooksPage() {
                 {stagingItems.length}
               </span>
             )}
-          </button>
+          </PrimitiveButton>
         </div>
 
         {activeTab === "revisions" && (
@@ -353,7 +346,7 @@ export default function PricebooksPage() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex gap-1">
-                              <button
+                              <PrimitiveButton
                                 onClick={() => {
                                   setSelectedRevisionId(revision.id);
                                   setActiveTab("staging");
@@ -362,13 +355,13 @@ export default function PricebooksPage() {
                                 title="검토 대기 보기"
                               >
                                 <Eye className="h-4 w-4 text-slate-400" />
-                              </button>
-                              <button
+                              </PrimitiveButton>
+                              <PrimitiveButton
                                 className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                                 title="다운로드"
                               >
                                 <Download className="h-4 w-4 text-slate-400" />
-                              </button>
+                              </PrimitiveButton>
                               <div
                                 className="relative"
                                 ref={
@@ -377,7 +370,7 @@ export default function PricebooksPage() {
                                     : undefined
                                 }
                               >
-                                <button
+                                <PrimitiveButton
                                   onClick={() =>
                                     setOpenMenuId(
                                       openMenuId === revision.id
@@ -388,12 +381,12 @@ export default function PricebooksPage() {
                                   className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                                 >
                                   <MoreHorizontal className="h-4 w-4 text-slate-400" />
-                                </button>
+                                </PrimitiveButton>
                                 {openMenuId === revision.id && (
                                   <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
                                     {revision.status === "draft" && (
                                       <>
-                                        <button
+                                        <PrimitiveButton
                                           onClick={() =>
                                             handleAutoApprove(revision.id)
                                           }
@@ -401,8 +394,8 @@ export default function PricebooksPage() {
                                         >
                                           <CheckCircle className="h-4 w-4" />
                                           고신뢰도 자동 승인
-                                        </button>
-                                        <button
+                                        </PrimitiveButton>
+                                        <PrimitiveButton
                                           onClick={() =>
                                             handlePromote(revision.id)
                                           }
@@ -410,8 +403,8 @@ export default function PricebooksPage() {
                                         >
                                           <Archive className="h-4 w-4" />
                                           정식 DB로 이동
-                                        </button>
-                                        <button
+                                        </PrimitiveButton>
+                                        <PrimitiveButton
                                           onClick={() =>
                                             handleActivate(revision.id)
                                           }
@@ -419,7 +412,7 @@ export default function PricebooksPage() {
                                         >
                                           <Play className="h-4 w-4" />
                                           활성화
-                                        </button>
+                                        </PrimitiveButton>
                                       </>
                                     )}
                                     {revision.status === "active" && (
@@ -428,7 +421,7 @@ export default function PricebooksPage() {
                                       </p>
                                     )}
                                     {revision.status === "deprecated" && (
-                                      <button
+                                      <PrimitiveButton
                                         onClick={() =>
                                           handleActivate(revision.id)
                                         }
@@ -436,7 +429,7 @@ export default function PricebooksPage() {
                                       >
                                         <Play className="h-4 w-4" />
                                         다시 활성화
-                                      </button>
+                                      </PrimitiveButton>
                                     )}
                                   </div>
                                 )}

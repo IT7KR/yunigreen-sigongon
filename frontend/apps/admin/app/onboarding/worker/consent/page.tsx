@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, Button } from "@sigongon/ui";
+import { Button, Card, CardContent, PrimitiveButton } from "@sigongon/ui";
 import { CheckCircle2, ChevronDown, ChevronUp, ArrowRight, Shield, Loader2 } from "lucide-react";
 
 /**
@@ -196,13 +196,13 @@ function ConsentItem({ title, checked, expanded, onCheck, onToggle, children }: 
           </div>
           <span className="text-sm text-slate-700">{title}</span>
         </div>
-        <button
+        <PrimitiveButton
           type="button"
           onClick={onToggle}
           className="p-1 text-slate-400 hover:text-slate-600"
         >
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
+        </PrimitiveButton>
       </div>
       {expanded && (
         <div className="border-t border-slate-200 bg-slate-50 p-3">

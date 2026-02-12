@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-} from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveInput } from "@sigongon/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Save } from "lucide-react";
@@ -144,7 +138,7 @@ export function NotificationPrefsSection() {
               <p className="text-sm text-slate-500">{item.description}</p>
             </div>
             <label className="relative inline-flex cursor-pointer items-center">
-              <input
+              <PrimitiveInput
                 type="checkbox"
                 checked={prefs[item.key]}
                 onChange={() => handleToggle(item.key)}

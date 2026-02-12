@@ -17,15 +17,7 @@ import {
 import { AdminLayout } from "@/components/AdminLayout";
 import { EstimateLineModal } from "@/components/EstimateLineModal";
 import { RAGSearchPanel } from "@/components/RAGSearchPanel";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  StatusBadge,
-  formatDate,
-} from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, StatusBadge, formatDate } from "@sigongon/ui";
 import type { EstimateStatus, EstimateLineSource } from "@sigongon/types";
 import { api } from "@/lib/api";
 import ExcelJS from "exceljs";
@@ -410,7 +402,7 @@ export default function EstimateDetailPage({
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-1">
-                          <button
+                          <PrimitiveButton
                             onClick={() => {
                               setEditingLine(line);
                               setLineModalOpen(true);
@@ -418,13 +410,13 @@ export default function EstimateDetailPage({
                             className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                           >
                             <Edit2 className="h-4 w-4 text-slate-400" />
-                          </button>
-                          <button
+                          </PrimitiveButton>
+                          <PrimitiveButton
                             onClick={() => handleDeleteLine(line.id)}
                             className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4 text-red-400" />
-                          </button>
+                          </PrimitiveButton>
                         </div>
                       </td>
                     </tr>

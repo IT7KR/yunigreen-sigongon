@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button, Calendar } from "@sigongon/ui";
+import { Button, Calendar, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
 import { Loader2, Calendar as CalendarIcon } from "lucide-react";
 
 interface TaxInvoiceFormData {
@@ -191,7 +191,7 @@ export function TaxInvoiceForm({
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               사업자등록번호 *
             </label>
-            <input
+            <PrimitiveInput
               type="text"
               value={formData.buyer_corp_num}
               onChange={(e) => handleBusinessNumberChange(e.target.value)}
@@ -209,7 +209,7 @@ export function TaxInvoiceForm({
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 상호 *
               </label>
-              <input
+              <PrimitiveInput
                 type="text"
                 value={formData.buyer_name}
                 onChange={(e) => handleChange("buyer_name", e.target.value)}
@@ -224,7 +224,7 @@ export function TaxInvoiceForm({
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 대표자명 *
               </label>
-              <input
+              <PrimitiveInput
                 type="text"
                 value={formData.buyer_ceo}
                 onChange={(e) => handleChange("buyer_ceo", e.target.value)}
@@ -241,7 +241,7 @@ export function TaxInvoiceForm({
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               주소 *
             </label>
-            <input
+            <PrimitiveInput
               type="text"
               value={formData.buyer_address}
               onChange={(e) => handleChange("buyer_address", e.target.value)}
@@ -257,7 +257,7 @@ export function TaxInvoiceForm({
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               이메일 *
             </label>
-            <input
+            <PrimitiveInput
               type="email"
               value={formData.buyer_email}
               onChange={(e) => handleChange("buyer_email", e.target.value)}
@@ -279,7 +279,7 @@ export function TaxInvoiceForm({
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               공급가액 *
             </label>
-            <input
+            <PrimitiveInput
               type="number"
               value={formData.supply_amount || ""}
               onChange={(e) => handleChange("supply_amount", Number(e.target.value))}
@@ -296,7 +296,7 @@ export function TaxInvoiceForm({
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               세액 (자동 계산)
             </label>
-            <input
+            <PrimitiveInput
               type="number"
               value={formData.tax_amount}
               readOnly
@@ -325,7 +325,7 @@ export function TaxInvoiceForm({
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               품목 *
             </label>
-            <input
+            <PrimitiveInput
               type="text"
               value={formData.description}
               onChange={(e) => handleChange("description", e.target.value)}
@@ -356,7 +356,7 @@ export function TaxInvoiceForm({
       <div>
         <h3 className="mb-4 text-sm font-semibold text-slate-700">발행일 *</h3>
         <div className="relative">
-          <button
+          <PrimitiveButton
             type="button"
             onClick={() => setShowCalendar(!showCalendar)}
             className="flex h-10 w-full items-center justify-between rounded-lg border border-slate-300 px-3 text-sm hover:border-brand-point-500"
@@ -365,7 +365,7 @@ export function TaxInvoiceForm({
               {formData.issue_date || "날짜 선택"}
             </span>
             <CalendarIcon className="h-4 w-4 text-slate-400" />
-          </button>
+          </PrimitiveButton>
           {showCalendar && (
             <div className="absolute top-12 z-10">
               <Calendar

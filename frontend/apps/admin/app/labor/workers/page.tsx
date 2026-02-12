@@ -17,17 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  Input,
-  Modal,
-  toast,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Modal, PrimitiveInput, PrimitiveSelect, toast } from "@sigongon/ui";
 import { api } from "@/lib/api";
 import type { DailyWorker } from "@sigongon/types";
 
@@ -286,7 +276,7 @@ export default function DailyWorkersPage() {
           <CardContent className="p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
+              <PrimitiveInput
                 type="search"
                 placeholder="성명, 연락처로 검색..."
                 value={search}
@@ -417,7 +407,7 @@ export default function DailyWorkersPage() {
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 직종 *
               </label>
-              <select
+              <PrimitiveSelect
                 value={formData.job_type}
                 onChange={(e) =>
                   setFormData({ ...formData, job_type: e.target.value })
@@ -427,7 +417,7 @@ export default function DailyWorkersPage() {
                 <option value="보통인부">보통인부</option>
                 <option value="특별인부">특별인부</option>
                 <option value="기능공">기능공</option>
-              </select>
+              </PrimitiveSelect>
             </div>
           </div>
 
@@ -462,7 +452,7 @@ export default function DailyWorkersPage() {
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 성별 *
               </label>
-              <select
+              <PrimitiveSelect
                 value={formData.gender}
                 onChange={(e) =>
                   setFormData({ ...formData, gender: e.target.value as "" | "1" | "2" | "3" | "4" })
@@ -474,7 +464,7 @@ export default function DailyWorkersPage() {
                 <option value="2">여성 (내국인)</option>
                 <option value="3">남성 (외국인)</option>
                 <option value="4">여성 (외국인)</option>
-              </select>
+              </PrimitiveSelect>
             </div>
           </div>
 
@@ -535,7 +525,7 @@ export default function DailyWorkersPage() {
 
           <div className="border-t border-slate-200 pt-4">
             <label className="flex items-center gap-2">
-              <input
+              <PrimitiveInput
                 type="checkbox"
                 checked={formData.is_foreign}
                 onChange={(e) =>
@@ -631,7 +621,7 @@ export default function DailyWorkersPage() {
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 직종 *
               </label>
-              <select
+              <PrimitiveSelect
                 value={formData.job_type}
                 onChange={(e) =>
                   setFormData({ ...formData, job_type: e.target.value })
@@ -641,7 +631,7 @@ export default function DailyWorkersPage() {
                 <option value="보통인부">보통인부</option>
                 <option value="특별인부">특별인부</option>
                 <option value="기능공">기능공</option>
-              </select>
+              </PrimitiveSelect>
             </div>
           </div>
 
@@ -676,7 +666,7 @@ export default function DailyWorkersPage() {
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 성별 *
               </label>
-              <select
+              <PrimitiveSelect
                 value={formData.gender}
                 onChange={(e) =>
                   setFormData({ ...formData, gender: e.target.value as "" | "1" | "2" | "3" | "4" })
@@ -688,7 +678,7 @@ export default function DailyWorkersPage() {
                 <option value="2">여성 (내국인)</option>
                 <option value="3">남성 (외국인)</option>
                 <option value="4">여성 (외국인)</option>
-              </select>
+              </PrimitiveSelect>
             </div>
           </div>
 
@@ -749,7 +739,7 @@ export default function DailyWorkersPage() {
 
           <div className="border-t border-slate-200 pt-4">
             <label className="flex items-center gap-2">
-              <input
+              <PrimitiveInput
                 type="checkbox"
                 checked={formData.is_foreign}
                 onChange={(e) =>

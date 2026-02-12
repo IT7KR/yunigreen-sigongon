@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Input, Card, Stepper } from "@sigongon/ui";
+import { Button, Card, Input, PrimitiveInput, Stepper } from "@sigongon/ui";
 import { Droplets, Check, X, Loader2 } from "lucide-react";
 import {
   STEPS,
@@ -329,7 +329,7 @@ export default function SignupPage() {
           {/* Terms */}
           <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
             <label className="flex items-start gap-3 cursor-pointer">
-              <input
+              <PrimitiveInput
                 type="checkbox"
                 checked={data.termsAgreed || false}
                 onChange={(e) =>
@@ -345,7 +345,7 @@ export default function SignupPage() {
             </label>
 
             <label className="flex items-start gap-3 cursor-pointer">
-              <input
+              <PrimitiveInput
                 type="checkbox"
                 checked={data.privacyAgreed || false}
                 onChange={(e) =>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Input, Card } from "@sigongon/ui";
+import { Button, Card, Input, PrimitiveInput, PrimitiveSelect } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { PROJECT_CATEGORIES } from "@sigongon/types";
 import { api } from "@/lib/api";
@@ -106,7 +106,7 @@ export default function NewProjectPage() {
             <label className="mb-2 block text-sm font-medium text-slate-900">
               공사 분류 (필수)
             </label>
-            <select
+            <PrimitiveSelect
               value={category}
               onChange={(e) => {
                 setCategory(e.target.value);
@@ -124,7 +124,7 @@ export default function NewProjectPage() {
                   {cat.label}
                 </option>
               ))}
-            </select>
+            </PrimitiveSelect>
             {errors.category && (
               <p className="mt-1 text-sm text-red-600">{errors.category}</p>
             )}
@@ -152,7 +152,7 @@ export default function NewProjectPage() {
             </label>
             <div className="space-y-2">
               <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
-                <input
+                <PrimitiveInput
                   type="radio"
                   name="primaryContact"
                   value="representative"
@@ -169,7 +169,7 @@ export default function NewProjectPage() {
               </label>
 
               <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
-                <input
+                <PrimitiveInput
                   type="radio"
                   name="primaryContact"
                   value="worker"
@@ -186,7 +186,7 @@ export default function NewProjectPage() {
               </label>
 
               <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
-                <input
+                <PrimitiveInput
                   type="radio"
                   name="primaryContact"
                   value="both"

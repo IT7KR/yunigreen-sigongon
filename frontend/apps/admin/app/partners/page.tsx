@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  Input,
-  Modal,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Modal, PrimitiveInput } from "@sigongon/ui";
 import { Plus, Upload, Search, Loader2, Check, Trash2, Pencil, Save, X, ToggleLeft, ToggleRight } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
@@ -221,7 +212,7 @@ export default function PartnersPage() {
         <div className="flex gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <input
+            <PrimitiveInput
               type="text"
               placeholder="업체명, 사업자번호 검색"
               value={searchTerm}
@@ -370,7 +361,7 @@ export default function PartnersPage() {
                 htmlFor="is_female_owned"
                 className="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
               >
-                <input
+                <PrimitiveInput
                   type="checkbox"
                   id="is_female_owned"
                   checked={formData.is_female_owned}

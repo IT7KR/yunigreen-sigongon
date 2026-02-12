@@ -4,15 +4,7 @@ import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Image, Loader2, Trash2 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  formatDate,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, formatDate } from "@sigongon/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
 
 interface PhotoAlbum {
@@ -159,7 +151,7 @@ export default function ProjectAlbumListPage({
                       </div>
                     </div>
                   </Link>
-                  <button
+                  <PrimitiveButton
                     onClick={(e) => {
                       e.preventDefault();
                       handleDeleteAlbum(album.id);
@@ -168,7 +160,7 @@ export default function ProjectAlbumListPage({
                     title="삭제"
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
-                  </button>
+                  </PrimitiveButton>
                 </div>
               ))}
             </div>

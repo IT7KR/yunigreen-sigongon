@@ -2,13 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  Button,
-  Input,
-  toast,
-} from "@sigongon/ui";
+import { Button, Card, CardContent, Input, PrimitiveButton, PrimitiveInput, PrimitiveSelect, toast } from "@sigongon/ui";
 import {
   CheckCircle2,
   Upload,
@@ -306,13 +300,13 @@ export default function WorkerOnboardingPage() {
                             {(idCardFile.size / 1024).toFixed(1)} KB
                           </p>
                         </div>
-                        <button
+                        <PrimitiveButton
                           type="button"
                           onClick={() => handleRemoveFile("idCard")}
                           className="p-1 text-slate-400 hover:text-red-500"
                         >
                           <X className="h-5 w-5" />
-                        </button>
+                        </PrimitiveButton>
                       </div>
                     </div>
                   ) : (
@@ -324,7 +318,7 @@ export default function WorkerOnboardingPage() {
                       <span className="mt-1 text-xs text-slate-500">
                         이미지 또는 PDF (최대 10MB)
                       </span>
-                      <input
+                      <PrimitiveInput
                         type="file"
                         accept="image/*,application/pdf"
                         capture="environment"
@@ -365,13 +359,13 @@ export default function WorkerOnboardingPage() {
                             {(safetyCertFile.size / 1024).toFixed(1)} KB
                           </p>
                         </div>
-                        <button
+                        <PrimitiveButton
                           type="button"
                           onClick={() => handleRemoveFile("safetyCert")}
                           className="p-1 text-slate-400 hover:text-red-500"
                         >
                           <X className="h-5 w-5" />
-                        </button>
+                        </PrimitiveButton>
                       </div>
                     </div>
                   ) : (
@@ -383,7 +377,7 @@ export default function WorkerOnboardingPage() {
                       <span className="mt-1 text-xs text-slate-500">
                         이미지 또는 PDF (최대 10MB)
                       </span>
-                      <input
+                      <PrimitiveInput
                         type="file"
                         accept="image/*,application/pdf"
                         capture="environment"
@@ -439,7 +433,7 @@ export default function WorkerOnboardingPage() {
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
                       성별 *
                     </label>
-                    <select
+                    <PrimitiveSelect
                       value={formData.gender}
                       onChange={(e) =>
                         setFormData({
@@ -454,7 +448,7 @@ export default function WorkerOnboardingPage() {
                       <option value="2">여성 (내국인)</option>
                       <option value="3">남성 (외국인)</option>
                       <option value="4">여성 (외국인)</option>
-                    </select>
+                    </PrimitiveSelect>
                   </div>
                 </div>
 

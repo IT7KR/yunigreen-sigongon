@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-} from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveButton } from "@sigongon/ui";
 import { api } from "@/lib/api";
 import { Lock, Eye, EyeOff } from "lucide-react";
 
@@ -115,7 +108,7 @@ export function PasswordSection() {
                 }
                 className={errors.currentPassword ? "border-red-500" : ""}
               />
-              <button
+              <PrimitiveButton
                 type="button"
                 onClick={() => togglePasswordVisibility("current")}
                 className="absolute right-3 top-9 text-slate-400 hover:text-slate-600"
@@ -125,7 +118,7 @@ export function PasswordSection() {
                 ) : (
                   <Eye className="h-4 w-4" />
                 )}
-              </button>
+              </PrimitiveButton>
             </div>
             {errors.currentPassword && (
               <p className="mt-1 text-sm text-red-500">
@@ -145,7 +138,7 @@ export function PasswordSection() {
                 }
                 className={errors.newPassword ? "border-red-500" : ""}
               />
-              <button
+              <PrimitiveButton
                 type="button"
                 onClick={() => togglePasswordVisibility("new")}
                 className="absolute right-3 top-9 text-slate-400 hover:text-slate-600"
@@ -155,7 +148,7 @@ export function PasswordSection() {
                 ) : (
                   <Eye className="h-4 w-4" />
                 )}
-              </button>
+              </PrimitiveButton>
             </div>
             {errors.newPassword && (
               <p className="mt-1 text-sm text-red-500">{errors.newPassword}</p>
@@ -173,7 +166,7 @@ export function PasswordSection() {
                 }
                 className={errors.confirmPassword ? "border-red-500" : ""}
               />
-              <button
+              <PrimitiveButton
                 type="button"
                 onClick={() => togglePasswordVisibility("confirm")}
                 className="absolute right-3 top-9 text-slate-400 hover:text-slate-600"
@@ -183,7 +176,7 @@ export function PasswordSection() {
                 ) : (
                   <Eye className="h-4 w-4" />
                 )}
-              </button>
+              </PrimitiveButton>
             </div>
             {errors.confirmPassword && (
               <p className="mt-1 text-sm text-red-500">

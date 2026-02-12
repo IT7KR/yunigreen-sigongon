@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
-import { Card, CardContent, Button, Input, BlurText } from "@sigongon/ui";
+import { BlurText, Button, Card, CardContent, Input, PrimitiveButton } from "@sigongon/ui";
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
 
@@ -103,7 +103,7 @@ function LoginForm() {
                 required
                 autoComplete="current-password"
               />
-              <button
+              <PrimitiveButton
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
@@ -114,7 +114,7 @@ function LoginForm() {
                 ) : (
                   <Eye className="h-5 w-5" />
                 )}
-              </button>
+              </PrimitiveButton>
             </div>
 
             <div className="flex justify-end">
@@ -152,7 +152,7 @@ function LoginForm() {
           <div className="h-px flex-1 bg-slate-200" />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <button
+          <PrimitiveButton
             type="button"
             onClick={() => handleQuickLogin("superadmin")}
             disabled={isLoading}
@@ -160,8 +160,8 @@ function LoginForm() {
           >
             <div className="font-medium text-red-700">최고관리자 (SA)</div>
             <div className="mt-0.5 text-red-600">유니그린 관리자</div>
-          </button>
-          <button
+          </PrimitiveButton>
+          <PrimitiveButton
             type="button"
             onClick={() => handleQuickLogin("ceo_lee")}
             disabled={isLoading}
@@ -169,8 +169,8 @@ function LoginForm() {
           >
             <div className="font-medium text-blue-700">대표 (회사관리자)</div>
             <div className="mt-0.5 text-blue-600">이중호</div>
-          </button>
-          <button
+          </PrimitiveButton>
+          <PrimitiveButton
             type="button"
             onClick={() => handleQuickLogin("site_kim")}
             disabled={isLoading}
@@ -178,8 +178,8 @@ function LoginForm() {
           >
             <div className="font-medium text-green-700">현장소장</div>
             <div className="mt-0.5 text-green-600">김소장</div>
-          </button>
-          <button
+          </PrimitiveButton>
+          <PrimitiveButton
             type="button"
             onClick={() => handleQuickLogin("worker_hong")}
             disabled={isLoading}
@@ -187,7 +187,7 @@ function LoginForm() {
           >
             <div className="font-medium text-amber-700">근로자</div>
             <div className="mt-0.5 text-amber-600">홍길동</div>
-          </button>
+          </PrimitiveButton>
         </div>
       </div>
 

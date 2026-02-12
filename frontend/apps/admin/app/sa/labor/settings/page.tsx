@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-  toast,
-} from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveSelect, toast } from "@sigongon/ui";
 import { Save, RefreshCw, Calendar, Percent, ArrowRight } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
@@ -229,7 +221,7 @@ export default function LaborSettingsPage() {
           </div>
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-slate-400" />
-            <select
+            <PrimitiveSelect
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-point-500"
@@ -239,7 +231,7 @@ export default function LaborSettingsPage() {
                   {year}년
                 </option>
               ))}
-            </select>
+            </PrimitiveSelect>
           </div>
         </div>
 

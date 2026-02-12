@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Button, Card, Badge } from "@sigongon/ui";
+import { Badge, Button, Card, PrimitiveButton } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Check } from "lucide-react";
 
@@ -48,7 +48,7 @@ export default function ProjectVisibilityPage() {
               className="grid grid-cols-[1fr_auto] items-center gap-4 px-6 py-4 hover:bg-slate-50"
             >
               <div className="font-medium text-slate-900">{project.name}</div>
-              <button
+              <PrimitiveButton
                 onClick={() => toggleVisibility(project.id)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-point-500 focus:ring-offset-2 ${
                   project.visible ? "bg-brand-point-500" : "bg-slate-200"
@@ -59,7 +59,7 @@ export default function ProjectVisibilityPage() {
                     project.visible ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
-              </button>
+              </PrimitiveButton>
             </div>
           ))}
         </div>

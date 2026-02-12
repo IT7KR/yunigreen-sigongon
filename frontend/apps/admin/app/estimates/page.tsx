@@ -11,20 +11,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import {
-  Card,
-  CardContent,
-  Button,
-  Badge,
-  formatCurrency,
-  formatDate,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, PrimitiveButton, PrimitiveInput, PrimitiveSelect, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatCurrency, formatDate } from "@sigongon/ui";
 import { useEstimates } from "@/hooks";
 import type { EstimateStatus } from "@sigongon/types";
 
@@ -122,7 +109,7 @@ export default function EstimatesPage() {
             <div className="flex flex-wrap gap-4">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
+                <PrimitiveInput
                   type="search"
                   placeholder="프로젝트명, 고객명으로 검색..."
                   value={search}
@@ -130,7 +117,7 @@ export default function EstimatesPage() {
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-4 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 />
               </div>
-              <select
+              <PrimitiveSelect
                 value={statusFilter}
                 onChange={(e) =>
                   setStatusFilter(e.target.value as EstimateStatus | "")
@@ -142,7 +129,7 @@ export default function EstimatesPage() {
                 <option value="issued">발행됨</option>
                 <option value="accepted">수락됨</option>
                 <option value="rejected">거절됨</option>
-              </select>
+              </PrimitiveSelect>
             </div>
           </CardContent>
         </Card>
@@ -218,12 +205,12 @@ export default function EstimatesPage() {
                           {formatDate(estimate.created_at)}
                         </TableCell>
                         <TableCell>
-                          <button
+                          <PrimitiveButton
                             className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <MoreHorizontal className="h-4 w-4 text-slate-400" />
-                          </button>
+                          </PrimitiveButton>
                         </TableCell>
                       </TableRow>
                     );

@@ -2,21 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
-import {
-  Card,
-  CardContent,
-  Button,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  Badge,
-  formatDate,
-  Pagination,
-  Modal,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, Modal, Pagination, PrimitiveButton, PrimitiveInput, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
 import {
   Search,
   Shield,
@@ -159,7 +145,7 @@ export default function SAUsersPage() {
           <CardContent className="p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
+              <PrimitiveInput
                 type="search"
                 placeholder="이름, 이메일, 고객사, 전화번호로 검색..."
                 value={searchQuery}
@@ -262,14 +248,14 @@ export default function SAUsersPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <button
+                              <PrimitiveButton
                                 onClick={() => openDetailModal(user)}
                                 className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                                 title="상세정보"
                               >
                                 <Eye className="h-4 w-4 text-slate-400" />
-                              </button>
-                              <button
+                              </PrimitiveButton>
+                              <PrimitiveButton
                                 onClick={() =>
                                   handleResetPassword(user.id, user.name)
                                 }
@@ -277,8 +263,8 @@ export default function SAUsersPage() {
                                 title="비밀번호 초기화"
                               >
                                 <Key className="h-4 w-4 text-slate-400" />
-                              </button>
-                              <button
+                              </PrimitiveButton>
+                              <PrimitiveButton
                                 onClick={() =>
                                   handleToggleActive(user.id, user.is_active)
                                 }
@@ -288,7 +274,7 @@ export default function SAUsersPage() {
                                 }
                               >
                                 <Ban className="h-4 w-4 text-red-400" />
-                              </button>
+                              </PrimitiveButton>
                             </div>
                           </TableCell>
                         </TableRow>

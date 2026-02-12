@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Loader2, CheckCircle2, XCircle, Shield, Building2 } from "lucide-react";
-import { Button, Card, CardContent } from "@sigongon/ui";
+import { Button, Card, CardContent, PrimitiveInput } from "@sigongon/ui";
 import type { UserRole } from "@sigongon/types";
 import { api } from "@/lib/api";
 
@@ -214,7 +214,7 @@ export default function AcceptInvitePage() {
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">
                   이름
                 </label>
-                <input
+                <PrimitiveInput
                   type="text"
                   value={invitation?.name || ""}
                   disabled
@@ -226,7 +226,7 @@ export default function AcceptInvitePage() {
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">
                   이메일
                 </label>
-                <input
+                <PrimitiveInput
                   type="email"
                   value={invitation?.email || ""}
                   disabled
@@ -241,7 +241,7 @@ export default function AcceptInvitePage() {
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">
                   비밀번호 *
                 </label>
-                <input
+                <PrimitiveInput
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -255,7 +255,7 @@ export default function AcceptInvitePage() {
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">
                   비밀번호 확인 *
                 </label>
-                <input
+                <PrimitiveInput
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -266,7 +266,7 @@ export default function AcceptInvitePage() {
               </div>
 
               <div className="flex items-start gap-2">
-                <input
+                <PrimitiveInput
                   type="checkbox"
                   id="agreeTerms"
                   checked={agreeTerms}

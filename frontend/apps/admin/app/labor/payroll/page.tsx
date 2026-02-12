@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  toast,
-} from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, PrimitiveSelect, toast } from "@sigongon/ui";
 import {
   Download,
   ChevronLeft,
@@ -420,7 +412,7 @@ export default function PayrollPage() {
               {/* Project selector */}
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-slate-600 whitespace-nowrap">현장</label>
-                <select
+                <PrimitiveSelect
                   value={selectedProject}
                   onChange={(e) => setSelectedProject(e.target.value)}
                   className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -431,40 +423,40 @@ export default function PayrollPage() {
                       {p.name}
                     </option>
                   ))}
-                </select>
+                </PrimitiveSelect>
               </div>
 
               {/* Year selector */}
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-slate-600 whitespace-nowrap">연도</label>
-                <select
+                <PrimitiveSelect
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
                   className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value={2025}>2025</option>
                   <option value={2026}>2026</option>
-                </select>
+                </PrimitiveSelect>
               </div>
 
               {/* Month selector with navigation */}
               <div className="flex items-center gap-1">
                 <label className="text-sm font-medium text-slate-600 whitespace-nowrap mr-1">월</label>
-                <button
+                <PrimitiveButton
                   onClick={goToPrevMonth}
                   className="rounded-md p-1.5 hover:bg-slate-100 transition-colors"
                 >
                   <ChevronLeft className="h-4 w-4 text-slate-500" />
-                </button>
+                </PrimitiveButton>
                 <span className="min-w-[3rem] text-center text-sm font-semibold text-slate-900">
                   {selectedMonth}월
                 </span>
-                <button
+                <PrimitiveButton
                   onClick={goToNextMonth}
                   className="rounded-md p-1.5 hover:bg-slate-100 transition-colors"
                 >
                   <ChevronRight className="h-4 w-4 text-slate-500" />
-                </button>
+                </PrimitiveButton>
               </div>
 
               <div className="flex-1" />
@@ -496,30 +488,30 @@ export default function PayrollPage() {
                 </Button>
                 {showExcelMenu && (
                   <div className="absolute right-0 top-full mt-1 w-56 rounded-lg border border-slate-200 bg-white py-1 shadow-lg z-50">
-                    <button
+                    <PrimitiveButton
                       onClick={() => handleExcelDownload("site")}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                     >
                       현장별 일용신고명세서
-                    </button>
-                    <button
+                    </PrimitiveButton>
+                    <PrimitiveButton
                       onClick={() => handleExcelDownload("consolidated")}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                     >
                       월별 통합본
-                    </button>
-                    <button
+                    </PrimitiveButton>
+                    <PrimitiveButton
                       onClick={() => handleExcelDownload("kwdi")}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                     >
                       근로복지공단 양식
-                    </button>
-                    <button
+                    </PrimitiveButton>
+                    <PrimitiveButton
                       onClick={() => handleExcelDownload("tax")}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                     >
                       국세청 양식
-                    </button>
+                    </PrimitiveButton>
                   </div>
                 )}
               </div>
