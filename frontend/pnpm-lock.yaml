@@ -20,6 +20,15 @@ importers:
       '@sigongon/api':
         specifier: workspace:*
         version: link:../../packages/api
+      '@sigongon/features':
+        specifier: workspace:*
+        version: link:../../packages/features
+      '@sigongon/mocks':
+        specifier: workspace:*
+        version: link:../../packages/mocks
+      '@sigongon/platform':
+        specifier: workspace:*
+        version: link:../../packages/platform
       '@sigongon/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -87,6 +96,15 @@ importers:
       '@sigongon/api':
         specifier: workspace:*
         version: link:../../packages/api
+      '@sigongon/features':
+        specifier: workspace:*
+        version: link:../../packages/features
+      '@sigongon/mocks':
+        specifier: workspace:*
+        version: link:../../packages/mocks
+      '@sigongon/platform':
+        specifier: workspace:*
+        version: link:../../packages/platform
       '@sigongon/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -143,6 +161,65 @@ importers:
         specifier: ^1.13.2
         version: 1.13.2
     devDependencies:
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/features:
+    dependencies:
+      '@sigongon/mocks':
+        specifier: workspace:*
+        version: link:../mocks
+      '@sigongon/platform':
+        specifier: workspace:*
+        version: link:../platform
+      '@sigongon/ui':
+        specifier: workspace:*
+        version: link:../ui
+      lucide-react:
+        specifier: ^0.562.0
+        version: 0.562.0(react@19.2.3)
+    devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.2.7
+      next:
+        specifier: 16.1.1
+        version: 16.1.1(@babel/core@7.28.5)(@playwright/test@1.57.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/mocks:
+    devDependencies:
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/platform:
+    dependencies:
+      '@sigongon/api':
+        specifier: workspace:*
+        version: link:../api
+      '@sigongon/types':
+        specifier: workspace:*
+        version: link:../types
+      '@tanstack/react-query':
+        specifier: ^5.90.16
+        version: 5.90.16(react@19.2.3)
+    devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.2.7
+      next:
+        specifier: 16.1.1
+        version: 16.1.1(@babel/core@7.28.5)(@playwright/test@1.57.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -1476,7 +1553,7 @@ packages:
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
-    deprecated: Glob versions prior to v9 are no longer supported
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   globals@14.0.0:
     resolution: {integrity: sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==}

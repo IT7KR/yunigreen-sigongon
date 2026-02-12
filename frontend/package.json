@@ -11,7 +11,7 @@
     "dev": "pnpm dev:all",
     "dev:mobile": "pnpm --filter @sigongon/mobile dev",
     "dev:admin": "pnpm --filter @sigongon/admin dev",
-    "dev:all": "pnpm -r --parallel --filter @sigongon/types --filter @sigongon/api --filter @sigongon/ui --filter @sigongon/admin --filter @sigongon/mobile dev",
+    "dev:all": "pnpm -r --parallel --filter @sigongon/types --filter @sigongon/api --filter @sigongon/ui --filter @sigongon/platform --filter @sigongon/mocks --filter @sigongon/features --filter @sigongon/admin --filter @sigongon/mobile dev",
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",

@@ -1,10 +1,1 @@
-import type { NextConfig } from "next"
-
-const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: false,
-  },
-  turbopack: {},
-}
-
-export default nextConfig
+export { default } from "../../scripts/next.base.mjs";

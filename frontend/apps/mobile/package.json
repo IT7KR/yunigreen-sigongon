@@ -12,6 +12,9 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.16",
     "@sigongon/api": "workspace:*",
+    "@sigongon/features": "workspace:*",
+    "@sigongon/mocks": "workspace:*",
+    "@sigongon/platform": "workspace:*",
     "@sigongon/types": "workspace:*",
     "@sigongon/ui": "workspace:*",
     "lucide-react": "^0.562.0",

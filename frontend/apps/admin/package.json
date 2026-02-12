@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@sigongon/api": "workspace:*",
+    "@sigongon/features": "workspace:*",
+    "@sigongon/mocks": "workspace:*",
+    "@sigongon/platform": "workspace:*",
     "@sigongon/types": "workspace:*",
     "@sigongon/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.16",
