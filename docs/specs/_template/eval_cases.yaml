@@ -1,0 +1,18 @@
+dataset: template-v1
+description: harness evaluation cases template
+cases:
+  - id: case-001
+    capability: diagnosis
+    input:
+      photos:
+        - sample/photo-1.jpg
+      notes: "누수 흔적 확인 필요"
+    expected:
+      required_fields:
+        - leak_opinion.summary
+        - leak_opinion.details
+        - confidence
+    tags:
+      - smoke
+      - schema
+    severity: high

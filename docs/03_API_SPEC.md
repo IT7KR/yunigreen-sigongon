@@ -725,7 +725,79 @@ Content-Type: `multipart/form-data`
 
 ---
 
-## 11. 에러 코드
+## 11. Harness 운영 API
+
+### 11.1 Harness 실행
+
+**POST** `/harness/runs`
+
+```json
+// 요청
+{
+  "harness_types": ["code", "behavior", "ai", "ops"]
+}
+
+// 응답 (200 OK)
+{
+  "success": true,
+  "data": {
+    "id": "f8fe8ddf-2e4d-4f50-b211-34ef81f8e0a3",
+    "status": "passed",
+    "selected_harnesses": ["code", "behavior", "ai", "ops"],
+    "summary": {
+      "total_checks": 17,
+      "passed": 16,
+      "failed": 0,
+      "warnings": 1
+    }
+  }
+}
+```
+
+### 11.2 Harness 실행 결과 조회
+
+**GET** `/harness/runs/{run_id}`
+
+```json
+// 응답 (200 OK)
+{
+  "success": true,
+  "data": {
+    "id": "f8fe8ddf-2e4d-4f50-b211-34ef81f8e0a3",
+    "status": "passed",
+    "checks": [
+      {
+        "name": "router_async_only",
+        "harness_type": "code",
+        "status": "pass",
+        "details": "모든 FastAPI endpoint가 async로 선언되어 있어요."
+      }
+    ]
+  }
+}
+```
+
+### 11.3 Harness 지표 조회
+
+**GET** `/harness/metrics?window_days=7`
+
+```json
+// 응답 (200 OK)
+{
+  "success": true,
+  "data": {
+    "window_days": 7,
+    "total_runs": 12,
+    "passed_runs": 10,
+    "failed_runs": 2,
+    "pass_rate": 0.8333
+  }
+}
+```
+
+---
+
+## 12. 에러 코드
 
 | 코드                 | HTTP 상태 | 설명                         |
 | -------------------- | --------- | ---------------------------- |
@@ -739,9 +811,10 @@ Content-Type: `multipart/form-data`
 
 ---
 
-## 12. 버전 이력
+## 13. 버전 이력
 
 | 버전  | 날짜       | 변경 내용                |
 | ----- | ---------- | ------------------------ |
 | 0.1.0 | 2026-01-04 | 최초 API 명세서 작성     |
 | 0.2.0 | 2026-01-04 | 한글화, 비동기 패턴 추가 |
+| 0.3.0 | 2026-02-13 | Harness 운영 API 추가    |

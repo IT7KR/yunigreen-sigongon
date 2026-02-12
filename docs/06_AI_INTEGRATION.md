@@ -541,8 +541,32 @@ async def analyze_photos_with_logging(photos: list[Photo]) -> dict:
 
 ---
 
-## 8. 버전 이력
+## 8. Harness 기반 운영
+
+프로젝트 전반 품질 관리를 위해 다음 하니스 체계를 운영합니다.
+
+- `code`: 비동기 엔드포인트/레이어 규칙/문서 스캐폴드 검증
+- `behavior`: API 계약과 핵심 테스트 존재 여부, live `/health` 스모크 검증
+- `ai`: 폴백 체인, JSON 강제, 프롬프트 버전 파일, 단가 AI 금지 규칙 검증
+- `ops`: health 계약, 에러 매핑, compose healthcheck, 진단 로깅 관찰성 검증
+
+실행:
+
+```bash
+cd backend && python scripts/run_harness.py
+```
+
+운영 API:
+
+- `POST /api/v1/harness/runs`
+- `GET /api/v1/harness/runs/{run_id}`
+- `GET /api/v1/harness/metrics`
+
+---
+
+## 9. 버전 이력
 
 | 버전 | 날짜 | 변경 내용 |
 |-----|------|----------|
 | 0.1.0 | 2026-01-04 | docs/06_AI_INTEGRATION.md로 분리 (AGENTS.md에서 이동) |
+| 0.2.0 | 2026-02-13 | Harness 기반 운영 섹션 추가 |
