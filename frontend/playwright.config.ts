@@ -19,7 +19,7 @@ export default defineConfig({
       name: "admin",
       use: {
         ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:3133",
+        baseURL: "http://localhost:3033",
       },
       testMatch: /admin\/.*.spec.ts/,
     },
@@ -27,7 +27,7 @@ export default defineConfig({
       name: "mobile",
       use: {
         ...devices["iPhone 13"],
-        baseURL: "http://localhost:3134",
+        baseURL: "http://localhost:3034",
       },
       testMatch: /mobile\/.*.spec.ts/,
     },
@@ -36,13 +36,13 @@ export default defineConfig({
   webServer: [
     {
       command: "pnpm --filter @sigongon/admin dev",
-      url: "http://localhost:3133",
+      url: "http://localhost:3033",
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },
     {
       command: "pnpm --filter @sigongon/mobile dev",
-      url: "http://localhost:3134",
+      url: "http://localhost:3034",
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },
