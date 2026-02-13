@@ -427,6 +427,44 @@ export class APIClient {
     return response.data;
   }
 
+  async updateProject(
+    id: string,
+    data: {
+      name?: string;
+      address?: string;
+      category?: string;
+      client_name?: string;
+      client_phone?: string;
+      notes?: string;
+    },
+  ) {
+    const response = await this.client.patch<
+      APIResponse<{
+        id: string;
+        name: string;
+        status: ProjectStatus;
+      }>
+    >(`/projects/${id}`, data);
+    return response.data;
+  }
+
+  async updateProjectStatus(id: string, status: ProjectStatus) {
+    const response = await this.client.patch<
+      APIResponse<{
+        id: string;
+        status: ProjectStatus;
+      }>
+    >(`/projects/${id}/status`, { status });
+    return response.data;
+  }
+
+  async deleteProject(id: string) {
+    const response = await this.client.delete<APIResponse<void>>(
+      `/projects/${id}`,
+    );
+    return response.data;
+  }
+
   // ============================================
   // Site Visits
   // ============================================
@@ -434,6 +472,13 @@ export class APIClient {
   async getSiteVisits(projectId: string) {
     const response = await this.client.get<APIResponse<SiteVisitDetail[]>>(
       `/projects/${projectId}/site-visits`,
+    );
+    return response.data;
+  }
+
+  async getSiteVisit(visitId: string) {
+    const response = await this.client.get<APIResponse<SiteVisitDetail>>(
+      `/site-visits/${visitId}`,
     );
     return response.data;
   }
@@ -507,6 +552,13 @@ export class APIClient {
   async getDiagnosis(diagnosisId: string) {
     const response = await this.client.get<APIResponse<DiagnosisDetail>>(
       `/diagnoses/${diagnosisId}`,
+    );
+    return response.data;
+  }
+
+  async getDiagnoses(projectId: string) {
+    const response = await this.client.get<APIResponse<DiagnosisDetail[]>>(
+      `/projects/${projectId}/diagnoses`,
     );
     return response.data;
   }
@@ -1752,6 +1804,31 @@ export class APIClient {
     return response.data;
   }
 
+  async getInvitationByToken(token: string) {
+    const response = await this.client.get<
+      APIResponse<{
+        id: string;
+        email: string;
+        name: string;
+        role: string;
+        organization_name: string;
+        status: string;
+        expires_at: string;
+      }>
+    >(`/invitations/${token}`);
+    return response.data;
+  }
+
+  async acceptInvitation(token: string, data: { password: string }) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        status: string;
+      }>
+    >(`/invitations/${token}/accept`, data);
+    return response.data;
+  }
+
   async resendInvitation(invitationId: string) {
     const response = await this.client.post<
       APIResponse<{
@@ -1788,6 +1865,14 @@ export class APIClient {
     const response = await this.client.post<APIResponse<{ worker_id: string }>>(
       "/workers/verify",
       { request_id: requestId, code },
+    );
+    return response.data;
+  }
+
+  async verifyWorkerInvite(inviteToken: string) {
+    const response = await this.client.post<APIResponse<{ worker_id: string }>>(
+      "/workers/invite/verify",
+      { invite_token: inviteToken },
     );
     return response.data;
   }
@@ -1913,6 +1998,116 @@ export class APIClient {
     const response = await this.client.post<
       APIResponse<{ id: string; read: boolean }>
     >(`/notifications/${notificationId}/read`);
+    return response.data;
+  }
+
+  // ============================================
+  // MyPage / Account
+  // ============================================
+
+  async updateMyProfile(data: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  }) {
+    const response = await this.client.patch<
+      APIResponse<{
+        id: string;
+        name: string;
+        email?: string;
+        phone?: string;
+      }>
+    >("/me/profile", data);
+    return response.data;
+  }
+
+  async getMyNotificationPrefs() {
+    const response = await this.client.get<
+      APIResponse<{
+        user_id: string;
+        email_notifications: boolean;
+        project_status_change: boolean;
+        estimate_contract_alerts: boolean;
+        daily_report_alerts: boolean;
+        platform_announcements: boolean;
+      }>
+    >("/me/notification-prefs");
+    return response.data;
+  }
+
+  async updateMyNotificationPrefs(data: {
+    email_notifications: boolean;
+    project_status_change: boolean;
+    estimate_contract_alerts: boolean;
+    daily_report_alerts: boolean;
+    platform_announcements: boolean;
+  }) {
+    const response = await this.client.put<
+      APIResponse<{
+        user_id: string;
+        email_notifications: boolean;
+        project_status_change: boolean;
+        estimate_contract_alerts: boolean;
+        daily_report_alerts: boolean;
+        platform_announcements: boolean;
+      }>
+    >("/me/notification-prefs", data);
+    return response.data;
+  }
+
+  async getMyActivityLog(page: number = 1, perPage: number = 20) {
+    const response = await this.client.get<
+      PaginatedResponse<{
+        id: string;
+        user_id: string;
+        action: string;
+        description: string;
+        ip_address: string;
+        device_info: string;
+        created_at: string;
+      }>
+    >("/me/activity-log", {
+      params: { page, per_page: perPage },
+    });
+    return response.data;
+  }
+
+  async changeMyPassword(data: {
+    current_password: string;
+    new_password: string;
+  }) {
+    const response = await this.client.post<
+      APIResponse<{
+        changed: boolean;
+      }>
+    >("/me/change-password", data);
+    return response.data;
+  }
+
+  async logoutAllDevices() {
+    const response = await this.client.post<
+      APIResponse<{
+        logged_out: boolean;
+      }>
+    >("/me/logout-all-devices");
+    return response.data;
+  }
+
+  async requestAccountDeactivation() {
+    const response = await this.client.post<
+      APIResponse<{
+        requested: boolean;
+      }>
+    >("/me/account-deactivation");
+    return response.data;
+  }
+
+  async requestAccountDeletion(data: { password: string; reason?: string }) {
+    const response = await this.client.post<
+      APIResponse<{
+        requested: boolean;
+      }>
+    >("/me/account-deletion", data);
     return response.data;
   }
 
