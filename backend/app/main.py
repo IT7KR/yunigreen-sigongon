@@ -36,8 +36,8 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="AI 기반 누수 진단 및 건설 관리 SaaS API",
-    docs_url="/docs" if settings.debug else None,
-    redoc_url="/redoc" if settings.debug else None,
+    docs_url="/docs" if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
     lifespan=lifespan,
 )
 
@@ -122,6 +122,7 @@ from app.routers import (
 from app.routers.contracts import router as contracts_router, project_contracts_router
 from app.routers.labor_contracts import router as labor_contracts_router, project_labor_router
 from app.routers.materials import router as materials_router
+from app.routers.operations import router as operations_router
 from app.routers.users import router as users_router
 from app.routers.photo_albums import router as photo_albums_router
 from app.routers.construction_reports import router as construction_reports_router
@@ -147,3 +148,4 @@ app.include_router(photo_albums_router, prefix="/api/v1", tags=["준공사진첩
 app.include_router(construction_reports_router, prefix="/api/v1", tags=["착공계/준공계"])
 app.include_router(billing_router, prefix="/api/v1", tags=["결제 및 구독"])
 app.include_router(tax_invoices_router, prefix="/api/v1", tags=["세금계산서"])
+app.include_router(operations_router, prefix="/api/v1", tags=["운영 확장"])
