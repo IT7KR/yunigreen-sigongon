@@ -223,9 +223,7 @@ export default function NewProjectPage() {
           )}
 
           <div className="flex justify-end gap-3 pt-4">
-            <Link href="/projects">
-              <Button variant="ghost" type="button"><X className="h-4 w-4" />취소</Button>
-            </Link>
+            <Button variant="ghost" type="button" asChild><Link href="/projects"><X className="h-4 w-4" />취소</Link></Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

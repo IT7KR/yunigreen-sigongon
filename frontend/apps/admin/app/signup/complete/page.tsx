@@ -205,14 +205,14 @@ export default function CompletePage() {
             <p>도움이 필요하신가요?</p>
             <p className="mt-1">
               <Link
-                href="#"
+                href="mailto:support@sigongon.com"
                 className="font-medium text-brand-point-600 hover:text-brand-point-700"
               >
                 고객센터
               </Link>
               {" 또는 "}
               <Link
-                href="#"
+                href="/dashboard"
                 className="font-medium text-brand-point-600 hover:text-brand-point-700"
               >
                 시작 가이드

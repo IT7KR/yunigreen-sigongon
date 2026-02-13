@@ -684,16 +684,14 @@ function StepCard({
 
           <div className="flex items-center gap-2">
             {step.action && (
-              <Link href={step.action.href}>
-                <Button
+              <Button
                   variant={isCurrent ? "primary" : "secondary"}
                   size="sm"
                   className="whitespace-nowrap text-xs"
-                >
+                 asChild><Link href={step.action.href}>
                   {step.action.label}
                   <ArrowRight className="ml-1 h-3 w-3" />
-                </Button>
-              </Link>
+                </Link></Button>
             )}
             {hasDocuments && (
               <PrimitiveButton

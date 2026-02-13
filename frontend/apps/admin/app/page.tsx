@@ -47,14 +47,10 @@ export default function LandingPage() {
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/login">
-                <Button variant="ghost" className="text-white hover:bg-white/10">
+              <Button variant="ghost" className="text-white hover:bg-white/10" asChild><Link href="/login">
                   로그인
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button>무료 체험</Button>
-              </Link>
+                </Link></Button>
+              <Button asChild><Link href="/signup">무료 체험</Link></Button>
             </div>
           </div>
         </div>
@@ -105,21 +101,17 @@ export default function LandingPage() {
               variants={staggerItem}
               className="flex flex-col gap-4 sm:flex-row"
             >
-              <Link href="/signup">
-                <Button size="lg" className="group gap-3 text-lg">
+              <Button size="lg" className="group gap-3 text-lg" asChild><Link href="/signup">
                   무료 체험 시작하기
                   <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button
+                </Link></Button>
+              <Button
                   size="lg"
                   variant="secondary"
                   className="border-white/20 bg-white/5 text-lg text-white hover:bg-white/10"
-                >
+                 asChild><Link href="/login">
                   이미 계정이 있으신가요?
-                </Button>
-              </Link>
+                </Link></Button>
             </motion.div>
 
             {/* Trust indicators */}
@@ -281,8 +273,7 @@ export default function LandingPage() {
                   ))}
                 </ul>
 
-                <Link href="/signup">
-                  <Button
+                <Button
                     fullWidth
                     size="lg"
                     variant={plan.id === "pro" ? "primary" : "secondary"}
@@ -291,10 +282,9 @@ export default function LandingPage() {
                         ? "border-white/20 bg-white/5 text-white hover:bg-white/10"
                         : ""
                     }
-                  >
+                   asChild><Link href="/signup">
                     {plan.id === "trial" ? "체험 시작하기" : "선택하기"}
-                  </Button>
-                </Link>
+                  </Link></Button>
               </motion.div>
             ))}
           </motion.div>
@@ -317,12 +307,10 @@ export default function LandingPage() {
             <p className="mb-10 text-xl text-slate-300">
               1개월 무료 체험으로 시공ON의 모든 기능을 경험해보세요
             </p>
-            <Link href="/signup">
-              <Button size="lg" className="text-lg">
+            <Button size="lg" className="text-lg" asChild><Link href="/signup">
                 무료 체험 시작하기
                 <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+              </Link></Button>
           </motion.div>
         </div>
       </section>
@@ -342,10 +330,10 @@ export default function LandingPage() {
               <span className="text-lg font-bold text-white">시공ON</span>
             </div>
             <div className="flex gap-6 text-sm text-slate-400">
-              <Link href="#" className="hover:text-white">
+              <Link href="/terms" className="hover:text-white">
                 이용약관
               </Link>
-              <Link href="#" className="hover:text-white">
+              <Link href="/privacy" className="hover:text-white">
                 개인정보처리방침
               </Link>
             </div>

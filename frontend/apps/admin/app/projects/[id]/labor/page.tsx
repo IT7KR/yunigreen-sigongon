@@ -131,12 +131,10 @@ export default function ProjectLaborPage({
           <p>
             실제 정산은 백엔드 연동 이후 프로젝트별 계약/근무 데이터로 계산됩니다.
           </p>
-          <Link href={`/labor/payroll`}>
-            <Button size="sm" variant="secondary" className="mt-1">
+          <Button size="sm" variant="secondary" className="mt-1" asChild><Link href={`/labor/payroll`}>
               노무 정산 화면으로 이동
               <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+            </Link></Button>
         </CardContent>
       </Card>
     </div>

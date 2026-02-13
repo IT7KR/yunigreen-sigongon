@@ -103,12 +103,10 @@ export default function CompletionPhotoAlbumPage({
           <CardTitle>바로가기</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          <Link href={`/projects/${projectId}/album`}>
-            <Button>
+          <Button asChild><Link href={`/projects/${projectId}/album`}>
               앨범 목록 열기
               <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+            </Link></Button>
           <Button variant="secondary" onClick={downloadSampleWorkbook}>
             <Download className="h-4 w-4" />
             준공사진첩 샘플 다운로드

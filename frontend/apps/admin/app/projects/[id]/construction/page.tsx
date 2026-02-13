@@ -235,19 +235,15 @@ export default function ConstructionPage({
                       : "날짜 미정"}
                   </p>
                 </div>
-                <Link href={`/projects/${id}/reports/start`}>
-                  <Button size="sm" variant="secondary">
+                <Button size="sm" variant="secondary" asChild><Link href={`/projects/${id}/reports/start`}>
                     상세보기
                     <ArrowRight className="ml-1 h-4 w-4" />
-                  </Button>
-                </Link>
+                  </Link></Button>
               </div>
             ) : (
               <div className="py-8 text-center">
                 <p className="mb-4 text-slate-500">아직 착공계가 없습니다.</p>
-                <Link href={`/projects/${id}/reports/start`}>
-                  <Button>착공계 작성</Button>
-                </Link>
+                <Button asChild><Link href={`/projects/${id}/reports/start`}>착공계 작성</Link></Button>
               </div>
             )}
           </CardContent>
@@ -271,12 +267,10 @@ export default function ConstructionPage({
                   작업 진행 상황 및 현장 기록
                 </p>
               </div>
-              <Link href={`/projects/${id}/construction/daily-reports`}>
-                <Button size="sm" variant="secondary">
+              <Button size="sm" variant="secondary" asChild><Link href={`/projects/${id}/construction/daily-reports`}>
                   목록보기
                   <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-              </Link>
+                </Link></Button>
             </div>
           </CardContent>
         </Card>

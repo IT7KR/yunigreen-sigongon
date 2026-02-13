@@ -132,9 +132,7 @@ export default function NewVisitPage({
             웹에서 방문 기록과 사진을 바로 등록할 수 있어요.
           </p>
         </div>
-        <Link href={`/projects/${projectId}/visits`}>
-          <Button variant="secondary">목록으로</Button>
-        </Link>
+        <Button variant="secondary" asChild><Link href={`/projects/${projectId}/visits`}>목록으로</Link></Button>
       </div>
 
       {errorMessage && (
@@ -269,9 +267,7 @@ export default function NewVisitPage({
       )}
 
       <div className="flex justify-end gap-2">
-        <Link href={`/projects/${projectId}/visits`}>
-          <Button variant="secondary">취소</Button>
-        </Link>
+        <Button variant="secondary" asChild><Link href={`/projects/${projectId}/visits`}>취소</Link></Button>
         <Button onClick={handleSubmit} disabled={isSubmitting}>
           {isSubmitting ? (
             <>

@@ -193,11 +193,9 @@ export default function EstimatesPage({
                           : "-"}
                       </td>
                       <td className="py-4">
-                        <Link href={`/estimates/${estimate.id}`}>
-                          <Button size="sm" variant="secondary">
+                        <Button size="sm" variant="secondary" asChild><Link href={`/estimates/${estimate.id}`}>
                             상세보기
-                          </Button>
-                        </Link>
+                          </Link></Button>
                       </td>
                     </tr>
                   ))}

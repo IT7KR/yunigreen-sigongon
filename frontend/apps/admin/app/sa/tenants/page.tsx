@@ -223,11 +223,9 @@ export default function TenantsPage() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Link href={`/sa/tenants/${tenant.id}`}>
-                                <Button size="sm" variant="ghost">
+                              <Button size="sm" variant="ghost" asChild><Link href={`/sa/tenants/${tenant.id}`}>
                                   <Eye className="h-3.5 w-3.5" />상세보기
-                                </Button>
-                              </Link>
+                                </Link></Button>
                             </TableCell>
                           </TableRow>
                         );

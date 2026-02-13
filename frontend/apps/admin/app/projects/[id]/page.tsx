@@ -117,9 +117,7 @@ export default function ProjectDetailPage({
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <p className="text-red-500">{error || "프로젝트를 찾을 수 없어요"}</p>
-        <Link href="/projects">
-          <Button>목록으로 돌아가기</Button>
-        </Link>
+        <Button asChild><Link href="/projects">목록으로 돌아가기</Link></Button>
       </div>
     );
   }

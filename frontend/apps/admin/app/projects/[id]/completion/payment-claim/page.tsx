@@ -142,18 +142,14 @@ export default function PaymentClaimPage({
           <CardTitle>정산 액션</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 md:grid-cols-2">
-          <Link href={`/projects/${projectId}/reports/completion`}>
-            <Button className="w-full justify-between">
+          <Button className="w-full justify-between" asChild><Link href={`/projects/${projectId}/reports/completion`}>
               준공계 확인
               <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-          <Link href={`/projects/${projectId}/tax-invoice`}>
-            <Button variant="secondary" className="w-full justify-between">
+            </Link></Button>
+          <Button variant="secondary" className="w-full justify-between" asChild><Link href={`/projects/${projectId}/tax-invoice`}>
               세금계산서 관리
               <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+            </Link></Button>
           <Button
             variant="secondary"
             className="w-full justify-between"

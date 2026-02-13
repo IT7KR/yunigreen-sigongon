@@ -87,12 +87,10 @@ export default function SALaborPage() {
             <p className="mt-1 text-slate-500">전체 시스템의 일용직 근로자를 관리합니다</p>
           </div>
           <div className="flex gap-2">
-            <Link href="/sa/labor/settings">
-              <Button variant="secondary">
+            <Button variant="secondary" asChild><Link href="/sa/labor/settings">
                 <Settings className="mr-2 h-4 w-4" />
                 보험요율 설정
-              </Button>
-            </Link>
+              </Link></Button>
             <Button variant="secondary" onClick={() => router.push("/labor/payroll")}>
               <Download className="mr-2 h-4 w-4" />
               신고 엑셀 다운로드

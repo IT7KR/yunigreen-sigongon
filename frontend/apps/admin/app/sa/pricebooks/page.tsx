@@ -118,12 +118,10 @@ export default function SAPricebooksPage() {
               전체 시스템의 적산 정보를 관리합니다
             </p>
           </div>
-          <Link href="/sa/pricebooks/upload">
-            <Button>
+          <Button asChild><Link href="/sa/pricebooks/upload">
               <Upload className="h-4 w-4" />
               새 버전 업로드
-            </Button>
-          </Link>
+            </Link></Button>
         </div>
 
         {isLoading ? (

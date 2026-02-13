@@ -137,9 +137,7 @@ export default function CompletionReportPage({
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <p className="text-red-500">{error}</p>
-        <Link href={`/projects/${id}/reports`}>
-          <Button>뒤로 가기</Button>
-        </Link>
+        <Button asChild><Link href={`/projects/${id}/reports`}>뒤로 가기</Link></Button>
       </div>
     );
   }
@@ -149,12 +147,10 @@ export default function CompletionReportPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/projects/${id}/reports`}>
-          <Button variant="secondary" size="sm">
+        <Button variant="secondary" size="sm" asChild><Link href={`/projects/${id}/reports`}>
             <ArrowLeft className="h-4 w-4" />
             뒤로
-          </Button>
-        </Link>
+          </Link></Button>
         <h1 className="text-2xl font-bold text-slate-900">
           {reportId ? "준공계 보기" : "준공계 작성"}
         </h1>

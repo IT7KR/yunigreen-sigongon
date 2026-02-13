@@ -103,12 +103,10 @@ export default function DailyReportsPage({
             <FileText className="h-5 w-5 text-slate-400" />
             작업일지 목록
           </CardTitle>
-          <Link href={`/projects/${projectId}/construction/daily-reports/new`}>
-            <Button>
+          <Button asChild><Link href={`/projects/${projectId}/construction/daily-reports/new`}>
               <Plus className="h-4 w-4" />
               새 작업일지
-            </Button>
-          </Link>
+            </Link></Button>
         </CardHeader>
         <CardContent>
           {reports.length === 0 ? (
@@ -120,14 +118,12 @@ export default function DailyReportsPage({
               <p className="mt-1 text-sm text-slate-400">
                 매일의 작업 내용을 기록해 보세요.
               </p>
-              <Link
+              <Button className="mt-6" asChild><Link
                 href={`/projects/${projectId}/construction/daily-reports/new`}
               >
-                <Button className="mt-6">
                   <Plus className="h-4 w-4" />
                   작업일지 작성하기
-                </Button>
-              </Link>
+                </Link></Button>
             </div>
           ) : (
             <div className="overflow-x-auto">

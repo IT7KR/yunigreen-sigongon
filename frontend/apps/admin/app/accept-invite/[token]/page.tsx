@@ -126,11 +126,9 @@ export default function AcceptInvitePage() {
             <h1 className="text-xl font-bold text-slate-900">초대 링크 오류</h1>
             <p className="mt-2 text-slate-500">{errorMessage}</p>
             <div className="mt-6">
-              <Link href="/login">
-                <Button variant="secondary" className="w-full">
+              <Button variant="secondary" className="w-full" asChild><Link href="/login">
                   로그인 페이지로 이동
-                </Button>
-              </Link>
+                </Link></Button>
             </div>
           </CardContent>
         </Card>

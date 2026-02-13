@@ -128,12 +128,10 @@ export default function NewDailyReportPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/projects/${id}/construction/daily-reports`}>
-          <Button variant="secondary" size="sm">
+        <Button variant="secondary" size="sm" asChild><Link href={`/projects/${id}/construction/daily-reports`}>
             <ArrowLeft className="h-4 w-4" />
             목록으로
-          </Button>
-        </Link>
+          </Link></Button>
         <h1 className="text-2xl font-bold text-slate-900">작업일지 작성</h1>
       </div>
 
@@ -271,11 +269,9 @@ export default function NewDailyReportPage({
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <Link href={`/projects/${id}/construction/daily-reports`}>
-                <Button type="button" variant="secondary">
+              <Button type="button" variant="secondary" asChild><Link href={`/projects/${id}/construction/daily-reports`}>
                   취소
-                </Button>
-              </Link>
+                </Link></Button>
               <Button type="submit" disabled={submitting}>
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

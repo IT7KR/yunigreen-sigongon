@@ -369,11 +369,9 @@ export default function SignupPage() {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Link href="/login" className="flex-1">
-              <Button variant="secondary" fullWidth size="lg">
+            <Button variant="secondary" fullWidth size="lg" asChild><Link href="/login" className="flex-1">
                 취소
-              </Button>
-            </Link>
+              </Link></Button>
             <Button onClick={handleNext} fullWidth size="lg" className="flex-1">
               다음
             </Button>

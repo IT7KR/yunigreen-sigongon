@@ -65,9 +65,7 @@ export default function ProjectVisibilityPage() {
         </div>
 
         <div className="flex justify-end border-t border-slate-200 p-6">
-          <Link href="/projects">
-            <Button size="lg">저장</Button>
-          </Link>
+          <Button size="lg" asChild><Link href="/projects">저장</Link></Button>
         </div>
       </Card>
     </AdminLayout>

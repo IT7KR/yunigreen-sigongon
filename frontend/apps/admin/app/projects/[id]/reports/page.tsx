@@ -86,12 +86,10 @@ export default function ConstructionReportsPage({
             착공계
           </CardTitle>
           {startReports.length === 0 && (
-            <Link href={`/projects/${id}/reports/start`}>
-              <Button size="sm">
+            <Button size="sm" asChild><Link href={`/projects/${id}/reports/start`}>
                 <Plus className="h-4 w-4" />
                 착공계 작성
-              </Button>
-            </Link>
+              </Link></Button>
           )}
         </CardHeader>
         <CardContent>
@@ -140,12 +138,10 @@ export default function ConstructionReportsPage({
             준공계
           </CardTitle>
           {hasApprovedStartReport && completionReports.length === 0 && (
-            <Link href={`/projects/${id}/reports/completion`}>
-              <Button size="sm">
+            <Button size="sm" asChild><Link href={`/projects/${id}/reports/completion`}>
                 <Plus className="h-4 w-4" />
                 준공계 작성
-              </Button>
-            </Link>
+              </Link></Button>
           )}
         </CardHeader>
         <CardContent>

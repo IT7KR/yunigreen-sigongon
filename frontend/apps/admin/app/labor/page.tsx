@@ -169,18 +169,14 @@ export default function LaborPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-900">노무 관리</h1>
           <div className="flex gap-2">
-            <Link href="/labor/contracts">
-              <Button variant="secondary">
+            <Button variant="secondary" asChild><Link href="/labor/contracts">
                 <Mail className="mr-2 h-4 w-4" />
                 근로계약 관리
-              </Button>
-            </Link>
-            <Link href="/labor/payroll">
-              <Button variant="secondary">
+              </Link></Button>
+            <Button variant="secondary" asChild><Link href="/labor/payroll">
                 <Download className="mr-2 h-4 w-4" />
                 신고 엑셀 다운로드
-              </Button>
-            </Link>
+              </Link></Button>
             <Button onClick={() => setShowInviteModal(true)}>
               <MessageSquare className="mr-2 h-4 w-4" />
               근로자 초대
@@ -375,11 +371,9 @@ export default function LaborPage() {
                         </td>
                         <td className="py-4">
                           <div className="flex gap-2">
-                            <Link href={`/labor/${worker.id}`}>
-                              <Button size="sm" variant="secondary">
+                            <Button size="sm" variant="secondary" asChild><Link href={`/labor/${worker.id}`}>
                                 <Eye className="h-3.5 w-3.5" />상세보기
-                              </Button>
-                            </Link>
+                              </Link></Button>
                             <Button size="sm" variant="secondary">
                               <Mail className="h-3 w-3" />
                             </Button>

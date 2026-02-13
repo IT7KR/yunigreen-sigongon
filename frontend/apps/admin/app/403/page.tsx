@@ -23,9 +23,7 @@ export default function ForbiddenPage() {
           최고관리자 권한이 필요한 페이지입니다.
         </p>
         <div className="mt-8">
-          <Link href="/dashboard">
-            <Button>대시보드로 돌아가기</Button>
-          </Link>
+          <Button asChild><Link href="/dashboard">대시보드로 돌아가기</Link></Button>
         </div>
       </div>
     </div>

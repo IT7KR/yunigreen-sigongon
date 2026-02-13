@@ -99,12 +99,10 @@ export default function VisitDetailPage({ params }: VisitDetailPageProps) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <p className="text-sm text-slate-500">방문 기록을 찾을 수 없습니다.</p>
-        <Link href={`/projects/${projectId}/visits`}>
-          <Button variant="secondary">
+        <Button variant="secondary" asChild><Link href={`/projects/${projectId}/visits`}>
             <ArrowLeft className="h-4 w-4" />
             방문 목록으로
-          </Button>
-        </Link>
+          </Link></Button>
       </div>
     );
   }

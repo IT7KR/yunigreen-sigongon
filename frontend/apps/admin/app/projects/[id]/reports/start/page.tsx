@@ -147,12 +147,10 @@ export default function StartReportPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/projects/${id}/reports`}>
-          <Button variant="secondary" size="sm">
+        <Button variant="secondary" size="sm" asChild><Link href={`/projects/${id}/reports`}>
             <ArrowLeft className="h-4 w-4" />
             뒤로
-          </Button>
-        </Link>
+          </Link></Button>
         <h1 className="text-2xl font-bold text-slate-900">
           {reportId ? "착공계 보기" : "착공계 작성"}
         </h1>
