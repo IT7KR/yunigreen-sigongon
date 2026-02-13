@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type DragEvent } from "react";
+import { useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import { Upload, X, FileIcon, AlertCircle } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "./Button";
@@ -120,6 +120,14 @@ export function FileUpload({
     }
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      inputRef.current?.click();
+    }
+  };
+
   const handleRemoveFile = (index: number) => {
     const newFiles = selectedFiles.filter((_, i) => i !== index);
     setSelectedFiles(newFiles);
@@ -138,11 +146,15 @@ export function FileUpload({
     <div className={cn("space-y-4", className)}>
       {/* Drop Zone */}
       <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-disabled={disabled}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
         className={cn(
           "cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors",
           isDragging && "border-brand-point-500 bg-brand-point-50",

@@ -104,8 +104,9 @@ function WorkerConsentContent() {
         <Card>
           <CardContent className="p-6">
             {/* All Agree */}
-            <div
-              className="mb-4 flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4"
+            <PrimitiveButton
+              type="button"
+              className="mb-4 flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left hover:border-slate-300"
               onClick={handleAgreeAll}
             >
               <div
@@ -116,7 +117,7 @@ function WorkerConsentContent() {
                 {allAgreed && <CheckCircle2 className="h-5 w-5 text-white" />}
               </div>
               <span className="font-medium text-slate-900">전체 동의</span>
-            </div>
+            </PrimitiveButton>
 
             {/* Individual Agreements */}
             <div className="space-y-3">
@@ -186,7 +187,11 @@ function ConsentItem({ title, checked, expanded, onCheck, onToggle, children }: 
   return (
     <div className="rounded-lg border border-slate-200">
       <div className="flex items-center justify-between p-3">
-        <div className="flex items-center gap-3" onClick={onCheck}>
+        <PrimitiveButton
+          type="button"
+          onClick={onCheck}
+          className="flex items-center gap-3 text-left"
+        >
           <div
             className={`flex h-5 w-5 cursor-pointer items-center justify-center rounded ${
               checked ? "bg-brand-point-600" : "border-2 border-slate-300"
@@ -195,7 +200,7 @@ function ConsentItem({ title, checked, expanded, onCheck, onToggle, children }: 
             {checked && <CheckCircle2 className="h-4 w-4 text-white" />}
           </div>
           <span className="text-sm text-slate-700">{title}</span>
-        </div>
+        </PrimitiveButton>
         <PrimitiveButton
           type="button"
           onClick={onToggle}

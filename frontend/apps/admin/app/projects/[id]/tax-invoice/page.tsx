@@ -154,7 +154,15 @@ export default function TaxInvoicePage({
                   invoices.map((invoice) => (
                     <tr
                       key={invoice.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleRowClick(invoice.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleRowClick(invoice.id);
+                        }
+                      }}
                       className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
                     >
                       <td className="py-4 text-slate-900">{invoice.issue_date}</td>

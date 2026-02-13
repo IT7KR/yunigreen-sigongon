@@ -22,6 +22,7 @@ import {
   CardHeader,
   CardTitle,
   Button,
+  PrimitiveButton,
   Badge,
   toast,
 } from "@sigongon/ui";
@@ -291,9 +292,10 @@ export default function DiagnosisDetailPage({
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {diagnosis.suggested_materials.map((material) => (
-                    <div
+                    <PrimitiveButton
+                      type="button"
                       key={material.id}
-                      className={`cursor-pointer rounded-lg border p-4 transition-colors ${
+                      className={`w-full cursor-pointer rounded-lg border p-4 text-left transition-colors ${
                         selectedMaterials.has(material.id)
                           ? "border-brand-point-500 bg-brand-point-50"
                           : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
@@ -357,7 +359,7 @@ export default function DiagnosisDetailPage({
                           주세요.
                         </div>
                       )}
-                    </div>
+                    </PrimitiveButton>
                   ))}
                 </CardContent>
               </Card>

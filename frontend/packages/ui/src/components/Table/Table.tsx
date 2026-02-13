@@ -47,7 +47,7 @@ interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {
 }
 
 const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
-  ({ className, clickable, ...props }, ref) => (
+  ({ className, clickable, onKeyDown, ...props }, ref) => (
     <tr
       ref={ref}
       className={cn(
@@ -55,6 +55,18 @@ const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
         clickable && "cursor-pointer",
         className
       )}
+      role={clickable ? "button" : props.role}
+      tabIndex={clickable ? 0 : props.tabIndex}
+      onKeyDown={(event) => {
+        onKeyDown?.(event)
+        if (!clickable || event.defaultPrevented) {
+          return
+        }
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          event.currentTarget.click()
+        }
+      }}
       {...props}
     />
   )
