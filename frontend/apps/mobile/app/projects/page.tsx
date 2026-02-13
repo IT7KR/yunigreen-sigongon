@@ -93,9 +93,7 @@ export default function ProjectsPage() {
               <p className="mt-1 text-sm text-slate-500">
                 새 프로젝트를 만들어보세요
               </p>
-              <Link href="/projects/new">
-                <Button className="mt-4">새 프로젝트 만들기</Button>
-              </Link>
+              <Button className="mt-4" asChild><Link href="/projects/new">새 프로젝트 만들기</Link></Button>
             </CardContent>
           </Card>
         )}

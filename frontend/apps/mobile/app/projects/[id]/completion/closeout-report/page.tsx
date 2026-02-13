@@ -80,18 +80,14 @@ export default function MobileCloseoutReportPage({
               <CheckCircle2 className="h-8 w-8 text-emerald-500" />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Link href={`/projects/${projectId}/reports`}>
-                <Button variant="secondary" fullWidth>
+              <Button variant="secondary" fullWidth asChild><Link href={`/projects/${projectId}/reports`}>
                   <FileText className="h-4 w-4" />
                   준공계 확인
-                </Button>
-              </Link>
-              <Link href={`/projects/${projectId}/album`}>
-                <Button variant="secondary" fullWidth>
+                </Link></Button>
+              <Button variant="secondary" fullWidth asChild><Link href={`/projects/${projectId}/album`}>
                   <Image className="h-4 w-4" />
                   사진첩 확인
-                </Button>
-              </Link>
+                </Link></Button>
             </div>
           </CardContent>
         </Card>

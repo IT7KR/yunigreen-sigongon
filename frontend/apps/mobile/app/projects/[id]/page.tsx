@@ -95,9 +95,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
       <MobileLayout title="프로젝트" showBack>
         <div className="flex h-64 flex-col items-center justify-center gap-4 p-4">
           <p className="text-slate-500">프로젝트를 찾을 수 없어요</p>
-          <Link href="/projects">
-            <Button variant="secondary">목록으로 돌아가기</Button>
-          </Link>
+          <Button variant="secondary" asChild><Link href="/projects">목록으로 돌아가기</Link></Button>
         </div>
       </MobileLayout>
     );
@@ -156,27 +154,23 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
 
         {/* 빠른 액션 */}
         <div className="grid grid-cols-3 gap-2">
-          <Link href={`/projects/${id}/visits/new`}>
-            <Button
+          <Button
               variant="secondary"
               fullWidth
               className="flex-col gap-1 py-3"
-            >
+             asChild><Link href={`/projects/${id}/visits/new`}>
               <Camera className="h-5 w-5" />
               <span className="text-xs">현장방문</span>
-            </Button>
-          </Link>
+            </Link></Button>
 
-          <Link href={`/projects/${id}/photos`}>
-            <Button
+          <Button
               variant="secondary"
               fullWidth
               className="flex-col gap-1 py-3"
-            >
+             asChild><Link href={`/projects/${id}/photos`}>
               <Camera className="h-5 w-5" />
               <span className="text-xs">사진촬영</span>
-            </Button>
-          </Link>
+            </Link></Button>
 
           <Button
             variant="secondary"
@@ -202,49 +196,41 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
             <span className="text-xs">견적서</span>
           </Button>
 
-          <Link href={`/projects/${id}/construction/start-report`}>
-            <Button
+          <Button
               variant="secondary"
               fullWidth
               className="flex-col gap-1 py-3"
-            >
+             asChild><Link href={`/projects/${id}/construction/start-report`}>
               <FileCheck className="h-5 w-5" />
               <span className="text-xs">착공계</span>
-            </Button>
-          </Link>
+            </Link></Button>
 
-          <Link href={`/projects/${id}/construction/daily-reports`}>
-            <Button
+          <Button
               variant="secondary"
               fullWidth
               className="flex-col gap-1 py-3"
-            >
+             asChild><Link href={`/projects/${id}/construction/daily-reports`}>
               <ClipboardList className="h-5 w-5" />
               <span className="text-xs">작업일지</span>
-            </Button>
-          </Link>
+            </Link></Button>
 
-          <Link href={`/projects/${id}/completion/closeout-report`}>
-            <Button
+          <Button
               variant="secondary"
               fullWidth
               className="flex-col gap-1 py-3"
-            >
+             asChild><Link href={`/projects/${id}/completion/closeout-report`}>
               <CheckCircle2 className="h-5 w-5" />
               <span className="text-xs">준공/정산</span>
-            </Button>
-          </Link>
+            </Link></Button>
 
-          <Link href={`/projects/${id}/completion/photo-album`}>
-            <Button
+          <Button
               variant="secondary"
               fullWidth
               className="flex-col gap-1 py-3"
-            >
+             asChild><Link href={`/projects/${id}/completion/photo-album`}>
               <Image className="h-5 w-5" />
               <span className="text-xs">준공사진첩</span>
-            </Button>
-          </Link>
+            </Link></Button>
         </div>
 
         {/* 현장방문 기록 */}
@@ -281,11 +267,9 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                 <p className="mt-2 text-sm text-slate-500">
                   아직 현장방문 기록이 없어요
                 </p>
-                <Link href={`/projects/${id}/visits/new`}>
-                  <Button variant="ghost" size="sm" className="mt-2">
+                <Button variant="ghost" size="sm" className="mt-2" asChild><Link href={`/projects/${id}/visits/new`}>
                     첫 방문 기록하기
-                  </Button>
-                </Link>
+                  </Link></Button>
               </div>
             )}
           </CardContent>

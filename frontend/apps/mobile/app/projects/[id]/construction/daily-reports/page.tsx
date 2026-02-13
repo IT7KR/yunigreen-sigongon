@@ -65,12 +65,10 @@ export default function DailyReportsPage({
       title="작업일지"
       showBack
       rightAction={
-        <Link href={`/projects/${projectId}/construction/daily-reports/new`}>
-          <Button size="sm" variant="secondary">
+        <Button size="sm" variant="secondary" asChild><Link href={`/projects/${projectId}/construction/daily-reports/new`}>
             <Plus className="h-4 w-4" />
             작성
-          </Button>
-        </Link>
+          </Link></Button>
       }
     >
       <div className="space-y-3 p-4">
@@ -85,12 +83,10 @@ export default function DailyReportsPage({
               <p className="mt-2 text-sm text-slate-500">
                 아직 작업일지가 없습니다.
               </p>
-              <Link href={`/projects/${projectId}/construction/daily-reports/new`}>
-                <Button className="mt-4">
+              <Button className="mt-4" asChild><Link href={`/projects/${projectId}/construction/daily-reports/new`}>
                   <Plus className="h-4 w-4" />
                   첫 작업일지 작성
-                </Button>
-              </Link>
+                </Link></Button>
             </CardContent>
           </Card>
         ) : (

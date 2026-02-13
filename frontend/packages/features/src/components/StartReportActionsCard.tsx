@@ -43,20 +43,16 @@ export function StartReportActionsCard({
         <p className="text-sm text-slate-600">{description}</p>
         <div className="flex flex-wrap gap-2">
           {createReportPath ? (
-            <Link href={createReportPath.replace("{projectId}", projectId)}>
-              <Button>
+            <Button asChild><Link href={createReportPath.replace("{projectId}", projectId)}>
                 <FileCheck2 className="h-4 w-4" />
                 {createLabel}
-              </Button>
-            </Link>
+              </Link></Button>
           ) : null}
 
-          <Link href={reportListPath.replace("{projectId}", projectId)}>
-            <Button variant="secondary">
+          <Button variant="secondary" asChild><Link href={reportListPath.replace("{projectId}", projectId)}>
               {listLabel}
               <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+            </Link></Button>
 
           <Button
             variant="secondary"

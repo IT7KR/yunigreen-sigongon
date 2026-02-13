@@ -88,12 +88,10 @@ export default function SiteVisitDetailPage({ params }: SiteVisitDetailPageProps
       <MobileLayout title="현장방문 상세" showBack>
         <div className="flex h-64 flex-col items-center justify-center gap-4 p-4">
           <p className="text-sm text-slate-500">방문 기록을 찾을 수 없어요.</p>
-          <Link href={`/projects/${projectId}/visits/new`}>
-            <Button>
+          <Button asChild><Link href={`/projects/${projectId}/visits/new`}>
               <Plus className="h-4 w-4" />
               현장방문 기록 추가
-            </Button>
-          </Link>
+            </Link></Button>
         </div>
       </MobileLayout>
     );
@@ -199,13 +197,11 @@ export default function SiteVisitDetailPage({ params }: SiteVisitDetailPageProps
           </CardContent>
         </Card>
 
-        <Link href={`/projects/${projectId}/visits/new`}>
-          <Button variant="secondary" fullWidth>
+        <Button variant="secondary" fullWidth asChild><Link href={`/projects/${projectId}/visits/new`}>
             <Plus className="h-4 w-4" />
             추가 방문/사진 등록
             <ChevronRight className="h-4 w-4" />
-          </Button>
-        </Link>
+          </Link></Button>
       </div>
     </MobileLayout>
   );

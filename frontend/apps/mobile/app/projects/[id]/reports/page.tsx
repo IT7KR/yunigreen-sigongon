@@ -81,18 +81,14 @@ export default function ReportsPage({ params }: ReportsPageProps) {
       <div className="space-y-6 p-4">
         <Card>
           <CardContent className="grid grid-cols-2 gap-2 p-4">
-            <Link href={`/projects/${id}/completion/closeout-report`}>
-              <Button variant="secondary" fullWidth>
+            <Button variant="secondary" fullWidth asChild><Link href={`/projects/${id}/completion/closeout-report`}>
                 <CheckCircle2 className="h-4 w-4" />
                 준공/정산
-              </Button>
-            </Link>
-            <Link href={`/projects/${id}/completion/photo-album`}>
-              <Button variant="secondary" fullWidth>
+              </Link></Button>
+            <Button variant="secondary" fullWidth asChild><Link href={`/projects/${id}/completion/photo-album`}>
                 <Image className="h-4 w-4" />
                 준공사진첩
-              </Button>
-            </Link>
+              </Link></Button>
           </CardContent>
         </Card>
 

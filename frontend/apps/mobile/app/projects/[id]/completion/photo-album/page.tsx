@@ -79,12 +79,10 @@ export default function MobileCompletionPhotoAlbumPage({
               <Image className="h-8 w-8 text-brand-point-600" />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Link href={`/projects/${projectId}/album`}>
-                <Button variant="secondary" fullWidth>
+              <Button variant="secondary" fullWidth asChild><Link href={`/projects/${projectId}/album`}>
                   <LayoutGrid className="h-4 w-4" />
                   앨범 목록
-                </Button>
-              </Link>
+                </Link></Button>
               <Button variant="secondary" fullWidth onClick={downloadSamplePdf}>
                 <Download className="h-4 w-4" />
                 샘플 PDF
