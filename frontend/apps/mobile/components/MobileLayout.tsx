@@ -2,7 +2,7 @@
 
 import { type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, FolderKanban, Plus, User } from "lucide-react";
 import { cn } from "@sigongon/ui";
 import { OfflineBanner } from "./camera/OfflineBanner";
@@ -28,6 +28,15 @@ export function MobileLayout({
   rightAction,
 }: MobileLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/");
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -36,8 +45,9 @@ export function MobileLayout({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {showBack && (
-                <Link
-                  href=".."
+                <button
+                  type="button"
+                  onClick={handleBack}
                   className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
                   aria-label="뒤로 가기"
                 >
@@ -54,7 +64,7 @@ export function MobileLayout({
                       d="M15 19l-7-7 7-7"
                     />
                   </svg>
-                </Link>
+                </button>
               )}
               <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
             </div>

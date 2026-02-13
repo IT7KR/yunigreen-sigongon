@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   User,
   Mail,
@@ -19,6 +20,7 @@ import { Card, CardContent, Button } from "@sigongon/ui";
 import { useAuth } from "@/lib/auth";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { user, logout, isLoading } = useAuth();
 
   if (isLoading) {
@@ -36,7 +38,7 @@ export default function ProfilePage() {
       <MobileLayout title="내 정보">
         <div className="flex h-64 flex-col items-center justify-center gap-4 p-4">
           <p className="text-slate-500">로그인이 필요해요</p>
-          <Button onClick={() => (window.location.href = "/login")}>
+          <Button onClick={() => router.push("/login")}>
             <LogIn className="h-4 w-4" />로그인
           </Button>
         </div>

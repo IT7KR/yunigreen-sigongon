@@ -7,6 +7,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import { toast } from "@sigongon/ui";
+import { useRouter } from "next/navigation";
 
 type Project = {
   id: string;
@@ -28,6 +29,7 @@ type SelectedWorker = {
 };
 
 export default function NewLaborContractPage() {
+  const router = useRouter();
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [selectedWorkers, setSelectedWorkers] = useState<SelectedWorker[]>([]);
   const [workDates, setWorkDates] = useState<Date[]>([]);
@@ -112,7 +114,7 @@ export default function NewLaborContractPage() {
           : "계약서가 발송되었습니다."
       );
       // Redirect to contracts list
-      window.location.href = "/labor/contracts";
+      router.push("/labor/contracts");
     } catch (error) {
       toast.error("저장 중 오류가 발생했습니다.");
     } finally {

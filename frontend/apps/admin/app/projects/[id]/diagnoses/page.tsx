@@ -89,7 +89,7 @@ export default function DiagnosesPage({
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <p className="text-red-500">진단 목록을 불러오는데 실패했어요</p>
-        <Button onClick={() => window.location.reload()}>다시 시도</Button>
+        <Button onClick={() => router.refresh()}>다시 시도</Button>
       </div>
     );
   }
