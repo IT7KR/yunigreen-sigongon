@@ -207,7 +207,8 @@ async def get_current_active_admin(
     Raises:
         HTTPException: 관리자가 아닐 때
     """
-    if current_user.role != "admin":
+    role_value = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role_value not in {"super_admin", "company_admin"}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="이 기능은 관리자만 쓸 수 있어요",

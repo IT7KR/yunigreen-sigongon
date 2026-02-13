@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     app_name: str = "SigongOn API"
     app_version: str = "0.1.0"
     debug: bool = False
+    enable_docs: bool = True
     
     # 데이터베이스 (비동기)
     database_url: str = "postgresql+asyncpg://postgres:password@db:5432/sigongon"

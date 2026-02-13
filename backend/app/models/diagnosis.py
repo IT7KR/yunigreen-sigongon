@@ -45,6 +45,7 @@ class AIDiagnosis(AIDiagnosisBase, table=True):
     
     # Output
     leak_opinion_text: str  # 누수소견서 본문
+    field_opinion_text: Optional[str] = Field(default=None)  # 현장 의견
     confidence_score: Optional[Decimal] = Field(default=None, max_digits=3, decimal_places=2)
     
     # Raw response for debugging/audit (stored as JSON)
@@ -74,6 +75,7 @@ class AIDiagnosisRead(AIDiagnosisBase):
     id: int
     site_visit_id: int
     leak_opinion_text: str
+    field_opinion_text: Optional[str]
     confidence_score: Optional[Decimal]
     status: DiagnosisStatus
     created_at: datetime

@@ -1,6 +1,6 @@
 import io
 from typing import Annotated, Optional
-from datetime import date
+from datetime import date, datetime
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, status, Body
@@ -15,6 +15,7 @@ from app.core.exceptions import NotFoundException
 from app.schemas.response import APIResponse
 from app.models.user import User
 from app.models.contract import Contract, ContractUpdate, ContractStatus
+from app.models.operations import ModusignRequest
 from app.models.project import Project
 from app.services.contract import ContractService
 from app.services.pdf_generator import generate_contract_pdf
@@ -28,6 +29,12 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 class SignRequest(BaseModel):
     signature_data: str
     signer_type: str
+
+
+class ModusignRequestPayload(BaseModel):
+    signer_name: str
+    signer_email: str
+    signer_phone: Optional[str] = None
 
 
 @router.get("/{contract_id}", response_model=APIResponse)
@@ -189,6 +196,128 @@ async def export_contract(
         media_type="application/pdf",
         headers={
             "Content-Disposition": f"attachment; filename=\"{filename}\"; filename*=UTF-8''{quote(filename_utf8)}"
+        }
+    )
+
+
+@router.get("/{contract_id}/pdf")
+async def export_contract_pdf_alias(
+    contract_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """프론트 호환용 PDF 별칭 경로."""
+    return await export_contract(contract_id=contract_id, db=db, current_user=current_user)
+
+
+@router.post("/{contract_id}/modusign/request", response_model=APIResponse)
+async def request_modusign(
+    contract_id: int,
+    payload: ModusignRequestPayload,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    contract = (await db.execute(select(Contract).where(Contract.id == contract_id))).scalar_one_or_none()
+    if not contract:
+        raise NotFoundException("contract", contract_id)
+
+    req = (await db.execute(select(ModusignRequest).where(ModusignRequest.contract_id == contract_id))).scalar_one_or_none()
+    now = datetime.utcnow()
+    document_url = f"/api/v1/contracts/{contract_id}/pdf"
+    if not req:
+        req = ModusignRequest(
+            contract_id=contract_id,
+            status="sent",
+            signer_name=payload.signer_name,
+            signer_email=payload.signer_email,
+            signer_phone=payload.signer_phone,
+            sent_at=now,
+            document_url=document_url,
+        )
+        db.add(req)
+    else:
+        req.status = "sent"
+        req.signer_name = payload.signer_name
+        req.signer_email = payload.signer_email
+        req.signer_phone = payload.signer_phone
+        req.sent_at = now
+        req.document_url = document_url
+
+    return APIResponse.ok(
+        {
+            "id": str(req.id),
+            "contract_id": str(contract_id),
+            "status": req.status,
+            "signer_name": req.signer_name,
+            "signer_email": req.signer_email,
+            "signer_phone": req.signer_phone,
+            "sent_at": req.sent_at.isoformat(),
+            "document_url": req.document_url,
+        }
+    )
+
+
+@router.get("/{contract_id}/modusign/status", response_model=APIResponse)
+async def get_modusign_status(
+    contract_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    req = (await db.execute(select(ModusignRequest).where(ModusignRequest.contract_id == contract_id))).scalar_one_or_none()
+    if not req:
+        return APIResponse.ok(
+            {
+                "contract_id": str(contract_id),
+                "status": "pending",
+            }
+        )
+
+    return APIResponse.ok(
+        {
+            "id": str(req.id),
+            "contract_id": str(contract_id),
+            "status": req.status,
+            "signer_name": req.signer_name,
+            "signer_email": req.signer_email,
+            "signer_phone": req.signer_phone,
+            "sent_at": req.sent_at.isoformat(),
+            "signed_at": req.signed_at.isoformat() if req.signed_at else None,
+            "expired_at": req.expired_at.isoformat() if req.expired_at else None,
+            "document_url": req.document_url,
+        }
+    )
+
+
+@router.post("/{contract_id}/modusign/cancel", response_model=APIResponse)
+async def cancel_modusign(
+    contract_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    req = (await db.execute(select(ModusignRequest).where(ModusignRequest.contract_id == contract_id))).scalar_one_or_none()
+    if not req:
+        return APIResponse.ok(None)
+
+    req.status = "rejected"
+    req.expired_at = datetime.utcnow()
+    return APIResponse.ok(None)
+
+
+@router.get("/{contract_id}/modusign/download", response_model=APIResponse)
+async def download_modusign_document(
+    contract_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    req = (await db.execute(select(ModusignRequest).where(ModusignRequest.contract_id == contract_id))).scalar_one_or_none()
+    if not req:
+        raise NotFoundException("modusign_request", contract_id)
+
+    return APIResponse.ok(
+        {
+            "contract_id": str(contract_id),
+            "document_url": req.document_url or f"/api/v1/contracts/{contract_id}/pdf",
+            "status": req.status,
         }
     )
 

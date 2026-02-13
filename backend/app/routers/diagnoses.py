@@ -76,6 +76,10 @@ class DiagnosisDetailResponse(AIDiagnosisRead):
     suggested_materials: list[AIMaterialSuggestionRead] = []
 
 
+class FieldOpinionUpdateRequest(BaseModel):
+    field_opinion_text: str
+
+
 @router.post(
     "/site-visits/{visit_id}/diagnose",
     response_model=APIResponse[DiagnosisRequestResponse],
@@ -139,6 +143,7 @@ async def request_diagnosis(
         model_name="gemini-3.0-flash",
         status=DiagnosisStatus.PENDING,
         leak_opinion_text="",  # 분석 후 업데이트
+        field_opinion_text=None,
     )
     
     db.add(diagnosis)
@@ -210,6 +215,7 @@ async def get_diagnosis(
             model_name=diagnosis.model_name,
             model_version=diagnosis.model_version,
             leak_opinion_text=diagnosis.leak_opinion_text,
+            field_opinion_text=diagnosis.field_opinion_text,
             confidence_score=diagnosis.confidence_score,
             status=diagnosis.status,
             created_at=diagnosis.created_at,
@@ -263,6 +269,49 @@ async def list_diagnoses(
     return APIResponse.ok([
         AIDiagnosisRead.model_validate(d) for d in diagnoses
     ])
+
+
+@router.patch(
+    "/diagnoses/{diagnosis_id}/field-opinion",
+    response_model=APIResponse[dict],
+)
+async def update_diagnosis_field_opinion(
+    diagnosis_id: int,
+    payload: FieldOpinionUpdateRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    diagnosis_result = await db.execute(
+        select(AIDiagnosis).where(AIDiagnosis.id == diagnosis_id)
+    )
+    diagnosis = diagnosis_result.scalar_one_or_none()
+    if not diagnosis:
+        raise NotFoundException("diagnosis", diagnosis_id)
+
+    visit_result = await db.execute(
+        select(SiteVisit).where(SiteVisit.id == diagnosis.site_visit_id)
+    )
+    visit = visit_result.scalar_one_or_none()
+    if not visit:
+        raise NotFoundException("diagnosis", diagnosis_id)
+
+    project_result = await db.execute(
+        select(Project)
+        .where(Project.id == visit.project_id)
+        .where(Project.organization_id == current_user.organization_id)
+    )
+    if not project_result.scalar_one_or_none():
+        raise NotFoundException("diagnosis", diagnosis_id)
+
+    diagnosis.field_opinion_text = payload.field_opinion_text
+
+    return APIResponse.ok(
+        {
+            "id": str(diagnosis.id),
+            "field_opinion_text": diagnosis.field_opinion_text,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+    )
 
 
 @router.patch(

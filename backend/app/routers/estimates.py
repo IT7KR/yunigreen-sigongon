@@ -525,6 +525,21 @@ async def export_estimate(
     )
 
 
+@router.get("/estimates/{estimate_id}/pdf")
+async def export_estimate_pdf_alias(
+    estimate_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """프론트 호환용 PDF 별칭 경로."""
+    return await export_estimate(
+        estimate_id=estimate_id,
+        db=db,
+        current_user=current_user,
+        format="pdf",
+    )
+
+
 # === Helper Functions ===
 
 async def _get_editable_estimate(

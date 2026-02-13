@@ -50,12 +50,13 @@ class ConfirmPaymentRequest(BaseModel):
 class IssueBillingKeyRequest(BaseModel):
     """정기결제 빌링키 발급 요청."""
     auth_key: str  # Toss widget에서 받은 인증키
-    customer_key: str  # 조직 ID 기반으로 생성
+    customer_key: Optional[str] = None  # 조직 ID 기반으로 생성 (선택)
 
 
 class ChangePlanRequest(BaseModel):
     """플랜 변경 요청."""
-    new_plan: SubscriptionPlan
+    new_plan: Optional[SubscriptionPlan] = None
+    plan: Optional[SubscriptionPlan] = None
 
 
 class SubscriptionDetail(BaseModel):
@@ -296,7 +297,14 @@ async def change_plan(
             detail="활성 상태의 구독만 플랜을 변경할 수 있어요",
         )
 
-    if subscription.plan == plan_data.new_plan:
+    target_plan = plan_data.new_plan or plan_data.plan
+    if target_plan is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="변경할 플랜이 필요해요",
+        )
+
+    if subscription.plan == target_plan:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 해당 플랜을 사용 중이에요",
@@ -304,7 +312,7 @@ async def change_plan(
 
     old_plan = subscription.plan
     old_price = PLAN_PRICING[old_plan]
-    new_price = PLAN_PRICING[plan_data.new_plan]
+    new_price = PLAN_PRICING[target_plan]
 
     # Calculate proration
     now = datetime.utcnow()
@@ -337,7 +345,7 @@ async def change_plan(
             db.add(payment)
 
     # Update plan
-    subscription.plan = plan_data.new_plan
+    subscription.plan = target_plan
     subscription.updated_at = datetime.utcnow()
 
     await db.commit()

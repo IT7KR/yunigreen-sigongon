@@ -47,6 +47,11 @@ class UserCreateResponse(BaseModel):
     message: str
 
 
+def _is_super_admin(user: User) -> bool:
+    role = user.role.value if hasattr(user.role, "value") else str(user.role)
+    return role == "super_admin"
+
+
 @router.get("", response_model=PaginatedResponse[UserListItem])
 async def list_users(
     db: DBSession,
@@ -57,7 +62,9 @@ async def list_users(
     role: Optional[UserRole] = None,
     is_active: Optional[bool] = None,
 ):
-    query = select(User).where(User.organization_id == admin.organization_id)
+    query = select(User)
+    if not _is_super_admin(admin):
+        query = query.where(User.organization_id == admin.organization_id)
     
     if search:
         search_filter = f"%{search}%"
@@ -105,13 +112,23 @@ async def create_user(
             detail="이미 등록된 이메일이에요",
         )
     
+    base_username = user_data.email.split("@")[0]
+    username = base_username
+    suffix = 1
+    while (
+        await db.execute(select(User).where(User.username == username))
+    ).scalar_one_or_none():
+        suffix += 1
+        username = f"{base_username}{suffix}"
+
     user = User(
+        username=username,
         email=user_data.email,
         password_hash=get_password_hash(user_data.password),
         name=user_data.name,
         phone=user_data.phone,
         role=user_data.role,
-        organization_id=admin.organization_id,
+        organization_id=admin.organization_id if not _is_super_admin(admin) else None,
         is_active=True,
     )
     
@@ -136,11 +153,10 @@ async def get_user(
     db: DBSession,
     admin: AdminUser,
 ):
-    result = await db.execute(
-        select(User)
-        .where(User.id == user_id)
-        .where(User.organization_id == admin.organization_id)
-    )
+    query = select(User).where(User.id == user_id)
+    if not _is_super_admin(admin):
+        query = query.where(User.organization_id == admin.organization_id)
+    result = await db.execute(query)
     user = result.scalar_one_or_none()
     
     if not user:
@@ -156,11 +172,10 @@ async def update_user(
     db: DBSession,
     admin: AdminUser,
 ):
-    result = await db.execute(
-        select(User)
-        .where(User.id == user_id)
-        .where(User.organization_id == admin.organization_id)
-    )
+    query = select(User).where(User.id == user_id)
+    if not _is_super_admin(admin):
+        query = query.where(User.organization_id == admin.organization_id)
+    result = await db.execute(query)
     user = result.scalar_one_or_none()
     
     if not user:
@@ -183,11 +198,10 @@ async def delete_user(
     db: DBSession,
     admin: AdminUser,
 ):
-    result = await db.execute(
-        select(User)
-        .where(User.id == user_id)
-        .where(User.organization_id == admin.organization_id)
-    )
+    query = select(User).where(User.id == user_id)
+    if not _is_super_admin(admin):
+        query = query.where(User.organization_id == admin.organization_id)
+    result = await db.execute(query)
     user = result.scalar_one_or_none()
     
     if not user:
