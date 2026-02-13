@@ -1,6 +1,14 @@
 "use client";
 
-import { forwardRef, type ButtonHTMLAttributes } from "react";
+import {
+  Children,
+  cloneElement,
+  forwardRef,
+  isValidElement,
+  type ButtonHTMLAttributes,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Loader2 } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -38,6 +46,7 @@ export interface ButtonProps
     ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   loading?: boolean;
+  asChild?: boolean;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -50,15 +59,46 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       loading,
       children,
       disabled,
+      asChild = false,
       ...props
     },
     ref,
   ) => {
+    const isDisabled = disabled || loading;
+    const buttonClassName = cn(
+      buttonVariants({ variant, size, fullWidth, className }),
+      asChild && isDisabled && "pointer-events-none opacity-50",
+    );
+
+    if (asChild) {
+      const onlyChild = Children.only(children);
+      if (!isValidElement(onlyChild)) {
+        return null;
+      }
+      const child = onlyChild as ReactElement<{
+        className?: string;
+        children?: ReactNode;
+      }>;
+
+      return cloneElement(
+        child as ReactElement<any>,
+        {
+          ...props,
+          className: cn(buttonClassName, child.props.className),
+          ...(isDisabled ? { "aria-disabled": true } : {}),
+        },
+        <>
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          {child.props.children}
+        </>,
+      );
+    }
+
     return (
       <button
-        className={cn(buttonVariants({ variant, size, fullWidth, className }))}
+        className={buttonClassName}
         ref={ref}
-        disabled={disabled || loading}
+        disabled={isDisabled}
         {...props}
       >
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
