@@ -13,6 +13,7 @@ const MIME_TYPE_BY_EXTENSION: Record<string, string> = {
   ".docx":
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ".hwp": "application/x-hwp",
+  ".hwpx": "application/haansofthwpx",
   ".txt": "text/plain; charset=utf-8",
 };
 
@@ -113,4 +114,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
