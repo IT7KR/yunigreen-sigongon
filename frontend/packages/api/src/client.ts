@@ -44,6 +44,8 @@ import type {
   TaxInvoiceStatus,
   // Case / Season
   SeasonInfo,
+  SeasonCategoryInfo,
+  SeasonCategoryPurpose,
   SeasonDocumentInfo,
   SeasonDocumentStatusInfo,
   DiagnosisCase,
@@ -2393,17 +2395,63 @@ export class APIClient {
     return response.data;
   }
 
-  async getAdminDocuments(seasonId?: number) {
+  async getAdminSeasonCategories(params?: {
+    season_id?: number;
+    purpose?: SeasonCategoryPurpose;
+    is_enabled?: boolean;
+  }) {
+    const response = await this.client.get<APIResponse<SeasonCategoryInfo[]>>(
+      "/admin/season-categories",
+      { params },
+    );
+    return response.data;
+  }
+
+  async createAdminSeasonCategory(data: {
+    season_id: number;
+    name: string;
+    purpose?: SeasonCategoryPurpose;
+    is_enabled?: boolean;
+    sort_order?: number;
+  }) {
+    const response = await this.client.post<APIResponse<SeasonCategoryInfo>>(
+      "/admin/season-categories",
+      data,
+    );
+    return response.data;
+  }
+
+  async updateAdminSeasonCategory(
+    categoryId: number,
+    data: {
+      name?: string;
+      is_enabled?: boolean;
+      sort_order?: number;
+    },
+  ) {
+    const response = await this.client.patch<APIResponse<SeasonCategoryInfo>>(
+      `/admin/season-categories/${categoryId}`,
+      data,
+    );
+    return response.data;
+  }
+
+  async getAdminDocuments(params?: {
+    season_id?: number;
+    category_id?: number;
+    purpose?: SeasonCategoryPurpose;
+  }) {
     const response = await this.client.get<APIResponse<SeasonDocumentInfo[]>>(
       "/admin/documents",
-      { params: { season_id: seasonId } },
+      { params },
     );
     return response.data;
   }
 
   async createAdminDocument(data: {
     season_id: number;
-    category: string;
+    category_id?: number;
+    category?: string;
     title: string;
     file_name: string;
   }) {

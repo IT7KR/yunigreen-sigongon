@@ -16,6 +16,8 @@ export type {
   DiagnosisDetail,
   EstimateDetail,
   SeasonInfo,
+  SeasonCategoryInfo,
+  SeasonCategoryPurpose,
   SeasonDocumentInfo,
   SeasonDocumentStatusInfo,
   DiagnosisCase,
