@@ -23,13 +23,11 @@ export default function ProjectDetailLayout({
 
   const tabs = [
     { name: "개요", href: `/projects/${id}`, exact: true },
-    { name: "접근권한", href: `/projects/${id}/access` },
     { name: "현장방문", href: `/projects/${id}/visits` },
     { name: "AI 진단", href: `/projects/${id}/diagnoses` },
     { name: "견적", href: `/projects/${id}/estimates` },
     { name: "계약", href: `/projects/${id}/contracts` },
-    // { name: "서류", href: `/projects/${id}/documents` },
-    // { name: "워크플로우", href: `/projects/${id}/workflow` },
+    { name: "문서함", href: `/projects/${id}/documents` },
     { name: "시공", href: `/projects/${id}/construction` },
     { name: "자재 발주", href: `/projects/${id}/orders` },
     { name: "준공/정산", href: `/projects/${id}/completion/closeout-report` },
@@ -61,7 +59,8 @@ export default function ProjectDetailLayout({
                   <StatusBadge status={project.status} />
                   {project.category && (
                     <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                      {PROJECT_CATEGORIES.find((c) => c.id === project.category)?.label || project.category}
+                      {PROJECT_CATEGORIES.find((c) => c.id === project.category)
+                        ?.label || project.category}
                     </span>
                   )}
                 </div>
@@ -75,6 +74,11 @@ export default function ProjectDetailLayout({
                 프로젝트 상세
               </h1>
             )}
+          </div>
+          <div className="hidden items-center gap-2 md:flex">
+            <Button size="sm" variant="secondary" asChild>
+              <Link href={`/projects/${id}/access`}>접근권한</Link>
+            </Button>
           </div>
         </div>
 
