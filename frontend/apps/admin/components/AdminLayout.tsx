@@ -20,6 +20,7 @@ import {
   HardHat,
   Calculator,
   UserCheck,
+  UserPlus,
   ChevronDown,
   ChevronRight,
   Sparkles,
@@ -49,7 +50,15 @@ const navItems = [
       { href: "/labor/settings", label: "보험요율 설정", icon: Settings },
     ],
   },
-  { href: "/users", icon: Users, label: "사용자" },
+  {
+    href: "/users",
+    icon: Users,
+    label: "사용자",
+    children: [
+      { href: "/users", label: "사용자 목록", icon: Users },
+      { href: "/onboarding/invite", label: "초대 발송", icon: UserPlus },
+    ],
+  },
   { href: "/partners", icon: Users, label: "협력사" },
   { href: "/billing", icon: FileText, label: "결제/구독" },
   { href: "/settings", icon: Settings, label: "설정" },
@@ -79,9 +88,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const { logout, user } = useAuth();
 
+  const isPathActive = (target: string) =>
+    pathname === target || pathname.startsWith(`${target}/`);
+
   // Auto-expand menu if current path matches
   const autoExpandedMenu = navItems.find(
-    (item) => "children" in item && item.children && pathname.startsWith(item.href),
+    (item) =>
+      "children" in item &&
+      item.children &&
+      item.children.some((child) => isPathActive(child.href)),
   );
   const effectiveExpanded = expandedMenu ?? (autoExpandedMenu ? autoExpandedMenu.href : null);
 
@@ -142,9 +157,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
           {navItems.map((item) => {
             const hasChildren = "children" in item && item.children && item.children.length > 0;
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/" && pathname.startsWith(item.href));
+            const hasActiveChild =
+              hasChildren &&
+              item.children!.some((child) => isPathActive(child.href));
+            const isActive = hasActiveChild || isPathActive(item.href);
             const isExpanded = effectiveExpanded === item.href;
 
             if (hasChildren) {
@@ -170,7 +186,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   {isExpanded && (
                     <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-slate-200 pl-3">
                       {item.children!.map((child) => {
-                        const isChildActive = pathname === child.href;
+                        const isChildActive = isPathActive(child.href);
                         return (
                           <Link
                             key={child.href}
