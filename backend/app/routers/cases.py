@@ -29,6 +29,8 @@ from app.models.case import (
     EstimateExport,
     ExportFileType,
     Season,
+    SeasonCategory,
+    SeasonCategoryPurpose,
     SeasonDocument,
     TraceChunk,
     VisionResult,
@@ -41,6 +43,7 @@ router = APIRouter()
 
 DBSession = Annotated[AsyncSession, Depends(get_async_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+DEFAULT_ESTIMATION_CATEGORY_NAME = "적산 자료"
 
 
 class SeasonCreateRequest(BaseModel):
@@ -59,9 +62,34 @@ class SeasonResponse(BaseModel):
     created_at: datetime
 
 
+class SeasonCategoryCreateRequest(BaseModel):
+    season_id: int
+    name: str = PydanticField(min_length=1, max_length=100)
+    purpose: SeasonCategoryPurpose = SeasonCategoryPurpose.ESTIMATION
+    is_enabled: bool = True
+    sort_order: int = 100
+
+
+class SeasonCategoryUpdateRequest(BaseModel):
+    name: Optional[str] = PydanticField(default=None, min_length=1, max_length=100)
+    is_enabled: Optional[bool] = None
+    sort_order: Optional[int] = None
+
+
+class SeasonCategoryResponse(BaseModel):
+    id: int
+    season_id: int
+    name: str
+    purpose: SeasonCategoryPurpose
+    is_enabled: bool
+    sort_order: int
+    created_at: datetime
+
+
 class AdminDocumentCreateRequest(BaseModel):
     season_id: int
-    category: str = PydanticField(min_length=1, max_length=100)
+    category_id: Optional[int] = None
+    category: Optional[str] = PydanticField(default=None, min_length=1, max_length=100)
     title: str = PydanticField(min_length=1, max_length=255)
     file_name: str = PydanticField(min_length=1, max_length=255)
 
@@ -69,6 +97,8 @@ class AdminDocumentCreateRequest(BaseModel):
 class AdminDocumentResponse(BaseModel):
     id: int
     season_id: int
+    category_id: Optional[int] = None
+    purpose: Optional[SeasonCategoryPurpose] = None
     category: str
     title: str
     file_url: str
@@ -143,6 +173,115 @@ def _ensure_admin(current_user: User) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="관리자 권한이 필요해요",
         )
+
+
+async def _ensure_default_estimation_category(
+    db: AsyncSession,
+    season_id: int,
+) -> SeasonCategory:
+    existing_result = await db.execute(
+        select(SeasonCategory).where(
+            SeasonCategory.season_id == season_id,
+            SeasonCategory.purpose == SeasonCategoryPurpose.ESTIMATION,
+            SeasonCategory.name == DEFAULT_ESTIMATION_CATEGORY_NAME,
+        )
+    )
+    existing = existing_result.scalar_one_or_none()
+    if existing:
+        return existing
+
+    category = SeasonCategory(
+        season_id=season_id,
+        name=DEFAULT_ESTIMATION_CATEGORY_NAME,
+        purpose=SeasonCategoryPurpose.ESTIMATION,
+        is_enabled=True,
+        sort_order=100,
+    )
+    db.add(category)
+    await db.flush()
+    return category
+
+
+async def _resolve_document_category(
+    db: AsyncSession,
+    season_id: int,
+    category_id: Optional[int],
+    category_name: Optional[str],
+) -> SeasonCategory:
+    if category_id is not None:
+        category_result = await db.execute(
+            select(SeasonCategory).where(SeasonCategory.id == category_id)
+        )
+        category = category_result.scalar_one_or_none()
+        if not category:
+            raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없어요")
+        if category.season_id != season_id:
+            raise HTTPException(status_code=400, detail="카테고리의 시즌이 일치하지 않아요")
+        if not category.is_enabled:
+            raise HTTPException(status_code=400, detail="비활성 카테고리에는 문서를 등록할 수 없어요")
+        return category
+
+    if category_name:
+        stripped = category_name.strip()
+        found_result = await db.execute(
+            select(SeasonCategory).where(
+                SeasonCategory.season_id == season_id,
+                SeasonCategory.name == stripped,
+            )
+        )
+        found = found_result.scalar_one_or_none()
+        if found:
+            if not found.is_enabled:
+                raise HTTPException(status_code=400, detail="비활성 카테고리에는 문서를 등록할 수 없어요")
+            return found
+
+        created = SeasonCategory(
+            season_id=season_id,
+            name=stripped,
+            purpose=SeasonCategoryPurpose.ESTIMATION,
+            is_enabled=True,
+            sort_order=200,
+        )
+        db.add(created)
+        await db.flush()
+        return created
+
+    return await _ensure_default_estimation_category(db, season_id)
+
+
+async def _load_category_maps(
+    db: AsyncSession,
+    season_ids: set[int],
+) -> tuple[dict[int, SeasonCategory], dict[tuple[int, str], SeasonCategory]]:
+    if not season_ids:
+        return {}, {}
+    result = await db.execute(
+        select(SeasonCategory).where(SeasonCategory.season_id.in_(list(season_ids)))
+    )
+    categories = list(result.scalars().all())
+    by_id = {c.id: c for c in categories}
+    by_pair = {(c.season_id, c.name): c for c in categories}
+    return by_id, by_pair
+
+
+def _build_admin_document_response(
+    document: SeasonDocument,
+    category_by_pair: dict[tuple[int, str], SeasonCategory],
+) -> AdminDocumentResponse:
+    category = category_by_pair.get((document.season_id, document.category))
+    return AdminDocumentResponse(
+        id=document.id,
+        season_id=document.season_id,
+        category_id=category.id if category else None,
+        purpose=category.purpose if category else None,
+        category=document.category,
+        title=document.title,
+        file_url=document.file_url,
+        version_hash=document.version_hash,
+        status=document.status,
+        uploaded_at=document.uploaded_at,
+        upload_url=f"/api/v1/admin/documents/{document.id}/upload",
+    )
 
 
 def _can_access_case(case: Case, current_user: User) -> bool:
@@ -410,6 +549,8 @@ async def create_season(payload: SeasonCreateRequest, db: DBSession, current_use
 
     season = Season(name=payload.name, is_active=payload.is_active)
     db.add(season)
+    await db.flush()
+    await _ensure_default_estimation_category(db, season.id)
 
     if payload.is_active:
         existing_result = await db.execute(select(Season).where(Season.id != season.id))
@@ -460,34 +601,199 @@ async def update_season(
     )
 
 
+@router.get("/admin/season-categories", response_model=APIResponse[list[SeasonCategoryResponse]])
+async def list_admin_season_categories(
+    db: DBSession,
+    current_user: CurrentUser,
+    season_id: Optional[int] = Query(default=None),
+    purpose: Optional[SeasonCategoryPurpose] = Query(default=None),
+    is_enabled: Optional[bool] = Query(default=None),
+):
+    _ensure_admin(current_user)
+
+    if season_id is not None:
+        season_result = await db.execute(select(Season).where(Season.id == season_id))
+        season = season_result.scalar_one_or_none()
+        if not season:
+            raise HTTPException(status_code=404, detail="시즌을 찾을 수 없어요")
+        await _ensure_default_estimation_category(db, season_id)
+
+    query = select(SeasonCategory)
+    if season_id is not None:
+        query = query.where(SeasonCategory.season_id == season_id)
+    if purpose is not None:
+        query = query.where(SeasonCategory.purpose == purpose)
+    if is_enabled is not None:
+        query = query.where(SeasonCategory.is_enabled == is_enabled)
+    query = query.order_by(
+        SeasonCategory.season_id.asc(),
+        SeasonCategory.sort_order.asc(),
+        SeasonCategory.created_at.asc(),
+    )
+
+    result = await db.execute(query)
+    rows = result.scalars().all()
+    return APIResponse.ok(
+        [
+            SeasonCategoryResponse(
+                id=row.id,
+                season_id=row.season_id,
+                name=row.name,
+                purpose=row.purpose,
+                is_enabled=row.is_enabled,
+                sort_order=row.sort_order,
+                created_at=row.created_at,
+            )
+            for row in rows
+        ]
+    )
+
+
+@router.post(
+    "/admin/season-categories",
+    response_model=APIResponse[SeasonCategoryResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_admin_season_category(
+    payload: SeasonCategoryCreateRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _ensure_admin(current_user)
+
+    season_result = await db.execute(select(Season).where(Season.id == payload.season_id))
+    season = season_result.scalar_one_or_none()
+    if not season:
+        raise HTTPException(status_code=404, detail="시즌을 찾을 수 없어요")
+
+    existing_result = await db.execute(
+        select(SeasonCategory).where(
+            SeasonCategory.season_id == payload.season_id,
+            SeasonCategory.name == payload.name.strip(),
+        )
+    )
+    existing = existing_result.scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=409, detail="이미 존재하는 카테고리예요")
+
+    row = SeasonCategory(
+        season_id=payload.season_id,
+        name=payload.name.strip(),
+        purpose=payload.purpose,
+        is_enabled=payload.is_enabled,
+        sort_order=payload.sort_order,
+    )
+    db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    return APIResponse.ok(
+        SeasonCategoryResponse(
+            id=row.id,
+            season_id=row.season_id,
+            name=row.name,
+            purpose=row.purpose,
+            is_enabled=row.is_enabled,
+            sort_order=row.sort_order,
+            created_at=row.created_at,
+        )
+    )
+
+
+@router.patch("/admin/season-categories/{category_id}", response_model=APIResponse[SeasonCategoryResponse])
+async def update_admin_season_category(
+    category_id: int,
+    payload: SeasonCategoryUpdateRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _ensure_admin(current_user)
+
+    result = await db.execute(select(SeasonCategory).where(SeasonCategory.id == category_id))
+    row = result.scalar_one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없어요")
+
+    if payload.name is not None:
+        next_name = payload.name.strip()
+        duplicate = await db.execute(
+            select(SeasonCategory).where(
+                SeasonCategory.season_id == row.season_id,
+                SeasonCategory.name == next_name,
+                SeasonCategory.id != row.id,
+            )
+        )
+        if duplicate.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="같은 이름의 카테고리가 이미 있어요")
+        row.name = next_name
+    if payload.is_enabled is not None:
+        row.is_enabled = payload.is_enabled
+    if payload.sort_order is not None:
+        row.sort_order = payload.sort_order
+
+    await db.commit()
+    await db.refresh(row)
+    return APIResponse.ok(
+        SeasonCategoryResponse(
+            id=row.id,
+            season_id=row.season_id,
+            name=row.name,
+            purpose=row.purpose,
+            is_enabled=row.is_enabled,
+            sort_order=row.sort_order,
+            created_at=row.created_at,
+        )
+    )
+
+
 @router.get("/admin/documents", response_model=APIResponse[list[AdminDocumentResponse]])
 async def list_admin_documents(
     db: DBSession,
     current_user: CurrentUser,
     season_id: Optional[int] = Query(default=None),
+    category_id: Optional[int] = Query(default=None),
+    purpose: Optional[SeasonCategoryPurpose] = Query(default=None),
 ):
     _ensure_admin(current_user)
+
+    selected_category: Optional[SeasonCategory] = None
+    if season_id is not None:
+        await _ensure_default_estimation_category(db, season_id)
+
+    if category_id is not None:
+        category_result = await db.execute(
+            select(SeasonCategory).where(SeasonCategory.id == category_id)
+        )
+        selected_category = category_result.scalar_one_or_none()
+        if not selected_category:
+            raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없어요")
+        if season_id is not None and selected_category.season_id != season_id:
+            raise HTTPException(status_code=400, detail="카테고리와 시즌이 일치하지 않아요")
+        season_id = selected_category.season_id
+
     query = select(SeasonDocument).order_by(SeasonDocument.uploaded_at.desc())
-    if season_id:
+    if season_id is not None:
         query = query.where(SeasonDocument.season_id == season_id)
+    if selected_category is not None:
+        query = query.where(SeasonDocument.category == selected_category.name)
+
     result = await db.execute(query)
-    docs = result.scalars().all()
+    docs = list(result.scalars().all())
+
+    season_ids = {d.season_id for d in docs}
+    _, category_by_pair = await _load_category_maps(db, season_ids)
+
+    if purpose is not None:
+        docs = [
+            d for d in docs
+            if category_by_pair.get((d.season_id, d.category))
+            and category_by_pair[(d.season_id, d.category)].purpose == purpose
+        ]
+
+    if selected_category is not None:
+        docs = [d for d in docs if d.category == selected_category.name]
 
     return APIResponse.ok(
-        [
-            AdminDocumentResponse(
-                id=d.id,
-                season_id=d.season_id,
-                category=d.category,
-                title=d.title,
-                file_url=d.file_url,
-                version_hash=d.version_hash,
-                status=d.status,
-                uploaded_at=d.uploaded_at,
-                upload_url=f"/api/v1/admin/documents/{d.id}/upload",
-            )
-            for d in docs
-        ]
+        [_build_admin_document_response(d, category_by_pair) for d in docs]
     )
 
 
@@ -504,12 +810,18 @@ async def create_admin_document(
     if not season:
         raise HTTPException(status_code=404, detail="시즌을 찾을 수 없어요")
 
+    category = await _resolve_document_category(
+        db=db,
+        season_id=payload.season_id,
+        category_id=payload.category_id,
+        category_name=payload.category,
+    )
     version_hash = hashlib.sha256(
-        f"{payload.file_name}:{payload.title}:{payload.season_id}".encode("utf-8")
+        f"{payload.file_name}:{payload.title}:{payload.season_id}:{category.name}".encode("utf-8")
     ).hexdigest()
     document = SeasonDocument(
         season_id=payload.season_id,
-        category=payload.category,
+        category=category.name,
         title=payload.title,
         file_url=f"pricebooks/{payload.season_id}/{payload.file_name}",
         version_hash=version_hash,
@@ -523,6 +835,8 @@ async def create_admin_document(
         AdminDocumentResponse(
             id=document.id,
             season_id=document.season_id,
+            category_id=category.id,
+            purpose=category.purpose,
             category=document.category,
             title=document.title,
             file_url=document.file_url,
@@ -869,7 +1183,37 @@ async def create_case_estimate(case_id: int, db: DBSession, current_user: Curren
     if not vision:
         raise HTTPException(status_code=400, detail="진단 결과가 없어요")
 
-    cost_result = await db.execute(select(CostItem).where(CostItem.season_id == case.season_id))
+    await _ensure_default_estimation_category(db, case.season_id)
+    category_result = await db.execute(
+        select(SeasonCategory).where(
+            SeasonCategory.season_id == case.season_id,
+            SeasonCategory.purpose == SeasonCategoryPurpose.ESTIMATION,
+            SeasonCategory.is_enabled == True,  # noqa: E712
+        )
+    )
+    estimation_categories = list(category_result.scalars().all())
+    estimation_category_names = {c.name for c in estimation_categories}
+    if not estimation_category_names:
+        raise HTTPException(status_code=400, detail="활성화된 적산 카테고리가 없어요")
+
+    docs_result = await db.execute(
+        select(SeasonDocument).where(
+            SeasonDocument.season_id == case.season_id,
+            SeasonDocument.status == DocumentStatus.DONE,
+            SeasonDocument.category.in_(list(estimation_category_names)),
+        )
+    )
+    estimation_docs = list(docs_result.scalars().all())
+    estimation_doc_ids = {d.id for d in estimation_docs}
+    if not estimation_doc_ids:
+        raise HTTPException(status_code=400, detail="적산 자료 문서 인덱싱이 필요해요")
+
+    cost_result = await db.execute(
+        select(CostItem).where(
+            CostItem.season_id == case.season_id,
+            CostItem.source_doc_id.in_(list(estimation_doc_ids)),
+        )
+    )
     cost_items = cost_result.scalars().all()
     cost_items_lower = [(c, (c.item_name or "").lower(), (c.spec or "").lower(), (c.unit or "").lower()) for c in cost_items]
 
