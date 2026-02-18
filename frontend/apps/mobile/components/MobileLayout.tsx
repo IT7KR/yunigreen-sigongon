@@ -3,9 +3,10 @@
 import { type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, FolderKanban, Plus, User } from "lucide-react";
+import { Bell, CreditCard, FileText, Home, FolderKanban, Plus, User } from "lucide-react";
 import { cn } from "@sigongon/ui";
 import { OfflineBanner } from "./camera/OfflineBanner";
+import { useAuth } from "@/lib/auth";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -14,11 +15,20 @@ interface MobileLayoutProps {
   rightAction?: ReactNode;
 }
 
-const navItems = [
+const managerNavItems = [
   { href: "/", icon: Home, label: "홈" },
   { href: "/projects", icon: FolderKanban, label: "프로젝트" },
   { href: "/projects/new", icon: Plus, label: "새 작업" },
+  { href: "/notifications", icon: Bell, label: "알림" },
   { href: "/profile", icon: User, label: "내 정보" },
+];
+
+const workerNavItems = [
+  { href: "/worker/entry", icon: Home, label: "홈" },
+  { href: "/worker/contracts", icon: FileText, label: "계약" },
+  { href: "/worker/paystubs", icon: CreditCard, label: "명세서" },
+  { href: "/notifications", icon: Bell, label: "알림" },
+  { href: "/worker/profile", icon: User, label: "내 정보" },
 ];
 
 export function MobileLayout({
@@ -29,6 +39,8 @@ export function MobileLayout({
 }: MobileLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuth();
+  const navItems = user?.role === "worker" ? workerNavItems : managerNavItems;
 
   const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
@@ -82,7 +94,7 @@ export function MobileLayout({
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href !== "/" && pathname.startsWith(item.href));
+              pathname.startsWith(`${item.href}/`);
 
             return (
               <Link
