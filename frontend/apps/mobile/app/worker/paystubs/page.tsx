@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@sigongon/ui";
-import { ArrowLeft, Download } from "lucide-react";
+import { MobileLayout } from "@/components/MobileLayout";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -31,24 +31,12 @@ function WorkerPaystubsContent() {
       setIsLoading(false);
     };
 
-    fetchData();
-  }, []);
+    void fetchData();
+  }, [workerId]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/worker/profile?workerId=${encodeURIComponent(workerId)}`}
-            className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-lg font-semibold text-slate-900">지급명세서함</h1>
-        </div>
-      </header>
-
-      <main className="flex-1 p-4 space-y-4">
+    <MobileLayout title="지급명세서함">
+      <div className="space-y-4 p-4">
         {isLoading ? (
           <div className="text-center text-sm text-slate-400">
             불러오는 중...
@@ -90,8 +78,8 @@ function WorkerPaystubsContent() {
             </Link>
           ))
         )}
-      </main>
-    </div>
+      </div>
+    </MobileLayout>
   );
 }
 

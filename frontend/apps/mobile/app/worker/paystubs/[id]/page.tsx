@@ -3,9 +3,9 @@
 import { Suspense, use, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@sigongon/ui";
-import { ArrowLeft, CheckCircle, Download } from "lucide-react";
-import Link from "next/link";
+import { CheckCircle } from "lucide-react";
 import { api } from "@/lib/api";
+import { MobileLayout } from "@/components/MobileLayout";
 
 function WorkerPaystubDetailContent({
   params,
@@ -37,8 +37,8 @@ function WorkerPaystubDetailContent({
       setIsLoading(false);
     };
 
-    fetchData();
-  }, [id]);
+    void fetchData();
+  }, [id, workerId]);
 
   const handleConfirm = async () => {
     if (!paystub || paystub.status === "confirmed") return;
@@ -51,22 +51,8 @@ function WorkerPaystubDetailContent({
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/worker/paystubs?workerId=${encodeURIComponent(workerId)}`}
-            className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-lg font-semibold text-slate-900">
-            지급명세서 상세
-          </h1>
-        </div>
-      </header>
-
-      <main className="flex-1 p-4 pb-24">
+    <MobileLayout title="지급명세서 상세" showBack>
+      <div className="p-4 pb-24">
         <div className="rounded-lg bg-white p-6 shadow-sm">
           {isLoading ? (
             <div className="text-center text-sm text-slate-400">
@@ -119,10 +105,10 @@ function WorkerPaystubDetailContent({
             </div>
           )}
         </div>
-      </main>
+      </div>
 
       {paystub && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4">
+        <div className="fixed bottom-16 left-0 right-0 border-t border-slate-200 bg-white p-4">
           {paystub.status === "confirmed" ? (
             <div className="text-center">
               <p className="text-sm font-medium text-green-600">
@@ -147,7 +133,7 @@ function WorkerPaystubDetailContent({
           )}
         </div>
       )}
-    </div>
+    </MobileLayout>
   );
 }
 
