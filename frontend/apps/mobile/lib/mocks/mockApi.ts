@@ -19,6 +19,8 @@ import type {
   LaborContractStatus,
   ProjectPhotoAlbum,
   SeasonInfo,
+  SeasonCategoryInfo,
+  SeasonCategoryPurpose,
   SeasonDocumentInfo,
   SeasonDocumentStatusInfo,
   DiagnosisCase,
@@ -250,6 +252,17 @@ export class MockAPIClient {
   > = {};
   private seasons: SeasonInfo[] = [
     { id: 202601010001, name: "2026H1", is_active: true, created_at: "2026-01-01T00:00:00Z" },
+  ];
+  private seasonCategories: SeasonCategoryInfo[] = [
+    {
+      id: 202601010101,
+      season_id: 202601010001,
+      name: "적산 자료",
+      purpose: "estimation",
+      is_enabled: true,
+      sort_order: 100,
+      created_at: "2026-01-01T00:00:00Z",
+    },
   ];
   private seasonDocuments: SeasonDocumentInfo[] = [];
   private diagnosisCases: DiagnosisCase[] = [];
@@ -2015,6 +2028,28 @@ export class MockAPIClient {
     );
   }
 
+  private ensureEstimationCategory(seasonId: number): SeasonCategoryInfo {
+    const existing = this.seasonCategories.find(
+      (row) =>
+        row.season_id === seasonId &&
+        row.purpose === "estimation" &&
+        row.name === "적산 자료",
+    );
+    if (existing) return existing;
+
+    const created: SeasonCategoryInfo = {
+      id: nextSnowflake(),
+      season_id: seasonId,
+      name: "적산 자료",
+      purpose: "estimation",
+      is_enabled: true,
+      sort_order: 100,
+      created_at: nowIso(),
+    };
+    this.seasonCategories = [...this.seasonCategories, created];
+    return created;
+  }
+
   async getSeasons(): Promise<APIResponse<SeasonInfo[]>> {
     return delay(ok([...this.seasons]));
   }
@@ -2030,6 +2065,7 @@ export class MockAPIClient {
     const season: SeasonInfo = { id, name: data.name, is_active: !!data.is_active, created_at: nowIso() };
     if (season.is_active) this.seasons = this.seasons.map((s) => ({ ...s, is_active: false }));
     this.seasons = [season, ...this.seasons];
+    this.ensureEstimationCategory(id);
     return delay(ok(season));
   }
 
@@ -2037,25 +2073,144 @@ export class MockAPIClient {
     const target = this.seasons.find((s) => s.id === seasonId);
     if (!target) return delay(fail("NOT_FOUND", "시즌을 찾을 수 없습니다"));
     this.seasons = this.seasons.map((s) => ({ ...s, is_active: data.is_active && s.id === seasonId }));
+    this.ensureEstimationCategory(seasonId);
     return delay(ok(this.seasons.find((s) => s.id === seasonId)!));
   }
 
-  async getAdminDocuments(seasonId?: number): Promise<APIResponse<SeasonDocumentInfo[]>> {
-    const docs = seasonId ? this.seasonDocuments.filter((d) => d.season_id === seasonId) : this.seasonDocuments;
-    return delay(ok([...docs]));
+  async getAdminSeasonCategories(params?: {
+    season_id?: number;
+    purpose?: SeasonCategoryPurpose;
+    is_enabled?: boolean;
+  }): Promise<APIResponse<SeasonCategoryInfo[]>> {
+    if (params?.season_id) {
+      this.ensureEstimationCategory(params.season_id);
+    }
+    let rows = [...this.seasonCategories];
+    if (params?.season_id) {
+      rows = rows.filter((row) => row.season_id === params.season_id);
+    }
+    if (params?.purpose) {
+      rows = rows.filter((row) => row.purpose === params.purpose);
+    }
+    if (typeof params?.is_enabled === "boolean") {
+      rows = rows.filter((row) => row.is_enabled === params.is_enabled);
+    }
+    return delay(ok(rows));
+  }
+
+  async createAdminSeasonCategory(data: {
+    season_id: number;
+    name: string;
+    purpose?: SeasonCategoryPurpose;
+    is_enabled?: boolean;
+    sort_order?: number;
+  }): Promise<APIResponse<SeasonCategoryInfo>> {
+    const exists = this.seasonCategories.find(
+      (row) => row.season_id === data.season_id && row.name === data.name,
+    );
+    if (exists) return delay(fail("CONFLICT", "이미 존재하는 카테고리예요"));
+
+    const row: SeasonCategoryInfo = {
+      id: nextSnowflake(),
+      season_id: data.season_id,
+      name: data.name,
+      purpose: data.purpose || "estimation",
+      is_enabled: data.is_enabled ?? true,
+      sort_order: data.sort_order ?? 100,
+      created_at: nowIso(),
+    };
+    this.seasonCategories = [...this.seasonCategories, row];
+    return delay(ok(row));
+  }
+
+  async updateAdminSeasonCategory(
+    categoryId: number,
+    data: { name?: string; is_enabled?: boolean; sort_order?: number },
+  ): Promise<APIResponse<SeasonCategoryInfo>> {
+    const idx = this.seasonCategories.findIndex((row) => row.id === categoryId);
+    if (idx === -1) return delay(fail("NOT_FOUND", "카테고리를 찾을 수 없습니다"));
+    const next = { ...this.seasonCategories[idx], ...data };
+    this.seasonCategories[idx] = next;
+    return delay(ok(next));
+  }
+
+  async getAdminDocuments(params?: {
+    season_id?: number;
+    category_id?: number;
+    purpose?: SeasonCategoryPurpose;
+  }): Promise<APIResponse<SeasonDocumentInfo[]>> {
+    if (params?.season_id) {
+      this.ensureEstimationCategory(params.season_id);
+    }
+    let rows = [...this.seasonDocuments];
+    if (params?.season_id) {
+      rows = rows.filter((row) => row.season_id === params.season_id);
+    }
+    if (params?.category_id) {
+      const category = this.seasonCategories.find((row) => row.id === params.category_id);
+      if (!category) return delay(fail("NOT_FOUND", "카테고리를 찾을 수 없습니다"));
+      rows = rows.filter(
+        (row) =>
+          row.season_id === category.season_id &&
+          row.category === category.name,
+      );
+    }
+    if (params?.purpose) {
+      rows = rows.filter((row) => {
+        const category = this.seasonCategories.find(
+          (c) => c.season_id === row.season_id && c.name === row.category,
+        );
+        return category?.purpose === params.purpose;
+      });
+    }
+    rows = rows.map((row) => {
+      const category = this.seasonCategories.find(
+        (c) => c.season_id === row.season_id && c.name === row.category,
+      );
+      return {
+        ...row,
+        category_id: category?.id,
+        purpose: category?.purpose,
+      };
+    });
+    return delay(ok(rows));
   }
 
   async createAdminDocument(data: {
     season_id: number;
-    category: string;
+    category_id?: number;
+    category?: string;
     title: string;
     file_name: string;
   }): Promise<APIResponse<SeasonDocumentInfo>> {
     const id = nextSnowflake();
+    let category = data.category?.trim();
+    let categoryId = data.category_id;
+
+    if (categoryId) {
+      const row = this.seasonCategories.find((item) => item.id === categoryId);
+      if (!row) return delay(fail("NOT_FOUND", "카테고리를 찾을 수 없습니다"));
+      category = row.name;
+    } else if (!category) {
+      const defaultCategory = this.ensureEstimationCategory(data.season_id);
+      category = defaultCategory.name;
+      categoryId = defaultCategory.id;
+    } else {
+      const matched = this.seasonCategories.find(
+        (row) => row.season_id === data.season_id && row.name === category,
+      );
+      if (matched) {
+        categoryId = matched.id;
+      }
+    }
+
+    const mappedCategory = this.seasonCategories.find((row) => row.id === categoryId);
     const doc: SeasonDocumentInfo = {
       id,
       season_id: data.season_id,
-      category: data.category,
+      category_id: mappedCategory?.id,
+      purpose: mappedCategory?.purpose,
+      category: category || "적산 자료",
       title: data.title,
       file_url: `pricebooks/${data.season_id}/${data.file_name}`,
       version_hash: randomId("vh"),
