@@ -81,6 +81,7 @@ export type MaterialOrderStatus = "draft" | "requested" | "confirmed" | "shipped
 
 // Case/Season Estimation
 export type SeasonDocumentStatus = "queued" | "running" | "done" | "failed"
+export type SeasonCategoryPurpose = "estimation" | "labor_rule" | "legal" | "safety"
 export type DiagnosisCaseStatus = "draft" | "vision_ready" | "estimated"
 export type EstimateExportType = "csv" | "xlsx"
 
@@ -435,9 +436,21 @@ export interface SeasonInfo {
   created_at: string
 }
 
+export interface SeasonCategoryInfo {
+  id: number
+  season_id: number
+  name: string
+  purpose: SeasonCategoryPurpose
+  is_enabled: boolean
+  sort_order: number
+  created_at: string
+}
+
 export interface SeasonDocumentInfo {
   id: number
   season_id: number
+  category_id?: number
+  purpose?: SeasonCategoryPurpose
   category: string
   title: string
   file_url: string
