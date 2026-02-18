@@ -851,7 +851,7 @@ export type DocumentGenerationType =
   | "external"  // 외부 연동 (모두싸인, 팝빌)
   | "upload"    // 사용자 업로드
 
-export type DocumentFileFormat = "xlsx" | "pdf" | "hwp_pdf" | "docx"
+export type DocumentFileFormat = "xlsx" | "pdf" | "hwp" | "hwpx" | "docx"
 
 export type ProjectDocumentStatus =
   | "not_started"   // 미작성
