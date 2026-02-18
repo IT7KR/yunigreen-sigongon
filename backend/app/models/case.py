@@ -4,7 +4,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import BigInteger, ForeignKey, JSON, Column
+from sqlalchemy import BigInteger, ForeignKey, JSON, Column, UniqueConstraint
 from sqlmodel import SQLModel, Field
 
 from app.core.snowflake import generate_snowflake_id
@@ -34,6 +34,15 @@ class ExportFileType(str, Enum):
     XLSX = "xlsx"
 
 
+class SeasonCategoryPurpose(str, Enum):
+    """Season document category purpose."""
+
+    ESTIMATION = "estimation"
+    LABOR_RULE = "labor_rule"
+    LEGAL = "legal"
+    SAFETY = "safety"
+
+
 class SeasonBase(SQLModel):
     name: str = Field(max_length=100, index=True)
     is_active: bool = Field(default=False, index=True)
@@ -41,6 +50,32 @@ class SeasonBase(SQLModel):
 
 class Season(SeasonBase, table=True):
     __tablename__ = "season"
+
+    id: int = Field(
+        default_factory=generate_snowflake_id,
+        sa_column=Column(BigInteger, primary_key=True),
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class SeasonCategoryBase(SQLModel):
+    season_id: int = Field(
+        sa_column=Column(BigInteger, ForeignKey("season.id"), index=True, nullable=False)
+    )
+    name: str = Field(max_length=100)
+    purpose: SeasonCategoryPurpose = Field(
+        default=SeasonCategoryPurpose.ESTIMATION,
+        index=True,
+    )
+    is_enabled: bool = Field(default=True, index=True)
+    sort_order: int = Field(default=100)
+
+
+class SeasonCategory(SeasonCategoryBase, table=True):
+    __tablename__ = "season_category"
+    __table_args__ = (
+        UniqueConstraint("season_id", "name", name="uq_season_category_name"),
+    )
 
     id: int = Field(
         default_factory=generate_snowflake_id,

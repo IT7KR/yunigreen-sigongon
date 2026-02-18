@@ -42,6 +42,7 @@ from app.models.billing import (
 )
 from app.models.case import (
     Season,
+    SeasonCategory,
     SeasonDocument,
     TraceChunk,
     CostItem,
@@ -50,6 +51,7 @@ from app.models.case import (
     VisionResult,
     CaseEstimate,
     EstimateExport,
+    SeasonCategoryPurpose,
     DocumentStatus,
     CaseStatus,
     ExportFileType,
@@ -173,6 +175,7 @@ __all__ = [
     "PaymentRead",
     # Case/Season
     "Season",
+    "SeasonCategory",
     "SeasonDocument",
     "TraceChunk",
     "CostItem",
@@ -181,6 +184,7 @@ __all__ = [
     "VisionResult",
     "CaseEstimate",
     "EstimateExport",
+    "SeasonCategoryPurpose",
     "DocumentStatus",
     "CaseStatus",
     "ExportFileType",
