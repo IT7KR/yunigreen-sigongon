@@ -74,23 +74,22 @@ const STATUS_CONFIG: Record<
 const FORMAT_LABELS: Record<DocumentFileFormat, string> = {
   xlsx: "Excel",
   pdf: "PDF",
-  hwp_pdf: "HWP→PDF",
+  hwp: "HWP",
+  hwpx: "HWPX",
   docx: "Word",
 };
 
 const FORMAT_CLASS: Record<DocumentFileFormat, string> = {
   xlsx: "bg-emerald-50 text-emerald-700",
   pdf: "bg-red-50 text-red-700",
-  hwp_pdf: "bg-sky-50 text-sky-700",
+  hwp: "bg-sky-50 text-sky-700",
+  hwpx: "bg-cyan-50 text-cyan-700",
   docx: "bg-indigo-50 text-indigo-700",
 };
 
 type DocumentAction = "generate" | "download" | "upload" | "external";
 
 function resolveFileExtension(format: DocumentFileFormat): string {
-  if (format === "hwp_pdf") {
-    return "pdf";
-  }
   return format;
 }
 
@@ -152,37 +151,37 @@ function makePhaseGroup(
 const MOCK_DOCUMENT_PHASES: ProjectDocumentPhaseGroup[] = [
   makePhaseGroup("contract", [
     doc("c1", "contract", "견적내역서", "xlsx", "auto", true, "generated"),
-    doc("c2", "contract", "수의계약체결제한여부확인서", "hwp_pdf", "template", true, "not_started"),
-    doc("c3", "contract", "시방서", "hwp_pdf", "auto", true, "generated"),
+    doc("c2", "contract", "수의계약체결제한여부확인서", "hwp", "template", true, "not_started"),
+    doc("c3", "contract", "시방서", "hwpx", "auto", true, "generated"),
     doc("c4", "contract", "사업자 외 서류", "pdf", "upload", true, "uploaded"),
     doc("c5", "contract", "계약보증서", "pdf", "upload", true, "not_started"),
-    doc("c6", "contract", "계약보증금 지급각서", "hwp_pdf", "template", false, "not_started", {
+    doc("c6", "contract", "계약보증금 지급각서", "hwp", "template", false, "not_started", {
       is_conditional: true,
       condition_description: "보증서 대체 시",
     }),
   ]),
   makePhaseGroup("commencement", [
-    doc("m1", "commencement", "착공공문", "hwp_pdf", "template", true, "not_started"),
-    doc("m2", "commencement", "착공신고서", "hwp_pdf", "template", true, "not_started"),
-    doc("m3", "commencement", "현장대리인 서류", "hwp_pdf", "upload", true, "not_started"),
+    doc("m1", "commencement", "착공공문", "hwp", "template", true, "not_started"),
+    doc("m2", "commencement", "착공신고서", "hwp", "template", true, "not_started"),
+    doc("m3", "commencement", "현장대리인 서류", "hwp", "upload", true, "not_started"),
     doc("m4", "commencement", "계약내역서", "xlsx", "auto", true, "generated"),
-    doc("m5", "commencement", "노무비 서류", "hwp_pdf", "template", false, "not_started", {
+    doc("m5", "commencement", "노무비 서류", "hwp", "template", false, "not_started", {
       is_conditional: true,
       condition_description: "상용/일용 선택",
     }),
-    doc("m6", "commencement", "안전보건관리 서약서", "hwp_pdf", "template", true, "not_started"),
-    doc("m7", "commencement", "착공 전 사진", "hwp_pdf", "auto", true, "not_started"),
-    doc("m8", "commencement", "직접시공계획서", "hwp_pdf", "template", true, "not_started"),
-    doc("m9", "commencement", "안전보건관리계획서", "hwp_pdf", "template", true, "not_started"),
+    doc("m6", "commencement", "안전보건관리 서약서", "hwp", "template", true, "not_started"),
+    doc("m7", "commencement", "착공 전 사진", "hwp", "auto", true, "not_started"),
+    doc("m8", "commencement", "직접시공계획서", "hwp", "template", true, "not_started"),
+    doc("m9", "commencement", "안전보건관리계획서", "hwp", "template", true, "not_started"),
   ]),
   makePhaseGroup("construction", [
-    doc("s1", "construction", "공사일지", "hwp_pdf", "auto", true, "generated"),
-    doc("s2", "construction", "일용근로계약서", "hwp_pdf", "auto", true, "generated"),
+    doc("s1", "construction", "공사일지", "hwp", "auto", true, "generated"),
+    doc("s2", "construction", "일용근로계약서", "hwp", "auto", true, "generated"),
     doc("s3", "construction", "현장 점검 보고서", "xlsx", "ai", true, "not_started"),
   ]),
   makePhaseGroup("completion", [
-    doc("p1", "completion", "준공공문", "hwp_pdf", "template", true, "not_started"),
-    doc("p2", "completion", "준공계", "hwp_pdf", "template", true, "not_started"),
+    doc("p1", "completion", "준공공문", "hwp", "template", true, "not_started"),
+    doc("p2", "completion", "준공계", "hwp", "template", true, "not_started"),
     doc("p3", "completion", "준공내역서", "xlsx", "auto", true, "not_started"),
     doc("p4", "completion", "준공정산동의서", "pdf", "template", false, "not_started", {
       is_conditional: true,
@@ -190,17 +189,17 @@ const MOCK_DOCUMENT_PHASES: ProjectDocumentPhaseGroup[] = [
     }),
     doc("p5", "completion", "준공사진첩", "pdf", "auto", true, "not_started"),
     doc("p6", "completion", "노무비 증빙자료", "pdf", "upload", true, "not_started"),
-    doc("p7", "completion", "산업안전관리비 집행내역", "hwp_pdf", "template", false, "not_started", {
+    doc("p7", "completion", "산업안전관리비 집행내역", "hwp", "template", false, "not_started", {
       is_conditional: true,
       condition_description: "2천만원 이상 공사",
     }),
-    doc("p8", "completion", "하자보수보증금 지급각서", "hwp_pdf", "template", true, "not_started"),
+    doc("p8", "completion", "하자보수보증금 지급각서", "hwp", "template", true, "not_started"),
     doc("p9", "completion", "폐기물/납세 증빙서류", "pdf", "upload", true, "not_started"),
   ]),
   makePhaseGroup("labor_report", [
     doc("l1", "labor_report", "근로내용확인신고", "xlsx", "auto", true, "not_started"),
     doc("l2", "labor_report", "일용근로지급명세서", "xlsx", "auto", true, "not_started"),
-    doc("l3", "labor_report", "일용근로계약서", "hwp_pdf", "auto", true, "generated"),
+    doc("l3", "labor_report", "일용근로계약서", "hwp", "auto", true, "generated"),
   ]),
   makePhaseGroup("private_contract", [
     doc("v1", "private_contract", "공사도급표준계약서", "pdf", "external", true, "not_started"),
@@ -210,7 +209,7 @@ const MOCK_DOCUMENT_PHASES: ProjectDocumentPhaseGroup[] = [
       is_conditional: true,
       condition_description: "학교 프로젝트만",
     }),
-    doc("h2", "school", "수도전기공문", "hwp_pdf", "template", false, "not_started", {
+    doc("h2", "school", "수도전기공문", "hwp", "template", false, "not_started", {
       is_conditional: true,
       condition_description: "학교 준공 시",
     }),
@@ -510,7 +509,7 @@ export default function DocumentsPage({
         ref={uploadInputRef}
         type="file"
         className="hidden"
-        accept=".pdf,.xlsx,.xls,.xlsm,.docx,.hwp"
+        accept=".pdf,.xlsx,.xls,.xlsm,.docx,.hwp,.hwpx"
         onChange={handleUploadInputChange}
       />
     </div>
