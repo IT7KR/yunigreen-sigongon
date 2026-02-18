@@ -190,6 +190,18 @@ export class MockAPIClient {
     }
   > = {};
 
+  private workerContractsByWorker: Record<
+    string,
+    Array<{
+      id: string;
+      project_name: string;
+      work_date: string;
+      role: string;
+      daily_rate: number;
+      status: "pending" | "signed";
+    }>
+  > = {};
+
   private workerPaystubsByWorker: Record<
     string,
     Array<{
@@ -375,6 +387,47 @@ export class MockAPIClient {
       status: "pending",
       content: "(계약 내용 생략)",
     };
+  }
+
+  private ensureWorkerContracts(workerId: string) {
+    if (this.workerContractsByWorker[workerId]) return;
+
+    const seededContracts = [
+      {
+        id: "wc_1",
+        project_name: "논현동 주택 리모델링",
+        work_date: "2026.01.22",
+        role: "목공",
+        daily_rate: 250000,
+        status: "pending" as const,
+        content: "(논현동 현장 계약 내용 생략)",
+      },
+      {
+        id: "wc_2",
+        project_name: "역삼중 옥상 방수 공사",
+        work_date: "2026.01.15",
+        role: "방수",
+        daily_rate: 230000,
+        status: "signed" as const,
+        content: "(역삼중 현장 계약 내용 생략)",
+      },
+    ];
+
+    for (const contract of seededContracts) {
+      this.workerContractsById[contract.id] = {
+        id: contract.id,
+        project_name: contract.project_name,
+        work_date: contract.work_date,
+        role: contract.role,
+        daily_rate: contract.daily_rate,
+        status: contract.status,
+        content: contract.content,
+      };
+    }
+
+    this.workerContractsByWorker[workerId] = seededContracts.map(
+      ({ content: _content, ...contract }) => contract,
+    );
   }
 
   private ensureWorkerPaystubs(workerId: string) {
@@ -1635,6 +1688,11 @@ export class MockAPIClient {
     return delay(ok({ success: true }));
   }
 
+  async getWorkerContracts(workerId: string) {
+    this.ensureWorkerContracts(workerId);
+    return delay(ok(this.workerContractsByWorker[workerId]));
+  }
+
   async getWorkerContract(contractId: string) {
     this.ensureWorkerContract(contractId);
     return delay(ok(this.workerContractsById[contractId]));
@@ -1643,6 +1701,12 @@ export class MockAPIClient {
   async signWorkerContract(contractId: string, _signatureData: string) {
     this.ensureWorkerContract(contractId);
     this.workerContractsById[contractId].status = "signed";
+    for (const contracts of Object.values(this.workerContractsByWorker)) {
+      const target = contracts.find((contract) => contract.id === contractId);
+      if (target) {
+        target.status = "signed";
+      }
+    }
     return delay(
       ok({ id: contractId, status: "signed" as const, signed_at: nowIso() }),
     );
