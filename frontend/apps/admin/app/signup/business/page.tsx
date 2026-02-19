@@ -85,10 +85,6 @@ export default function BusinessPage() {
       newErrors.businessLicense = "사업자등록증을 업로드해주세요";
     }
 
-    if (!data.constructionLicenseFile) {
-      newErrors.constructionLicense = "건설업등록증을 업로드해주세요";
-    }
-
     if (!data.repPhone) {
       newErrors.repPhone = "대표자 연락처를 입력해주세요";
     }
@@ -222,7 +218,7 @@ export default function BusinessPage() {
 
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-900">
-                건설업등록증 (필수)
+                건설업등록증 (선택)
               </label>
               <FileUpload
                 accept=".pdf,.jpg,.jpeg,.png"
@@ -236,7 +232,7 @@ export default function BusinessPage() {
                 <p className="mt-1 text-sm text-red-600">{errors.constructionLicense}</p>
               )}
               <p className="mt-1 text-xs text-slate-500">
-                건설업등록증을 업로드해주세요
+                전문건설업 면허 보유 시 업로드해주세요
               </p>
             </div>
           </div>
