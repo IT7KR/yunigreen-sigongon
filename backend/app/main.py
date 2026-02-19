@@ -120,6 +120,7 @@ from app.routers import (
     cases_router,
     harness_router,
 )
+from app.routers.licenses import router as licenses_router
 from app.routers.contracts import router as contracts_router, project_contracts_router
 from app.routers.labor_contracts import router as labor_contracts_router, project_labor_router
 from app.routers.materials import router as materials_router
@@ -146,6 +147,7 @@ app.include_router(pricebooks_router, prefix="/api/v1/pricebooks", tags=["단가
 app.include_router(rag_router, prefix="/api/v1/rag", tags=["RAG 검색"])
 app.include_router(harness_router, prefix="/api/v1/harness", tags=["Harness 운영"])
 app.include_router(cases_router, prefix="/api/v1", tags=["시즌/케이스 견적"])
+app.include_router(licenses_router, prefix="/api/v1/licenses", tags=["면허"])
 app.include_router(contracts_router, prefix="/api/v1", tags=["계약"])
 app.include_router(project_contracts_router, prefix="/api/v1", tags=["계약"])
 app.include_router(labor_contracts_router, prefix="/api/v1", tags=["노무비"])
