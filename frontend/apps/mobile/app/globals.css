@@ -86,3 +86,17 @@ body {
 .pb-nav-safe {
   padding-bottom: calc(4rem + max(1rem, env(safe-area-inset-bottom)));
 }
+
+/* View Transition tuning for supported browsers */
+@supports (view-transition-name: root) {
+  ::view-transition-group(*) {
+    animation-duration: 220ms;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 220ms;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
