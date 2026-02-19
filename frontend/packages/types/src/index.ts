@@ -438,14 +438,16 @@ export interface TaxInvoice {
 }
 
 export interface WarrantyInfo {
-  project_id: string
-  warranty_expires_at: string
+  project_id: string | number
+  warranty_expires_at: string | null
   days_remaining: number
+  is_expired: boolean
   as_requests: Array<{
-    id: string
+    id: string | number
     description: string
     status: string
     created_at: string
+    resolved_at?: string | null
   }>
 }
 
@@ -1065,7 +1067,7 @@ export interface LaborCodebook {
   job_type_codes: Record<string, string>
 }
 
-/** 일용 근로자 (주소록) */
+/** 일용 근로자 (관리) */
 export interface DailyWorker {
   id: string
   name: string
@@ -1092,7 +1094,59 @@ export interface DailyWorker {
   /** 필수 서류 업로드 여부 */
   has_id_card?: boolean
   has_safety_cert?: boolean
+  /** 노무 투입 차단 여부 */
+  is_blocked_for_labor?: boolean
+  /** 차단 사유 */
+  block_reason?: string
+  /** 차단 처리자 ID */
+  blocked_by_user_id?: string
+  /** 차단 처리 시각 */
+  blocked_at?: string
 }
+
+export type WorkerDocumentType = "id_card" | "safety_cert"
+export type WorkerDocumentReviewStatus =
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "quarantined"
+
+export interface WorkerDocument {
+  id: string | null
+  worker_id: string
+  organization_id?: string | null
+  document_id: string
+  document_type: WorkerDocumentType
+  document_name: string
+  name: string
+  status: string
+  storage_path?: string | null
+  original_filename?: string | null
+  mime_type?: string | null
+  file_size_bytes: number
+  file_hash_sha256?: string | null
+  review_status: WorkerDocumentReviewStatus
+  review_reason?: string | null
+  reviewed_by_user_id?: string | null
+  reviewed_at?: string | null
+  anomaly_flags: string[]
+  uploaded_at?: string | null
+}
+
+export interface WorkerDocumentReviewQueueItem extends Omit<WorkerDocument, "id"> {
+  id: string
+  worker_name: string
+  worker_job_type: string
+  worker_registration_status: string
+  worker_is_blocked_for_labor: boolean
+  worker_block_reason?: string | null
+}
+
+export type WorkerDocumentReviewAction =
+  | "approve"
+  | "reject"
+  | "quarantine"
+  | "request_reupload"
 
 /** 일별 근무 기록 */
 export interface DailyWorkRecord {

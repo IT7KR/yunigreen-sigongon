@@ -56,6 +56,11 @@ import type {
   DiagnosisCaseImage,
   VisionResultDetail,
   DiagnosisCaseEstimate,
+  DailyWorker,
+  WorkerDocument,
+  WorkerDocumentReviewAction,
+  WorkerDocumentReviewQueueItem,
+  WorkerDocumentType,
 } from "@sigongon/types";
 
 export class NetworkError extends Error {
@@ -1580,16 +1585,16 @@ export class APIClient {
   async getWarrantyInfo(projectId: string) {
     const response = await this.client.get<
       APIResponse<{
-        project_id: string;
-        warranty_expires_at: string;
+        project_id: string | number;
+        warranty_expires_at: string | null;
         days_remaining: number;
         is_expired: boolean;
         as_requests: Array<{
-          id: string;
+          id: string | number;
           description: string;
           status: string;
           created_at: string;
-          resolved_at?: string;
+          resolved_at?: string | null;
         }>;
       }>
     >(`/projects/${projectId}/warranty`);
@@ -1610,6 +1615,24 @@ export class APIClient {
         message: string;
       }>
     >(`/projects/${projectId}/warranty/as-requests`, data);
+    return response.data;
+  }
+
+  async updateASRequest(
+    projectId: string,
+    asRequestId: string,
+    data: {
+      status: "pending" | "in_progress" | "resolved" | "cancelled";
+    },
+  ) {
+    const response = await this.client.patch<
+      APIResponse<{
+        id: string | number;
+        status: string;
+        resolved_at?: string | null;
+        message: string;
+      }>
+    >(`/projects/${projectId}/warranty/as-requests/${asRequestId}`, data);
     return response.data;
   }
 
@@ -1924,6 +1947,8 @@ export class APIClient {
           status: "active" | "inactive";
           contract_status: "signed" | "pending";
           last_work_date: string;
+          is_blocked_for_labor?: boolean;
+          block_reason?: string | null;
         }>;
         tenant_worker_distribution: Array<{
           organization_id: string;
@@ -1950,6 +1975,8 @@ export class APIClient {
           status: "active" | "inactive";
           contract_status: "signed" | "pending";
           last_work_date: string;
+          is_blocked_for_labor?: boolean;
+          block_reason?: string | null;
         }>;
       }>
     >("/labor/overview");
@@ -1971,7 +1998,7 @@ export class APIClient {
   // ============================================
 
   async getDailyWorkers() {
-    const response = await this.client.get<APIResponse<any[]>>("/labor/daily-workers");
+    const response = await this.client.get<APIResponse<DailyWorker[]>>("/labor/daily-workers");
     return response.data;
   }
 
@@ -1980,18 +2007,97 @@ export class APIClient {
     return response.data;
   }
 
-  async createDailyWorker(data: any) {
-    const response = await this.client.post<APIResponse<any>>("/labor/daily-workers", data);
+  async createDailyWorker(
+    data: Omit<DailyWorker, "id"> & { gender: 1 | 2 | 3 | 4; daily_rate: number },
+  ) {
+    const response = await this.client.post<APIResponse<{ id: string }>>("/labor/daily-workers", data);
     return response.data;
   }
 
-  async updateDailyWorker(id: string, data: any) {
-    const response = await this.client.patch<APIResponse<any>>(`/labor/daily-workers/${id}`, data);
+  async updateDailyWorker(
+    id: string,
+    data: Partial<Omit<DailyWorker, "id">> & { gender?: 1 | 2 | 3 | 4; daily_rate?: number },
+  ) {
+    const response = await this.client.patch<APIResponse<{ id: string }>>(`/labor/daily-workers/${id}`, data);
     return response.data;
   }
 
   async deleteDailyWorker(id: string) {
-    const response = await this.client.delete<APIResponse<any>>(`/labor/daily-workers/${id}`);
+    const response = await this.client.delete<APIResponse<{ id: string }>>(`/labor/daily-workers/${id}`);
+    return response.data;
+  }
+
+  async getDailyWorkerDocuments(workerId: string) {
+    const response = await this.client.get<APIResponse<WorkerDocument[]>>(
+      `/labor/daily-workers/${workerId}/documents`,
+    );
+    return response.data;
+  }
+
+  async uploadDailyWorkerDocument(
+    workerId: string,
+    documentType: WorkerDocumentType,
+    file: File,
+  ) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await this.client.post<
+      APIResponse<{
+        worker_id: string;
+        document: WorkerDocument;
+        requires_review: boolean;
+      }>
+    >(`/labor/daily-workers/${workerId}/documents/${documentType}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  }
+
+  async getWorkerDocumentReviewQueue(reviewStatus: WorkerDocument["review_status"] | "all" = "pending_review") {
+    const response = await this.client.get<APIResponse<WorkerDocumentReviewQueueItem[]>>(
+      "/labor/worker-documents/review-queue",
+      { params: { review_status: reviewStatus } },
+    );
+    return response.data;
+  }
+
+  async reviewWorkerDocument(
+    workerDocumentId: string,
+    data: { action: WorkerDocumentReviewAction; reason?: string },
+  ) {
+    const response = await this.client.post<
+      APIResponse<{
+        worker_id: string;
+        document: WorkerDocument;
+      }>
+    >(`/labor/worker-documents/${workerDocumentId}/review`, data);
+    return response.data;
+  }
+
+  async setDailyWorkerControl(
+    workerId: string,
+    data: { action: "block" | "unblock"; reason?: string },
+  ) {
+    const response = await this.client.patch<
+      APIResponse<{
+        id: string;
+        is_blocked_for_labor: boolean;
+        block_reason?: string | null;
+        blocked_by_user_id?: string | null;
+        blocked_at?: string | null;
+      }>
+    >(`/labor/daily-workers/${workerId}/control`, data);
+    return response.data;
+  }
+
+  async downloadWorkerDocument(workerDocumentId: string) {
+    const response = await this.client.get<Blob>(
+      `/labor/worker-documents/${workerDocumentId}/download`,
+      { responseType: "blob" },
+    );
     return response.data;
   }
 
