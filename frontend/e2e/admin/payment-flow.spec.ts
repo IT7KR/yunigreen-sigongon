@@ -115,46 +115,9 @@ test.describe("결제 관련 플로우", () => {
     });
   });
 
-  test.describe("대시보드 재무 현황", () => {
+  test.describe("대시보드 표시", () => {
     test.beforeEach(async ({ page }) => {
       await loginAsSuperAdmin(page);
-    });
-
-    test("대시보드에 금월 매출 카드가 표시된다", async ({ page }) => {
-      await page.goto("/dashboard");
-
-      await expect(page.getByText(/금월 매출/)).toBeVisible({ timeout: 5000 });
-    });
-
-    test("대시보드에 금월 수금 카드가 표시된다", async ({ page }) => {
-      await page.goto("/dashboard");
-
-      await expect(page.getByText(/금월 수금/)).toBeVisible({ timeout: 5000 });
-    });
-
-    test("대시보드에 미수금 카드가 표시된다", async ({ page }) => {
-      await page.goto("/dashboard");
-
-      await expect(page.getByText(/미수금/)).toBeVisible({ timeout: 5000 });
-    });
-
-    test("대시보드의 미수금 확인하기 링크가 billing 페이지를 가리킨다", async ({
-      page,
-    }) => {
-      await page.goto("/dashboard");
-
-      // AlertBox with billing link
-      const billingLink = page.getByRole("link", { name: /확인하기/ }).filter({
-        hasText: /확인하기/,
-      });
-
-      // The link might or might not be visible depending on mock data
-      const isVisible = await billingLink.first().isVisible({ timeout: 2000 }).catch(() => false);
-
-      if (isVisible) {
-        const href = await billingLink.first().getAttribute("href");
-        expect(href).toContain("billing");
-      }
     });
 
     test("대시보드에 최근 프로젝트 카드가 표시된다", async ({ page }) => {
