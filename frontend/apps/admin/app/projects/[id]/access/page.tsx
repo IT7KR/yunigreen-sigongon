@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, toast } from "@sigongon/ui";
-import { Eye, EyeOff, Loader2, ShieldCheck, Users } from "lucide-react";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, PrimitiveInput, toast } from "@sigongon/ui";
+import { Eye, EyeOff, Loader2, Search, ShieldCheck, Users, X } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface ManagerAccessItem {
@@ -21,17 +21,30 @@ export default function ProjectAccessPage({
   const [managers, setManagers] = useState<ManagerAccessItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
 
   const visibleCount = useMemo(
     () => managers.filter((manager) => manager.visible).length,
     [managers],
   );
 
-  useEffect(() => {
-    loadManagers();
-  }, [projectId]);
+  const selectedManagers = useMemo(
+    () => managers.filter((manager) => manager.visible),
+    [managers],
+  );
 
-  async function loadManagers() {
+  const filteredManagers = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    if (!keyword) return managers;
+
+    return managers.filter((manager) => {
+      const name = manager.name.toLowerCase();
+      const phone = (manager.phone || "").toLowerCase();
+      return name.includes(keyword) || phone.includes(keyword);
+    });
+  }, [managers, query]);
+
+  const loadManagers = useCallback(async () => {
     try {
       setLoading(true);
       const usersResponse = await api.getUsers({
@@ -73,7 +86,11 @@ export default function ProjectAccessPage({
     } finally {
       setLoading(false);
     }
-  }
+  }, [projectId]);
+
+  useEffect(() => {
+    void loadManagers();
+  }, [loadManagers]);
 
   function toggleVisibility(userId: string) {
     setManagers((prev) =>
@@ -134,6 +151,19 @@ export default function ProjectAccessPage({
           </Badge>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-slate-700">현장소장 검색</p>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <PrimitiveInput
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="이름 또는 연락처로 검색"
+                className="pl-9"
+              />
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
@@ -162,6 +192,44 @@ export default function ProjectAccessPage({
               저장
             </Button>
           </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5">
+              <p className="text-sm font-medium text-slate-700">검색 결과</p>
+              <p className="text-xs text-slate-500">{filteredManagers.length}명</p>
+            </div>
+
+            {loading ? (
+              <div className="flex h-24 items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-brand-point-500" />
+              </div>
+            ) : filteredManagers.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-slate-500">
+                검색된 현장소장이 없습니다.
+              </p>
+            ) : (
+              <div className="max-h-64 overflow-y-auto">
+                {filteredManagers.map((manager) => (
+                  <label
+                    key={manager.id}
+                    className="flex cursor-pointer items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 hover:bg-slate-50"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-slate-900">{manager.name}</p>
+                      <p className="truncate text-xs text-slate-500">{manager.phone || "-"}</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={manager.visible}
+                      onChange={() => toggleVisibility(manager.id)}
+                      className="h-4 w-4 rounded border-slate-300 text-brand-point-500 focus:ring-brand-point-500"
+                      aria-label={`${manager.name} 접근권한 선택`}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -169,7 +237,7 @@ export default function ProjectAccessPage({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-slate-400" />
-            현장소장별 공개 설정
+            선택된 현장소장
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -177,36 +245,24 @@ export default function ProjectAccessPage({
             <div className="flex h-40 items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-brand-point-500" />
             </div>
-          ) : managers.length === 0 ? (
+          ) : selectedManagers.length === 0 ? (
             <p className="py-10 text-center text-sm text-slate-500">
-              등록된 현장소장이 없습니다.
+              선택된 현장소장이 없습니다.
             </p>
           ) : (
-            <div className="space-y-2">
-              {managers.map((manager) => (
-                <div
+            <div className="flex flex-wrap gap-2">
+              {selectedManagers.map((manager) => (
+                <PrimitiveButton
                   key={manager.id}
-                  className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3"
+                  type="button"
+                  onClick={() => toggleVisibility(manager.id)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-brand-point-200 bg-brand-point-50 px-3 py-1.5 text-xs font-medium text-brand-point-700 hover:bg-brand-point-100"
                 >
-                  <div>
-                    <p className="font-medium text-slate-900">{manager.name}</p>
-                    <p className="text-xs text-slate-500">{manager.phone || "-"}</p>
-                  </div>
-                  <PrimitiveButton
-                    type="button"
-                    onClick={() => toggleVisibility(manager.id)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-point-500 focus:ring-offset-2 ${
-                      manager.visible ? "bg-brand-point-500" : "bg-slate-300"
-                    }`}
-                    aria-label={`${manager.name} 가시성 토글`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        manager.visible ? "translate-x-6" : "translate-x-1"
-                      }`}
-                    />
-                  </PrimitiveButton>
-                </div>
+                  <span>{manager.name}</span>
+                  <span className="text-brand-point-500">·</span>
+                  <span>{manager.phone || "-"}</span>
+                  <X className="h-3.5 w-3.5" />
+                </PrimitiveButton>
               ))}
             </div>
           )}
