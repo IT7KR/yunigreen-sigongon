@@ -1,6 +1,8 @@
 import io
+import logging
 from datetime import datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Optional
 
 from reportlab.lib import colors
@@ -10,6 +12,8 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.platypus import (
+    Image as RLImage,
+    PageBreak,
     SimpleDocTemplate,
     Table,
     TableStyle,
@@ -17,11 +21,14 @@ from reportlab.platypus import (
     Spacer,
 )
 
+from app.core.config import settings
+
 pdfmetrics.registerFont(UnicodeCIDFont("HeiseiMin-W3"))
 pdfmetrics.registerFont(UnicodeCIDFont("HeiseiKakuGo-W5"))
 
 FONT_NAME = "HeiseiKakuGo-W5"
 FONT_NAME_BOLD = "HeiseiMin-W3"
+logger = logging.getLogger(__name__)
 
 
 def _format_currency(amount: Decimal) -> str:
@@ -338,6 +345,65 @@ def generate_contract_pdf(
     return buffer.getvalue()
 
 
+def _resolve_photo_path(raw_path: str) -> Optional[Path]:
+    candidate = Path(raw_path)
+    if candidate.is_absolute() and candidate.exists():
+        return candidate
+
+    relative_candidate = Path(settings.upload_dir) / raw_path.lstrip("/")
+    if relative_candidate.exists():
+        return relative_candidate
+    return None
+
+
+def _build_photo_grid(photo_paths: list[Path]) -> Table:
+    cells: list = []
+    max_cell_width = 78 * mm
+    max_cell_height = 58 * mm
+
+    for path in photo_paths:
+        try:
+            image = RLImage(str(path))
+            image._restrictSize(max_cell_width, max_cell_height)
+            caption = Paragraph(path.name, ParagraphStyle(name="PhotoCaption", fontName=FONT_NAME, fontSize=8, leading=10))
+            cell_table = Table([[image], [caption]], colWidths=[max_cell_width])
+            cell_table.setStyle(
+                TableStyle(
+                    [
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("TOPPADDING", (0, 0), (-1, -1), 2),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                    ]
+                )
+            )
+            cells.append(cell_table)
+        except Exception as exc:
+            logger.warning("Failed to load diagnosis photo for pdf: %s (%s)", path, exc)
+
+    while len(cells) < 4:
+        cells.append(Spacer(1, 1))
+
+    grid = Table(
+        [
+            [cells[0], cells[1]],
+            [cells[2], cells[3]],
+        ],
+        colWidths=[80 * mm, 80 * mm],
+        rowHeights=[65 * mm, 65 * mm],
+    )
+    grid.setStyle(
+        TableStyle(
+            [
+                ("GRID", (0, 0), (-1, -1), 0.3, colors.lightgrey),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ]
+        )
+    )
+    return grid
+
+
 def generate_diagnosis_pdf(
     diagnosis_id: int,
     project_name: str,
@@ -346,6 +412,7 @@ def generate_diagnosis_pdf(
     leak_opinion_text: str,
     field_opinion_text: Optional[str] = None,
     material_suggestions: Optional[list] = None,
+    photo_paths: Optional[list[str]] = None,
 ) -> bytes:
     """AI 소견서 PDF 생성."""
     buffer = io.BytesIO()
@@ -436,6 +503,28 @@ def generate_diagnosis_pdf(
         ]))
         story.append(mat_table)
         story.append(Spacer(1, 5 * mm))
+
+    # Diagnosis photos (max 8, paged as 2x2 grid)
+    if photo_paths:
+        resolved_paths: list[Path] = []
+        for raw_path in photo_paths[:8]:
+            resolved = _resolve_photo_path(raw_path)
+            if resolved:
+                resolved_paths.append(resolved)
+            else:
+                logger.warning("Diagnosis photo path not found, skipped: %s", raw_path)
+
+        if resolved_paths:
+            story.append(Paragraph("■ 진단 사진", normal_style))
+            story.append(Spacer(1, 3 * mm))
+
+            chunks = [resolved_paths[idx: idx + 4] for idx in range(0, len(resolved_paths), 4)]
+            for page_index, chunk in enumerate(chunks):
+                story.append(_build_photo_grid(chunk))
+                if page_index < len(chunks) - 1:
+                    story.append(PageBreak())
+
+            story.append(Spacer(1, 5 * mm))
 
     # Footer
     story.append(Spacer(1, 10 * mm))

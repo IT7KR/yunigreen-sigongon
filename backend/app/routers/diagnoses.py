@@ -424,6 +424,16 @@ async def download_diagnosis_pdf(
         project_name = project.name
         site_address = project.address or project.name
 
+    photo_paths: list[str] = []
+    if site_visit:
+        photo_result = await db.execute(
+            select(Photo)
+            .where(Photo.site_visit_id == site_visit.id)
+            .order_by(Photo.created_at.desc())
+            .limit(8)
+        )
+        photo_paths = [photo.storage_path for photo in photo_result.scalars().all()]
+
     # Load material suggestions
     mat_result = await db.execute(
         select(AIMaterialSuggestion).where(
@@ -449,6 +459,7 @@ async def download_diagnosis_pdf(
         leak_opinion_text=diagnosis.leak_opinion_text or "",
         field_opinion_text=diagnosis.field_opinion_text,
         material_suggestions=material_list,
+        photo_paths=photo_paths,
     )
 
     filename = f"소견서_{diagnosis_id}.pdf"
