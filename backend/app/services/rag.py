@@ -1,6 +1,7 @@
 """RAG (Retrieval-Augmented Generation) 서비스."""
 import math
 from typing import Optional
+import re
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -23,13 +24,21 @@ class RAGService:
         category: Optional[str] = None,
     ) -> list[dict]:
         query_embedding = await self._get_embedding(query)
-        
-        results = await self._vector_search(
-            query_embedding,
-            top_k=top_k,
-            revision_id=revision_id,
-            category=category,
-        )
+
+        if self._is_zero_vector(query_embedding):
+            results = await self._keyword_search(
+                query=query,
+                top_k=top_k,
+                revision_id=revision_id,
+                category=category,
+            )
+        else:
+            results = await self._vector_search(
+                query_embedding,
+                top_k=top_k,
+                revision_id=revision_id,
+                category=category,
+            )
         
         return [
             {
@@ -92,6 +101,50 @@ class RAGService:
         
         scored_chunks.sort(key=lambda x: x[1], reverse=True)
         return scored_chunks[:top_k]
+
+    async def _keyword_search(
+        self,
+        query: str,
+        top_k: int,
+        revision_id: Optional[int] = None,
+        category: Optional[str] = None,
+    ) -> list[tuple[DocumentChunk, float]]:
+        base_query = select(DocumentChunk)
+
+        if revision_id:
+            base_query = base_query.where(
+                DocumentChunk.pricebook_revision_id == revision_id
+            )
+
+        if category:
+            base_query = base_query.where(
+                DocumentChunk.category == category
+            )
+
+        result = await self.db.execute(base_query.limit(300))
+        chunks = result.scalars().all()
+
+        tokens = [t for t in re.findall(r"[가-힣A-Za-z0-9]+", query.lower()) if len(t) >= 2]
+        if not tokens:
+            return [(chunk, 0.0) for chunk in chunks[:top_k]]
+
+        scored: list[tuple[DocumentChunk, float]] = []
+        for chunk in chunks:
+            text = (chunk.chunk_text or "").lower()
+            score = 0.0
+            for token in tokens:
+                if token in text:
+                    score += 1.0
+            if score > 0:
+                scored.append((chunk, score))
+
+        scored.sort(key=lambda row: row[1], reverse=True)
+        return scored[:top_k]
+
+    def _is_zero_vector(self, vector: list[float]) -> bool:
+        if not vector:
+            return True
+        return all(abs(v) < 1e-12 for v in vector)
     
     def _cosine_similarity(self, vec_a: list[float], vec_b: list[float]) -> float:
         if len(vec_a) != len(vec_b):
