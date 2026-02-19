@@ -132,6 +132,7 @@ from app.routers.field_representatives import router as field_representatives_ro
 from app.routers.consent import router as consent_router
 from app.routers.documents import router as documents_router
 from app.routers.notifications import router as notifications_router
+from app.routers.dashboard import router as dashboard_router
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["인증"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["사용자 관리"])
@@ -157,3 +158,4 @@ app.include_router(field_representatives_router, prefix="/api/v1", tags=["현장
 app.include_router(consent_router, prefix="/api/v1", tags=["동의 기록"])
 app.include_router(documents_router, prefix="/api/v1", tags=["문서 생성"])
 app.include_router(notifications_router, prefix="/api/v1", tags=["알림"])
+app.include_router(dashboard_router, prefix="/api/v1", tags=["대시보드"])

@@ -2596,13 +2596,25 @@ async def get_sa_dashboard(
         "signups_growth": 0,
     }
 
+    # Build last 6 months of revenue history
+    now_dt = datetime.utcnow()
+    monthly_revenue_list = []
+    for i in range(5, -1, -1):
+        m_date = now_dt - timedelta(days=30 * i)
+        monthly_revenue_list.append(
+            {
+                "month": m_date.strftime("%Y-%m"),
+                "label": m_date.strftime("%m월"),
+                "amount": int(monthly_revenue) if i == 0 else 0,
+            }
+        )
+
     return APIResponse.ok(
         {
             # Flattened keys for API client compatibility
             "total_tenants": stats_payload["total_tenants"],
             "active_tenants": stats_payload["total_tenants"],
             "total_revenue": stats_payload["monthly_revenue"],
-            "monthly_revenue": stats_payload["monthly_revenue"],
             "recent_signups": [
                 {
                     "id": str(org.id),
@@ -2625,15 +2637,54 @@ async def get_sa_dashboard(
                 }
                 for org in recent_orgs
             ],
-            "monthly_revenue": [
-                {
-                    "month": datetime.utcnow().strftime("%Y-%m"),
-                    "amount": int(monthly_revenue),
-                }
-            ],
+            "monthly_revenue": monthly_revenue_list,
             "plan_distribution": plan_distribution,
         }
     )
+
+
+@router.get("/admin/subscriptions/expiring", response_model=APIResponse[dict])
+async def get_expiring_subscriptions(
+    db: DBSession,
+    current_user: CurrentUser,
+    days: int = 30,
+):
+    """만료 임박 구독 목록 (super admin 전용)."""
+    if _role_value(current_user) != "super_admin":
+        raise HTTPException(status_code=403, detail="슈퍼관리자만 접근 가능해요")
+
+    cutoff = datetime.utcnow() + timedelta(days=days)
+    expiring_subs = (
+        await db.execute(
+            select(Subscription, Organization)
+            .join(Organization, Subscription.organization_id == Organization.id)
+            .where(
+                Subscription.expires_at <= cutoff,
+                Subscription.status == SubscriptionStatus.ACTIVE,
+            )
+            .order_by(Subscription.expires_at.asc())
+        )
+    ).all()
+
+    items = []
+    for sub, org in expiring_subs:
+        days_remaining = max(0, (sub.expires_at.date() - datetime.utcnow().date()).days)
+        plan_map = {
+            SubscriptionPlan.STARTER: "스타터",
+            SubscriptionPlan.STANDARD: "스탠다드",
+            SubscriptionPlan.PREMIUM: "프리미엄",
+        }
+        items.append(
+            {
+                "id": str(sub.id),
+                "company_name": org.name,
+                "plan": plan_map.get(sub.plan, sub.plan.value),
+                "expires_at": sub.expires_at.strftime("%Y-%m-%d"),
+                "days_remaining": days_remaining,
+            }
+        )
+
+    return APIResponse.ok({"items": items, "total": len(items)})
 
 
 @router.get("/admin/tenants", response_model=PaginatedResponse[dict])

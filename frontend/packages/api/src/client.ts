@@ -1752,6 +1752,83 @@ export class APIClient {
     return response.data;
   }
 
+  async getDashboardSummary(): Promise<
+    APIResponse<{
+      monthly_revenue: number;
+      monthly_collection: number;
+      receivables: number;
+      monthly_workers: number;
+      recent_logs: Array<{
+        id: string;
+        project: string;
+        date: string;
+        summary: string;
+      }>;
+    }>
+  > {
+    const response = await this.client.get<
+      APIResponse<{
+        monthly_revenue: number;
+        monthly_collection: number;
+        receivables: number;
+        monthly_workers: number;
+        recent_logs: Array<{
+          id: string;
+          project: string;
+          date: string;
+          summary: string;
+        }>;
+      }>
+    >("/dashboard/summary");
+    return response.data;
+  }
+
+  async getProjectStats(): Promise<
+    APIResponse<{
+      total: number;
+      in_progress: number;
+      completed: number;
+      this_month: number;
+    }>
+  > {
+    const response = await this.client.get<
+      APIResponse<{
+        total: number;
+        in_progress: number;
+        completed: number;
+        this_month: number;
+      }>
+    >("/dashboard/projects/stats");
+    return response.data;
+  }
+
+  async getExpiringSubscriptions(days?: number): Promise<
+    APIResponse<{
+      items: Array<{
+        id: string;
+        company_name: string;
+        plan: string;
+        expires_at: string;
+        days_remaining: number;
+      }>;
+      total: number;
+    }>
+  > {
+    const response = await this.client.get<
+      APIResponse<{
+        items: Array<{
+          id: string;
+          company_name: string;
+          plan: string;
+          expires_at: string;
+          days_remaining: number;
+        }>;
+        total: number;
+      }>
+    >("/admin/subscriptions/expiring", { params: { days } });
+    return response.data;
+  }
+
   async getTenants(params?: { page?: number; search?: string }) {
     const response = await this.client.get<
       PaginatedResponse<{
@@ -2400,6 +2477,29 @@ export class APIClient {
         require_grounding: requireGrounding,
       },
     });
+    return response.data;
+  }
+
+  async validatePricebookRevision(revisionId: number | string): Promise<
+    APIResponse<{
+      total_items: number;
+      valid_count: number;
+      warning_count: number;
+      error_count: number;
+      is_valid: boolean;
+      issues: Array<{
+        item_index: number;
+        item_name: string;
+        field: string;
+        severity: "ok" | "warning" | "error";
+        message: string;
+        value?: string | null;
+      }>;
+    }>
+  > {
+    const response = await this.client.get(
+      `/pricebooks/revisions/${revisionId}/validate`,
+    );
     return response.data;
   }
 

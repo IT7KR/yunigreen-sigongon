@@ -81,13 +81,6 @@ export default function SADashboardPage() {
   const [expiringSubscriptions, setExpiringSubscriptions] = useState<ExpiringSubscription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data for expiring subscriptions
-  const mockExpiringSubscriptions: ExpiringSubscription[] = [
-    { id: "1", company_name: "(주)삼성건설", plan: "스탠다드", expires_at: "2026-02-10", days_remaining: 4 },
-    { id: "2", company_name: "현대방수", plan: "스타터", expires_at: "2026-02-12", days_remaining: 6 },
-    { id: "3", company_name: "롯데건축", plan: "프리미엄", expires_at: "2026-02-15", days_remaining: 9 },
-  ];
-
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -95,15 +88,19 @@ export default function SADashboardPage() {
   async function loadDashboardData() {
     setIsLoading(true);
     try {
-      const response = await api.getSADashboard();
-      if (response.success && response.data) {
-        setStats(response.data.stats);
-        setRecentActivity(response.data.recent_activity);
-        setMonthlyRevenue(response.data.monthly_revenue);
-        setPlanDistribution(response.data.plan_distribution);
+      const [dashRes, expiringRes] = await Promise.all([
+        api.getSADashboard(),
+        api.getExpiringSubscriptions(30),
+      ]);
+      if (dashRes.success && dashRes.data) {
+        setStats(dashRes.data.stats);
+        setRecentActivity(dashRes.data.recent_activity);
+        setMonthlyRevenue(dashRes.data.monthly_revenue);
+        setPlanDistribution(dashRes.data.plan_distribution);
       }
-      // Set mock expiring subscriptions
-      setExpiringSubscriptions(mockExpiringSubscriptions);
+      if (expiringRes.success && expiringRes.data) {
+        setExpiringSubscriptions(expiringRes.data.items);
+      }
     } catch (err) {
       console.error("Failed to load dashboard data:", err);
     } finally {

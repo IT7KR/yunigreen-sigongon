@@ -27,35 +27,30 @@ export function useProject(id: string) {
 }
 
 export function useDashboardStats() {
-  const projects = useQuery({
-    queryKey: ["projects", { per_page: 1000 }],
-    queryFn: () => api.getProjects({ per_page: 1000 }),
+  const projectStats = useQuery({
+    queryKey: ["dashboard-project-stats"],
+    queryFn: () => api.getProjectStats(),
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const recentProjects = useQuery({
+    queryKey: ["projects", { per_page: 5 }],
+    queryFn: () => api.getProjects({ per_page: 5 }),
     staleTime: 1000 * 60 * 5,
   });
 
   const stats = {
-    total: projects.data?.meta?.total ?? 0,
-    inProgress: 0,
-    completed: 0,
-    thisMonth: 0,
+    total: projectStats.data?.data?.total ?? 0,
+    inProgress: projectStats.data?.data?.in_progress ?? 0,
+    completed: projectStats.data?.data?.completed ?? 0,
+    thisMonth: projectStats.data?.data?.this_month ?? 0,
   };
 
-  if (projects.data?.data) {
-    const now = new Date();
-    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    projects.data.data.forEach((p) => {
-      if (p.status === "in_progress") stats.inProgress++;
-      if (p.status === "completed" || p.status === "warranty")
-        stats.completed++;
-      if (new Date(p.created_at) >= thisMonth) stats.thisMonth++;
-    });
-  }
-
   return {
-    ...projects,
+    isLoading: projectStats.isLoading || recentProjects.isLoading,
+    error: projectStats.error || recentProjects.error,
     stats,
-    recentProjects: projects.data?.data?.slice(0, 5) ?? [],
+    recentProjects: recentProjects.data?.data?.slice(0, 5) ?? [],
   };
 }
 

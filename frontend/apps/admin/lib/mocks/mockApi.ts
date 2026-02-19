@@ -2015,6 +2015,52 @@ export class MockAPIClient {
     );
   }
 
+  async validatePricebookRevision(_revisionId: number | string) {
+    return delay(
+      ok({
+        total_items: 42,
+        valid_count: 38,
+        warning_count: 3,
+        error_count: 1,
+        is_valid: false,
+        issues: [
+          {
+            item_index: 5,
+            item_name: "철근공사",
+            field: "unit_price_extracted",
+            severity: "error" as const,
+            message: "단가가 없습니다",
+            value: null,
+          },
+          {
+            item_index: 12,
+            item_name: "타일공사",
+            field: "is_grounded",
+            severity: "warning" as const,
+            message: "원본 문서에서 단가를 확인하지 못했습니다 (Grounding 실패)",
+            value: null,
+          },
+          {
+            item_index: 20,
+            item_name: "방수공사",
+            field: "unit",
+            severity: "warning" as const,
+            message: "단위가 없습니다",
+            value: null,
+          },
+          {
+            item_index: 31,
+            item_name: "도장공사",
+            field: "anomaly_flags",
+            severity: "warning" as const,
+            message: "이상치 감지: price_too_high",
+            value: "price_too_high",
+          },
+        ],
+      }),
+    );
+  }
+
   async getUtilities(_projectId: string) {
     this.ensureUtilities(_projectId);
     return delay(ok(this.utilitiesByProject[_projectId]));
@@ -2592,6 +2638,46 @@ export class MockAPIClient {
       ok({
         url: "https://modusign.co.kr/document/download/...",
         filename: "contract_signed.pdf",
+      })
+    );
+  }
+
+  async getDashboardSummary() {
+    return delay(
+      ok({
+        monthly_revenue: 45000000,
+        monthly_collection: 38250000,
+        receivables: 6750000,
+        monthly_workers: 24,
+        recent_logs: [
+          { id: "1", project: "강남 삼성빌딩 방수공사", date: "2026-02-05", summary: "옥상 방수 1차 도포 완료" },
+          { id: "2", project: "서초 현대아파트 외벽공사", date: "2026-02-05", summary: "외벽 균열 보수 70% 완료" },
+          { id: "3", project: "송파 롯데타워 지하방수", date: "2026-02-04", summary: "지하 2층 방수 시공 시작" },
+        ],
+      })
+    );
+  }
+
+  async getProjectStats() {
+    const projects = mockDb.get("projects");
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const total = projects.length;
+    const inProgress = projects.filter((p: { status: string }) => p.status === "in_progress").length;
+    const completed = projects.filter((p: { status: string }) => p.status === "completed" || p.status === "warranty").length;
+    const thisMonth = projects.filter((p: { createdAt?: string }) => p.createdAt && new Date(p.createdAt) >= monthStart).length;
+    return delay(ok({ total, in_progress: inProgress, completed, this_month: thisMonth }));
+  }
+
+  async getExpiringSubscriptions(_days?: number) {
+    return delay(
+      ok({
+        items: [
+          { id: "1", company_name: "(주)삼성건설", plan: "스탠다드", expires_at: "2026-02-10", days_remaining: 4 },
+          { id: "2", company_name: "현대방수", plan: "스타터", expires_at: "2026-02-12", days_remaining: 6 },
+          { id: "3", company_name: "롯데건축", plan: "프리미엄", expires_at: "2026-02-15", days_remaining: 9 },
+        ],
+        total: 3,
       })
     );
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   FolderKanban,
@@ -29,23 +30,33 @@ import {
   StaggerGrid,
 } from "@sigongon/ui";
 import { useDashboardStats } from "@/hooks";
+import { api } from "@/lib/api";
 import type { ProjectStatus } from "@sigongon/types";
-
-// Mock data for extended dashboard - will be replaced with API calls
-const mockExtendedStats = {
-  monthlyRevenue: 45000000,
-  monthlyCollection: 38000000,
-  receivables: 7000000,
-  monthlyWorkers: 24,
-  recentLogs: [
-    { id: "1", project: "강남 삼성빌딩 방수공사", date: "2026-02-05", summary: "옥상 방수 1차 도포 완료" },
-    { id: "2", project: "서초 현대아파트 외벽공사", date: "2026-02-05", summary: "외벽 균열 보수 70% 완료" },
-    { id: "3", project: "송파 롯데타워 지하방수", date: "2026-02-04", summary: "지하 2층 방수 시공 시작" },
-  ],
-};
 
 export default function DashboardPage() {
   const { stats, recentProjects, isLoading, error } = useDashboardStats();
+
+  const [extendedStats, setExtendedStats] = useState({
+    monthlyRevenue: 0,
+    monthlyCollection: 0,
+    receivables: 0,
+    monthlyWorkers: 0,
+    recentLogs: [] as Array<{ id: string; project: string; date: string; summary: string }>,
+  });
+
+  useEffect(() => {
+    api.getDashboardSummary().then((r) => {
+      if (r.success && r.data) {
+        setExtendedStats({
+          monthlyRevenue: r.data.monthly_revenue,
+          monthlyCollection: r.data.monthly_collection,
+          receivables: r.data.receivables,
+          monthlyWorkers: r.data.monthly_workers,
+          recentLogs: r.data.recent_logs,
+        });
+      }
+    });
+  }, []);
 
   const statCards = [
     {
@@ -73,25 +84,25 @@ export default function DashboardPage() {
   const financeCards = [
     {
       title: "금월 매출",
-      value: mockExtendedStats.monthlyRevenue,
+      value: extendedStats.monthlyRevenue,
       icon: DollarSign,
       color: "green",
     },
     {
       title: "금월 수금",
-      value: mockExtendedStats.monthlyCollection,
+      value: extendedStats.monthlyCollection,
       icon: Receipt,
       color: "blue",
     },
     {
       title: "미수금",
-      value: mockExtendedStats.receivables,
+      value: extendedStats.receivables,
       icon: AlertCircle,
       color: "amber",
     },
     {
       title: "금월 투입 인원",
-      value: mockExtendedStats.monthlyWorkers,
+      value: extendedStats.monthlyWorkers,
       icon: Users,
       color: "purple",
       suffix: "명",
@@ -238,9 +249,9 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
                 <CardContent>
-                  {mockExtendedStats.recentLogs.length > 0 ? (
+                  {extendedStats.recentLogs.length > 0 ? (
                   <StaggerGrid
-                    items={mockExtendedStats.recentLogs}
+                    items={extendedStats.recentLogs}
                     className="space-y-3"
                     keyExtractor={(log) => log.id}
                     renderItem={(log) => (
@@ -283,9 +294,9 @@ export default function DashboardPage() {
                       {stats.inProgress}개 프로젝트가 진행 중이에요
                     </AlertBox>
                   )}
-                  {mockExtendedStats.receivables > 0 && (
+                  {extendedStats.receivables > 0 && (
                     <AlertBox variant="error" action={{ label: "확인하기", href: "/billing" }}>
-                      미수금 {(mockExtendedStats.receivables / 10000).toLocaleString()}만원
+                      미수금 {(extendedStats.receivables / 10000).toLocaleString()}만원
                     </AlertBox>
                   )}
                   <AlertBox variant="warning" action={{ label: "확인하기", href: "/pricebooks" }}>
