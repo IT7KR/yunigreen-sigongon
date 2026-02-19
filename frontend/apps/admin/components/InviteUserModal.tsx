@@ -42,13 +42,13 @@ export function InviteUserModal({
 
   /**
    * Available roles based on current user's role:
-   * - super_admin: can invite all roles
+   * - super_admin: can invite company_admin only
    * - company_admin: can only invite site_manager (within same org)
    * - site_manager/worker: cannot invite users (should not see this modal)
    */
   const availableRoles = useMemo(() => {
     if (currentUserRole === "super_admin") {
-      return ROLE_OPTIONS;
+      return ROLE_OPTIONS.filter((r) => r.value === "company_admin");
     }
     if (currentUserRole === "company_admin") {
       return ROLE_OPTIONS.filter((r) => r.value === "site_manager");

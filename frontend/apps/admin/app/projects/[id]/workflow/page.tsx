@@ -433,11 +433,16 @@ function buildSteps(id: string): WorkflowStep[] {
 // Resolve step statuses from project status
 // ---------------------------------------------------------------------------
 
-function resolveStatuses(projectStatus: string): StepStatus[] {
+function resolveStatuses(
+  projectStatus: string,
+  latestEstimateStatus?: string,
+  hasContract = false,
+): StepStatus[] {
   const s = projectStatus;
 
   const atLeast = (t: string) => statusAtLeast(s, t);
   const is = (...v: string[]) => statusIs(s, ...v);
+  const hasEstimate = Boolean(latestEstimateStatus);
 
   // Step 1: always completed once a project exists
   const s1: StepStatus = "completed";
@@ -452,22 +457,24 @@ function resolveStatuses(projectStatus: string): StepStatus[] {
         : "pending";
   // Step 4: same as step 3
   const s4: StepStatus = s3;
-  // Step 5: completed if quoted or later
-  const s5: StepStatus = atLeast("quoted")
+  // Step 5: completed once estimate is created
+  const s5: StepStatus = hasEstimate || atLeast("quoted")
     ? "completed"
     : is("estimating")
       ? "current"
       : "pending";
-  // Step 6: completed if quoted or later
-  const s6: StepStatus = atLeast("quoted")
+  // Step 6: completed once estimate is issued to customer
+  const s6: StepStatus = ["issued", "accepted", "rejected"].includes(
+    latestEstimateStatus || "",
+  )
     ? "completed"
-    : s5 === "current"
+    : latestEstimateStatus === "draft" || s5 === "current"
       ? "current"
       : "pending";
-  // Step 7: completed if contracted or later
-  const s7: StepStatus = atLeast("contracted")
+  // Step 7: completed if contract exists/contracted, current when customer accepted
+  const s7: StepStatus = hasContract || atLeast("contracted")
     ? "completed"
-    : is("quoted")
+    : latestEstimateStatus === "accepted"
       ? "current"
       : "pending";
   // Step 8: completed if in_progress or later
@@ -742,7 +749,15 @@ export default function WorkflowPage({
   }
 
   const steps = buildSteps(id);
-  const statuses = resolveStatuses(project.status);
+  const latestEstimateStatus = [...(project.estimates || [])].sort(
+    (a, b) => b.version - a.version,
+  )[0]?.status;
+  const hasContract = (project.contracts?.length || 0) > 0;
+  const statuses = resolveStatuses(
+    project.status,
+    latestEstimateStatus,
+    hasContract,
+  );
   const completedCount = statuses.filter((s) => s === "completed").length;
 
   return (

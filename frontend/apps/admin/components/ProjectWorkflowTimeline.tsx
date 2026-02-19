@@ -77,18 +77,16 @@ export function ProjectWorkflowTimeline({
       if (diagnosisCount > 0 || visitCount > 0) return "pending";
       return "not_started";
     }
-    if (estimateStatus === "issued" || estimateStatus === "accepted")
+    if (estimateStatus === "accepted" || estimateStatus === "rejected")
       return "completed";
-    if (estimateStatus === "draft") return "in_progress";
+    if (estimateStatus === "draft" || estimateStatus === "issued")
+      return "in_progress";
     return "pending";
   };
 
   const getContractStatus = (): WorkflowStage["status"] => {
     if (!hasContract) {
-      if (
-        hasEstimate &&
-        (estimateStatus === "issued" || estimateStatus === "accepted")
-      ) {
+      if (hasEstimate && estimateStatus === "accepted") {
         return "pending";
       }
       return "not_started";
@@ -135,7 +133,7 @@ export function ProjectWorkflowTimeline({
       id: "visit",
       label: "방문",
       href: `/projects/${projectId}/visits`,
-      description: "초기/재방문 이력을 등록하고 현장 사진을 수집합니다.",
+      description: "최초 방문/진행 점검/준공 확인 이력을 등록하고 현장 사진을 수집합니다.",
       count: visitCount,
       status: getVisitStatus(),
     },

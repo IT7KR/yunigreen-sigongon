@@ -208,6 +208,10 @@ export default function ProjectDetailPage({
     (project.estimates?.length ?? 0) > 0,
     (project.contracts?.length ?? 0) > 0,
   );
+  const latestEstimate = [...(project.estimates || [])].sort(
+    (a, b) => b.version - a.version,
+  )[0];
+  const latestContract = [...(project.contracts || [])][0];
 
   const primaryAction = actions.find((a) => a.primary) || actions[0];
   const quickActions = actions.filter((a) => a !== primaryAction).slice(0, 5); // Limit quick actions
@@ -329,9 +333,9 @@ export default function ProjectDetailPage({
               visitCount={project.site_visits?.length ?? 0}
               diagnosisCount={project.diagnoses_count ?? 0}
               hasEstimate={(project.estimates?.length ?? 0) > 0}
-              estimateStatus={project.estimates?.[0]?.status}
+              estimateStatus={latestEstimate?.status}
               hasContract={(project.contracts?.length ?? 0) > 0}
-              contractStatus={project.contracts?.[0]?.status}
+              contractStatus={latestContract?.status}
               projectStatus={project.status}
             />
           </div>

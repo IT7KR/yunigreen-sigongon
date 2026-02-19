@@ -68,6 +68,17 @@ export default function EstimatesPage({
   async function handleCreateEstimate() {
     try {
       setCreatingEstimate(true);
+      const projectResponse = await api.getProject(projectId);
+      const visits = projectResponse.success ? projectResponse.data?.site_visits || [] : [];
+      if (visits.length === 0) {
+        setError("현장방문 기록이 있어야 견적서를 생성할 수 있어요");
+        return;
+      }
+      const hasArea = visits.some((visit) => Boolean(visit.estimated_area_m2));
+      if (!hasArea) {
+        setError("면적 산출값을 먼저 입력해 주세요. (현장방문 > 면적 산출)");
+        return;
+      }
       const result = await api.createEstimate(projectId);
       if (result.success && result.data) {
         router.push(`/estimates/${result.data.id}`);

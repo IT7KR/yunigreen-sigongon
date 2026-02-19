@@ -19,6 +19,7 @@ export default function NewProjectPage() {
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerResults, setCustomerResults] = useState<CustomerMaster[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [selectedCustomerLabel, setSelectedCustomerLabel] = useState("");
   const [isCustomerSearching, setIsCustomerSearching] = useState(false);
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
@@ -67,11 +68,19 @@ export default function NewProjectPage() {
     setCustomerQuery(customer.name);
     setClientName(customer.name);
     setClientPhone(getCustomerPrimaryPhone(customer));
+    setSelectedCustomerLabel(
+      `${customer.name}${
+        getCustomerPrimaryPhone(customer)
+          ? ` · ${getCustomerPrimaryPhone(customer)}`
+          : ""
+      }`,
+    );
     setCustomerResults([]);
   };
 
   const handleClearCustomer = () => {
     setSelectedCustomerId("");
+    setSelectedCustomerLabel("");
     setCustomerQuery("");
     setCustomerResults([]);
   };
@@ -241,7 +250,7 @@ export default function NewProjectPage() {
             )}
             {selectedCustomerId && (
               <div className="flex items-center justify-between rounded-lg bg-brand-point-50 px-3 py-2 text-xs text-brand-point-700">
-                <span>선택된 발주처 ID: {selectedCustomerId}</span>
+                <span>선택된 발주처: {selectedCustomerLabel || selectedCustomerId}</span>
                 <button
                   type="button"
                   className="font-medium underline"

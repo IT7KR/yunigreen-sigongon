@@ -23,6 +23,8 @@ interface RepresentativeFormState {
   notes: string;
   bookletFileName: string;
   careerFileName: string;
+  initialCareerFileName: string;
+  careerCertUploadedAt?: string;
   employmentFileName: string;
 }
 
@@ -33,6 +35,8 @@ const EMPTY_FORM: RepresentativeFormState = {
   notes: "",
   bookletFileName: "",
   careerFileName: "",
+  initialCareerFileName: "",
+  careerCertUploadedAt: undefined,
   employmentFileName: "",
 };
 
@@ -102,6 +106,8 @@ export default function LaborRepresentativesPage() {
       notes: item.notes || "",
       bookletFileName: item.booklet_filename || "",
       careerFileName: item.career_cert_filename || "",
+      initialCareerFileName: item.career_cert_filename || "",
+      careerCertUploadedAt: item.career_cert_uploaded_at,
       employmentFileName: item.employment_cert_filename || "",
     });
     setIsFormOpen(true);
@@ -120,6 +126,16 @@ export default function LaborRepresentativesPage() {
     setSaving(true);
     try {
       const nowIso = new Date().toISOString();
+      const careerFileChanged =
+        formState.careerFileName !== formState.initialCareerFileName;
+      const careerCertUploadedAt = formState.careerFileName
+        ? formState.id
+          ? careerFileChanged
+            ? nowIso
+            : formState.careerCertUploadedAt || nowIso
+          : nowIso
+        : undefined;
+
       await upsertFieldRepresentative({
         id: formState.id,
         name: formState.name.trim(),
@@ -128,7 +144,7 @@ export default function LaborRepresentativesPage() {
         notes: formState.notes.trim() || undefined,
         booklet_filename: formState.bookletFileName || undefined,
         career_cert_filename: formState.careerFileName || undefined,
-        career_cert_uploaded_at: formState.careerFileName ? nowIso : undefined,
+        career_cert_uploaded_at: careerCertUploadedAt,
         employment_cert_filename: formState.employmentFileName || undefined,
       });
 
@@ -235,7 +251,10 @@ export default function LaborRepresentativesPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">현장대리인 관리</h1>
             <p className="mt-1 text-sm text-slate-500">
-              기술수첩/경력증명/재직증명 서류를 관리하고 프로젝트별로 배정합니다.
+              기술수첩 사본/현장경력증명서/재직증명서를 관리하고 프로젝트별로 배정합니다.
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              경력증명서 만료는 접근 차단 없이 알림으로 안내합니다.
             </p>
           </div>
           <Button onClick={openCreateModal}>
@@ -438,7 +457,7 @@ export default function LaborRepresentativesPage() {
           </div>
 
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            프로젝트에는 기준일 기준으로 현장대리인 1명만 배정됩니다.
+            프로젝트에는 기준일 기준으로 현장대리인 1명만 배정됩니다. 경력증명서 만료는 차단 없이 알림으로만 안내됩니다.
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

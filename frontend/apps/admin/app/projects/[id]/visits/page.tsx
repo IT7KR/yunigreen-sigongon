@@ -145,6 +145,7 @@ export default function VisitsPage({
                   <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
                     <th className="pb-3 font-medium">방문일시</th>
                     <th className="pb-3 font-medium">방문유형</th>
+                    <th className="pb-3 font-medium">면적(㎡)</th>
                     <th className="pb-3 font-medium">사진 수</th>
                     <th className="pb-3 font-medium">메모</th>
                     <th className="pb-3 font-medium"></th>
@@ -165,6 +166,9 @@ export default function VisitsPage({
                         >
                           {visitTypeLabels[visit.visit_type]}
                         </Badge>
+                      </td>
+                      <td className="py-4 text-slate-600">
+                        {visit.estimated_area_m2 || "-"}
                       </td>
                       <td className="py-4">
                         <div className="flex items-center gap-2 text-slate-600">

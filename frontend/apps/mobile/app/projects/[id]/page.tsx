@@ -27,6 +27,7 @@ import {
   Button,
   StatusBadge,
   formatDate,
+  toast,
 } from "@sigongon/ui";
 import { SiteVisitCard, EstimateCard } from "@/components/features";
 import {
@@ -71,6 +72,15 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
 
   const handleCreateEstimate = async () => {
     try {
+      if (visits.length === 0) {
+        toast.warning("현장방문 기록이 있어야 견적서를 생성할 수 있어요.");
+        return;
+      }
+      const hasArea = visits.some((visit) => Boolean(visit.estimated_area_m2));
+      if (!hasArea) {
+        toast.warning("면적 산출값을 먼저 입력해 주세요.");
+        return;
+      }
       const result = await createEstimate.mutateAsync(undefined);
       if (result.success && result.data) {
         router.push(`/estimates/${result.data.id}`);

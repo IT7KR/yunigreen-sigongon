@@ -10,9 +10,9 @@ const visitTypeLabels: Record<
   VisitType,
   { label: string; variant: "default" | "info" | "success" }
 > = {
-  initial: { label: "최초방문", variant: "info" },
-  progress: { label: "중간점검", variant: "default" },
-  completion: { label: "준공검사", variant: "success" },
+  initial: { label: "최초 방문", variant: "info" },
+  progress: { label: "진행 점검", variant: "default" },
+  completion: { label: "준공 확인", variant: "success" },
 };
 
 interface SiteVisitCardProps {
@@ -21,6 +21,7 @@ interface SiteVisitCardProps {
     visit_type: VisitType;
     visited_at: string;
     photo_count: number;
+    estimated_area_m2?: string;
   };
   projectId: string;
 }
@@ -51,6 +52,11 @@ export function SiteVisitCard({ visit, projectId }: SiteVisitCardProps) {
             <Calendar className="h-3 w-3" />
             {formatDate(visit.visited_at)}
           </div>
+          {visit.estimated_area_m2 && (
+            <div className="mt-0.5 text-xs text-slate-500">
+              면적 {visit.estimated_area_m2}㎡
+            </div>
+          )}
         </div>
       </div>
       <ChevronRight className="h-4 w-4 text-slate-400" />
