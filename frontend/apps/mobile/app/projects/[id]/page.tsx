@@ -37,6 +37,7 @@ import {
   useRequestDiagnosis,
   useCreateEstimate,
 } from "@/hooks";
+import { useAuth } from "@/lib/auth";
 import type { ProjectStatus, VisitType, EstimateStatus } from "@sigongon/types";
 
 interface ProjectDetailPageProps {
@@ -46,6 +47,7 @@ interface ProjectDetailPageProps {
 export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const { user } = useAuth();
 
   const { data: projectData, isLoading: projectLoading } = useProject(id);
   const { data: visitsData, isLoading: visitsLoading } = useSiteVisits(id);
@@ -120,15 +122,23 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const projectStatus = project.status as ProjectStatus;
 
   type ActionKey = "visit" | "photo" | "diagnosis" | "estimate" | "start" | "daily" | "closeout" | "album";
+  const isSiteManager = user?.role === "site_manager";
+
+  const roleActionSet = isSiteManager
+    ? new Set<ActionKey>(["visit", "photo", "diagnosis", "start", "daily", "closeout", "album"])
+    : new Set<ActionKey>(["visit", "photo", "diagnosis", "estimate", "start", "daily", "closeout", "album"]);
 
   const getPriorityOrder = (): ActionKey[] => {
-    if (!hasVisits) return ["visit", "photo", "diagnosis", "estimate", "start", "daily", "closeout", "album"];
-    if (!hasDiagnosis) return ["diagnosis", "visit", "estimate", "photo", "start", "daily", "closeout", "album"];
-    if (!hasEstimate) return ["estimate", "diagnosis", "visit", "photo", "start", "daily", "closeout", "album"];
-    if (!hasContract) return ["start", "estimate", "daily", "visit", "diagnosis", "photo", "closeout", "album"];
-    if (projectStatus === "contracted" || projectStatus === "in_progress") return ["daily", "start", "photo", "estimate", "visit", "diagnosis", "closeout", "album"];
-    if (["completed", "warranty", "closed"].includes(projectStatus)) return ["closeout", "album", "daily", "estimate", "visit", "diagnosis", "photo", "start"];
-    return ["visit", "photo", "diagnosis", "estimate", "start", "daily", "closeout", "album"];
+    const filterByRole = (actions: ActionKey[]) =>
+      actions.filter((action) => roleActionSet.has(action));
+
+    if (!hasVisits) return filterByRole(["visit", "photo", "diagnosis", "estimate", "start", "daily", "closeout", "album"]);
+    if (!hasDiagnosis) return filterByRole(["diagnosis", "visit", "estimate", "photo", "start", "daily", "closeout", "album"]);
+    if (!hasEstimate) return filterByRole(["estimate", "diagnosis", "visit", "photo", "start", "daily", "closeout", "album"]);
+    if (!hasContract) return filterByRole(["start", "estimate", "daily", "visit", "diagnosis", "photo", "closeout", "album"]);
+    if (projectStatus === "contracted" || projectStatus === "in_progress") return filterByRole(["daily", "start", "photo", "estimate", "visit", "diagnosis", "closeout", "album"]);
+    if (["completed", "warranty", "closed"].includes(projectStatus)) return filterByRole(["closeout", "album", "daily", "estimate", "visit", "diagnosis", "photo", "start"]);
+    return filterByRole(["visit", "photo", "diagnosis", "estimate", "start", "daily", "closeout", "album"]);
   };
 
   const priorityOrder = getPriorityOrder();
@@ -305,6 +315,14 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
           {priorityOrder.map((key) => actionNodes[key])}
         </div>
 
+        {isSiteManager && (
+          <Card>
+            <CardContent className="p-4 text-sm text-slate-600">
+              일당 확정과 지급명세서 발급은 대표자 권한이며 관리자 웹에서 진행됩니다.
+            </CardContent>
+          </Card>
+        )}
+
         {/* 현장방문 기록 */}
         <Card>
           <CardHeader className="flex-row items-center justify-between">
@@ -348,49 +366,51 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         </Card>
 
         {/* 견적서 목록 */}
-        <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="text-base">견적서</CardTitle>
-            {project.estimates && project.estimates.length > 0 && (
-              <Link
-                href={`/projects/${id}/estimates`}
-                className="flex items-center gap-1 text-sm text-brand-point-600 hover:text-brand-point-700"
-              >
-                전체보기
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-3 pt-2">
-            {project.estimates && project.estimates.length > 0 ? (
-              project.estimates.slice(0, 3).map((estimate) => (
-                <EstimateCard
-                  key={estimate.id}
-                  estimate={{
-                    ...estimate,
-                    status: estimate.status as EstimateStatus,
-                  }}
-                />
-              ))
-            ) : (
-              <div className="py-6 text-center">
-                <FileText className="mx-auto h-8 w-8 text-slate-300" />
-                <p className="mt-2 text-sm text-slate-500">
-                  아직 견적서가 없어요
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2"
-                  onClick={handleCreateEstimate}
-                  disabled={createEstimate.isPending}
+        {!isSiteManager && (
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle className="text-base">견적서</CardTitle>
+              {project.estimates && project.estimates.length > 0 && (
+                <Link
+                  href={`/projects/${id}/estimates`}
+                  className="flex items-center gap-1 text-sm text-brand-point-600 hover:text-brand-point-700"
                 >
-                  견적서 만들기
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  전체보기
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-3 pt-2">
+              {project.estimates && project.estimates.length > 0 ? (
+                project.estimates.slice(0, 3).map((estimate) => (
+                  <EstimateCard
+                    key={estimate.id}
+                    estimate={{
+                      ...estimate,
+                      status: estimate.status as EstimateStatus,
+                    }}
+                  />
+                ))
+              ) : (
+                <div className="py-6 text-center">
+                  <FileText className="mx-auto h-8 w-8 text-slate-300" />
+                  <p className="mt-2 text-sm text-slate-500">
+                    아직 견적서가 없어요
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2"
+                    onClick={handleCreateEstimate}
+                    disabled={createEstimate.isPending}
+                  >
+                    견적서 만들기
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </MobileLayout>
   );
