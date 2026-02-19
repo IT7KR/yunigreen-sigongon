@@ -127,6 +127,7 @@ export default function MaterialOrdersPage({
 }) {
   const { id: projectId } = use(params);
   const { user } = useAuth();
+  const canViewAmount = user?.role !== "site_manager";
   const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -284,7 +285,7 @@ export default function MaterialOrdersPage({
                       품목 {order.items?.length || 0}개
                     </p>
                     <p className="mt-1 text-sm font-medium text-slate-700">
-                      {(order.total_amount || 0).toLocaleString()}원
+                      {canViewAmount ? `${(order.total_amount || 0).toLocaleString()}원` : "비공개"}
                     </p>
                   </div>
                   {statusBadge(order.status)}
@@ -320,7 +321,11 @@ export default function MaterialOrdersPage({
                     <TableCell className="font-medium">{order.order_number}</TableCell>
                     <TableCell>{statusBadge(order.status)}</TableCell>
                     <TableCell>{order.items?.length || 0}개</TableCell>
-                    <TableCell>{(order.total_amount || 0).toLocaleString()}원</TableCell>
+                    <TableCell>
+                      {canViewAmount
+                        ? `${(order.total_amount || 0).toLocaleString()}원`
+                        : "비공개"}
+                    </TableCell>
                     <TableCell>
                       {order.requested_at
                         ? new Date(order.requested_at).toLocaleDateString()
@@ -382,14 +387,17 @@ export default function MaterialOrdersPage({
                           <p className="text-sm text-slate-600">{item.specification}</p>
                         )}
                         <p className="mt-1 text-sm text-slate-500">
-                          {item.quantity} {item.unit} × {(item.unit_price || 0).toLocaleString()}원
+                          {item.quantity} {item.unit}
+                          {canViewAmount
+                            ? ` × ${(item.unit_price || 0).toLocaleString()}원`
+                            : ""}
                         </p>
                         {item.price_source === "manual_override" && item.override_reason && (
                           <p className="mt-1 text-xs text-amber-600">수동 사유: {item.override_reason}</p>
                         )}
                       </div>
                       <p className="font-semibold text-slate-900">
-                        {(item.amount || 0).toLocaleString()}원
+                        {canViewAmount ? `${(item.amount || 0).toLocaleString()}원` : "비공개"}
                       </p>
                     </div>
                   </Card>
@@ -426,7 +434,9 @@ export default function MaterialOrdersPage({
             <div className="flex items-center justify-between border-t border-slate-200 pt-4">
               <span className="font-semibold text-slate-900">총 금액</span>
               <span className="text-xl font-bold text-brand-point-600">
-                {(selectedOrder.total_amount || 0).toLocaleString()}원
+                {canViewAmount
+                  ? `${(selectedOrder.total_amount || 0).toLocaleString()}원`
+                  : "비공개"}
               </span>
             </div>
 
