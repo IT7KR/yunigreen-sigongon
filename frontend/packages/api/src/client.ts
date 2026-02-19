@@ -1906,6 +1906,35 @@ export class APIClient {
   // Labor Overview (노무 관리)
   // ============================================
 
+  async getSALaborOverview() {
+    const response = await this.client.get<
+      APIResponse<{
+        summary: {
+          active_workers: number;
+          pending_paystubs: number;
+          unsigned_contracts: number;
+          organizations_with_workers: number;
+        };
+        workers: Array<{
+          id: string;
+          name: string;
+          role: string;
+          organization_id: string;
+          organization_name: string;
+          status: "active" | "inactive";
+          contract_status: "signed" | "pending";
+          last_work_date: string;
+        }>;
+        tenant_worker_distribution: Array<{
+          organization_id: string;
+          organization_name: string;
+          worker_count: number;
+        }>;
+      }>
+    >("/admin/labor/overview");
+    return response.data;
+  }
+
   async getLaborOverview() {
     const response = await this.client.get<
       APIResponse<{

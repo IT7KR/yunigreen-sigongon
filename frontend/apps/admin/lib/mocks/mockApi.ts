@@ -3352,6 +3352,58 @@ export class MockAPIClient {
     );
   }
 
+  async getSALaborOverview() {
+    return delay(
+      ok({
+        summary: {
+          active_workers: 42,
+          pending_paystubs: 9,
+          unsigned_contracts: 6,
+          organizations_with_workers: 3,
+        },
+        workers: [
+          {
+            id: "w1",
+            name: "홍길동",
+            role: "미장공",
+            organization_id: "org_1",
+            organization_name: "유니그린개발",
+            status: "active" as const,
+            contract_status: "signed" as const,
+            last_work_date: "2026-02-01",
+          },
+          {
+            id: "w2",
+            name: "김영희",
+            role: "방수공",
+            organization_id: "org_2",
+            organization_name: "동방건설",
+            status: "active" as const,
+            contract_status: "pending" as const,
+            last_work_date: "2026-02-03",
+          },
+        ],
+        tenant_worker_distribution: [
+          {
+            organization_id: "org_1",
+            organization_name: "유니그린개발",
+            worker_count: 18,
+          },
+          {
+            organization_id: "org_2",
+            organization_name: "동방건설",
+            worker_count: 14,
+          },
+          {
+            organization_id: "org_3",
+            organization_name: "서울방수",
+            worker_count: 10,
+          },
+        ],
+      })
+    );
+  }
+
   async getDailyReports(_projectId: string) {
     return delay(
       ok([
