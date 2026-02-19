@@ -874,6 +874,83 @@ async def create_admin_document(
     )
 
 
+@router.post("/admin/documents/upload", response_model=APIResponse[AdminDocumentResponse], status_code=status.HTTP_201_CREATED)
+async def upload_admin_document(
+    db: DBSession,
+    current_user: CurrentUser,
+    season_id: int = Form(...),
+    category_id: Optional[int] = Form(default=None),
+    category: Optional[str] = Form(default=None),
+    title: Optional[str] = Form(default=None),
+    file: UploadFile = File(...),
+):
+    _ensure_admin(current_user)
+
+    season_result = await db.execute(select(Season).where(Season.id == season_id))
+    season = season_result.scalar_one_or_none()
+    if not season:
+        raise HTTPException(status_code=404, detail="시즌을 찾을 수 없어요")
+
+    category_row = await _resolve_document_category(
+        db=db,
+        season_id=season_id,
+        category_id=category_id,
+        category_name=category,
+    )
+
+    filename = file.filename or ""
+    ext = Path(filename).suffix.lower()
+    if ext != ".pdf":
+        raise HTTPException(status_code=400, detail="PDF 파일만 업로드할 수 있어요")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="빈 파일은 업로드할 수 없어요")
+
+    stored_filename = f"{uuid.uuid4().hex}{ext}"
+    stored_path = await storage_service.save_bytes(
+        data=content,
+        category="pricebooks",
+        subfolder=str(season_id),
+        filename=stored_filename,
+    )
+
+    resolved_title = (title or "").strip() or Path(filename).stem or "적산 자료"
+    version_hash = hashlib.sha256(
+        f"{stored_path}:{resolved_title}:{season_id}:{category_row.name}".encode("utf-8")
+    ).hexdigest()
+
+    document = SeasonDocument(
+        season_id=season_id,
+        category=category_row.name,
+        title=resolved_title,
+        file_url=stored_path,
+        version_hash=version_hash,
+        status=DocumentStatus.QUEUED,
+        is_enabled=True,
+    )
+    db.add(document)
+    await db.commit()
+    await db.refresh(document)
+
+    return APIResponse.ok(
+        AdminDocumentResponse(
+            id=document.id,
+            season_id=document.season_id,
+            category_id=category_row.id,
+            purpose=category_row.purpose,
+            category=document.category,
+            title=document.title,
+            file_url=document.file_url,
+            version_hash=document.version_hash,
+            status=document.status,
+            is_enabled=document.is_enabled,
+            uploaded_at=document.uploaded_at,
+            upload_url=f"/api/v1/admin/documents/{document.id}/upload",
+        )
+    )
+
+
 @router.patch("/admin/documents/{document_id}", response_model=APIResponse[AdminDocumentResponse])
 async def update_admin_document(
     document_id: int,

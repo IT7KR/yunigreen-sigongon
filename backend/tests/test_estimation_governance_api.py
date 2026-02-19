@@ -242,3 +242,30 @@ async def test_create_case_estimate_ignores_disabled_documents(
 
     assert first_line["unit_price"] == 1000.0
     assert first_line["evidence"][0]["doc_title"] == enabled_done_doc.title
+
+
+@pytest.mark.asyncio
+async def test_upload_admin_document_with_file(async_client: AsyncClient, governance_context):
+    season = governance_context["season"]
+    category = governance_context["category"]
+
+    response = await async_client.post(
+        "/api/v1/admin/documents/upload",
+        data={
+            "season_id": str(season.id),
+            "category_id": str(category.id),
+            "title": "업로드 문서",
+        },
+        files={
+            "file": ("uploaded-pricebook.pdf", b"%PDF-1.7 mock content", "application/pdf"),
+        },
+    )
+    assert response.status_code == 201
+
+    body = response.json()
+    assert body["success"] is True
+    data = body["data"]
+    assert data["title"] == "업로드 문서"
+    assert data["status"] == "queued"
+    assert data["is_enabled"] is True
+    assert data["file_url"].startswith(f"pricebooks/{season.id}/")
