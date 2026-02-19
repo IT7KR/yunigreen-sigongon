@@ -43,7 +43,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             required={required}
             style={{ WebkitAppearance: "none", MozAppearance: "none" }}
             className={cn(
-              "flex h-10 w-full appearance-none rounded-lg border bg-white px-3 py-2 pr-10 text-sm text-slate-900",
+              "flex h-11 w-full appearance-none rounded-lg border bg-white px-3 py-2 pr-10 text-base text-slate-900",
               "focus:outline-none focus:ring-2 focus:ring-offset-0",
               error
                 ? "border-red-500 focus:border-red-500 focus:ring-red-200"
