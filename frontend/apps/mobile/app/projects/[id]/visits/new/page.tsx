@@ -270,7 +270,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="현장 상황이나 특이사항을 기록해 주세요"
               rows={3}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             />
           </CardContent>
         </Card>

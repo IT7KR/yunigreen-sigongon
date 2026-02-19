@@ -217,7 +217,7 @@ export default function NewDailyReportPage({
             <textarea
               ref={workDescriptionRef}
               name="work_description"
-              className="h-32 w-full rounded-lg border border-slate-300 p-3"
+              className="h-32 w-full rounded-lg border border-slate-300 p-3 text-base"
               placeholder="오늘 진행한 작업을 상세히 기록해주세요."
               required
             />
@@ -229,7 +229,7 @@ export default function NewDailyReportPage({
             </label>
             <textarea
               name="tomorrow_plan"
-              className="h-24 w-full rounded-lg border border-slate-300 p-3"
+              className="h-24 w-full rounded-lg border border-slate-300 p-3 text-base"
               placeholder="내일 진행할 작업을 입력해주세요."
             />
           </div>

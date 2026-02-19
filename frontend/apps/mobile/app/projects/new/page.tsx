@@ -120,7 +120,7 @@ export default function NewProjectPage() {
               onChange={(e) => handleChange("notes", e.target.value)}
               placeholder="프로젝트에 대한 메모를 남겨주세요"
               rows={3}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             />
           </CardContent>
         </Card>

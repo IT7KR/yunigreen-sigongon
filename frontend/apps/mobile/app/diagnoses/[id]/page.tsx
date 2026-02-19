@@ -219,7 +219,7 @@ export default function DiagnosisDetailPage({
                   onChange={(event) => setFieldOpinion(event.target.value)}
                   rows={4}
                   placeholder="현장 확인 결과를 수기로 보완해 주세요."
-                  className="w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+                  className="w-full rounded-lg border border-slate-300 p-3 text-base text-slate-700 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 />
                 <Button
                   variant="secondary"
