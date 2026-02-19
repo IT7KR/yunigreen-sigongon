@@ -131,6 +131,8 @@ export class MockAPIClient {
 
   private contractsById: Record<string, ContractDetail> = {};
   private projectContractIds: Record<string, string[]> = {};
+  private materialOrdersByProject: Record<string, any[]> = {};
+  private materialOrdersById: Record<string, any> = {};
 
   private laborContractsByProject: Record<string, LaborContractListItem[]> = {};
   private warrantyRequestsByProject: Record<
@@ -1200,6 +1202,215 @@ export class MockAPIClient {
       );
     }
     return delay(ok(contract));
+  }
+
+  async getMaterialOrders(projectId: string) {
+    if (!this.materialOrdersByProject[projectId]) {
+      this.materialOrdersByProject[projectId] = [
+        {
+          id: randomId("mo"),
+          project_id: projectId,
+          order_number: "MO-2026-101",
+          status: "requested",
+          items: [
+            {
+              id: randomId("item"),
+              catalog_item_id: "mat_301",
+              pricebook_revision_id: "rev_2026_01",
+              price_source: "catalog_revision",
+              description: "하도 프라이머",
+              specification: "18L",
+              unit: "통",
+              quantity: 2,
+              unit_price: 52000,
+              amount: 104000,
+            },
+          ],
+          total_amount: 104000,
+          requested_at: "2026-02-10T09:00:00Z",
+          created_at: "2026-02-10T08:45:00Z",
+          updated_at: "2026-02-10T09:00:00Z",
+        },
+        {
+          id: randomId("mo"),
+          project_id: projectId,
+          order_number: "MO-2026-102",
+          status: "shipped",
+          items: [
+            {
+              id: randomId("item"),
+              catalog_item_id: "mat_302",
+              pricebook_revision_id: "rev_2026_01",
+              price_source: "catalog_revision",
+              description: "방수 몰탈",
+              specification: "25kg",
+              unit: "포",
+              quantity: 8,
+              unit_price: 18000,
+              amount: 144000,
+            },
+          ],
+          total_amount: 144000,
+          requested_at: "2026-02-08T10:30:00Z",
+          payment_at: "2026-02-08T14:00:00Z",
+          shipped_at: "2026-02-09T10:00:00Z",
+          created_at: "2026-02-08T10:00:00Z",
+          updated_at: "2026-02-09T10:00:00Z",
+        },
+      ];
+
+      this.materialOrdersByProject[projectId].forEach((order) => {
+        this.materialOrdersById[order.id] = order;
+      });
+    }
+
+    return delay(ok(this.materialOrdersByProject[projectId] || []));
+  }
+
+  async getMaterialOrdersMobile(projectId: string) {
+    const response = await this.getMaterialOrders(projectId);
+    if (!response.success || !response.data) return delay(ok([]));
+
+    return delay(
+      ok(
+        response.data.map((order: any) => ({
+          id: order.id,
+          order_number: order.order_number,
+          status: order.status,
+          item_count: Array.isArray(order.items) ? order.items.length : 0,
+          summary_amount: order.total_amount,
+          requested_at: order.requested_at,
+          delivered_at: order.delivered_at,
+          updated_at: order.updated_at || order.created_at,
+        })),
+      ),
+    );
+  }
+
+  async createMaterialOrder(
+    projectId: string,
+    data: {
+      vendor_id?: number;
+      items: Array<{
+        description?: string;
+        specification?: string;
+        unit?: string;
+        quantity: number;
+        unit_price?: number;
+        catalog_item_id?: string | number | null;
+        pricebook_revision_id?: string | number | null;
+        override_reason?: string;
+      }>;
+      notes?: string;
+    },
+  ) {
+    const orderId = randomId("mo");
+    const orderNumber = `MO-2026-${String(Object.keys(this.materialOrdersById).length + 1).padStart(3, "0")}`;
+    const items = data.items.map((item) => ({
+      id: randomId("item"),
+      catalog_item_id: item.catalog_item_id ?? null,
+      pricebook_revision_id: item.pricebook_revision_id ?? null,
+      price_source:
+        item.catalog_item_id && item.pricebook_revision_id
+          ? "catalog_revision"
+          : "manual_override",
+      override_reason: item.override_reason,
+      description: item.description || "신규 품목",
+      specification: item.specification,
+      unit: item.unit || "개",
+      quantity: item.quantity,
+      unit_price: item.unit_price ?? 0,
+      amount: item.quantity * (item.unit_price ?? 0),
+    }));
+    const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+
+    const order = {
+      id: orderId,
+      project_id: projectId,
+      order_number: orderNumber,
+      status: "draft" as const,
+      items,
+      total_amount: totalAmount,
+      vendor_id: data.vendor_id ?? null,
+      notes: data.notes,
+      created_at: nowIso(),
+      updated_at: nowIso(),
+    };
+    this.materialOrdersById[orderId] = order;
+    if (!this.materialOrdersByProject[projectId]) this.materialOrdersByProject[projectId] = [];
+    this.materialOrdersByProject[projectId].push(order);
+
+    return delay(
+      ok({
+        id: orderId,
+        order_number: orderNumber,
+        status: "draft" as const,
+        total_amount: totalAmount,
+      }),
+    );
+  }
+
+  async getMaterialOrder(orderId: string) {
+    const order = this.materialOrdersById[orderId];
+    if (!order) return delay(fail("NOT_FOUND", "발주를 찾을 수 없습니다"));
+    return delay(ok(order));
+  }
+
+  async updateMaterialOrderStatus(
+    orderId: string,
+    payload:
+      | string
+      | {
+          status: string;
+          reason?: string;
+          invoice_number?: string;
+          invoice_amount?: number;
+          invoice_file_url?: string;
+        },
+  ) {
+    const status = typeof payload === "string" ? payload : payload.status;
+    const order = this.materialOrdersById[orderId];
+    if (!order) return delay(fail("NOT_FOUND", "발주를 찾을 수 없습니다"));
+
+    order.status = status as any;
+    if (typeof payload !== "string") {
+      if (payload.invoice_number !== undefined) order.invoice_number = payload.invoice_number;
+      if (payload.invoice_amount !== undefined) order.invoice_amount = payload.invoice_amount;
+      if (payload.invoice_file_url !== undefined) order.invoice_file_url = payload.invoice_file_url;
+      if (payload.reason) {
+        order.notes = order.notes ? `[${payload.reason}] ${order.notes}` : payload.reason;
+      }
+    }
+
+    if (status === "requested" && !order.requested_at) {
+      order.requested_at = nowIso();
+    } else if (status === "invoice_received" && !order.confirmed_at) {
+      order.confirmed_at = nowIso();
+    } else if (status === "payment_completed" && !order.payment_at) {
+      order.payment_at = nowIso();
+    } else if (status === "shipped" && !order.shipped_at) {
+      order.shipped_at = nowIso();
+    } else if (status === "delivered" && !order.delivered_at) {
+      order.delivered_at = nowIso();
+      order.received_at = order.delivered_at;
+    } else if (status === "closed" && !order.closed_at) {
+      order.closed_at = nowIso();
+    }
+    order.updated_at = nowIso();
+
+    return delay(ok({ id: orderId, status, message: "상태가 업데이트되었습니다" }));
+  }
+
+  async cancelMaterialOrder(orderId: string) {
+    const order = this.materialOrdersById[orderId];
+    if (!order) return delay(fail("NOT_FOUND", "발주를 찾을 수 없습니다"));
+    order.status = "cancelled";
+    order.updated_at = nowIso();
+    if (this.materialOrdersByProject[order.project_id]) {
+      this.materialOrdersByProject[order.project_id] =
+        this.materialOrdersByProject[order.project_id].filter((o) => o.id !== orderId);
+    }
+    return delay(ok(null));
   }
 
   async createContract(

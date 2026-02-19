@@ -2200,8 +2200,24 @@ export class MockAPIClient {
     data: {
       estimate_id: string;
       template_type?: "public_office" | "private_standard";
+      contract_kind?: "private_standard" | "public_platform";
+      execution_mode?: "modusign" | "upload_only";
       start_date?: string;
       expected_end_date?: string;
+      contract_date?: string;
+      work_start_date?: string;
+      work_end_date?: string;
+      delay_penalty_rate?: string;
+      special_terms?: string;
+      owner_name?: string;
+      owner_representative_name?: string;
+      owner_address?: string;
+      owner_business_number?: string;
+      owner_phone?: string;
+      public_platform_type?: "narajangteo" | "s2b" | "etc";
+      public_contract_reference?: string;
+      public_notice_number?: string;
+      public_bid_number?: string;
       notes?: string;
     },
   ) {
@@ -2240,11 +2256,41 @@ export class MockAPIClient {
       contract_number: `CT-${Date.now()}`,
       contract_amount: estimate.total_amount || "0",
       template_type: data.template_type || "public_office",
+      contract_kind:
+        data.contract_kind ||
+        (data.template_type === "private_standard"
+          ? "private_standard"
+          : "public_platform"),
+      execution_mode:
+        data.execution_mode ||
+        (data.template_type === "private_standard" ? "modusign" : "upload_only"),
       status: "draft",
       notes: data.notes,
+      special_terms: data.special_terms,
       created_at: nowIso(),
       start_date: data.start_date,
       expected_end_date: data.expected_end_date,
+      contract_date: data.contract_date,
+      work_start_date: data.work_start_date || data.start_date,
+      work_end_date: data.work_end_date || data.expected_end_date,
+      delay_penalty_rate: data.delay_penalty_rate,
+      owner_name: data.owner_name,
+      owner_representative_name: data.owner_representative_name,
+      owner_address: data.owner_address,
+      owner_business_number: data.owner_business_number,
+      owner_phone: data.owner_phone,
+      public_platform_type: data.public_platform_type,
+      public_contract_reference: data.public_contract_reference,
+      public_notice_number: data.public_notice_number,
+      public_bid_number: data.public_bid_number,
+      completeness: {
+        is_complete: false,
+        completion_rate: 20,
+        required_field_count: 5,
+        filled_field_count: 1,
+        missing_fields: [],
+        missing_field_keys: [],
+      },
       project_name: project.name,
       client_name: project.clientName,
     };
@@ -2260,6 +2306,80 @@ export class MockAPIClient {
         id: contractId,
         contract_number: contract.contract_number || contractId,
         status: contract.status,
+      }),
+    );
+  }
+
+  async finalizeContract(contractId: string) {
+    const contract = this.contractsById[contractId];
+    if (!contract) {
+      return delay(
+        fail<{ id: string; status: ContractStatus }>(
+          "NOT_FOUND",
+          "계약서를 찾을 수 없어요",
+        ),
+      );
+    }
+    const next: ContractDetail = {
+      ...contract,
+      status: "active",
+      completeness: {
+        is_complete: true,
+        completion_rate: 100,
+        required_field_count: 5,
+        filled_field_count: 5,
+        missing_fields: [],
+        missing_field_keys: [],
+      },
+    };
+    this.contractsById[contractId] = next;
+    return delay(
+      ok({
+        id: contractId,
+        status: next.status,
+        completeness: next.completeness,
+      }),
+    );
+  }
+
+  async uploadContractSource(
+    contractId: string,
+    data: {
+      file: File;
+      public_platform_type?: "narajangteo" | "s2b" | "etc";
+      public_contract_reference?: string;
+      public_notice_number?: string;
+      public_bid_number?: string;
+    },
+  ) {
+    const contract = this.contractsById[contractId];
+    if (!contract) {
+      return delay(fail<{ id: string }>("NOT_FOUND", "계약서를 찾을 수 없어요"));
+    }
+    const next: ContractDetail = {
+      ...contract,
+      contract_kind: "public_platform",
+      execution_mode: "upload_only",
+      source_document_path: `mock://contracts/${contractId}/${data.file.name}`,
+      public_platform_type: data.public_platform_type || contract.public_platform_type,
+      public_contract_reference:
+        data.public_contract_reference || contract.public_contract_reference,
+      public_notice_number: data.public_notice_number || contract.public_notice_number,
+      public_bid_number: data.public_bid_number || contract.public_bid_number,
+      completeness: {
+        is_complete: true,
+        completion_rate: 100,
+        required_field_count: 3,
+        filled_field_count: 3,
+        missing_fields: [],
+        missing_field_keys: [],
+      },
+    };
+    this.contractsById[contractId] = next;
+    return delay(
+      ok({
+        id: contractId,
+        source_document_path: next.source_document_path,
       }),
     );
   }
@@ -5322,6 +5442,9 @@ export class MockAPIClient {
           items: [
             {
               id: randomId("item"),
+              catalog_item_id: "mat_1001",
+              pricebook_revision_id: "rev_2026_01",
+              price_source: "catalog_revision",
               description: "방수 시트",
               specification: "1.5mm 두께",
               unit: "롤",
@@ -5342,18 +5465,29 @@ export class MockAPIClient {
           total_amount: 550000,
           requested_at: "2026-01-15T09:00:00Z",
           confirmed_at: "2026-01-15T14:30:00Z",
+          payment_at: "2026-01-16T11:20:00Z",
+          shipped_at: "2026-01-17T10:10:00Z",
           delivered_at: "2026-01-18T10:00:00Z",
+          received_at: "2026-01-18T10:00:00Z",
+          closed_at: null,
+          invoice_number: "INV-2026-0001",
+          invoice_amount: 550000,
+          invoice_file_url: "/sample/invoice-1.pdf",
           notes: "긴급 발주",
           created_at: "2026-01-15T08:30:00Z",
+          updated_at: "2026-01-18T10:00:00Z",
         },
         {
           id: randomId("mo"),
           project_id: projectId,
           order_number: "MO-2026-002",
-          status: "confirmed",
+          status: "payment_completed",
           items: [
             {
               id: randomId("item"),
+              catalog_item_id: "mat_2001",
+              pricebook_revision_id: "rev_2026_01",
+              price_source: "catalog_revision",
               description: "우레탄 방수재",
               specification: "20kg",
               unit: "통",
@@ -5365,8 +5499,12 @@ export class MockAPIClient {
           total_amount: 600000,
           requested_at: "2026-01-28T10:00:00Z",
           confirmed_at: "2026-01-28T15:00:00Z",
+          payment_at: "2026-01-29T10:00:00Z",
+          invoice_number: "INV-2026-0002",
+          invoice_amount: 600000,
           notes: "",
           created_at: "2026-01-28T09:45:00Z",
+          updated_at: "2026-01-29T10:00:00Z",
         },
         {
           id: randomId("mo"),
@@ -5376,6 +5514,10 @@ export class MockAPIClient {
           items: [
             {
               id: randomId("item"),
+              catalog_item_id: null,
+              pricebook_revision_id: null,
+              price_source: "manual_override",
+              override_reason: "긴급 대체품",
               description: "보강재",
               specification: "스테인리스",
               unit: "개",
@@ -5387,6 +5529,7 @@ export class MockAPIClient {
           total_amount: 240000,
           requested_at: "2026-02-01T11:00:00Z",
           created_at: "2026-02-01T10:50:00Z",
+          updated_at: "2026-02-01T11:00:00Z",
         },
       ];
 
@@ -5401,17 +5544,43 @@ export class MockAPIClient {
     );
   }
 
+  async getMaterialOrdersMobile(projectId: string) {
+    const ordersResponse = await this.getMaterialOrders(projectId);
+    if (!ordersResponse.success || !ordersResponse.data) {
+      return delay(ok([]));
+    }
+
+    return delay(
+      ok(
+        ordersResponse.data.map((order: any) => ({
+          id: order.id,
+          order_number: order.order_number,
+          status: order.status,
+          item_count: Array.isArray(order.items) ? order.items.length : 0,
+          summary_amount: order.total_amount,
+          requested_at: order.requested_at,
+          delivered_at: order.delivered_at,
+          updated_at: order.updated_at || order.created_at,
+        })),
+      ),
+    );
+  }
+
   async createMaterialOrder(
     projectId: string,
     data: {
       items: Array<{
-        description: string;
+        description?: string;
         specification?: string;
-        unit: string;
+        unit?: string;
         quantity: number;
-        unit_price: number;
+        unit_price?: number;
+        catalog_item_id?: string | number | null;
+        pricebook_revision_id?: string | number | null;
+        override_reason?: string;
       }>;
       notes?: string;
+      vendor_id?: number;
     }
   ) {
     const orderId = randomId("mo");
@@ -5419,12 +5588,19 @@ export class MockAPIClient {
 
     const items = data.items.map((item) => ({
       id: randomId("item"),
-      description: item.description,
+      catalog_item_id: item.catalog_item_id ?? null,
+      pricebook_revision_id: item.pricebook_revision_id ?? null,
+      price_source:
+        item.catalog_item_id && item.pricebook_revision_id
+          ? "catalog_revision"
+          : "manual_override",
+      override_reason: item.override_reason,
+      description: item.description || "신규 품목",
       specification: item.specification,
-      unit: item.unit,
+      unit: item.unit || "개",
       quantity: item.quantity,
-      unit_price: item.unit_price,
-      amount: item.quantity * item.unit_price,
+      unit_price: item.unit_price ?? 0,
+      amount: item.quantity * (item.unit_price ?? 0),
     }));
 
     const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
@@ -5436,8 +5612,10 @@ export class MockAPIClient {
       status: "draft" as const,
       items,
       total_amount: totalAmount,
+      vendor_id: data.vendor_id ?? null,
       notes: data.notes,
       created_at: nowIso(),
+      updated_at: nowIso(),
     };
 
     this.materialOrdersById[orderId] = order;
@@ -5466,7 +5644,19 @@ export class MockAPIClient {
     return delay(ok(order));
   }
 
-  async updateMaterialOrderStatus(orderId: string, status: string) {
+  async updateMaterialOrderStatus(
+    orderId: string,
+    payload:
+      | string
+      | {
+          status: string;
+          reason?: string;
+          invoice_number?: string;
+          invoice_amount?: number;
+          invoice_file_url?: string;
+        },
+  ) {
+    const status = typeof payload === "string" ? payload : payload.status;
     const order = this.materialOrdersById[orderId];
     if (!order) {
       return delay(fail("NOT_FOUND", "발주를 찾을 수 없습니다"));
@@ -5475,13 +5665,30 @@ export class MockAPIClient {
     order.status = status as any;
 
     // Update timestamps based on status
+    if (typeof payload !== "string") {
+      if (payload.invoice_number !== undefined) order.invoice_number = payload.invoice_number;
+      if (payload.invoice_amount !== undefined) order.invoice_amount = payload.invoice_amount;
+      if (payload.invoice_file_url !== undefined) order.invoice_file_url = payload.invoice_file_url;
+      if (payload.reason) {
+        order.notes = order.notes ? `[${payload.reason}] ${order.notes}` : payload.reason;
+      }
+    }
+
     if (status === "requested" && !order.requested_at) {
       order.requested_at = nowIso();
-    } else if (status === "confirmed" && !order.confirmed_at) {
+    } else if (status === "invoice_received" && !order.confirmed_at) {
       order.confirmed_at = nowIso();
+    } else if (status === "payment_completed" && !order.payment_at) {
+      order.payment_at = nowIso();
+    } else if (status === "shipped" && !order.shipped_at) {
+      order.shipped_at = nowIso();
     } else if (status === "delivered" && !order.delivered_at) {
       order.delivered_at = nowIso();
+      order.received_at = order.delivered_at;
+    } else if (status === "closed" && !order.closed_at) {
+      order.closed_at = nowIso();
     }
+    order.updated_at = nowIso();
 
     return delay(
       ok({
@@ -5499,6 +5706,7 @@ export class MockAPIClient {
     }
 
     order.status = "cancelled";
+    order.updated_at = nowIso();
 
     // Remove from project list
     if (this.materialOrdersByProject[order.project_id]) {
