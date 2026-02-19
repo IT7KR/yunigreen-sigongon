@@ -68,6 +68,7 @@ from app.models.operations import (
     WorkerDocumentModerationLog,
 )
 from app.models.project import Project, ProjectStatus, SiteVisit
+from app.models.pricebook import CatalogItem, CatalogItemPrice
 from app.models.user import Organization, User, UserRole
 from app.schemas.response import APIResponse, PaginatedResponse
 from app.services.audit_log import write_activity_log
@@ -117,6 +118,16 @@ _WORKER_DOCUMENT_LABELS = {
 _WORKER_DOCUMENT_REVIEW_STATUSES = {"pending_review", "approved", "rejected", "quarantined"}
 _WORKER_DOCUMENT_REVIEW_ACTIONS = {"approve", "reject", "quarantine", "request_reupload"}
 _WORKER_DOCUMENT_CONTROL_ACTIONS = {"block", "unblock"}
+
+_MATERIAL_ORDER_FINANCE_STATUSES = {
+    "invoice_received",
+    "payment_completed",
+    "closed",
+}
+_MATERIAL_ORDER_SITE_MANAGER_ALLOWED_TARGETS = {
+    "requested",
+    "delivered",
+}
 
 
 def _role_value(user: User) -> str:
@@ -388,6 +399,110 @@ def _safe_decimal_to_int(value: Decimal | int | float | None) -> int:
     if isinstance(value, Decimal):
         return int(value)
     return int(value)
+
+
+def _normalize_material_order_status_value(raw_status: MaterialOrderStatus | str) -> str:
+    value = raw_status.value if hasattr(raw_status, "value") else str(raw_status)
+    if value == MaterialOrderStatus.CONFIRMED.value:
+        return MaterialOrderStatus.INVOICE_RECEIVED.value
+    return value
+
+
+def _material_order_allowed_transitions() -> dict[str, set[str]]:
+    return {
+        MaterialOrderStatus.DRAFT.value: {
+            MaterialOrderStatus.REQUESTED.value,
+            MaterialOrderStatus.CANCELLED.value,
+        },
+        MaterialOrderStatus.REQUESTED.value: {
+            MaterialOrderStatus.INVOICE_RECEIVED.value,
+            MaterialOrderStatus.CANCELLED.value,
+        },
+        MaterialOrderStatus.INVOICE_RECEIVED.value: {
+            MaterialOrderStatus.PAYMENT_COMPLETED.value,
+            MaterialOrderStatus.CANCELLED.value,
+        },
+        MaterialOrderStatus.PAYMENT_COMPLETED.value: {
+            MaterialOrderStatus.SHIPPED.value,
+            MaterialOrderStatus.CANCELLED.value,
+        },
+        MaterialOrderStatus.SHIPPED.value: {
+            MaterialOrderStatus.DELIVERED.value,
+            MaterialOrderStatus.CANCELLED.value,
+        },
+        MaterialOrderStatus.DELIVERED.value: {
+            MaterialOrderStatus.CLOSED.value,
+            MaterialOrderStatus.CANCELLED.value,
+        },
+        MaterialOrderStatus.CLOSED.value: set(),
+        MaterialOrderStatus.CANCELLED.value: set(),
+    }
+
+
+def _require_material_order_status_permission(
+    *,
+    user: User,
+    target_status: str,
+) -> None:
+    role = _role_value(user)
+
+    if target_status in _MATERIAL_ORDER_FINANCE_STATUSES and role not in {
+        ROLE_COMPANY_ADMIN,
+        ROLE_SUPER_ADMIN,
+    }:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="금액/정산 관련 발주 상태는 대표자 또는 최고관리자만 변경할 수 있어요.",
+        )
+
+    if role == ROLE_SITE_MANAGER and target_status not in _MATERIAL_ORDER_SITE_MANAGER_ALLOWED_TARGETS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="현장소장은 발주 요청/수령 확인 상태만 변경할 수 있어요.",
+        )
+
+
+def _serialize_material_order_item(item: MaterialOrderItem) -> dict:
+    return {
+        "id": str(item.id),
+        "catalog_item_id": str(item.catalog_item_id) if item.catalog_item_id else None,
+        "pricebook_revision_id": str(item.pricebook_revision_id) if item.pricebook_revision_id else None,
+        "price_source": item.price_source,
+        "override_reason": item.override_reason,
+        "description": item.description,
+        "specification": item.specification,
+        "unit": item.unit,
+        "quantity": float(item.quantity),
+        "unit_price": float(item.unit_price),
+        "amount": float(item.amount),
+    }
+
+
+def _serialize_material_order(order: MaterialOrder, items: list[MaterialOrderItem]) -> dict:
+    normalized_status = _normalize_material_order_status_value(order.status)
+    return {
+        "id": str(order.id),
+        "project_id": str(order.project_id),
+        "order_number": order.order_number,
+        "status": normalized_status,
+        "total_amount": order.total_amount,
+        "vendor_id": str(order.vendor_id) if order.vendor_id else None,
+        "invoice_number": order.invoice_number,
+        "invoice_amount": order.invoice_amount,
+        "invoice_file_url": order.invoice_file_url,
+        "requested_at": _to_iso(order.requested_at),
+        "confirmed_at": _to_iso(order.confirmed_at),
+        "payment_at": _to_iso(order.payment_at),
+        "shipped_at": _to_iso(order.shipped_at),
+        "delivered_at": _to_iso(order.delivered_at),
+        "received_at": _to_iso(order.received_at),
+        "received_by_user_id": str(order.received_by_user_id) if order.received_by_user_id else None,
+        "closed_at": _to_iso(order.closed_at),
+        "notes": order.notes,
+        "created_at": order.created_at.isoformat(),
+        "updated_at": order.updated_at.isoformat(),
+        "items": [_serialize_material_order_item(item) for item in items],
+    }
 
 
 def _serialize_daily_report(report: DailyReport) -> dict:
@@ -1229,20 +1344,28 @@ async def patch_utility_status(
 
 
 class MaterialOrderItemInput(BaseModel):
-    description: str
+    catalog_item_id: Optional[int] = None
+    pricebook_revision_id: Optional[int] = None
+    description: Optional[str] = None
     specification: Optional[str] = None
-    unit: str
+    unit: Optional[str] = None
     quantity: Decimal
-    unit_price: Decimal
+    unit_price: Optional[Decimal] = None
+    override_reason: Optional[str] = None
 
 
 class MaterialOrderCreateRequest(BaseModel):
     items: list[MaterialOrderItemInput]
     notes: Optional[str] = None
+    vendor_id: Optional[int] = None
 
 
 class MaterialOrderStatusPatchRequest(BaseModel):
     status: str
+    reason: Optional[str] = None
+    invoice_number: Optional[str] = None
+    invoice_amount: Optional[int] = None
+    invoice_file_url: Optional[str] = None
 
 
 @router.get("/projects/{project_id}/material-orders", response_model=APIResponse[list[dict]])
@@ -1270,29 +1393,53 @@ async def list_material_orders(
     for row in item_rows:
         by_order.setdefault(row.material_order_id, []).append(row)
 
+    return APIResponse.ok(
+        [_serialize_material_order(order, by_order.get(order.id, [])) for order in orders]
+    )
+
+
+@router.get("/projects/{project_id}/material-orders/mobile", response_model=APIResponse[list[dict]])
+async def list_material_orders_mobile(
+    project_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    await _get_project_for_user(db, project_id, current_user)
+
+    result = await db.execute(
+        select(MaterialOrder)
+        .where(MaterialOrder.project_id == project_id)
+        .order_by(MaterialOrder.updated_at.desc(), MaterialOrder.created_at.desc())
+    )
+    orders = result.scalars().all()
+    if not orders:
+        return APIResponse.ok([])
+
+    item_counts_result = await db.execute(
+        select(
+            MaterialOrderItem.material_order_id,
+            func.count(MaterialOrderItem.id),
+        )
+        .where(MaterialOrderItem.material_order_id.in_([o.id for o in orders]))
+        .group_by(MaterialOrderItem.material_order_id)
+    )
+    item_count_map = {
+        int(row[0]): int(row[1])
+        for row in item_counts_result.all()
+    }
+
+    role = _role_value(current_user)
+    show_amount = role in {ROLE_COMPANY_ADMIN, ROLE_SUPER_ADMIN}
     return APIResponse.ok([
         {
             "id": str(order.id),
-            "project_id": str(order.project_id),
             "order_number": order.order_number,
-            "status": order.status.value,
-            "total_amount": order.total_amount,
+            "status": _normalize_material_order_status_value(order.status),
+            "item_count": item_count_map.get(order.id, 0),
+            "summary_amount": order.total_amount if show_amount else None,
             "requested_at": _to_iso(order.requested_at),
-            "confirmed_at": _to_iso(order.confirmed_at),
             "delivered_at": _to_iso(order.delivered_at),
-            "created_at": order.created_at.isoformat(),
-            "items": [
-                {
-                    "id": str(i.id),
-                    "description": i.description,
-                    "specification": i.specification,
-                    "unit": i.unit,
-                    "quantity": float(i.quantity),
-                    "unit_price": float(i.unit_price),
-                    "amount": float(i.amount),
-                }
-                for i in by_order.get(order.id, [])
-            ],
+            "updated_at": _to_iso(order.updated_at),
         }
         for order in orders
     ])
@@ -1305,7 +1452,7 @@ async def create_material_order(
     db: DBSession,
     current_user: CurrentUser,
 ):
-    await _get_project_for_user(db, project_id, current_user)
+    project = await _get_project_for_user(db, project_id, current_user)
 
     if not payload.items:
         raise HTTPException(status_code=400, detail="발주 품목이 필요해요")
@@ -1315,24 +1462,121 @@ async def create_material_order(
         project_id=project_id,
         order_number=order_number,
         status=MaterialOrderStatus.DRAFT,
+        vendor_id=payload.vendor_id,
         notes=payload.notes,
         created_by=current_user.id,
     )
     db.add(order)
     await db.flush()
 
+    role = _role_value(current_user)
+    can_override_price = role in {ROLE_COMPANY_ADMIN, ROLE_SUPER_ADMIN}
     total = Decimal("0")
     for row in payload.items:
-        amount = row.quantity * row.unit_price
+        if row.quantity <= 0:
+            raise HTTPException(status_code=400, detail="수량은 0보다 커야 해요")
+
+        resolved_description = (row.description or "").strip()
+        resolved_specification = (row.specification or "").strip() or None
+        resolved_unit = (row.unit or "").strip()
+        resolved_unit_price: Optional[Decimal] = row.unit_price
+        resolved_catalog_item_id = row.catalog_item_id
+        resolved_revision_id = row.pricebook_revision_id
+        price_source = "catalog_revision"
+        override_reason = (row.override_reason or "").strip() or None
+
+        if row.catalog_item_id is not None:
+            if resolved_revision_id is None:
+                resolved_revision_id = project.pricebook_revision_id
+            if resolved_revision_id is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="단가표 버전이 연결되지 않아 자재 단가를 확인할 수 없어요.",
+                )
+
+            joined = (
+                await db.execute(
+                    select(CatalogItemPrice, CatalogItem)
+                    .join(CatalogItem, CatalogItem.id == CatalogItemPrice.catalog_item_id)
+                    .where(CatalogItemPrice.catalog_item_id == row.catalog_item_id)
+                    .where(CatalogItemPrice.pricebook_revision_id == resolved_revision_id)
+                )
+            ).first()
+            if not joined:
+                raise HTTPException(
+                    status_code=400,
+                    detail="요청한 단가표 버전에서 자재 단가를 찾을 수 없어요.",
+                )
+
+            catalog_price, catalog_item = joined
+            resolved_description = resolved_description or catalog_item.name_ko
+            resolved_specification = (
+                resolved_specification
+                if resolved_specification is not None
+                else (catalog_item.specification or None)
+            )
+            resolved_unit = resolved_unit or catalog_item.base_unit
+            resolved_unit_price = catalog_price.unit_price
+
+            if row.unit_price is not None and row.unit_price != catalog_price.unit_price:
+                if not can_override_price:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="단가 수동 변경은 대표자 또는 최고관리자만 할 수 있어요.",
+                    )
+                if not override_reason:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="단가를 수동 변경할 때는 사유를 입력해 주세요.",
+                    )
+                resolved_unit_price = row.unit_price
+                price_source = "manual_override"
+        else:
+            if not can_override_price:
+                raise HTTPException(
+                    status_code=400,
+                    detail="카탈로그 품목을 선택해 주세요.",
+                )
+            if (
+                not resolved_description
+                or not resolved_unit
+                or resolved_unit_price is None
+                or resolved_unit_price <= 0
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="수동 품목은 품명, 단위, 단가를 모두 입력해 주세요.",
+                )
+            if not override_reason:
+                raise HTTPException(
+                    status_code=400,
+                    detail="수동 품목 추가 시 사유를 입력해 주세요.",
+                )
+            price_source = "manual_override"
+            resolved_catalog_item_id = None
+            resolved_revision_id = None
+
+        if resolved_unit_price is None or resolved_unit_price <= 0:
+            raise HTTPException(status_code=400, detail="유효한 단가를 찾을 수 없어요.")
+        if not resolved_description:
+            raise HTTPException(status_code=400, detail="품목명을 입력해 주세요.")
+        if not resolved_unit:
+            raise HTTPException(status_code=400, detail="단위를 입력해 주세요.")
+
+        amount = row.quantity * resolved_unit_price
         total += amount
         db.add(
             MaterialOrderItem(
                 material_order_id=order.id,
-                description=row.description,
-                specification=row.specification,
-                unit=row.unit,
+                catalog_item_id=resolved_catalog_item_id,
+                pricebook_revision_id=resolved_revision_id,
+                price_source=price_source,
+                override_reason=override_reason,
+                description=resolved_description,
+                specification=resolved_specification,
+                unit=resolved_unit,
                 quantity=row.quantity,
-                unit_price=row.unit_price,
+                unit_price=resolved_unit_price,
                 amount=amount,
             )
         )
@@ -1343,7 +1587,7 @@ async def create_material_order(
         {
             "id": str(order.id),
             "order_number": order.order_number,
-            "status": order.status.value,
+            "status": _normalize_material_order_status_value(order.status),
             "total_amount": order.total_amount,
         }
     )
@@ -1369,32 +1613,7 @@ async def get_material_order(
     )
     order_items = item_result.scalars().all()
 
-    return APIResponse.ok(
-        {
-            "id": str(order.id),
-            "project_id": str(order.project_id),
-            "order_number": order.order_number,
-            "status": order.status.value,
-            "items": [
-                {
-                    "id": str(item.id),
-                    "description": item.description,
-                    "specification": item.specification,
-                    "unit": item.unit,
-                    "quantity": float(item.quantity),
-                    "unit_price": float(item.unit_price),
-                    "amount": float(item.amount),
-                }
-                for item in order_items
-            ],
-            "total_amount": order.total_amount,
-            "requested_at": _to_iso(order.requested_at),
-            "confirmed_at": _to_iso(order.confirmed_at),
-            "delivered_at": _to_iso(order.delivered_at),
-            "notes": order.notes,
-            "created_at": order.created_at.isoformat(),
-        }
-    )
+    return APIResponse.ok(_serialize_material_order(order, order_items))
 
 
 @router.patch("/material-orders/{order_id}", response_model=APIResponse[dict])
@@ -1412,24 +1631,71 @@ async def update_material_order_status(
     await _get_project_for_user(db, order.project_id, current_user)
 
     try:
-        next_status = MaterialOrderStatus(payload.status)
+        requested_status = MaterialOrderStatus(payload.status)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="유효하지 않은 발주 상태예요") from exc
 
-    order.status = next_status
+    current_status = _normalize_material_order_status_value(order.status)
+    next_status_value = _normalize_material_order_status_value(requested_status)
+    if current_status == next_status_value:
+        return APIResponse.ok(
+            {
+                "id": str(order.id),
+                "status": next_status_value,
+                "message": "이미 같은 상태예요.",
+            }
+        )
+
+    _require_material_order_status_permission(
+        user=current_user,
+        target_status=next_status_value,
+    )
+
+    transition_map = _material_order_allowed_transitions()
+    allowed_targets = transition_map.get(current_status, set())
+    if next_status_value not in allowed_targets:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{current_status} 상태에서 {next_status_value} 상태로는 변경할 수 없어요.",
+        )
+
+    if next_status_value == MaterialOrderStatus.CANCELLED.value and not (payload.reason or "").strip():
+        raise HTTPException(status_code=400, detail="발주 취소 시 사유를 입력해 주세요.")
+
+    order.status = MaterialOrderStatus(next_status_value)
     now = datetime.utcnow()
-    if next_status == MaterialOrderStatus.REQUESTED:
+    if payload.invoice_number is not None:
+        order.invoice_number = payload.invoice_number
+    if payload.invoice_amount is not None:
+        order.invoice_amount = payload.invoice_amount
+    if payload.invoice_file_url is not None:
+        order.invoice_file_url = payload.invoice_file_url
+
+    if next_status_value == MaterialOrderStatus.REQUESTED.value:
         order.requested_at = now
-    elif next_status == MaterialOrderStatus.CONFIRMED:
+    elif next_status_value == MaterialOrderStatus.INVOICE_RECEIVED.value:
         order.confirmed_at = now
-    elif next_status == MaterialOrderStatus.DELIVERED:
+    elif next_status_value == MaterialOrderStatus.PAYMENT_COMPLETED.value:
+        order.payment_at = now
+    elif next_status_value == MaterialOrderStatus.SHIPPED.value:
+        order.shipped_at = now
+    elif next_status_value == MaterialOrderStatus.DELIVERED.value:
         order.delivered_at = now
+        order.received_at = now
+        order.received_by_user_id = current_user.id
+    elif next_status_value == MaterialOrderStatus.CLOSED.value:
+        order.closed_at = now
+    elif next_status_value == MaterialOrderStatus.CANCELLED.value:
+        reason = (payload.reason or "").strip()
+        if reason:
+            note_prefix = f"[취소사유] {reason}"
+            order.notes = f"{note_prefix}\n{order.notes}" if order.notes else note_prefix
     order.updated_at = now
 
     return APIResponse.ok(
         {
             "id": str(order.id),
-            "status": order.status.value,
+            "status": _normalize_material_order_status_value(order.status),
             "message": "발주 상태를 변경했어요.",
         }
     )
@@ -1447,6 +1713,19 @@ async def cancel_material_order(
         raise NotFoundException("material_order", order_id)
 
     await _get_project_for_user(db, order.project_id, current_user)
+
+    _require_material_order_status_permission(
+        user=current_user,
+        target_status=MaterialOrderStatus.CANCELLED.value,
+    )
+    current_status = _normalize_material_order_status_value(order.status)
+    allowed_targets = _material_order_allowed_transitions().get(current_status, set())
+    if MaterialOrderStatus.CANCELLED.value not in allowed_targets:
+        raise HTTPException(
+            status_code=400,
+            detail="현재 상태에서는 발주를 취소할 수 없어요.",
+        )
+
     order.status = MaterialOrderStatus.CANCELLED
     order.updated_at = datetime.utcnow()
     return APIResponse.ok({"id": str(order.id), "message": "발주를 취소했어요."})
