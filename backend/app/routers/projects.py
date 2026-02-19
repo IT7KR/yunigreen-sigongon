@@ -562,7 +562,7 @@ class WarrantyInfo(BaseModel):
     warranty_expires_at: Optional[datetime]
     days_remaining: int
     is_expired: bool
-    as_requests: list
+    as_requests: list[WarrantyASRequest]
 
 
 @router.get("/{project_id}/warranty", response_model=APIResponse[WarrantyInfo])
@@ -596,13 +596,13 @@ async def get_warranty_info(
     as_requests = as_result.scalars().all()
     
     as_request_list = [
-        {
-            "id": str(req.id),
-            "description": req.description,
-            "status": req.status.value,
-            "created_at": req.created_at.isoformat(),
-            "resolved_at": req.resolved_at.isoformat() if req.resolved_at else None,
-        }
+        WarrantyASRequest(
+            id=req.id,
+            description=req.description,
+            status=req.status.value,
+            created_at=req.created_at,
+            resolved_at=req.resolved_at,
+        )
         for req in as_requests
     ]
     
@@ -675,6 +675,110 @@ async def create_as_request(
             id=as_request.id,
             status=as_request.status.value,
             message="AS 요청이 접수되었어요",
+        )
+    )
+
+
+class ASRequestUpdateRequest(BaseModel):
+    status: ASRequestStatus
+
+
+class ASRequestUpdateResponse(BaseModel):
+    id: int
+    status: str
+    resolved_at: Optional[datetime]
+    message: str
+
+
+@router.patch(
+    "/{project_id}/warranty/as-requests/{as_request_id}",
+    response_model=APIResponse[ASRequestUpdateResponse],
+)
+async def update_as_request_status(
+    project_id: int,
+    as_request_id: int,
+    request_data: ASRequestUpdateRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """AS 요청 상태 변경.
+
+    접수된 AS 요청의 진행 상태를 관리해요.
+    """
+    project = await _get_project_for_current_user(db, project_id, current_user)
+
+    if project.status not in {
+        ProjectStatus.COMPLETED,
+        ProjectStatus.WARRANTY,
+        ProjectStatus.CLOSED,
+    }:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="완료된 프로젝트에서만 AS 요청 상태를 변경할 수 있어요",
+        )
+
+    as_result = await db.execute(
+        select(ASRequest).where(
+            ASRequest.project_id == project_id,
+            ASRequest.id == as_request_id,
+        )
+    )
+    as_request = as_result.scalar_one_or_none()
+    if not as_request:
+        raise NotFoundException("as_request", as_request_id)
+
+    current_status = as_request.status
+    next_status = request_data.status
+    allowed_transitions: dict[ASRequestStatus, set[ASRequestStatus]] = {
+        ASRequestStatus.PENDING: {
+            ASRequestStatus.IN_PROGRESS,
+            ASRequestStatus.RESOLVED,
+            ASRequestStatus.CANCELLED,
+        },
+        ASRequestStatus.IN_PROGRESS: {
+            ASRequestStatus.PENDING,
+            ASRequestStatus.RESOLVED,
+            ASRequestStatus.CANCELLED,
+        },
+        ASRequestStatus.RESOLVED: {
+            ASRequestStatus.PENDING,
+            ASRequestStatus.IN_PROGRESS,
+        },
+        ASRequestStatus.CANCELLED: {
+            ASRequestStatus.PENDING,
+        },
+    }
+
+    if next_status != current_status and next_status not in allowed_transitions[current_status]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="현재 상태에서 요청한 상태로 변경할 수 없어요",
+        )
+
+    if next_status == ASRequestStatus.RESOLVED:
+        as_request.resolved_at = datetime.utcnow()
+    elif current_status == ASRequestStatus.RESOLVED and next_status != ASRequestStatus.RESOLVED:
+        as_request.resolved_at = None
+
+    as_request.status = next_status
+    as_request.updated_at = datetime.utcnow()
+
+    await db.commit()
+    await db.refresh(as_request)
+
+    status_message = {
+        ASRequestStatus.PENDING: "AS 요청 상태를 접수로 변경했어요",
+        ASRequestStatus.IN_PROGRESS: "AS 요청 상태를 처리중으로 변경했어요",
+        ASRequestStatus.RESOLVED: "AS 요청을 완료 처리했어요",
+        ASRequestStatus.CANCELLED: "AS 요청을 취소 처리했어요",
+    }
+
+    return APIResponse.ok(
+        ASRequestUpdateResponse(
+            id=as_request.id,
+            status=as_request.status.value,
+            resolved_at=as_request.resolved_at,
+            message=status_message[as_request.status],
         )
     )
 
