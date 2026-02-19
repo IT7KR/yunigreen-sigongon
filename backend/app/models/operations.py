@@ -35,10 +35,14 @@ class UtilityDocStatus(str, Enum):
 class MaterialOrderStatus(str, Enum):
     DRAFT = "draft"
     REQUESTED = "requested"
-    CONFIRMED = "confirmed"
+    INVOICE_RECEIVED = "invoice_received"
+    PAYMENT_COMPLETED = "payment_completed"
     SHIPPED = "shipped"
     DELIVERED = "delivered"
+    CLOSED = "closed"
     CANCELLED = "cancelled"
+    # Legacy compatibility (existing rows may still store "confirmed")
+    CONFIRMED = "confirmed"
 
 
 class NotificationType(str, Enum):
@@ -110,10 +114,19 @@ class MaterialOrder(SQLModel, table=True):
     order_number: str = Field(max_length=60, index=True)
     status: MaterialOrderStatus = Field(default=MaterialOrderStatus.DRAFT, index=True)
     total_amount: int = Field(default=0)
+    vendor_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
+    invoice_number: Optional[str] = Field(default=None, max_length=120, index=True)
+    invoice_amount: Optional[int] = Field(default=None)
+    invoice_file_url: Optional[str] = Field(default=None, max_length=500)
     notes: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     requested_at: Optional[datetime] = Field(default=None)
-    confirmed_at: Optional[datetime] = Field(default=None)
+    confirmed_at: Optional[datetime] = Field(default=None)  # Backward compatibility
+    payment_at: Optional[datetime] = Field(default=None)
+    shipped_at: Optional[datetime] = Field(default=None)
     delivered_at: Optional[datetime] = Field(default=None)
+    received_at: Optional[datetime] = Field(default=None)
+    received_by_user_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
+    closed_at: Optional[datetime] = Field(default=None)
     created_by: Optional[int] = Field(default=None, sa_type=BigInteger)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -124,6 +137,10 @@ class MaterialOrderItem(SQLModel, table=True):
 
     id: int = Field(default_factory=generate_snowflake_id, sa_column=Column(BigInteger, primary_key=True))
     material_order_id: int = Field(sa_column=Column(BigInteger, nullable=False, index=True))
+    catalog_item_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
+    pricebook_revision_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
+    price_source: str = Field(default="catalog_revision", max_length=30)
+    override_reason: Optional[str] = Field(default=None, max_length=255)
     description: str = Field(max_length=255)
     specification: Optional[str] = Field(default=None, max_length=255)
     unit: str = Field(max_length=20)
