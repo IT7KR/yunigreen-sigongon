@@ -1,5 +1,5 @@
 import base64
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
@@ -8,8 +8,14 @@ from sqlmodel import select
 
 from app.core.exceptions import NotFoundException
 from app.core.snowflake import generate_snowflake_id
-from app.models.contract import Contract, ContractStatus, ContractCreate, ContractUpdate
-from app.models.estimate import Estimate
+from app.models.contract import (
+    Contract,
+    ContractStatus,
+    ContractTemplateType,
+    ContractCreate,
+    ContractUpdate,
+)
+from app.models.estimate import Estimate, EstimateStatus
 from app.services.storage import storage_service
 
 
@@ -39,8 +45,9 @@ class ContractService:
         self,
         project_id: int,
         estimate_id: int,
-        start_date: Optional[datetime] = None,
-        expected_end_date: Optional[datetime] = None,
+        template_type: ContractTemplateType = ContractTemplateType.PUBLIC_OFFICE,
+        start_date: Optional[date] = None,
+        expected_end_date: Optional[date] = None,
         notes: Optional[str] = None,
     ) -> Contract:
         estimate_result = await self.db.execute(
@@ -49,6 +56,10 @@ class ContractService:
         estimate = estimate_result.scalar_one_or_none()
         if not estimate:
             raise NotFoundException("견적서를 찾을 수 없어요")
+        if estimate.project_id != project_id:
+            raise ValueError("선택한 견적서가 해당 프로젝트에 속하지 않아요")
+        if estimate.status != EstimateStatus.ACCEPTED:
+            raise ValueError("고객 수락된 견적서만 계약서를 생성할 수 있어요")
         
         contract_number = await self._generate_contract_number()
         
@@ -58,6 +69,7 @@ class ContractService:
             estimate_id=estimate_id,
             contract_number=contract_number,
             contract_amount=estimate.total_amount,
+            template_type=template_type,
             status=ContractStatus.DRAFT,
             start_date=start_date,
             expected_end_date=expected_end_date,

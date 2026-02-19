@@ -1,10 +1,11 @@
 import io
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Annotated, Optional
+from typing import Any, Annotated, Optional, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 from sqlmodel import select
@@ -55,6 +56,17 @@ class EstimateWithLines(EstimateRead):
 class IssueResponse(EstimateRead):
     """발행 응답."""
     message: str = "견적서를 발행했어요"
+
+
+class EstimateDecisionRequest(BaseModel):
+    """고객 견적 의사결정 입력."""
+    action: Literal["accepted", "rejected"]
+    reason: Optional[str] = None
+
+
+class DecisionResponse(EstimateRead):
+    """고객 결정 응답."""
+    message: str = "견적서 상태를 업데이트했어요"
 
 
 @router.get(
@@ -224,6 +236,8 @@ async def create_estimate(
             total_amount=estimate.total_amount,
             created_at=estimate.created_at,
             issued_at=estimate.issued_at,
+            accepted_at=estimate.accepted_at,
+            rejected_at=estimate.rejected_at,
             lines=[EstimateLineRead.model_validate(l) for l in lines],
             range_total_min=range_total_min,
             range_total_max=range_total_max,
@@ -264,6 +278,8 @@ async def get_estimate(
             total_amount=estimate.total_amount,
             created_at=estimate.created_at,
             issued_at=estimate.issued_at,
+            accepted_at=estimate.accepted_at,
+            rejected_at=estimate.rejected_at,
             lines=[
                 EstimateLineRead.model_validate(l) 
                 for l in sorted(estimate.lines or [], key=lambda x: x.sort_order)
@@ -292,10 +308,14 @@ async def add_estimate_line(
     
     # 금액 계산
     amount = line_data.quantity * line_data.unit_price_snapshot
+    await db.refresh(estimate, ["lines"])
+    next_sort_order = line_data.sort_order
+    if next_sort_order <= 0:
+        next_sort_order = len(estimate.lines or []) + 1
     
     line = EstimateLine(
         estimate_id=estimate_id,
-        sort_order=line_data.sort_order,
+        sort_order=next_sort_order,
         description=line_data.description,
         specification=line_data.specification,
         unit=line_data.unit,
@@ -450,10 +470,77 @@ async def issue_estimate(
         total_amount=estimate.total_amount,
         created_at=estimate.created_at,
         issued_at=estimate.issued_at,
+        accepted_at=estimate.accepted_at,
+        rejected_at=estimate.rejected_at,
         message="견적서를 발행했어요",
     )
     
     return APIResponse.ok(response)
+
+
+@router.post(
+    "/estimates/{estimate_id}/decision",
+    response_model=APIResponse[DecisionResponse],
+)
+async def decide_estimate(
+    estimate_id: int,
+    payload: EstimateDecisionRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """고객 견적 의사결정(수락/거절) 반영."""
+    estimate = await ensure_exists(db, Estimate, estimate_id, "estimate")
+    await ensure_exists_in_org(db, Project, estimate.project_id, current_user, "project")
+
+    if estimate.status != EstimateStatus.ISSUED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="발행된 견적서만 고객 의사결정을 반영할 수 있어요.",
+        )
+
+    now = datetime.utcnow()
+    action = payload.action
+    if action == "accepted":
+        estimate.status = EstimateStatus.ACCEPTED
+        estimate.accepted_at = now
+        message = "고객 수락으로 처리했어요."
+    else:
+        estimate.status = EstimateStatus.REJECTED
+        estimate.rejected_at = now
+        message = "고객 미선정(거절)으로 처리했어요."
+
+    estimate.decided_by = current_user.id
+    estimate.updated_at = now
+
+    if payload.reason:
+        reason_note = f"[고객 결정 메모] {payload.reason.strip()}"
+        estimate.notes = (
+            f"{estimate.notes}\n{reason_note}".strip()
+            if estimate.notes
+            else reason_note
+        )
+
+    await db.commit()
+    await db.refresh(estimate)
+
+    return APIResponse.ok(
+        DecisionResponse(
+            id=estimate.id,
+            project_id=estimate.project_id,
+            version=estimate.version,
+            pricebook_revision_id=estimate.pricebook_revision_id,
+            notes=estimate.notes,
+            status=estimate.status,
+            subtotal=estimate.subtotal,
+            vat_amount=estimate.vat_amount,
+            total_amount=estimate.total_amount,
+            created_at=estimate.created_at,
+            issued_at=estimate.issued_at,
+            accepted_at=estimate.accepted_at,
+            rejected_at=estimate.rejected_at,
+            message=message,
+        )
+    )
 
 
 @router.get(

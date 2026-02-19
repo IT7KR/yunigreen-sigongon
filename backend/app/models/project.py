@@ -25,6 +25,7 @@ class ProjectStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     WARRANTY = "warranty"
+    CLOSED = "closed"
 
 
 class VisitType(str, Enum):
@@ -46,6 +47,7 @@ class ProjectBase(SQLModel):
     """Project base fields."""
     name: str = Field(max_length=255, index=True)
     address: str
+    category: Optional[str] = Field(default=None, max_length=100, index=True)
     customer_master_id: Optional[int] = Field(default=None, sa_type=BigInteger, index=True)
     client_name: Optional[str] = Field(default=None, max_length=100)
     client_phone: Optional[str] = Field(default=None, max_length=20)
@@ -123,6 +125,7 @@ class ProjectUpdate(SQLModel):
     """Schema for updating project."""
     name: Optional[str] = None
     address: Optional[str] = None
+    category: Optional[str] = None
     customer_master_id: Optional[int] = None
     client_name: Optional[str] = None
     client_phone: Optional[str] = None
@@ -135,6 +138,11 @@ class SiteVisitBase(SQLModel):
     """SiteVisit base fields."""
     visit_type: VisitType
     visited_at: datetime
+    estimated_area_m2: Optional[Decimal] = Field(
+        default=None,
+        max_digits=10,
+        decimal_places=2,
+    )
     notes: Optional[str] = Field(default=None)
 
 
@@ -166,7 +174,7 @@ class SiteVisit(SiteVisitBase, table=True):
 
 class SiteVisitCreate(SiteVisitBase):
     """Schema for creating site visit."""
-    project_id: int
+    pass
 
 
 class SiteVisitRead(SiteVisitBase):

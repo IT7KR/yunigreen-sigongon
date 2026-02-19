@@ -62,10 +62,13 @@ class Estimate(EstimateBase, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     issued_at: Optional[datetime] = Field(default=None)
+    accepted_at: Optional[datetime] = Field(default=None)
+    rejected_at: Optional[datetime] = Field(default=None)
     
     # Audit
     created_by: Optional[int] = Field(default=None, sa_type=BigInteger)
     issued_by: Optional[int] = Field(default=None, sa_type=BigInteger)
+    decided_by: Optional[int] = Field(default=None, sa_type=BigInteger)
     
     # Relationships
     project: Optional["Project"] = Relationship(
@@ -86,7 +89,6 @@ class Estimate(EstimateBase, table=True):
 
 class EstimateCreate(SQLModel):
     """Schema for creating estimate."""
-    project_id: int
     diagnosis_id: Optional[int] = None  # If generating from AI diagnosis
     include_confirmed_only: bool = False
 
@@ -103,6 +105,8 @@ class EstimateRead(EstimateBase):
     total_amount: Decimal
     created_at: datetime
     issued_at: Optional[datetime]
+    accepted_at: Optional[datetime]
+    rejected_at: Optional[datetime]
 
 
 class EstimateUpdate(SQLModel):
@@ -161,7 +165,6 @@ class EstimateLine(EstimateLineBase, table=True):
 
 class EstimateLineCreate(EstimateLineBase):
     """Schema for creating estimate line."""
-    estimate_id: int
     catalog_item_id: Optional[int] = None
     unit_price_snapshot: Decimal
     sort_order: int = 0

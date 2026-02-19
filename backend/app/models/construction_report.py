@@ -31,6 +31,7 @@ class ConstructionReportBase(SQLModel):
     """ConstructionReport base fields."""
     report_type: ReportType
     notes: Optional[str] = Field(default=None)
+    auto_link_representative_docs: bool = Field(default=True)
 
     # 착공계 specific fields
     construction_name: Optional[str] = Field(default=None, max_length=255)  # 공사명
@@ -83,6 +84,7 @@ class ConstructionReportCreate(SQLModel):
     project_id: int
     report_type: ReportType
     notes: Optional[str] = None
+    auto_link_representative_docs: bool = True
 
     # 착공계 specific fields
     construction_name: Optional[str] = None
@@ -115,6 +117,7 @@ class ConstructionReportRead(ConstructionReportBase):
 class ConstructionReportUpdate(SQLModel):
     """Schema for updating construction report."""
     notes: Optional[str] = None
+    auto_link_representative_docs: Optional[bool] = None
 
     # 착공계 specific fields
     construction_name: Optional[str] = None

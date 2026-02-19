@@ -24,6 +24,12 @@ class ContractStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class ContractTemplateType(str, Enum):
+    """계약서 템플릿 유형."""
+    PUBLIC_OFFICE = "public_office"
+    PRIVATE_STANDARD = "private_standard"
+
+
 class LaborContractStatus(str, Enum):
     """Labor contract status enumeration."""
     DRAFT = "draft"
@@ -49,6 +55,10 @@ class Contract(ContractBase, table=True):
     
     # Contract details
     contract_amount: Decimal = Field(max_digits=15, decimal_places=2)
+    template_type: ContractTemplateType = Field(
+        default=ContractTemplateType.PUBLIC_OFFICE,
+        index=True,
+    )
     
     # Status
     status: ContractStatus = Field(default=ContractStatus.DRAFT, index=True)
@@ -83,6 +93,7 @@ class ContractCreate(SQLModel):
     project_id: int
     estimate_id: int
     contract_amount: Decimal
+    template_type: ContractTemplateType = ContractTemplateType.PUBLIC_OFFICE
     start_date: Optional[date] = None
     expected_end_date: Optional[date] = None
 
@@ -93,6 +104,7 @@ class ContractRead(ContractBase):
     project_id: int
     estimate_id: int
     contract_amount: Decimal
+    template_type: ContractTemplateType
     status: ContractStatus
     created_at: datetime
     signed_at: Optional[datetime]
