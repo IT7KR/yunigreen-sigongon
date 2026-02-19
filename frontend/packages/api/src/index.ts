@@ -12,6 +12,7 @@ export {
 // Re-export types for convenience
 export type {
   APIResponse,
+  CustomerMaster,
   PaginatedResponse,
   LoginResponse,
   ProjectListItem,

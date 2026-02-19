@@ -62,6 +62,7 @@ export function useCreateProject() {
     mutationFn: (data: {
       name: string;
       address: string;
+      customer_master_id?: string;
       client_name?: string;
       client_phone?: string;
       notes?: string;

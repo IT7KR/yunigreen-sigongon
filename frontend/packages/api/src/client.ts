@@ -5,6 +5,7 @@ import axios, {
 } from "axios";
 import type {
   APIResponse,
+  CustomerMaster,
   PaginatedResponse,
   LoginResponse,
   ProjectListItem,
@@ -445,6 +446,70 @@ export class APIClient {
   }
 
   // ============================================
+  // Customer Masters
+  // ============================================
+
+  async getCustomers(params?: {
+    page?: number;
+    per_page?: number;
+    search?: string;
+    include_inactive?: boolean;
+  }) {
+    const response = await this.client.get<PaginatedResponse<CustomerMaster>>(
+      "/customers",
+      { params },
+    );
+    return response.data;
+  }
+
+  async getCustomer(id: string) {
+    const response = await this.client.get<APIResponse<CustomerMaster>>(
+      `/customers/${id}`,
+    );
+    return response.data;
+  }
+
+  async createCustomer(data: {
+    name: string;
+    phone?: string;
+    memo?: string;
+  }) {
+    const response = await this.client.post<APIResponse<CustomerMaster>>(
+      "/customers",
+      data,
+    );
+    return response.data;
+  }
+
+  async updateCustomer(
+    id: string,
+    data: {
+      name?: string;
+      phone?: string;
+      memo?: string;
+      is_active?: boolean;
+    },
+  ) {
+    const response = await this.client.patch<APIResponse<CustomerMaster>>(
+      `/customers/${id}`,
+      data,
+    );
+    return response.data;
+  }
+
+  async upsertCustomer(data: {
+    name: string;
+    phone?: string;
+    memo?: string;
+  }) {
+    const response = await this.client.post<APIResponse<CustomerMaster>>(
+      "/customers/upsert",
+      data,
+    );
+    return response.data;
+  }
+
+  // ============================================
   // Projects
   // ============================================
 
@@ -472,6 +537,7 @@ export class APIClient {
     name: string;
     address: string;
     category?: string;
+    customer_master_id?: string;
     client_name?: string;
     client_phone?: string;
     notes?: string;
@@ -492,6 +558,7 @@ export class APIClient {
       name?: string;
       address?: string;
       category?: string;
+      customer_master_id?: string;
       client_name?: string;
       client_phone?: string;
       notes?: string;

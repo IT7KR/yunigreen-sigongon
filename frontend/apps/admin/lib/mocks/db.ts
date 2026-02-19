@@ -38,6 +38,7 @@ export interface Project {
   address: string;
   status: ProjectStatus;
   category?: ProjectCategory;
+  customerMasterId?: string;
   clientName: string;
   clientPhone: string;
   notes?: string;
@@ -227,6 +228,11 @@ const normalizeProject = (raw: any): Project => {
     name: String(raw?.name || "프로젝트"),
     address: String(raw?.address || ""),
     status: normalizeStatus(raw?.status),
+    customerMasterId: raw?.customerMasterId
+      ? String(raw.customerMasterId)
+      : raw?.customer_master_id
+      ? String(raw.customer_master_id)
+      : undefined,
     clientName: String(raw?.clientName || raw?.client_name || ""),
     clientPhone: String(raw?.clientPhone || raw?.client_phone || ""),
     notes: raw?.notes ? String(raw.notes) : undefined,

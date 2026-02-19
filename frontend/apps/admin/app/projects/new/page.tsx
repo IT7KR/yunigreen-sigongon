@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Card, Input, PrimitiveInput, Select, Textarea } from "@sigongon/ui";
+import { Button, Card, Input, Modal, PrimitiveInput, Select, Textarea } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
-import { PROJECT_CATEGORIES } from "@sigongon/types";
+import { PROJECT_CATEGORIES, type CustomerMaster } from "@sigongon/types";
 import { api } from "@/lib/api";
 import { Loader2, X, Plus } from "lucide-react";
 
@@ -16,6 +16,15 @@ export default function NewProjectPage() {
   const [category, setCategory] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerResults, setCustomerResults] = useState<CustomerMaster[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [isCustomerSearching, setIsCustomerSearching] = useState(false);
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerError, setNewCustomerError] = useState("");
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [primaryContact, setPrimaryContact] = useState("representative");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -26,6 +35,72 @@ export default function NewProjectPage() {
     if (cleaned.length <= 3) return cleaned;
     if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
+  };
+
+  useEffect(() => {
+    const query = customerQuery.trim();
+    if (!query || selectedCustomerId) {
+      setCustomerResults([]);
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      try {
+        setIsCustomerSearching(true);
+        const res = await api.getCustomers({ search: query, per_page: 8 });
+        if (res.success && res.data) {
+          setCustomerResults(res.data);
+        }
+      } finally {
+        setIsCustomerSearching(false);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [customerQuery, selectedCustomerId]);
+
+  const handleSelectCustomer = (customer: CustomerMaster) => {
+    setSelectedCustomerId(customer.id);
+    setCustomerQuery(customer.name);
+    setClientName(customer.name);
+    setClientPhone(customer.phone || "");
+    setCustomerResults([]);
+  };
+
+  const handleClearCustomer = () => {
+    setSelectedCustomerId("");
+    setCustomerQuery("");
+    setCustomerResults([]);
+  };
+
+  const handleCreateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedName = newCustomerName.trim();
+    if (!trimmedName) {
+      setNewCustomerError("발주처명을 입력하세요");
+      return;
+    }
+
+    try {
+      setIsCreatingCustomer(true);
+      setNewCustomerError("");
+      const res = await api.createCustomer({
+        name: trimmedName,
+        phone: newCustomerPhone.trim() || undefined,
+      });
+      if (!res.success || !res.data) {
+        setNewCustomerError("발주처 등록에 실패했습니다");
+        return;
+      }
+      handleSelectCustomer(res.data);
+      setShowNewCustomerModal(false);
+      setNewCustomerName("");
+      setNewCustomerPhone("");
+    } catch {
+      setNewCustomerError("발주처 등록에 실패했습니다");
+    } finally {
+      setIsCreatingCustomer(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,6 +131,7 @@ export default function NewProjectPage() {
         name: name.trim(),
         address: address.trim(),
         category,
+        customer_master_id: selectedCustomerId || undefined,
         client_name: clientName.trim() || undefined,
         client_phone: clientPhone.trim() || undefined,
         notes: notes.trim() || undefined,
@@ -116,15 +192,72 @@ export default function NewProjectPage() {
             />
           </div>
 
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700">
+              발주처 선택
+            </label>
+            <div className="flex gap-2">
+              <PrimitiveInput
+                type="text"
+                placeholder="발주처명/연락처로 검색"
+                value={customerQuery}
+                onChange={(e) => {
+                  setSelectedCustomerId("");
+                  setCustomerQuery(e.target.value);
+                }}
+                className="h-11 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowNewCustomerModal(true)}
+              >
+                신규 등록
+              </Button>
+            </div>
+            {isCustomerSearching && (
+              <p className="text-xs text-slate-500">검색 중...</p>
+            )}
+            {!isCustomerSearching && customerResults.length > 0 && (
+              <div className="max-h-44 overflow-auto rounded-lg border border-slate-200 bg-white">
+                {customerResults.map((customer) => (
+                  <button
+                    key={customer.id}
+                    type="button"
+                    className="w-full border-b border-slate-100 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-slate-50"
+                    onClick={() => handleSelectCustomer(customer)}
+                  >
+                    <p className="font-medium text-slate-900">{customer.name}</p>
+                    <p className="text-xs text-slate-500">
+                      {customer.phone || "연락처 없음"}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+            {selectedCustomerId && (
+              <div className="flex items-center justify-between rounded-lg bg-brand-point-50 px-3 py-2 text-xs text-brand-point-700">
+                <span>선택된 발주처 ID: {selectedCustomerId}</span>
+                <button
+                  type="button"
+                  className="font-medium underline"
+                  onClick={handleClearCustomer}
+                >
+                  선택 해제
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <Input
-              label="고객명 (선택)"
+              label="고객명 (스냅샷)"
               placeholder="홍길동"
               value={clientName}
               onChange={(e) => setClientName(e.target.value)}
             />
             <Input
-              label="고객 연락처 (선택)"
+              label="고객 연락처 (스냅샷)"
               placeholder="010-0000-0000"
               value={clientPhone}
               onChange={(e) => setClientPhone(handlePhoneFormat(e.target.value))}
@@ -217,6 +350,46 @@ export default function NewProjectPage() {
           </div>
         </form>
       </Card>
+
+      <Modal
+        isOpen={showNewCustomerModal}
+        onClose={() => setShowNewCustomerModal(false)}
+        title="발주처 신규 등록"
+        size="md"
+      >
+        <form className="space-y-4" onSubmit={handleCreateCustomer}>
+          <Input
+            label="발주처명 *"
+            value={newCustomerName}
+            onChange={(e) => {
+              setNewCustomerName(e.target.value);
+              setNewCustomerError("");
+            }}
+            required
+          />
+          <Input
+            label="연락처"
+            placeholder="010-0000-0000"
+            value={newCustomerPhone}
+            onChange={(e) => setNewCustomerPhone(handlePhoneFormat(e.target.value))}
+          />
+          {newCustomerError && (
+            <p className="text-sm text-red-600">{newCustomerError}</p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowNewCustomerModal(false)}
+            >
+              취소
+            </Button>
+            <Button type="submit" disabled={isCreatingCustomer}>
+              {isCreatingCustomer ? <Loader2 className="h-4 w-4 animate-spin" /> : "등록"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </AdminLayout>
   );
 }

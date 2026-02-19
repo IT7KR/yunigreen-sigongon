@@ -8,7 +8,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { Button, Card, CardContent, ConfirmModal, EmptyState, Input, LoadingOverlay, Modal, PageHeader, PageTransition, PrimitiveButton, PrimitiveInput, Select, StatusBadge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
 import { useProjects } from "@/hooks";
 import { api } from "@/lib/api";
-import type { ProjectStatus, ProjectCategory } from "@sigongon/types";
+import type { CustomerMaster, ProjectCategory, ProjectStatus } from "@sigongon/types";
 import { PROJECT_CATEGORIES } from "@sigongon/types";
 
 export default function ProjectsPage() {
@@ -19,7 +19,21 @@ export default function ProjectsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [editProject, setEditProject] = useState<{ id: string; name: string; address: string; client_name: string; category: string } | null>(null);
+  const [editProject, setEditProject] = useState<{
+    id: string;
+    name: string;
+    address: string;
+    client_name: string;
+    client_phone: string;
+    category: string;
+    customer_master_id: string;
+  } | null>(null);
+  const [customers, setCustomers] = useState<CustomerMaster[]>([]);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
+  const [customerError, setCustomerError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -38,6 +52,28 @@ export default function ProjectsPage() {
   const total = projects.length;
 
   const categoryMap = Object.fromEntries(PROJECT_CATEGORIES.map((c) => [c.id, c.label]));
+
+  const formatPhone = (value: string) => {
+    const cleaned = value.replace(/\D/g, "");
+    if (cleaned.length <= 3) return cleaned;
+    if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
+  };
+
+  const loadCustomers = async () => {
+    try {
+      const response = await api.getCustomers({ per_page: 100 });
+      if (response.success && response.data) {
+        setCustomers(response.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    loadCustomers();
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -61,6 +97,7 @@ export default function ProjectsPage() {
         name: formData.get("name") as string,
         address: formData.get("address") as string,
         category: (formData.get("category") as string) || undefined,
+        customer_master_id: (formData.get("customer_master_id") as string) || undefined,
         client_name: (formData.get("client_name") as string) || undefined,
         client_phone: (formData.get("client_phone") as string) || undefined,
       });
@@ -97,6 +134,7 @@ export default function ProjectsPage() {
         name: formData.get("name") as string,
         address: formData.get("address") as string,
         category: (formData.get("category") as string) || undefined,
+        customer_master_id: (formData.get("customer_master_id") as string) || undefined,
         client_name: (formData.get("client_name") as string) || undefined,
         client_phone: (formData.get("client_phone") as string) || undefined,
       });
@@ -110,6 +148,37 @@ export default function ProjectsPage() {
       console.error(err);
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleCreateCustomer(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const trimmedName = newCustomerName.trim();
+    if (!trimmedName) {
+      setCustomerError("발주처명을 입력하세요");
+      return;
+    }
+
+    try {
+      setCreatingCustomer(true);
+      setCustomerError("");
+      const response = await api.createCustomer({
+        name: trimmedName,
+        phone: newCustomerPhone.trim() || undefined,
+      });
+      if (!response.success || !response.data) {
+        setCustomerError("발주처 등록에 실패했습니다");
+        return;
+      }
+      await loadCustomers();
+      setNewCustomerName("");
+      setNewCustomerPhone("");
+      setShowCustomerModal(false);
+    } catch (err) {
+      console.error(err);
+      setCustomerError("발주처 등록에 실패했습니다");
+    } finally {
+      setCreatingCustomer(false);
     }
   }
 
@@ -263,7 +332,9 @@ export default function ProjectsPage() {
                                     name: project.name,
                                     address: project.address,
                                     client_name: project.client_name || "",
+                                    client_phone: project.client_phone || "",
                                     category: project.category || "",
+                                    customer_master_id: project.customer_master_id || "",
                                   });
                                 }}
                               >
@@ -321,11 +392,37 @@ export default function ProjectsPage() {
             required
             options={PROJECT_CATEGORIES.map((cat) => ({ value: cat.id, label: cat.label }))}
           />
-          <Input name="client_name" label="고객명" placeholder="홍길동" />
+          <Select
+            name="customer_master_id"
+            label="발주처 선택"
+            placeholder="선택 안 함"
+            options={customers.map((customer) => ({
+              value: customer.id,
+              label: customer.phone
+                ? `${customer.name} (${customer.phone})`
+                : customer.name,
+            }))}
+          />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowCustomerModal(true);
+                setCustomerError("");
+              }}
+            >
+              발주처 신규 등록
+            </Button>
+          </div>
+          <Input name="client_name" label="고객명 (스냅샷)" placeholder="홍길동" />
           <Input
             name="client_phone"
-            label="고객 연락처"
+            label="고객 연락처 (스냅샷)"
             placeholder="010-1234-5678"
+            onChange={(e) => {
+              e.currentTarget.value = formatPhone(e.currentTarget.value);
+            }}
           />
           <div className="flex gap-3 pt-2">
             <Button
@@ -373,18 +470,52 @@ export default function ProjectsPage() {
               label="카테고리"
               placeholder="카테고리 선택"
               value={editProject.category}
+              onChange={(value) =>
+                setEditProject({ ...editProject, category: value })
+              }
               required
               options={PROJECT_CATEGORIES.map((cat) => ({ value: cat.id, label: cat.label }))}
             />
+            <Select
+              name="customer_master_id"
+              label="발주처 선택"
+              placeholder="선택 안 함"
+              value={editProject.customer_master_id}
+              onChange={(value) =>
+                setEditProject({ ...editProject, customer_master_id: value })
+              }
+              options={customers.map((customer) => ({
+                value: customer.id,
+                label: customer.phone
+                  ? `${customer.name} (${customer.phone})`
+                  : customer.name,
+              }))}
+            />
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setShowCustomerModal(true);
+                  setCustomerError("");
+                }}
+              >
+                발주처 신규 등록
+              </Button>
+            </div>
             <Input
               name="client_name"
-              label="고객명"
+              label="고객명 (스냅샷)"
               defaultValue={editProject.client_name}
             />
             <Input
               name="client_phone"
-              label="고객 연락처"
+              label="고객 연락처 (스냅샷)"
               placeholder="010-1234-5678"
+              defaultValue={editProject.client_phone}
+              onChange={(e) => {
+                e.currentTarget.value = formatPhone(e.currentTarget.value);
+              }}
             />
             <div className="flex gap-3 pt-2">
               <Button
@@ -405,6 +536,50 @@ export default function ProjectsPage() {
             </div>
           </form>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        title="발주처 신규 등록"
+        size="md"
+      >
+        <form className="space-y-4" onSubmit={handleCreateCustomer}>
+          <Input
+            label="발주처명 *"
+            value={newCustomerName}
+            onChange={(e) => {
+              setNewCustomerName(e.target.value);
+              setCustomerError("");
+            }}
+            required
+          />
+          <Input
+            label="연락처"
+            placeholder="010-1234-5678"
+            value={newCustomerPhone}
+            onChange={(e) => setNewCustomerPhone(formatPhone(e.target.value))}
+          />
+          {customerError && (
+            <p className="text-sm text-red-600">{customerError}</p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowCustomerModal(false)}
+            >
+              취소
+            </Button>
+            <Button type="submit" disabled={creatingCustomer}>
+              {creatingCustomer ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "등록"
+              )}
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       {/* Delete Confirm Modal */}

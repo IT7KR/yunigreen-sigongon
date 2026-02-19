@@ -1,5 +1,6 @@
 import type {
   APIResponse,
+  CustomerMaster,
   PaginatedResponse,
   LoginResponse,
   ProjectListItem,
@@ -172,6 +173,7 @@ interface MockRepresentativeAssignment {
 export class MockAPIClient {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
+  private customersByOrg: Record<string, CustomerMaster[]> = {};
 
   private siteVisitsByProject: Record<string, SiteVisitDetail[]> = {};
   private visitProjectId: Record<string, string> = {};
@@ -746,6 +748,61 @@ export class MockAPIClient {
     return user || null;
   }
 
+  private normalizePhone(value?: string) {
+    if (!value) return "";
+    return value.replace(/\D/g, "");
+  }
+
+  private getCurrentOrganizationId() {
+    const user = this.getCurrentUser() || this.getStoredUsers()[0];
+    return user.organization_id || "org_1";
+  }
+
+  private getCustomerCatalog(organizationId?: string) {
+    const orgId = organizationId || this.getCurrentOrganizationId();
+    if (!this.customersByOrg[orgId]) {
+      this.customersByOrg[orgId] = [];
+    }
+
+    const projects = mockDb
+      .get("projects")
+      .filter((project) => project.organization_id === orgId);
+    const catalog = this.customersByOrg[orgId];
+
+    projects.forEach((project) => {
+      const snapshotName = (project.clientName || "").trim();
+      if (!snapshotName) return;
+      const snapshotPhone = project.clientPhone || "";
+      const snapshotPhoneNormalized = this.normalizePhone(snapshotPhone);
+
+      let customer = project.customerMasterId
+        ? catalog.find((item) => item.id === project.customerMasterId)
+        : undefined;
+      if (!customer) {
+        customer = catalog.find(
+          (item) =>
+            item.name === snapshotName &&
+            this.normalizePhone(item.phone) === snapshotPhoneNormalized,
+        );
+      }
+      if (!customer) {
+        customer = {
+          id: project.customerMasterId || randomId("cm"),
+          organization_id: orgId,
+          name: snapshotName,
+          phone: snapshotPhone || undefined,
+          memo: undefined,
+          is_active: true,
+          created_at: nowIso(),
+          updated_at: nowIso(),
+        };
+        catalog.push(customer);
+      }
+    });
+
+    return catalog;
+  }
+
   async login(username: string, _password: string) {
     if (!username) {
       return delay(
@@ -882,6 +939,155 @@ export class MockAPIClient {
     return delay(ok({ verified: true, message: "비밀번호가 변경되었어요." }));
   }
 
+  async getCustomers(params?: {
+    page?: number;
+    per_page?: number;
+    search?: string;
+    include_inactive?: boolean;
+  }) {
+    this.seedData();
+    const organizationId = this.getCurrentOrganizationId();
+    let customers = this.getCustomerCatalog(organizationId);
+
+    if (!params?.include_inactive) {
+      customers = customers.filter((customer) => customer.is_active);
+    }
+    if (params?.search) {
+      const query = params.search.toLowerCase();
+      const queryPhone = this.normalizePhone(params.search);
+      customers = customers.filter((customer) => {
+        const nameMatch = customer.name.toLowerCase().includes(query);
+        const phoneMatch = (customer.phone || "").toLowerCase().includes(query);
+        const normalizedMatch = queryPhone
+          ? this.normalizePhone(customer.phone).includes(queryPhone)
+          : false;
+        return nameMatch || phoneMatch || normalizedMatch;
+      });
+    }
+
+    const page = params?.page || 1;
+    const per_page = params?.per_page || 20;
+    const total = customers.length;
+    const total_pages = Math.max(1, Math.ceil(total / per_page));
+    const start = (page - 1) * per_page;
+    const items = customers.slice(start, start + per_page);
+
+    return delay(okPage(items, { page, per_page, total, total_pages }));
+  }
+
+  async getCustomer(id: string) {
+    this.seedData();
+    const organizationId = this.getCurrentOrganizationId();
+    const customer = this.getCustomerCatalog(organizationId).find(
+      (item) => item.id === id,
+    );
+    if (!customer) {
+      return delay(
+        fail<CustomerMaster>("NOT_FOUND", "발주처 정보를 찾을 수 없어요"),
+      );
+    }
+    return delay(ok(customer));
+  }
+
+  async createCustomer(data: {
+    name: string;
+    phone?: string;
+    memo?: string;
+  }) {
+    this.seedData();
+    const organizationId = this.getCurrentOrganizationId();
+    const catalog = this.getCustomerCatalog(organizationId);
+    const normalizedName = data.name.trim();
+    const normalizedPhone = this.normalizePhone(data.phone);
+    const duplicate = catalog.find(
+      (item) =>
+        item.name === normalizedName &&
+        this.normalizePhone(item.phone) === normalizedPhone,
+    );
+    if (duplicate) {
+      return delay(
+        fail<CustomerMaster>("DUPLICATE_ERROR", "이미 등록된 발주처 정보예요."),
+      );
+    }
+
+    const customer: CustomerMaster = {
+      id: randomId("cm"),
+      organization_id: organizationId,
+      name: normalizedName,
+      phone: data.phone,
+      memo: data.memo,
+      is_active: true,
+      created_at: nowIso(),
+      updated_at: nowIso(),
+    };
+    catalog.unshift(customer);
+    return delay(ok(customer));
+  }
+
+  async updateCustomer(
+    id: string,
+    data: {
+      name?: string;
+      phone?: string;
+      memo?: string;
+      is_active?: boolean;
+    },
+  ) {
+    this.seedData();
+    const organizationId = this.getCurrentOrganizationId();
+    const catalog = this.getCustomerCatalog(organizationId);
+    const index = catalog.findIndex((item) => item.id === id);
+    if (index < 0) {
+      return delay(
+        fail<CustomerMaster>("NOT_FOUND", "발주처 정보를 찾을 수 없어요"),
+      );
+    }
+
+    const current = catalog[index];
+    const next: CustomerMaster = {
+      ...current,
+      ...(data.name !== undefined && { name: data.name.trim() }),
+      ...(data.phone !== undefined && { phone: data.phone }),
+      ...(data.memo !== undefined && { memo: data.memo }),
+      ...(data.is_active !== undefined && { is_active: data.is_active }),
+      updated_at: nowIso(),
+    };
+    catalog[index] = next;
+    return delay(ok(next));
+  }
+
+  async upsertCustomer(data: {
+    name: string;
+    phone?: string;
+    memo?: string;
+  }) {
+    this.seedData();
+    const organizationId = this.getCurrentOrganizationId();
+    const catalog = this.getCustomerCatalog(organizationId);
+    const normalizedName = data.name.trim();
+    const normalizedPhone = this.normalizePhone(data.phone);
+
+    const existing = catalog.find(
+      (item) =>
+        item.name === normalizedName &&
+        this.normalizePhone(item.phone) === normalizedPhone,
+    );
+    if (existing) {
+      const updated: CustomerMaster = {
+        ...existing,
+        phone: data.phone ?? existing.phone,
+        memo: data.memo ?? existing.memo,
+        is_active: true,
+        updated_at: nowIso(),
+      };
+      const index = catalog.findIndex((item) => item.id === existing.id);
+      catalog[index] = updated;
+      return delay(ok(updated));
+    }
+
+    return this.createCustomer(data);
+  }
+
   async getProjects(params?: {
     page?: number;
     per_page?: number;
@@ -889,6 +1095,7 @@ export class MockAPIClient {
     search?: string;
   }) {
     this.seedData();
+    const customerCatalog = this.getCustomerCatalog();
     let projects = mockDb.get("projects");
 
     if (params?.status) {
@@ -923,7 +1130,12 @@ export class MockAPIClient {
         address: p.address,
         status: p.status,
         category: p.category,
+        customer_master_id: p.customerMasterId,
+        customer_master_summary: p.customerMasterId
+          ? customerCatalog.find((customer) => customer.id === p.customerMasterId)
+          : undefined,
         client_name: p.clientName,
+        client_phone: p.clientPhone,
         created_at: p.createdAt,
         site_visit_count: siteVisits.length,
         estimate_count: estimates.length,
@@ -934,6 +1146,7 @@ export class MockAPIClient {
   }
 
   async getProject(id: string) {
+    const customerCatalog = this.getCustomerCatalog();
     const project = mockDb.get("projects").find((p) => p.id === id);
     if (!project) {
       return delay(
@@ -972,6 +1185,10 @@ export class MockAPIClient {
         address: project.address,
         status: project.status,
         category: project.category,
+        customer_master_id: project.customerMasterId,
+        customer_master_summary: project.customerMasterId
+          ? customerCatalog.find((customer) => customer.id === project.customerMasterId)
+          : undefined,
         client_name: project.clientName,
         client_phone: project.clientPhone,
         notes: project.notes,
@@ -1052,20 +1269,50 @@ export class MockAPIClient {
     name: string;
     address: string;
     category?: string;
+    customer_master_id?: string;
     client_name?: string;
     client_phone?: string;
     notes?: string;
   }) {
+    const organizationId = this.getCurrentOrganizationId();
+    const customerCatalog = this.getCustomerCatalog();
+    let selectedCustomer = data.customer_master_id
+      ? customerCatalog.find((customer) => customer.id === data.customer_master_id)
+      : undefined;
+    if (!selectedCustomer && data.client_name) {
+      const normalizedName = data.client_name.trim();
+      const normalizedPhone = this.normalizePhone(data.client_phone);
+      selectedCustomer = customerCatalog.find(
+        (customer) =>
+          customer.name === normalizedName &&
+          this.normalizePhone(customer.phone) === normalizedPhone,
+      );
+      if (!selectedCustomer) {
+        selectedCustomer = {
+          id: randomId("cm"),
+          organization_id: organizationId,
+          name: normalizedName,
+          phone: data.client_phone,
+          memo: undefined,
+          is_active: true,
+          created_at: nowIso(),
+          updated_at: nowIso(),
+        };
+        customerCatalog.unshift(selectedCustomer);
+      }
+    }
+
     const newProject: Project = {
       id: randomId("p"),
       name: data.name,
       address: data.address,
       status: "draft",
       category: data.category as any,
-      clientName: data.client_name || "",
-      clientPhone: data.client_phone || "",
+      customerMasterId: data.customer_master_id || selectedCustomer?.id,
+      clientName: data.client_name || selectedCustomer?.name || "",
+      clientPhone: data.client_phone || selectedCustomer?.phone || "",
       notes: data.notes,
-      organization_id: "org_1",
+      organization_id: organizationId,
       visibleToSiteManager: true,
       siteManagerVisibility: undefined,
       createdAt: nowIso(),
@@ -1084,8 +1331,43 @@ export class MockAPIClient {
 
   async updateProject(
     projectId: string,
-    data: { name?: string; address?: string; category?: string; client_name?: string; client_phone?: string },
+    data: {
+      name?: string;
+      address?: string;
+      category?: string;
+      customer_master_id?: string;
+      client_name?: string;
+      client_phone?: string;
+    },
   ) {
+    const organizationId = this.getCurrentOrganizationId();
+    const customerCatalog = this.getCustomerCatalog();
+    let selectedCustomer = data.customer_master_id
+      ? customerCatalog.find((customer) => customer.id === data.customer_master_id)
+      : undefined;
+    if (!selectedCustomer && data.client_name) {
+      const normalizedName = data.client_name.trim();
+      const normalizedPhone = this.normalizePhone(data.client_phone);
+      selectedCustomer = customerCatalog.find(
+        (customer) =>
+          customer.name === normalizedName &&
+          this.normalizePhone(customer.phone) === normalizedPhone,
+      );
+      if (!selectedCustomer) {
+        selectedCustomer = {
+          id: randomId("cm"),
+          organization_id: organizationId,
+          name: normalizedName,
+          phone: data.client_phone,
+          memo: undefined,
+          is_active: true,
+          created_at: nowIso(),
+          updated_at: nowIso(),
+        };
+        customerCatalog.unshift(selectedCustomer);
+      }
+    }
+
     mockDb.update("projects", (prev) =>
       prev.map((p) =>
         p.id === projectId
@@ -1094,6 +1376,22 @@ export class MockAPIClient {
               ...(data.name !== undefined && { name: data.name }),
               ...(data.address !== undefined && { address: data.address }),
               ...(data.category !== undefined && { category: data.category as any }),
+              ...(data.customer_master_id !== undefined && {
+                customerMasterId: data.customer_master_id || undefined,
+              }),
+              ...(data.customer_master_id === undefined &&
+                data.client_name !== undefined &&
+                selectedCustomer && {
+                  customerMasterId: selectedCustomer.id,
+                }),
+              ...(data.customer_master_id !== undefined &&
+                data.client_name === undefined && {
+                  clientName: selectedCustomer?.name || p.clientName,
+                }),
+              ...(data.customer_master_id !== undefined &&
+                data.client_phone === undefined && {
+                  clientPhone: selectedCustomer?.phone || p.clientPhone,
+                }),
               ...(data.client_name !== undefined && { clientName: data.client_name }),
               ...(data.client_phone !== undefined && { clientPhone: data.client_phone }),
             }

@@ -142,10 +142,29 @@ export interface Organization {
   phone?: string
 }
 
+export interface CustomerMasterSummary {
+  id: string
+  name: string
+  phone?: string
+}
+
+export interface CustomerMaster {
+  id: string
+  organization_id: string
+  name: string
+  phone?: string
+  memo?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Project {
   id: string
   name: string
   address: string
+  customer_master_id?: string
+  customer_master_summary?: CustomerMasterSummary
   client_name?: string
   client_phone?: string
   notes?: string
@@ -603,7 +622,10 @@ export interface ProjectListItem {
   address: string
   status: ProjectStatus
   category?: ProjectCategory
+  customer_master_id?: string
+  customer_master_summary?: CustomerMasterSummary
   client_name?: string
+  client_phone?: string
   created_at: string
   site_visit_count: number
   estimate_count: number
@@ -615,6 +637,8 @@ export interface ProjectDetail {
   address: string
   status: ProjectStatus
   category?: ProjectCategory
+  customer_master_id?: string
+  customer_master_summary?: CustomerMasterSummary
   client_name?: string
   client_phone?: string
   notes?: string
