@@ -1429,7 +1429,7 @@ export class MockAPIClient {
     const req = {
       id: randomId("as"),
       description: data.description,
-      status: "received",
+      status: "pending",
       created_at: nowIso(),
     };
     this.warrantyRequestsByProject[projectId] = [
@@ -1437,6 +1437,42 @@ export class MockAPIClient {
       req,
     ];
     return delay(ok({ id: req.id, status: req.status, message: "접수했어요" }));
+  }
+
+  async updateASRequest(
+    projectId: string,
+    asRequestId: string,
+    data: { status: "pending" | "in_progress" | "resolved" | "cancelled" },
+  ) {
+    const requests = this.warrantyRequestsByProject[projectId] || [];
+    const nextRequests = requests.map((request) => {
+      if (request.id !== asRequestId) return request;
+      return {
+        ...request,
+        status: data.status,
+        resolved_at:
+          data.status === "resolved"
+            ? nowIso()
+            : request.status === "resolved"
+              ? undefined
+              : request.resolved_at,
+      };
+    });
+
+    this.warrantyRequestsByProject[projectId] = nextRequests;
+    const updated = nextRequests.find((request) => request.id === asRequestId);
+    if (!updated) {
+      return delay(fail("NOT_FOUND", "A/S 요청을 찾을 수 없어요"));
+    }
+
+    return delay(
+      ok({
+        id: updated.id,
+        status: updated.status,
+        resolved_at: updated.resolved_at,
+        message: "A/S 요청 상태를 변경했어요.",
+      }),
+    );
   }
 
   async completeProject(projectId: string) {

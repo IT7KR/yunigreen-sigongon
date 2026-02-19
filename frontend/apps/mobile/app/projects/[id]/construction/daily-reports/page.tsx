@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ClipboardList,
   FileDown,
+  Image as ImageIcon,
   Loader2,
   Plus,
 } from "lucide-react";
@@ -22,6 +23,7 @@ interface DailyReportItem {
   temperature?: string;
   work_description: string;
   tomorrow_plan?: string;
+  photos?: string[];
   photo_count: number;
   created_at: string;
 }
@@ -34,6 +36,25 @@ const weatherLabel: Record<string, string> = {
   wind: "강풍",
 };
 
+function getWeatherText(weather?: string) {
+  if (!weather) return "-";
+  return weatherLabel[weather] || weather;
+}
+
+function getPhotoPreviewSrc(photos?: string[]) {
+  const firstPhoto = photos?.find((photo) => photo?.trim());
+  if (!firstPhoto) return null;
+
+  const src = firstPhoto.trim();
+  const isRenderableSrc =
+    src.startsWith("http://") ||
+    src.startsWith("https://") ||
+    src.startsWith("/") ||
+    src.startsWith("data:image/");
+
+  return isRenderableSrc ? src : null;
+}
+
 export default function DailyReportsPage({
   params,
 }: {
@@ -42,7 +63,9 @@ export default function DailyReportsPage({
   const { id: projectId } = use(params);
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<DailyReportItem[]>([]);
-  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
+  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     loadReports();
@@ -87,10 +110,12 @@ export default function DailyReportsPage({
       title="작업일지"
       showBack
       rightAction={
-        <Button size="sm" variant="secondary" asChild><Link href={`/projects/${projectId}/construction/daily-reports/new`}>
+        <Button size="sm" variant="secondary" asChild>
+          <Link href={`/projects/${projectId}/construction/daily-reports/new`}>
             <Plus className="h-4 w-4" />
             작성
-          </Link></Button>
+          </Link>
+        </Button>
       }
     >
       <div className="space-y-3 p-4">
@@ -105,58 +130,78 @@ export default function DailyReportsPage({
               <p className="mt-2 text-sm text-slate-500">
                 아직 작업일지가 없습니다.
               </p>
-              <Button className="mt-4" asChild><Link href={`/projects/${projectId}/construction/daily-reports/new`}>
-                  <Plus className="h-4 w-4" />
-                  첫 작업일지 작성
-                </Link></Button>
+              <Button className="mt-4" asChild>
+                <Link
+                  href={`/projects/${projectId}/construction/daily-reports/new`}
+                >
+                  <Plus className="h-4 w-4" />첫 작업일지 작성
+                </Link>
+              </Button>
             </CardContent>
           </Card>
         ) : (
-          reports.map((report) => (
-            <Card key={report.id}>
-              <CardContent className="p-4">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="font-medium text-slate-900">{report.work_date}</p>
-                  <ChevronRight className="h-4 w-4 text-slate-400" />
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>{formatDate(report.created_at)} 작성</span>
-                  {report.weather && (
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5">
-                      {weatherLabel[report.weather] || report.weather}
-                    </span>
-                  )}
-                  {report.temperature && (
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5">
-                      {report.temperature}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-2 line-clamp-2 text-sm text-slate-700">
-                  {report.work_description}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  사진 {report.photo_count}장
-                </p>
-                <div className="mt-3 flex justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDownloadHwpx(report)}
-                    disabled={downloadingReportId === report.id}
-                  >
-                    {downloadingReportId === report.id ? (
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    ) : (
-                      <FileDown className="mr-1 h-3 w-3" />
-                    )}
-                    HWPX
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          reports.map((report) => {
+            const previewSrc = getPhotoPreviewSrc(report.photos);
+
+            return (
+              <Card key={report.id}>
+                <CardContent className="p-4">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="font-medium text-slate-900">
+                      {report.work_date}
+                    </p>
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>{formatDate(report.created_at)} 작성</span>
+                    <span>날씨 {getWeatherText(report.weather)}</span>
+                    {report.temperature && <span>{report.temperature}</span>}
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-sm text-slate-700">
+                    {report.work_description}
+                  </p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md border border-dashed border-slate-300 bg-slate-50">
+                      {previewSrc ? (
+                        <div
+                          role="img"
+                          aria-label={`${formatDate(report.work_date)} 작업사진`}
+                          className="h-full w-full bg-cover bg-center"
+                          style={{
+                            backgroundImage: `url("${previewSrc}")`,
+                          }}
+                        />
+                      ) : (
+                        <ImageIcon
+                          className="h-4 w-4 text-slate-400"
+                          aria-hidden
+                        />
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      사진 {report.photo_count}장
+                    </p>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownloadHwpx(report)}
+                      disabled={downloadingReportId === report.id}
+                    >
+                      {downloadingReportId === report.id ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <FileDown className="mr-1 h-3 w-3" />
+                      )}
+                      다운로드
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
     </MobileLayout>

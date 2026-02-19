@@ -34,11 +34,17 @@ import { SiteVisitCard, EstimateCard } from "@/components/features";
 import {
   useProject,
   useSiteVisits,
+  useConstructionReports,
   useRequestDiagnosis,
   useCreateEstimate,
 } from "@/hooks";
 import { useAuth } from "@/lib/auth";
-import type { ProjectStatus, VisitType, EstimateStatus } from "@sigongon/types";
+import type {
+  ProjectStatus,
+  VisitType,
+  EstimateStatus,
+  ReportStatus,
+} from "@sigongon/types";
 
 interface ProjectDetailPageProps {
   params: Promise<{ id: string }>;
@@ -51,11 +57,19 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
 
   const { data: projectData, isLoading: projectLoading } = useProject(id);
   const { data: visitsData, isLoading: visitsLoading } = useSiteVisits(id);
+  const { data: reportsData } = useConstructionReports(id);
   const requestDiagnosis = useRequestDiagnosis();
   const createEstimate = useCreateEstimate(id);
 
   const project = projectData?.data;
   const visits = visitsData?.data || [];
+  const reports = reportsData?.data || [];
+  const startReports = reports.filter((report) => report.report_type === "start");
+  const latestStartReport = [...startReports].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  )[0];
+  const startReportStatus = latestStartReport?.status as ReportStatus | undefined;
   const latestVisit = visits[0];
 
   const handleRequestDiagnosis = async () => {
@@ -121,24 +135,129 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const hasContract = (project.contracts?.length ?? 0) > 0;
   const projectStatus = project.status as ProjectStatus;
 
-  type ActionKey = "visit" | "photo" | "diagnosis" | "estimate" | "start" | "daily" | "closeout" | "album";
+  type ActionKey =
+    | "visit"
+    | "photo"
+    | "diagnosis"
+    | "estimate"
+    | "reports"
+    | "daily"
+    | "closeout"
+    | "album";
   const isSiteManager = user?.role === "site_manager";
 
   const roleActionSet = isSiteManager
-    ? new Set<ActionKey>(["visit", "photo", "diagnosis", "start", "daily", "closeout", "album"])
-    : new Set<ActionKey>(["visit", "photo", "diagnosis", "estimate", "start", "daily", "closeout", "album"]);
+    ? new Set<ActionKey>([
+        "visit",
+        "photo",
+        "diagnosis",
+        "reports",
+        "daily",
+        "closeout",
+        "album",
+      ])
+    : new Set<ActionKey>([
+        "visit",
+        "photo",
+        "diagnosis",
+        "estimate",
+        "reports",
+        "daily",
+        "closeout",
+        "album",
+      ]);
 
   const getPriorityOrder = (): ActionKey[] => {
     const filterByRole = (actions: ActionKey[]) =>
       actions.filter((action) => roleActionSet.has(action));
 
-    if (!hasVisits) return filterByRole(["visit", "photo", "diagnosis", "estimate", "start", "daily", "closeout", "album"]);
-    if (!hasDiagnosis) return filterByRole(["diagnosis", "visit", "estimate", "photo", "start", "daily", "closeout", "album"]);
-    if (!hasEstimate) return filterByRole(["estimate", "diagnosis", "visit", "photo", "start", "daily", "closeout", "album"]);
-    if (!hasContract) return filterByRole(["start", "estimate", "daily", "visit", "diagnosis", "photo", "closeout", "album"]);
-    if (projectStatus === "contracted" || projectStatus === "in_progress") return filterByRole(["daily", "start", "photo", "estimate", "visit", "diagnosis", "closeout", "album"]);
-    if (["completed", "warranty", "closed"].includes(projectStatus)) return filterByRole(["closeout", "album", "daily", "estimate", "visit", "diagnosis", "photo", "start"]);
-    return filterByRole(["visit", "photo", "diagnosis", "estimate", "start", "daily", "closeout", "album"]);
+    if (!hasVisits)
+      return filterByRole([
+        "visit",
+        "photo",
+        "diagnosis",
+        "estimate",
+        "reports",
+        "daily",
+        "closeout",
+        "album",
+      ]);
+    if (!hasDiagnosis)
+      return filterByRole([
+        "diagnosis",
+        "visit",
+        "estimate",
+        "photo",
+        "reports",
+        "daily",
+        "closeout",
+        "album",
+      ]);
+    if (!hasEstimate)
+      return filterByRole([
+        "estimate",
+        "diagnosis",
+        "visit",
+        "photo",
+        "reports",
+        "daily",
+        "closeout",
+        "album",
+      ]);
+    if (!hasContract)
+      return filterByRole([
+        "estimate",
+        "reports",
+        "daily",
+        "visit",
+        "diagnosis",
+        "photo",
+        "closeout",
+        "album",
+      ]);
+    if (projectStatus === "contracted")
+      return filterByRole([
+        "reports",
+        "daily",
+        "photo",
+        "estimate",
+        "visit",
+        "diagnosis",
+        "closeout",
+        "album",
+      ]);
+    if (projectStatus === "in_progress")
+      return filterByRole([
+        "daily",
+        "reports",
+        "photo",
+        "estimate",
+        "visit",
+        "diagnosis",
+        "closeout",
+        "album",
+      ]);
+    if (["completed", "warranty", "closed"].includes(projectStatus))
+      return filterByRole([
+        "closeout",
+        "album",
+        "reports",
+        "daily",
+        "estimate",
+        "visit",
+        "diagnosis",
+        "photo",
+      ]);
+    return filterByRole([
+      "visit",
+      "photo",
+      "diagnosis",
+      "estimate",
+      "reports",
+      "daily",
+      "closeout",
+      "album",
+    ]);
   };
 
   const priorityOrder = getPriorityOrder();
@@ -188,11 +307,11 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         <span className="text-xs">견적서</span>
       </Button>
     ),
-    start: (
-      <Button key="start" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
-        <Link href={`/projects/${id}/construction/start-report`}>
+    reports: (
+      <Button key="reports" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
+        <Link href={`/projects/${id}/reports`}>
           <FileCheck className="h-5 w-5" />
-          <span className="text-xs">착공계</span>
+          <span className="text-xs">보고서</span>
         </Link>
       </Button>
     ),
@@ -228,7 +347,30 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     { key: "diagnosis", label: "AI진단", state: hasDiagnosis ? "done" : hasVisits ? "active" : "pending" },
     { key: "estimate", label: "견적", state: hasEstimate ? "done" : hasDiagnosis ? "active" : "pending" },
     { key: "contract", label: "계약", state: hasContract ? "done" : hasEstimate ? "active" : "pending" },
-    { key: "construction", label: "시공", state: ["completed", "warranty", "closed"].includes(projectStatus) ? "done" : (projectStatus === "in_progress" || projectStatus === "contracted") ? "active" : "pending" },
+    {
+      key: "start_report",
+      label: "착공계",
+      state:
+        startReportStatus === "approved" ||
+        ["completed", "warranty", "closed"].includes(projectStatus)
+          ? "done"
+          : startReportStatus === "submitted" ||
+              startReportStatus === "draft" ||
+              startReportStatus === "rejected" ||
+              hasContract
+            ? "active"
+            : "pending",
+    },
+    {
+      key: "construction",
+      label: "시공",
+      state:
+        ["completed", "warranty", "closed"].includes(projectStatus)
+          ? "done"
+          : projectStatus === "in_progress" || startReportStatus === "approved"
+            ? "active"
+            : "pending",
+    },
     { key: "closeout", label: "준공", state: ["completed", "warranty", "closed"].includes(projectStatus) ? "done" : projectStatus === "in_progress" ? "active" : "pending" },
   ];
 
