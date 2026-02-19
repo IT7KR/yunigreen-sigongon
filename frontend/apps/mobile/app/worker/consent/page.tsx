@@ -86,10 +86,24 @@ function WorkerConsentContent() {
   const allConsentsChecked =
     consents.collection && consents.thirdParty && consents.sensitive;
 
-  const handleSubmit = () => {
-    if (allConsentsChecked) {
-      router.push(`/worker/profile?workerId=${encodeURIComponent(workerId)}`);
+  const handleSubmit = async () => {
+    if (!allConsentsChecked) return;
+
+    try {
+      const { api } = await import("@/lib/api");
+      await api.saveConsentRecords({
+        records: [
+          { consent_type: "privacy_collection", consented: consents.collection },
+          { consent_type: "third_party_sharing", consented: consents.thirdParty },
+          { consent_type: "sensitive_info", consented: consents.sensitive },
+        ],
+        invite_token: workerId.startsWith("worker_") ? undefined : workerId,
+      });
+    } catch (e) {
+      console.error("[Consent] 저장 실패 (계속 진행):", e);
     }
+
+    router.push(`/worker/profile?workerId=${encodeURIComponent(workerId)}`);
   };
 
   return (

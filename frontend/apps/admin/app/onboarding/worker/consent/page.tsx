@@ -48,8 +48,24 @@ function WorkerConsentContent() {
     });
   };
 
-  const handleProceed = () => {
+  const handleProceed = async () => {
     if (!allAgreed) return;
+
+    try {
+      const { api } = await import("@/lib/api");
+      await api.saveConsentRecords({
+        records: [
+          { consent_type: "privacy_collection", consented: agreements.privacy },
+          { consent_type: "sensitive_info", consented: agreements.collection },
+          { consent_type: "third_party_sharing", consented: agreements.thirdParty },
+        ],
+        invite_token: token || undefined,
+      });
+    } catch (e) {
+      console.error("[Consent] API 저장 실패 (계속 진행):", e);
+      // Non-blocking: proceed even if API fails
+    }
+
     router.push(`/onboarding/worker/${token}?step=documents`);
   };
 
