@@ -3,12 +3,13 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Card, CardContent, Button, formatDate } from "@sigongon/ui";
+import { Card, CardContent, Button, formatDate, toast } from "@sigongon/ui";
 import { api } from "@/lib/api";
 import {
   Calendar,
   ChevronRight,
   ClipboardList,
+  FileDown,
   Loader2,
   Plus,
 } from "lucide-react";
@@ -41,6 +42,7 @@ export default function DailyReportsPage({
   const { id: projectId } = use(params);
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<DailyReportItem[]>([]);
+  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
 
   useEffect(() => {
     loadReports();
@@ -57,6 +59,26 @@ export default function DailyReportsPage({
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDownloadHwpx(report: DailyReportItem) {
+    try {
+      setDownloadingReportId(report.id);
+      const blob = await api.downloadDailyReportHwpx(projectId, report.id);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `공사일지_${report.work_date}.hwpx`;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (downloadError) {
+      console.error("Failed to download daily report hwpx:", downloadError);
+      toast.error("작업일지 HWPX 다운로드에 실패했어요.");
+    } finally {
+      setDownloadingReportId(null);
     }
   }
 
@@ -117,6 +139,21 @@ export default function DailyReportsPage({
                 <p className="mt-1 text-xs text-slate-500">
                   사진 {report.photo_count}장
                 </p>
+                <div className="mt-3 flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDownloadHwpx(report)}
+                    disabled={downloadingReportId === report.id}
+                  >
+                    {downloadingReportId === report.id ? (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    ) : (
+                      <FileDown className="mr-1 h-3 w-3" />
+                    )}
+                    HWPX
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))
@@ -125,4 +162,3 @@ export default function DailyReportsPage({
     </MobileLayout>
   );
 }
-

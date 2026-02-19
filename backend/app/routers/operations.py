@@ -4,8 +4,10 @@ from __future__ import annotations
 import io
 import random
 import secrets
+import tempfile
 from datetime import date, datetime, timedelta
 from decimal import ROUND_DOWN, Decimal
+from pathlib import Path
 from typing import Annotated, Optional
 from urllib.parse import quote
 
@@ -73,6 +75,19 @@ router = APIRouter()
 DBSession = Annotated[AsyncSession, Depends(get_async_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
+_WEATHER_LABELS: dict[str, str] = {
+    "sunny": "맑음",
+    "cloudy": "흐림",
+    "rain": "비",
+    "rainy": "비",
+    "snow": "눈",
+}
+_SAMPLE_ROOT = Path(__file__).parent.parent.parent.parent / "sample"
+_DAILY_REPORT_TEMPLATE_CANDIDATES: tuple[Path, ...] = (
+    _SAMPLE_ROOT / "generated" / "공사일지_토큰템플릿.hwpx",
+    _SAMPLE_ROOT / "7. 공사일지" / "공사일지_토큰템플릿.hwpx",
+)
+
 
 def _role_value(user: User) -> str:
     role = user.role
@@ -104,6 +119,22 @@ async def _get_project_for_user(
     return project
 
 
+async def _get_daily_report_for_project(
+    db: AsyncSession,
+    project_id: int,
+    report_id: int,
+) -> DailyReport:
+    result = await db.execute(
+        select(DailyReport)
+        .where(DailyReport.project_id == project_id)
+        .where(DailyReport.id == report_id)
+    )
+    report = result.scalar_one_or_none()
+    if not report:
+        raise NotFoundException("daily_report", report_id)
+    return report
+
+
 def _to_int(value: int | str) -> int:
     if isinstance(value, int):
         return value
@@ -126,6 +157,75 @@ def _safe_decimal_to_int(value: Decimal | int | float | None) -> int:
     if isinstance(value, Decimal):
         return int(value)
     return int(value)
+
+
+def _serialize_daily_report(report: DailyReport) -> dict:
+    photos = report.photos or []
+    return {
+        "id": str(report.id),
+        "project_id": str(report.project_id),
+        "work_date": report.work_date.isoformat(),
+        "weather": report.weather,
+        "temperature": report.temperature,
+        "work_description": report.work_description,
+        "tomorrow_plan": report.tomorrow_plan,
+        "photos": photos,
+        "photo_count": len(photos),
+        "created_at": report.created_at.isoformat(),
+    }
+
+
+def _format_temperature_display(value: str | None) -> str:
+    if not value:
+        return ""
+    text = value.strip()
+    if not text:
+        return ""
+    if "℃" in text or "°C" in text:
+        return text
+    return f"{text}℃"
+
+
+def _resolve_daily_report_template_path() -> Path | None:
+    for template_path in _DAILY_REPORT_TEMPLATE_CANDIDATES:
+        if template_path.exists():
+            return template_path
+
+    sample_daily_report_dir = _SAMPLE_ROOT / "7. 공사일지"
+    if sample_daily_report_dir.exists():
+        candidates = sorted(sample_daily_report_dir.glob("*.hwpx"))
+        if candidates:
+            return candidates[0]
+    return None
+
+
+def _build_daily_report_hwpx_context(project: Project, report: DailyReport) -> dict:
+    weather_label = _WEATHER_LABELS.get((report.weather or "").lower(), report.weather or "")
+    temperature_display = _format_temperature_display(report.temperature)
+    photos = report.photos or []
+    return {
+        "project_name": project.name or "",
+        "site_address": project.address or "",
+        "work_date": report.work_date.isoformat(),
+        "work_date_kor": report.work_date.strftime("%Y년 %m월 %d일"),
+        "weather": weather_label,
+        "weather_code": report.weather or "",
+        "temperature": temperature_display,
+        "temperature_raw": (report.temperature or "").strip(),
+        "work_description": report.work_description or "",
+        "tomorrow_plan": report.tomorrow_plan or "",
+        "photo_count": str(len(photos)),
+        "photo_count_number": len(photos),
+        "photos": [
+            {
+                "index": idx + 1,
+                "path": path,
+                "item": path,
+            }
+            for idx, path in enumerate(photos)
+        ],
+        "photos_summary": ", ".join(photos),
+    }
 
 
 async def _log_activity(
@@ -579,22 +679,7 @@ async def list_daily_reports(
         .order_by(DailyReport.work_date.desc(), DailyReport.created_at.desc())
     )
     reports = result.scalars().all()
-
-    return APIResponse.ok([
-        {
-            "id": str(r.id),
-            "project_id": str(r.project_id),
-            "work_date": r.work_date.isoformat(),
-            "weather": r.weather,
-            "temperature": r.temperature,
-            "work_description": r.work_description,
-            "tomorrow_plan": r.tomorrow_plan,
-            "photos": r.photos,
-            "photo_count": len(r.photos or []),
-            "created_at": r.created_at.isoformat(),
-        }
-        for r in reports
-    ])
+    return APIResponse.ok([_serialize_daily_report(report) for report in reports])
 
 
 @router.post("/projects/{project_id}/daily-reports", response_model=APIResponse[dict], status_code=status.HTTP_201_CREATED)
@@ -621,18 +706,73 @@ async def create_daily_report(
     await _log_activity(db, current_user.id, "project_update", f"프로젝트 {project_id} 작업일지 등록")
 
     await db.flush()
-    return APIResponse.ok(
-        {
-            "id": str(report.id),
-            "project_id": str(report.project_id),
-            "work_date": report.work_date.isoformat(),
-            "weather": report.weather,
-            "temperature": report.temperature,
-            "work_description": report.work_description,
-            "tomorrow_plan": report.tomorrow_plan,
-            "photos": report.photos,
-            "created_at": report.created_at.isoformat(),
-        }
+    return APIResponse.ok(_serialize_daily_report(report))
+
+
+@router.get("/projects/{project_id}/daily-reports/{report_id}", response_model=APIResponse[dict])
+async def get_daily_report(
+    project_id: int,
+    report_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    await _get_project_for_user(db, project_id, current_user)
+    report = await _get_daily_report_for_project(db, project_id, report_id)
+    return APIResponse.ok(_serialize_daily_report(report))
+
+
+@router.post("/projects/{project_id}/daily-reports/{report_id}/hwpx")
+async def download_daily_report_hwpx(
+    project_id: int,
+    report_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    project = await _get_project_for_user(db, project_id, current_user)
+    report = await _get_daily_report_for_project(db, project_id, report_id)
+
+    template_path = _resolve_daily_report_template_path()
+    if template_path is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="공사일지 HWPX 템플릿을 찾을 수 없어요",
+        )
+
+    context = _build_daily_report_hwpx_context(project, report)
+
+    try:
+        from app.services.hwpx_template_engine import HwpxTemplateEngine
+
+        engine = HwpxTemplateEngine(strict=False)
+        with tempfile.NamedTemporaryFile(suffix=".hwpx", delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+
+        try:
+            engine.render(
+                template_path=template_path,
+                output_path=tmp_path,
+                context=context,
+            )
+            output_bytes = tmp_path.read_bytes()
+        finally:
+            tmp_path.unlink(missing_ok=True)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"작업일지 HWPX 생성에 실패했어요: {str(exc)}",
+        ) from exc
+
+    project_name = _sanitize_filename(project.name or "project")
+    date_token = report.work_date.strftime("%Y%m%d")
+    filename = f"공사일지_{project_name}_{date_token}.hwpx"
+    encoded_filename = quote(filename, safe="")
+
+    return StreamingResponse(
+        io.BytesIO(output_bytes),
+        media_type="application/vnd.hancom.hwpx",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
+        },
     )
 
 
@@ -996,18 +1136,70 @@ async def list_project_diagnoses(
 
 class PartnerCreateRequest(BaseModel):
     name: str
-    owner: str
-    biz_no: str
-    license: Optional[str] = None
-    is_female_owned: bool = False
-
-
-class PartnerUpdateRequest(BaseModel):
-    name: Optional[str] = None
+    representative_name: Optional[str] = None
+    representative_phone: Optional[str] = None
+    business_number: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+    license_type: Optional[str] = None
+    is_women_owned: Optional[bool] = None
+    # Legacy compatibility fields
     owner: Optional[str] = None
     biz_no: Optional[str] = None
     license: Optional[str] = None
     is_female_owned: Optional[bool] = None
+
+
+class PartnerUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    representative_name: Optional[str] = None
+    representative_phone: Optional[str] = None
+    business_number: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+    license_type: Optional[str] = None
+    is_women_owned: Optional[bool] = None
+    # Legacy compatibility fields
+    owner: Optional[str] = None
+    biz_no: Optional[str] = None
+    license: Optional[str] = None
+    is_female_owned: Optional[bool] = None
+
+
+def _normalize_partner_text(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = " ".join(value.strip().split())
+    return normalized or None
+
+
+def _resolve_partner_text(primary: Optional[str], legacy: Optional[str]) -> Optional[str]:
+    return _normalize_partner_text(primary) or _normalize_partner_text(legacy)
+
+
+def _partner_to_response(partner: Partner) -> dict:
+    representative_name = partner.representative_name or partner.owner or ""
+    business_number = partner.business_number or partner.biz_no or ""
+    license_type = partner.license_type or partner.license or ""
+    is_women_owned = bool(partner.is_women_owned or partner.is_female_owned)
+
+    return {
+        "id": str(partner.id),
+        "name": partner.name,
+        "representative_name": representative_name,
+        "representative_phone": partner.representative_phone or "",
+        "business_number": business_number,
+        "contact_name": partner.contact_name or "",
+        "contact_phone": partner.contact_phone or "",
+        "license_type": license_type,
+        "is_women_owned": is_women_owned,
+        # Legacy compatibility
+        "owner": representative_name,
+        "biz_no": business_number,
+        "license": license_type,
+        "is_female_owned": is_women_owned,
+        "status": partner.status.value,
+    }
 
 
 @router.get("/partners", response_model=APIResponse[list[dict]])
@@ -1024,8 +1216,13 @@ async def list_partners(
         like = f"%{search}%"
         query = query.where(
             (Partner.name.ilike(like)) |
+            (Partner.representative_name.ilike(like)) |
             (Partner.owner.ilike(like)) |
-            (Partner.biz_no.ilike(like))
+            (Partner.business_number.ilike(like)) |
+            (Partner.biz_no.ilike(like)) |
+            (Partner.representative_phone.ilike(like)) |
+            (Partner.contact_name.ilike(like)) |
+            (Partner.contact_phone.ilike(like))
         )
     if status_filter:
         try:
@@ -1037,18 +1234,7 @@ async def list_partners(
     result = await db.execute(query)
     items = result.scalars().all()
 
-    return APIResponse.ok([
-        {
-            "id": str(p.id),
-            "name": p.name,
-            "biz_no": p.biz_no,
-            "owner": p.owner,
-            "license": p.license or "",
-            "is_female_owned": p.is_female_owned,
-            "status": p.status.value,
-        }
-        for p in items
-    ])
+    return APIResponse.ok([_partner_to_response(p) for p in items])
 
 
 @router.post("/partners", response_model=APIResponse[dict], status_code=status.HTTP_201_CREATED)
@@ -1059,29 +1245,54 @@ async def create_partner(
 ):
     org_id = _require_org_id(current_user)
 
+    name = _normalize_partner_text(payload.name)
+    if not name:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="업체명을 입력해 주세요.",
+        )
+
+    representative_name = _resolve_partner_text(
+        payload.representative_name, payload.owner
+    )
+    if not representative_name:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="대표자명을 입력해 주세요.",
+        )
+
+    business_number = _resolve_partner_text(payload.business_number, payload.biz_no)
+    if not business_number:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="사업자번호를 입력해 주세요.",
+        )
+
+    license_type = _resolve_partner_text(payload.license_type, payload.license)
+    is_women_owned = payload.is_women_owned
+    if is_women_owned is None:
+        is_women_owned = payload.is_female_owned if payload.is_female_owned is not None else False
+
     partner = Partner(
         organization_id=org_id,
-        name=payload.name,
-        owner=payload.owner,
-        biz_no=payload.biz_no,
-        license=payload.license,
-        is_female_owned=payload.is_female_owned,
+        name=name,
+        representative_name=representative_name,
+        representative_phone=_normalize_partner_text(payload.representative_phone),
+        business_number=business_number,
+        contact_name=_normalize_partner_text(payload.contact_name),
+        contact_phone=_normalize_partner_text(payload.contact_phone),
+        license_type=license_type,
+        is_women_owned=bool(is_women_owned),
+        owner=representative_name,
+        biz_no=business_number,
+        license=license_type,
+        is_female_owned=bool(is_women_owned),
         status=PartnerStatus.ACTIVE,
     )
     db.add(partner)
     await db.flush()
 
-    return APIResponse.ok(
-        {
-            "id": str(partner.id),
-            "name": partner.name,
-            "owner": partner.owner,
-            "biz_no": partner.biz_no,
-            "license": partner.license,
-            "is_female_owned": partner.is_female_owned,
-            "status": partner.status.value,
-        }
-    )
+    return APIResponse.ok(_partner_to_response(partner))
 
 
 @router.patch("/partners/{partner_id}", response_model=APIResponse[dict])
@@ -1103,21 +1314,66 @@ async def update_partner(
         raise NotFoundException("partner", partner_id)
 
     updates = payload.model_dump(exclude_unset=True)
-    for field, value in updates.items():
-        setattr(partner, field, value)
+
+    if "name" in updates:
+        normalized_name = _normalize_partner_text(updates["name"])
+        if not normalized_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="업체명을 입력해 주세요.",
+            )
+        partner.name = normalized_name
+
+    if "representative_name" in updates or "owner" in updates:
+        representative_name = _resolve_partner_text(
+            updates.get("representative_name"), updates.get("owner")
+        )
+        if not representative_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="대표자명을 입력해 주세요.",
+            )
+        partner.representative_name = representative_name
+        partner.owner = representative_name
+
+    if "business_number" in updates or "biz_no" in updates:
+        business_number = _resolve_partner_text(
+            updates.get("business_number"), updates.get("biz_no")
+        )
+        if not business_number:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="사업자번호를 입력해 주세요.",
+            )
+        partner.business_number = business_number
+        partner.biz_no = business_number
+
+    if "representative_phone" in updates:
+        partner.representative_phone = _normalize_partner_text(
+            updates["representative_phone"]
+        )
+    if "contact_name" in updates:
+        partner.contact_name = _normalize_partner_text(updates["contact_name"])
+    if "contact_phone" in updates:
+        partner.contact_phone = _normalize_partner_text(updates["contact_phone"])
+
+    if "license_type" in updates or "license" in updates:
+        license_type = _resolve_partner_text(
+            updates.get("license_type"), updates.get("license")
+        )
+        partner.license_type = license_type
+        partner.license = license_type
+
+    is_women_owned_update = updates.get("is_women_owned")
+    if is_women_owned_update is None and "is_female_owned" in updates:
+        is_women_owned_update = updates.get("is_female_owned")
+    if is_women_owned_update is not None:
+        partner.is_women_owned = bool(is_women_owned_update)
+        partner.is_female_owned = bool(is_women_owned_update)
+
     partner.updated_at = datetime.utcnow()
 
-    return APIResponse.ok(
-        {
-            "id": str(partner.id),
-            "name": partner.name,
-            "owner": partner.owner,
-            "biz_no": partner.biz_no,
-            "license": partner.license,
-            "is_female_owned": partner.is_female_owned,
-            "status": partner.status.value,
-        }
-    )
+    return APIResponse.ok(_partner_to_response(partner))
 
 
 @router.delete("/partners/{partner_id}", response_model=APIResponse[dict])

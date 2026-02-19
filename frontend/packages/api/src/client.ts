@@ -471,6 +471,14 @@ export class APIClient {
 
   async createCustomer(data: {
     name: string;
+    customer_kind?: "company" | "individual";
+    representative_name?: string;
+    representative_phone?: string;
+    business_number?: string;
+    contact_name?: string;
+    contact_phone?: string;
+    license_type?: string;
+    is_women_owned?: boolean;
     phone?: string;
     memo?: string;
   }) {
@@ -485,6 +493,14 @@ export class APIClient {
     id: string,
     data: {
       name?: string;
+      customer_kind?: "company" | "individual";
+      representative_name?: string;
+      representative_phone?: string;
+      business_number?: string;
+      contact_name?: string;
+      contact_phone?: string;
+      license_type?: string;
+      is_women_owned?: boolean;
       phone?: string;
       memo?: string;
       is_active?: boolean;
@@ -499,6 +515,14 @@ export class APIClient {
 
   async upsertCustomer(data: {
     name: string;
+    customer_kind?: "company" | "individual";
+    representative_name?: string;
+    representative_phone?: string;
+    business_number?: string;
+    contact_name?: string;
+    contact_phone?: string;
+    license_type?: string;
+    is_women_owned?: boolean;
     phone?: string;
     memo?: string;
   }) {
@@ -1021,6 +1045,24 @@ export class APIClient {
     return response.data;
   }
 
+  async getDailyReport(projectId: string, reportId: string | number) {
+    const response = await this.client.get<
+      APIResponse<{
+        id: string;
+        project_id: string;
+        work_date: string;
+        weather?: string;
+        temperature?: string;
+        work_description: string;
+        tomorrow_plan?: string;
+        photos: string[];
+        photo_count: number;
+        created_at: string;
+      }>
+    >(`/projects/${projectId}/daily-reports/${reportId}`);
+    return response.data;
+  }
+
   async createDailyReport(
     projectId: string,
     data: {
@@ -1045,6 +1087,18 @@ export class APIClient {
         created_at: string;
       }>
     >(`/projects/${projectId}/daily-reports`, data);
+    return response.data;
+  }
+
+  async downloadDailyReportHwpx(
+    projectId: string,
+    reportId: string | number,
+  ): Promise<Blob> {
+    const response = await this.client.post<Blob>(
+      `/projects/${projectId}/daily-reports/${reportId}/hwpx`,
+      {},
+      { responseType: "blob" },
+    );
     return response.data;
   }
 
@@ -1594,10 +1648,18 @@ export class APIClient {
         Array<{
           id: string;
           name: string;
-          biz_no: string;
-          owner: string;
-          license: string;
-          is_female_owned: boolean;
+          representative_name: string;
+          representative_phone?: string;
+          business_number: string;
+          contact_name?: string;
+          contact_phone?: string;
+          license_type?: string;
+          is_women_owned: boolean;
+          // Legacy compatibility
+          owner?: string;
+          biz_no?: string;
+          license?: string;
+          is_female_owned?: boolean;
           status: "active" | "inactive";
         }>
       >
@@ -1607,8 +1669,16 @@ export class APIClient {
 
   async createPartner(data: {
     name: string;
-    owner: string;
-    biz_no: string;
+    representative_name?: string;
+    representative_phone?: string;
+    business_number?: string;
+    contact_name?: string;
+    contact_phone?: string;
+    license_type?: string;
+    is_women_owned?: boolean;
+    // Legacy compatibility
+    owner?: string;
+    biz_no?: string;
     license?: string;
     is_female_owned?: boolean;
   }) {
@@ -1616,10 +1686,18 @@ export class APIClient {
       APIResponse<{
         id: string;
         name: string;
-        owner: string;
-        biz_no: string;
+        representative_name: string;
+        representative_phone?: string;
+        business_number: string;
+        contact_name?: string;
+        contact_phone?: string;
+        license_type?: string;
+        is_women_owned: boolean;
+        // Legacy compatibility
+        owner?: string;
+        biz_no?: string;
         license?: string;
-        is_female_owned: boolean;
+        is_female_owned?: boolean;
         status: "active" | "inactive";
       }>
     >("/partners", data);
@@ -1630,6 +1708,14 @@ export class APIClient {
     id: string,
     data: {
       name?: string;
+      representative_name?: string;
+      representative_phone?: string;
+      business_number?: string;
+      contact_name?: string;
+      contact_phone?: string;
+      license_type?: string;
+      is_women_owned?: boolean;
+      // Legacy compatibility
       owner?: string;
       biz_no?: string;
       license?: string;
@@ -1640,10 +1726,18 @@ export class APIClient {
       APIResponse<{
         id: string;
         name: string;
-        owner: string;
-        biz_no: string;
+        representative_name: string;
+        representative_phone?: string;
+        business_number: string;
+        contact_name?: string;
+        contact_phone?: string;
+        license_type?: string;
+        is_women_owned: boolean;
+        // Legacy compatibility
+        owner?: string;
+        biz_no?: string;
         license?: string;
-        is_female_owned: boolean;
+        is_female_owned?: boolean;
         status: "active" | "inactive";
       }>
     >(`/partners/${id}`, data);

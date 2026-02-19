@@ -8,6 +8,7 @@ import {
   Loader2,
   Calendar,
   Image as ImageIcon,
+  FileDown,
 } from "lucide-react";
 import {
   Card,
@@ -16,6 +17,7 @@ import {
   CardTitle,
   Button,
   formatDate,
+  toast,
 } from "@sigongon/ui";
 import { api } from "@/lib/api";
 
@@ -57,6 +59,7 @@ export default function DailyReportsPage({
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
 
   useEffect(() => {
     loadDailyReports();
@@ -75,6 +78,26 @@ export default function DailyReportsPage({
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDownloadHwpx(report: DailyReport) {
+    try {
+      setDownloadingReportId(report.id);
+      const blob = await api.downloadDailyReportHwpx(projectId, report.id);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `공사일지_${report.work_date}.hwpx`;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (downloadError) {
+      console.error("Failed to download daily report hwpx:", downloadError);
+      toast.error("작업일지 HWPX 다운로드에 실패했어요.");
+    } finally {
+      setDownloadingReportId(null);
     }
   }
 
@@ -135,6 +158,7 @@ export default function DailyReportsPage({
                     <th className="pb-3 font-medium">작업내용</th>
                     <th className="pb-3 font-medium text-center">사진</th>
                     <th className="pb-3 font-medium">작성일</th>
+                    <th className="pb-3 font-medium text-right">문서</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -193,6 +217,21 @@ export default function DailyReportsPage({
                       </td>
                       <td className="py-4 text-sm text-slate-500">
                         {formatDate(report.created_at)}
+                      </td>
+                      <td className="py-4 text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadHwpx(report)}
+                          disabled={downloadingReportId === report.id}
+                        >
+                          {downloadingReportId === report.id ? (
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          ) : (
+                            <FileDown className="mr-1 h-3 w-3" />
+                          )}
+                          HWPX
+                        </Button>
                       </td>
                     </tr>
                   ))}
