@@ -17,32 +17,41 @@ import { api } from "@/lib/api";
 import { buildSampleFileDownloadUrl } from "@/lib/sampleFiles";
 
 interface ASRequestItem {
-  id: string;
+  id: string | number;
   description: string;
   status: string;
   created_at: string;
-  resolved_at?: string;
+  resolved_at?: string | null;
 }
 
 interface WarrantyInfo {
-  project_id: string;
-  warranty_expires_at: string;
+  project_id: string | number;
+  warranty_expires_at: string | null;
   days_remaining: number;
   is_expired: boolean;
   as_requests: ASRequestItem[];
 }
 
 const asStatusLabel: Record<string, string> = {
-  received: "접수",
+  pending: "접수",
   in_progress: "처리중",
-  completed: "완료",
+  resolved: "완료",
+  cancelled: "취소",
 };
 
 const asStatusClass: Record<string, string> = {
-  received: "bg-amber-100 text-amber-700",
+  pending: "bg-amber-100 text-amber-700",
   in_progress: "bg-blue-100 text-blue-700",
-  completed: "bg-green-100 text-green-700",
+  resolved: "bg-green-100 text-green-700",
+  cancelled: "bg-slate-100 text-slate-700",
 };
+
+const asStatusActions = [
+  { value: "pending", label: "접수" },
+  { value: "in_progress", label: "처리중" },
+  { value: "resolved", label: "완료" },
+  { value: "cancelled", label: "취소" },
+] as const;
 
 export default function WarrantyPage({
   params,
@@ -52,6 +61,7 @@ export default function WarrantyPage({
   const { id: projectId } = use(params);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [updatingRequestId, setUpdatingRequestId] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [warrantyInfo, setWarrantyInfo] = useState<WarrantyInfo | null>(null);
 
@@ -99,6 +109,28 @@ export default function WarrantyPage({
     }
   }
 
+  async function handleUpdateASRequest(
+    asRequestId: string | number,
+    nextStatus: "pending" | "in_progress" | "resolved" | "cancelled",
+  ) {
+    const targetId = String(asRequestId);
+    try {
+      setUpdatingRequestId(targetId);
+      const response = await api.updateASRequest(projectId, targetId, {
+        status: nextStatus,
+      });
+      if (response.success) {
+        toast.success("A/S 요청 상태를 변경했어요.");
+        await loadWarrantyInfo();
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("A/S 요청 상태 변경에 실패했어요.");
+    } finally {
+      setUpdatingRequestId(null);
+    }
+  }
+
   function downloadWarrantySample() {
     const anchor = document.createElement("a");
     anchor.href = buildSampleFileDownloadUrl(
@@ -138,7 +170,10 @@ export default function WarrantyPage({
               하자보증 기간
             </CardTitle>
             <p className="mt-1 text-sm text-slate-500">
-              만료일: {formatDate(warrantyInfo.warranty_expires_at)}
+              만료일:{" "}
+              {warrantyInfo.warranty_expires_at
+                ? formatDate(warrantyInfo.warranty_expires_at)
+                : "-"}
             </p>
           </div>
           <Badge
@@ -223,6 +258,30 @@ export default function WarrantyPage({
                       ? ` · 완료일 ${formatDate(request.resolved_at)}`
                       : ""}
                   </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {asStatusActions.map((action) => {
+                      const isCurrent = request.status === action.value;
+                      const isUpdating =
+                        updatingRequestId === String(request.id);
+
+                      return (
+                        <Button
+                          key={`${request.id}-${action.value}`}
+                          size="sm"
+                          variant={isCurrent ? "secondary" : "outline"}
+                          disabled={isCurrent || isUpdating}
+                          onClick={() =>
+                            handleUpdateASRequest(request.id, action.value)
+                          }
+                        >
+                          {isUpdating ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : null}
+                          {action.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
             </div>
