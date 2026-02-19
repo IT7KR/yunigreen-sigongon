@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { AdminLayout } from "@/components/AdminLayout";
 import { api } from "@/lib/api";
 import {
@@ -12,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
   ConfirmModal,
+  FileUpload,
   Input,
   formatDate,
   toast,
@@ -26,14 +26,30 @@ import type {
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronRight,
   FileSpreadsheet,
   Layers,
   Plus,
   RefreshCw,
-  Upload,
 } from "lucide-react";
 
 const ESTIMATION_PURPOSE = "estimation" as const;
+
+const STEPS = [
+  { id: 1, label: "요약" },
+  { id: 2, label: "시즌" },
+  { id: 3, label: "카테고리" },
+  { id: 4, label: "적산 문서" },
+] as const;
+
+type StepId = (typeof STEPS)[number]["id"];
+
+const STEP_DESCRIPTIONS: Record<StepId, string> = {
+  1: "현재 반영 상태를 확인하고 문제를 먼저 파악합니다.",
+  2: "견적에 반영할 시즌을 선택하거나 신규 시즌을 생성합니다.",
+  3: "시즌 내 카테고리의 사용 여부를 확정합니다.",
+  4: "PDF 문서를 첨부하고 인덱싱 상태를 관리합니다.",
+};
 
 const DOC_STATUS_CONFIG: Record<
   SeasonDocumentStatus,
@@ -107,18 +123,25 @@ function resolvePendingActionConfig(pendingAction: PendingAction) {
   };
 }
 
+function deriveTitleFromFileName(fileName: string): string {
+  const base = fileName.replace(/\.[^.]+$/, "");
+  return base.replace(/[_-]+/g, " ").trim() || "적산 자료";
+}
+
 export default function SAEstimationGovernancePage() {
   const [seasons, setSeasons] = useState<SeasonInfo[]>([]);
   const [overview, setOverview] = useState<EstimationGovernanceOverview | null>(null);
   const [categories, setCategories] = useState<SeasonCategoryInfo[]>([]);
   const [documents, setDocuments] = useState<SeasonDocumentInfo[]>([]);
 
+  const [activeStep, setActiveStep] = useState<StepId>(1);
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
   const [newSeasonName, setNewSeasonName] = useState("");
   const [docTitle, setDocTitle] = useState("");
-  const [fileName, setFileName] = useState("season-pricebook.pdf");
+  const [selectedDocumentFile, setSelectedDocumentFile] = useState<File | null>(null);
+  const [fileUploadResetKey, setFileUploadResetKey] = useState(0);
 
   const [isBootLoading, setIsBootLoading] = useState(true);
   const [isScopedLoading, setIsScopedLoading] = useState(false);
@@ -126,6 +149,7 @@ export default function SAEstimationGovernancePage() {
   const [isCreatingSeason, setIsCreatingSeason] = useState(false);
   const [isCreatingDocument, setIsCreatingDocument] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [isWarningsExpanded, setIsWarningsExpanded] = useState(false);
 
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
@@ -147,6 +171,25 @@ export default function SAEstimationGovernancePage() {
   const doneEnabledDocumentCount = documents.filter(
     (document) => document.is_enabled && document.status === "done",
   ).length;
+
+  const selectedSeason = seasons.find((season) => season.id === selectedSeasonId) || null;
+  const overviewDoneEnabledDocuments = (overview?.enabled_documents || []).filter(
+    (document) => document.status === "done",
+  );
+  const hasActiveSeason = Boolean(overview?.active_season);
+  const isEstimateReady =
+    hasActiveSeason &&
+    overviewDoneEnabledDocuments.length > 0 &&
+    (overview?.effective_cost_item_count || 0) > 0;
+  const readinessReason =
+    overview?.health_warnings[0]?.message ||
+    (!hasActiveSeason
+      ? "활성 시즌이 없어요."
+      : overviewDoneEnabledDocuments.length === 0
+        ? "활성 상태의 인덱싱 완료 문서가 없어요."
+        : (overview?.effective_cost_item_count || 0) === 0
+          ? "반영 가능한 적산 항목이 없어요."
+          : "현재 견적 반영 세트가 정상 상태입니다.");
 
   async function bootstrap() {
     setIsBootLoading(true);
@@ -254,6 +297,7 @@ export default function SAEstimationGovernancePage() {
 
       setNewSeasonName("");
       toast.success("시즌을 생성했어요.");
+      setActiveStep(2);
       await refreshContext(response.data.id);
     } catch (err) {
       console.error("시즌 생성 실패:", err);
@@ -286,7 +330,15 @@ export default function SAEstimationGovernancePage() {
     });
   }
 
-  async function handleCreateDocument() {
+  function handleSelectDocumentFiles(files: File[]) {
+    const first = files[0] || null;
+    setSelectedDocumentFile(first);
+    if (first && !docTitle.trim()) {
+      setDocTitle(deriveTitleFromFileName(first.name));
+    }
+  }
+
+  async function handleUploadDocument() {
     if (!selectedSeasonId) {
       toast.error("시즌을 선택해 주세요.");
       return;
@@ -295,36 +347,39 @@ export default function SAEstimationGovernancePage() {
       toast.error("카테고리를 선택해 주세요.");
       return;
     }
-    if (!docTitle.trim() || !fileName.trim()) {
-      toast.error("문서 제목과 파일명을 입력해 주세요.");
+    if (!selectedDocumentFile) {
+      toast.error("업로드할 PDF 파일을 선택해 주세요.");
       return;
     }
 
     setIsCreatingDocument(true);
     try {
-      const createRes = await api.createAdminDocument({
+      const uploadRes = await api.uploadAdminDocumentFile({
         season_id: selectedSeasonId,
         category_id: selectedCategoryId,
-        title: docTitle.trim(),
-        file_name: fileName.trim(),
+        title: docTitle.trim() || deriveTitleFromFileName(selectedDocumentFile.name),
+        file: selectedDocumentFile,
       });
-      if (!createRes.success || !createRes.data) {
-        toast.error(createRes.error?.message || "문서 등록에 실패했어요.");
+
+      if (!uploadRes.success || !uploadRes.data) {
+        toast.error(uploadRes.error?.message || "문서 업로드에 실패했어요.");
         return;
       }
 
-      const ingestRes = await api.ingestAdminDocument(createRes.data.id);
+      const ingestRes = await api.ingestAdminDocument(uploadRes.data.id);
       if (!ingestRes.success) {
         toast.error(ingestRes.error?.message || "인덱싱 시작에 실패했어요.");
         return;
       }
 
-      toast.success("문서를 등록하고 인덱싱을 시작했어요.");
+      toast.success("문서를 첨부하고 인덱싱을 시작했어요.");
       setDocTitle("");
+      setSelectedDocumentFile(null);
+      setFileUploadResetKey((prev) => prev + 1);
       await refreshContext(selectedSeasonId);
     } catch (err) {
-      console.error("문서 등록/인덱싱 실패:", err);
-      toast.error("문서 등록 중 오류가 발생했어요.");
+      console.error("문서 업로드/인덱싱 실패:", err);
+      toast.error("문서 업로드 중 오류가 발생했어요.");
     } finally {
       setIsCreatingDocument(false);
     }
@@ -381,71 +436,150 @@ export default function SAEstimationGovernancePage() {
     }
   }
 
-  const overviewDoneEnabledDocuments = (overview?.enabled_documents ?? []).filter(
-    (document) => document.status === "done",
+  function moveStep(target: StepId) {
+    setActiveStep(target);
+  }
+
+  const statusSummaryCard = (
+    <Card className="lg:sticky lg:top-6">
+      <CardHeader>
+        <CardTitle>현재 반영 상태</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <div
+          className={
+            isEstimateReady
+              ? "rounded-lg border border-green-200 bg-green-50 p-3"
+              : "rounded-lg border border-amber-200 bg-amber-50 p-3"
+          }
+        >
+          <p
+            className={
+              isEstimateReady
+                ? "text-xs font-semibold text-green-900"
+                : "text-xs font-semibold text-amber-900"
+            }
+          >
+            {isEstimateReady ? "견적 반영 가능" : "견적 반영 점검 필요"}
+          </p>
+          <p
+            className={
+              isEstimateReady ? "mt-1 text-xs text-green-800" : "mt-1 text-xs text-amber-900"
+            }
+          >
+            {readinessReason}
+          </p>
+        </div>
+        <div className="rounded-lg border border-slate-200 p-3">
+          <p className="text-xs text-slate-500">선택된 시즌</p>
+          <p className="mt-1 font-medium text-slate-900">{selectedSeason?.name || "없음"}</p>
+        </div>
+        <div className="rounded-lg border border-slate-200 p-3">
+          <div className="flex items-center gap-2 text-slate-900">
+            <Layers className="h-4 w-4 text-slate-500" />
+            <span>활성 카테고리 {enabledCategoryCount}개</span>
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-slate-900">
+            <FileSpreadsheet className="h-4 w-4 text-slate-500" />
+            <span>활성 문서 {enabledDocumentCount}개</span>
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-slate-900">
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <span>done 문서 {doneEnabledDocumentCount}개</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">적산 운영</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-600">
               활성 시즌 + 활성 카테고리 + 활성 문서(done) 조합이 현재 견적 반영 세트입니다.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => void refreshContext(selectedSeasonId)}
-              loading={isRefreshing}
-            >
-              <RefreshCw className="h-4 w-4" />
-              새로고침
-            </Button>
-            <Button asChild>
-              <Link href="/sa/pricebooks/upload">
-                <Upload className="h-4 w-4" />
-                새 적산 PDF 업로드
-              </Link>
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            onClick={() => void refreshContext(selectedSeasonId)}
+            loading={isRefreshing}
+          >
+            <RefreshCw className="h-4 w-4" />
+            새로고침
+          </Button>
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>현재 견적 반영 세트</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
+          <CardContent className="p-3">
+            <div
+              className={
+                isEstimateReady
+                  ? "mb-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2"
+                  : "mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
+              }
+            >
+              <p
+                className={
+                  isEstimateReady
+                    ? "text-xs font-semibold text-green-900"
+                    : "text-xs font-semibold text-amber-900"
+                }
+              >
+                {isEstimateReady ? "견적 반영 가능" : "견적 반영 점검 필요"}
+              </p>
+              <p className={isEstimateReady ? "text-xs text-green-800" : "text-xs text-amber-900"}>
+                {readinessReason}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <p className="text-xs text-slate-500">활성 시즌</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">
-                  {overview?.active_season?.name || "없음"}
-                </p>
+                <p className="text-sm font-semibold text-slate-900">{overview?.active_season?.name || "없음"}</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">활성 카테고리</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">
-                  {(overview?.enabled_categories.length || 0).toLocaleString()}개
-                </p>
+              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                <p className="text-xs text-slate-500">반영 문서(done)</p>
+                <p className="text-sm font-semibold text-slate-900">{overviewDoneEnabledDocuments.length.toLocaleString()}개</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">활성 문서(done)</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">
-                  {overviewDoneEnabledDocuments.length.toLocaleString()}개
-                </p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <p className="text-xs text-slate-500">반영 적산 항목</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">
-                  {(overview?.effective_cost_item_count || 0).toLocaleString()}개
-                </p>
+                <p className="text-sm font-semibold text-slate-900">{(overview?.effective_cost_item_count || 0).toLocaleString()}개</p>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {!!overview?.health_warnings.length && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="space-y-2 p-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-amber-900">운영 경고 {overview.health_warnings.length}건</p>
+                  <p className="text-xs text-amber-900">{overview.health_warnings[0].message}</p>
+                </div>
+                {overview.health_warnings.length > 1 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIsWarningsExpanded((prev) => !prev)}
+                  >
+                    {isWarningsExpanded ? "접기" : "더보기"}
+                  </Button>
+                )}
+              </div>
+              {isWarningsExpanded && overview.health_warnings.length > 1 && (
+                <div className="space-y-1 pl-6">
+                  {overview.health_warnings.slice(1).map((warning) => (
+                    <p key={warning.code} className="text-xs text-amber-900">• {warning.message}</p>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {isBootLoading ? (
           <Card>
@@ -454,267 +588,338 @@ export default function SAEstimationGovernancePage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 xl:grid-cols-12">
-            <Card className="xl:col-span-3">
-              <CardHeader>
-                <CardTitle>시즌</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Input
-                    placeholder="예: 2026H2"
-                    value={newSeasonName}
-                    onChange={(event) => setNewSeasonName(event.target.value)}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() => void handleCreateSeason()}
-                    loading={isCreatingSeason}
-                  >
-                    <Plus className="h-4 w-4" />
-                    추가
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  {seasons.length === 0 ? (
-                    <p className="text-sm text-slate-500">등록된 시즌이 없어요.</p>
-                  ) : (
-                    seasons.map((season) => (
-                      <div
-                        key={season.id}
-                        className="rounded-lg border border-slate-200 p-3"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <button
-                            type="button"
-                            onClick={() => void handleSelectSeason(season.id)}
-                            className="text-left"
-                          >
-                            <p className="text-sm font-medium text-slate-900">{season.name}</p>
-                            <p className="text-xs text-slate-500">
-                              생성: {formatDate(season.created_at)}
-                            </p>
-                          </button>
-                          <Badge variant={season.is_active ? "success" : "default"}>
-                            {season.is_active ? "활성" : "비활성"}
-                          </Badge>
-                        </div>
-                        {!season.is_active && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="mt-2"
-                            onClick={() => openActivateSeasonDialog(season)}
-                          >
-                            활성화
-                          </Button>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="xl:col-span-3">
-              <CardHeader>
-                <CardTitle>카테고리</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <p className="text-xs text-slate-500">대상 시즌</p>
-                  <select
-                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
-                    value={selectedSeasonId ?? ""}
-                    onChange={(event) => {
-                      const value = Number(event.target.value);
-                      if (!value) return;
-                      void handleSelectSeason(value);
-                    }}
-                  >
-                    {seasons.map((season) => (
-                      <option key={season.id} value={season.id}>
-                        {season.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {isScopedLoading ? (
-                  <p className="text-sm text-slate-500">불러오는 중...</p>
-                ) : categories.length === 0 ? (
-                  <p className="text-sm text-slate-500">카테고리가 없어요.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {categories.map((category) => (
-                      <div
-                        key={category.id}
-                        className="rounded-lg border border-slate-200 p-3"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-medium text-slate-900">{category.name}</p>
-                            <p className="text-xs text-slate-500">
-                              purpose: {category.purpose}
-                            </p>
-                          </div>
-                          <Badge variant={category.is_enabled ? "success" : "default"}>
-                            {category.is_enabled ? "활성" : "비활성"}
-                          </Badge>
-                        </div>
+          <div className="grid gap-4 lg:grid-cols-12">
+            <div className="space-y-4 lg:col-span-8">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle>운영 단계</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <div className="flex min-w-max gap-2">
+                      {STEPS.map((step) => (
                         <Button
+                          key={step.id}
                           size="sm"
-                          variant={category.is_enabled ? "outline" : "secondary"}
-                          className="mt-2"
-                          onClick={() => openToggleCategoryDialog(category)}
+                          variant={activeStep === step.id ? "primary" : "outline"}
+                          onClick={() => moveStep(step.id)}
+                          className="min-h-12 min-w-[7rem]"
                         >
-                          {category.is_enabled ? "비활성화" : "활성화"}
+                          {step.id}. {step.label}
                         </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="xl:col-span-4">
-              <CardHeader>
-                <CardTitle>적산 문서</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-2">
-                  <select
-                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
-                    value={selectedCategoryId ?? ""}
-                    onChange={(event) => {
-                      const value = Number(event.target.value);
-                      setSelectedCategoryId(value || null);
-                    }}
-                  >
-                    <option value="">카테고리 선택</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Input
-                    placeholder="문서 제목"
-                    value={docTitle}
-                    onChange={(event) => setDocTitle(event.target.value)}
-                  />
-                  <Input
-                    placeholder="파일명.pdf"
-                    value={fileName}
-                    onChange={(event) => setFileName(event.target.value)}
-                  />
-                  <Button
-                    onClick={() => void handleCreateDocument()}
-                    loading={isCreatingDocument}
-                    disabled={!selectedSeasonId || !selectedCategoryId}
-                  >
-                    문서 등록 + 인덱싱
-                  </Button>
-                </div>
-
-                {isScopedLoading ? (
-                  <p className="text-sm text-slate-500">불러오는 중...</p>
-                ) : documents.length === 0 ? (
-                  <p className="text-sm text-slate-500">등록된 문서가 없어요.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {documents.map((document) => {
-                      const statusConfig = DOC_STATUS_CONFIG[document.status];
-                      return (
-                        <div
-                          key={document.id}
-                          className="rounded-lg border border-slate-200 p-3"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                              <p className="text-sm font-medium text-slate-900">{document.title}</p>
-                              <p className="text-xs text-slate-500">
-                                {seasonNameMap.get(document.season_id) || document.season_id} · {document.category}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-                              <Badge variant={document.is_enabled ? "success" : "default"}>
-                                {document.is_enabled ? "반영" : "미반영"}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="mt-2 flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant={document.is_enabled ? "outline" : "secondary"}
-                              onClick={() => openToggleDocumentDialog(document)}
-                            >
-                              {document.is_enabled ? "비활성화" : "활성화"}
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="xl:col-span-2">
-              <CardHeader>
-                <CardTitle>영향도</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="rounded-lg border border-slate-200 p-3 text-sm">
-                  <p className="font-medium text-slate-900">현재 조합</p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    활성 시즌 + 활성 카테고리 + 활성 문서(done)
-                  </p>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 p-3 text-sm">
-                  <div className="flex items-center gap-2 text-slate-900">
-                    <Layers className="h-4 w-4 text-slate-500" />
-                    <span>활성 카테고리 {enabledCategoryCount}개</span>
-                  </div>
-                  <div className="mt-1 flex items-center gap-2 text-slate-900">
-                    <FileSpreadsheet className="h-4 w-4 text-slate-500" />
-                    <span>활성 문서 {enabledDocumentCount}개</span>
-                  </div>
-                  <div className="mt-1 flex items-center gap-2 text-slate-900">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span>done 문서 {doneEnabledDocumentCount}개</span>
-                  </div>
-                </div>
-
-                {overview?.health_warnings.length ? (
-                  <div className="space-y-2">
-                    {overview.health_warnings.map((warning) => (
-                      <div
-                        key={warning.code}
-                        className="rounded-lg border border-amber-200 bg-amber-50 p-3"
-                      >
-                        <div className="flex items-start gap-2">
-                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                          <p className="text-xs text-amber-900">{warning.message}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-green-200 bg-green-50 p-3">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                      <p className="text-xs text-green-800">
-                        현재 견적 반영 세트가 정상 상태입니다.
-                      </p>
+                      ))}
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <p className="mt-3 text-xs text-slate-500">
+                    현재 단계 {activeStep}/4 · {STEP_DESCRIPTIONS[activeStep]}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <div className="lg:hidden">{statusSummaryCard}</div>
+
+              {activeStep === 1 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>요약</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-slate-700">
+                      현재 반영 규칙은 <strong>활성 시즌 + 활성 카테고리 + 활성 문서(done)</strong> 입니다.
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-lg border border-slate-200 p-3">
+                        <p className="text-xs text-slate-500">선택된 시즌</p>
+                        <p className="mt-1 text-sm font-medium text-slate-900">{selectedSeason?.name || "없음"}</p>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 p-3">
+                        <p className="text-xs text-slate-500">활성 카테고리/문서</p>
+                        <p className="mt-1 text-sm font-medium text-slate-900">
+                          {enabledCategoryCount}개 / {doneEnabledDocumentCount}개(done)
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <Button onClick={() => moveStep(2)}>
+                        시즌 설정으로 이동
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" onClick={() => moveStep(4)}>
+                        문서 첨부로 이동
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {activeStep === 2 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>시즌</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Input
+                        id="new-season-name"
+                        name="newSeasonName"
+                        autoComplete="off"
+                        label="새 시즌명"
+                        placeholder="예: 2026H2"
+                        value={newSeasonName}
+                        onChange={(event) => setNewSeasonName(event.target.value)}
+                      />
+                      <Button
+                        onClick={() => void handleCreateSeason()}
+                        loading={isCreatingSeason}
+                        className="min-h-12"
+                      >
+                        <Plus className="h-4 w-4" />
+                        시즌 추가
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {seasons.length === 0 ? (
+                        <p className="text-sm text-slate-500">등록된 시즌이 없어요.</p>
+                      ) : (
+                        seasons.map((season) => (
+                          <div key={season.id} className="rounded-lg border border-slate-200 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <button
+                                type="button"
+                                onClick={() => void handleSelectSeason(season.id)}
+                                className="text-left"
+                              >
+                                <p className="text-sm font-medium text-slate-900">{season.name}</p>
+                                <p className="text-xs text-slate-500">생성: {formatDate(season.created_at)}</p>
+                              </button>
+                              <Badge variant={season.is_active ? "success" : "default"}>
+                                {season.is_active ? "활성" : "비활성"}
+                              </Badge>
+                            </div>
+                            {!season.is_active && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="mt-2"
+                                onClick={() => openActivateSeasonDialog(season)}
+                              >
+                                활성화
+                              </Button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button variant="outline" onClick={() => moveStep(3)}>
+                        다음: 카테고리
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {activeStep === 3 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>카테고리</CardTitle>
+                  </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="category-season-select" className="text-xs text-slate-500">
+                      대상 시즌
+                    </label>
+                    <select
+                      id="category-season-select"
+                      name="categorySeason"
+                      className="h-12 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+                      value={selectedSeasonId ?? ""}
+                      onChange={(event) => {
+                          const value = Number(event.target.value);
+                          if (!value) return;
+                          void handleSelectSeason(value);
+                        }}
+                      >
+                        {seasons.map((season) => (
+                          <option key={season.id} value={season.id}>
+                            {season.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {isScopedLoading ? (
+                      <p className="text-sm text-slate-500">불러오는 중...</p>
+                    ) : categories.length === 0 ? (
+                      <p className="text-sm text-slate-500">카테고리가 없어요.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {categories.map((category) => (
+                          <div key={category.id} className="rounded-lg border border-slate-200 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <p className="text-sm font-medium text-slate-900">{category.name}</p>
+                                <p className="text-xs text-slate-500">용도: {category.purpose}</p>
+                              </div>
+                              <Badge variant={category.is_enabled ? "success" : "default"}>
+                                {category.is_enabled ? "활성" : "비활성"}
+                              </Badge>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant={category.is_enabled ? "outline" : "secondary"}
+                              className="mt-2"
+                              onClick={() => openToggleCategoryDialog(category)}
+                            >
+                              {category.is_enabled ? "비활성화" : "활성화"}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex justify-end">
+                      <Button variant="outline" onClick={() => moveStep(4)}>
+                        다음: 적산 문서
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {activeStep === 4 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>적산 문서 (파일 첨부 기반)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <label htmlFor="document-season-select" className="text-xs text-slate-500">
+                          대상 시즌
+                        </label>
+                        <select
+                          id="document-season-select"
+                          name="documentSeason"
+                          className="h-12 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+                          value={selectedSeasonId ?? ""}
+                          onChange={(event) => {
+                            const value = Number(event.target.value);
+                            if (!value) return;
+                            void handleSelectSeason(value);
+                          }}
+                        >
+                          {seasons.map((season) => (
+                            <option key={season.id} value={season.id}>
+                              {season.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="document-category-select" className="text-xs text-slate-500">
+                          카테고리
+                        </label>
+                        <select
+                          id="document-category-select"
+                          name="documentCategory"
+                          className="h-12 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+                          value={selectedCategoryId ?? ""}
+                          onChange={(event) => {
+                            const value = Number(event.target.value);
+                            setSelectedCategoryId(value || null);
+                          }}
+                        >
+                          <option value="">카테고리 선택</option>
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-slate-200 p-3">
+                      <p className="mb-2 text-xs text-slate-500">PDF 첨부</p>
+                      <FileUpload
+                        key={fileUploadResetKey}
+                        accept=".pdf,application/pdf"
+                        maxSize={50 * 1024 * 1024}
+                        multiple={false}
+                        onFiles={handleSelectDocumentFiles}
+                        disabled={isCreatingDocument}
+                      />
+                    </div>
+
+                    <Input
+                      id="document-title"
+                      name="documentTitle"
+                      autoComplete="off"
+                      label="문서 제목 (선택)"
+                      helperText="미입력 시 첨부 파일명으로 자동 설정됩니다."
+                      value={docTitle}
+                      onChange={(event) => setDocTitle(event.target.value)}
+                    />
+
+                    <Button
+                      onClick={() => void handleUploadDocument()}
+                      loading={isCreatingDocument}
+                      disabled={!selectedSeasonId || !selectedCategoryId || !selectedDocumentFile}
+                      className="min-h-12 w-full"
+                    >
+                      문서 첨부 + 인덱싱 시작
+                    </Button>
+
+                    <div className="space-y-2">
+                      {isScopedLoading ? (
+                        <p className="text-sm text-slate-500">불러오는 중...</p>
+                      ) : documents.length === 0 ? (
+                        <p className="text-sm text-slate-500">등록된 문서가 없어요.</p>
+                      ) : (
+                        documents.map((document) => {
+                          const statusConfig = DOC_STATUS_CONFIG[document.status];
+                          return (
+                            <div key={document.id} className="rounded-lg border border-slate-200 p-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                  <p className="text-sm font-medium text-slate-900">{document.title}</p>
+                                  <p className="text-xs text-slate-500">
+                                    {seasonNameMap.get(document.season_id) || document.season_id} · {document.category}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+                                  <Badge variant={document.is_enabled ? "success" : "default"}>
+                                    {document.is_enabled ? "반영" : "미반영"}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant={document.is_enabled ? "outline" : "secondary"}
+                                className="mt-2"
+                                onClick={() => openToggleDocumentDialog(document)}
+                              >
+                                {document.is_enabled ? "비활성화" : "활성화"}
+                              </Button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            <div className="hidden space-y-4 lg:col-span-4 lg:block">
+              {statusSummaryCard}
+            </div>
           </div>
         )}
       </div>
