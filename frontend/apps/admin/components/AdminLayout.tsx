@@ -102,11 +102,21 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Skip navigation */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-point-500 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg"
+      >
+        본문으로 건너뛰기
+      </a>
       {/* Mobile header */}
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
         <PrimitiveButton
           onClick={() => setSidebarOpen(true)}
           className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
+          aria-label="메뉴 열기"
+          aria-expanded={sidebarOpen}
+          aria-controls="main-sidebar"
         >
           <Menu className="h-6 w-6" />
         </PrimitiveButton>
@@ -124,11 +134,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <div
           className="fixed inset-0 z-50 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
+          aria-label="메뉴 닫기"
+          role="button"
+          tabIndex={-1}
         />
       )}
 
       {/* Sidebar */}
       <aside
+        id="main-sidebar"
+        aria-label="주 메뉴"
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex w-64 transform flex-col bg-white shadow-lg transition-transform lg:translate-x-0 lg:shadow-none",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
@@ -168,6 +183,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <div key={item.href}>
                   <PrimitiveButton
                     onClick={() => setExpandedMenu(isExpanded ? null : item.href)}
+                    aria-expanded={isExpanded}
+                    aria-controls={`submenu-${item.href.replace(/\//g, '-')}`}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       isActive
@@ -184,7 +201,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     )}
                   </PrimitiveButton>
                   {isExpanded && (
-                    <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-slate-200 pl-3">
+                    <div id={`submenu-${item.href.replace(/\//g, '-')}`} className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-slate-200 pl-3">
                       {item.children!.map((child) => {
                         const isChildActive = isPathActive(child.href);
                         return (
@@ -300,7 +317,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Main content */}
       <main className="lg:ml-64">
-        <div className="mx-auto max-w-7xl p-4 lg:p-8">{children}</div>
+        <div id="main-content" className="mx-auto max-w-7xl p-4 lg:p-8">{children}</div>
       </main>
     </div>
   );
