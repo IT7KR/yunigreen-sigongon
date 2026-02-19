@@ -1003,21 +1003,36 @@ export interface SitePayrollWorkerEntry {
   worker_id: string
   worker_name: string
   job_type: string
+  job_type_code?: string             // 직종코드 (근로복지공단 코드)
   team: string
-  ssn_masked: string
+  ssn_masked: string                 // 주민(외국인)등록번호 (마스킹 처리)
+  ssn_full?: string                  // 주민(외국인)등록번호 (전체, 전자신고용)
   daily_rate: number
+  // 외국인 근로자 정보 (근로복지공단 신고 필수)
+  is_foreign?: boolean               // 외국인 여부
+  nationality_code?: string          // 국적코드 (근로복지공단 코드표, 예: 100=한국)
+  visa_status?: string               // 체류자격코드 (예: H-2, E-9)
+  english_name?: string              // 영문 성명 (외국인)
+  phone?: string                     // 전화번호
+  // 보험 구분 (1=산재, 3=고용, 5=산재+고용)
+  insurance_type?: "1" | "3" | "5"
   work_days: Record<number, number>  // day-of-month → man_days
   total_days: number                  // 총 출력일수
   total_man_days: number              // 총 공수
   total_labor_cost: number            // 총노무비 = daily_rate × total_man_days
-  income_tax: number                  // 갑근세
-  resident_tax: number               // 주민세
+  income_tax: number                  // 갑근세(소득세)
+  resident_tax: number               // 주민세(지방소득세)
   health_insurance: number           // 건강보험
   longterm_care: number              // 요양보험(장기요양)
   national_pension: number           // 국민연금
   employment_insurance: number       // 고용보험
   total_deductions: number           // 공제 합계
   net_pay: number                    // 차감지급액
+  // 국세청 신고용 추가 필드
+  nts_pay_month?: string             // 지급월 (YYYYMM, 예: 202601)
+  nts_work_month?: string            // 근무월 (YYYYMM)
+  nts_last_work_date?: string        // 최종근무일 (YYYYMMDD)
+  nontaxable_income?: number         // 비과세소득
 }
 
 /** 현장별 급여 보고서 */
