@@ -753,6 +753,10 @@ export class MockAPIClient {
     return value.replace(/\D/g, "");
   }
 
+  private getCustomerPrimaryPhone(customer: Partial<CustomerMaster>) {
+    return customer.representative_phone || customer.contact_phone || customer.phone || "";
+  }
+
   private getCurrentOrganizationId() {
     const user = this.getCurrentUser() || this.getStoredUsers()[0];
     return user.organization_id || "org_1";
@@ -782,7 +786,7 @@ export class MockAPIClient {
         customer = catalog.find(
           (item) =>
             item.name === snapshotName &&
-            this.normalizePhone(item.phone) === snapshotPhoneNormalized,
+            this.normalizePhone(this.getCustomerPrimaryPhone(item)) === snapshotPhoneNormalized,
         );
       }
       if (!customer) {
@@ -790,6 +794,14 @@ export class MockAPIClient {
           id: project.customerMasterId || randomId("cm"),
           organization_id: orgId,
           name: snapshotName,
+          customer_kind: "company",
+          representative_name: snapshotName,
+          representative_phone: snapshotPhone || undefined,
+          business_number: undefined,
+          contact_name: undefined,
+          contact_phone: undefined,
+          license_type: undefined,
+          is_women_owned: false,
           phone: snapshotPhone || undefined,
           memo: undefined,
           is_active: true,
@@ -957,11 +969,26 @@ export class MockAPIClient {
       const queryPhone = this.normalizePhone(params.search);
       customers = customers.filter((customer) => {
         const nameMatch = customer.name.toLowerCase().includes(query);
-        const phoneMatch = (customer.phone || "").toLowerCase().includes(query);
+        const representativeMatch = (customer.representative_name || "")
+          .toLowerCase()
+          .includes(query);
+        const contactMatch = (customer.contact_name || "").toLowerCase().includes(query);
+        const businessNumberMatch = (customer.business_number || "")
+          .toLowerCase()
+          .includes(query);
+        const primaryPhone = this.getCustomerPrimaryPhone(customer);
+        const phoneMatch = primaryPhone.toLowerCase().includes(query);
         const normalizedMatch = queryPhone
-          ? this.normalizePhone(customer.phone).includes(queryPhone)
+          ? this.normalizePhone(primaryPhone).includes(queryPhone)
           : false;
-        return nameMatch || phoneMatch || normalizedMatch;
+        return (
+          nameMatch ||
+          representativeMatch ||
+          contactMatch ||
+          businessNumberMatch ||
+          phoneMatch ||
+          normalizedMatch
+        );
       });
     }
 
@@ -991,6 +1018,14 @@ export class MockAPIClient {
 
   async createCustomer(data: {
     name: string;
+    customer_kind?: "company" | "individual";
+    representative_name?: string;
+    representative_phone?: string;
+    business_number?: string;
+    contact_name?: string;
+    contact_phone?: string;
+    license_type?: string;
+    is_women_owned?: boolean;
     phone?: string;
     memo?: string;
   }) {
@@ -998,11 +1033,13 @@ export class MockAPIClient {
     const organizationId = this.getCurrentOrganizationId();
     const catalog = this.getCustomerCatalog(organizationId);
     const normalizedName = data.name.trim();
-    const normalizedPhone = this.normalizePhone(data.phone);
+    const resolvedPhone =
+      data.phone || data.representative_phone || data.contact_phone;
+    const normalizedPhone = this.normalizePhone(resolvedPhone);
     const duplicate = catalog.find(
       (item) =>
         item.name === normalizedName &&
-        this.normalizePhone(item.phone) === normalizedPhone,
+        this.normalizePhone(this.getCustomerPrimaryPhone(item)) === normalizedPhone,
     );
     if (duplicate) {
       return delay(
@@ -1014,7 +1051,16 @@ export class MockAPIClient {
       id: randomId("cm"),
       organization_id: organizationId,
       name: normalizedName,
-      phone: data.phone,
+      customer_kind: data.customer_kind || "company",
+      representative_name:
+        data.representative_name || normalizedName || undefined,
+      representative_phone: data.representative_phone || resolvedPhone,
+      business_number: data.business_number,
+      contact_name: data.contact_name,
+      contact_phone: data.contact_phone,
+      license_type: data.license_type,
+      is_women_owned: data.is_women_owned || false,
+      phone: resolvedPhone,
       memo: data.memo,
       is_active: true,
       created_at: nowIso(),
@@ -1028,6 +1074,14 @@ export class MockAPIClient {
     id: string,
     data: {
       name?: string;
+      customer_kind?: "company" | "individual";
+      representative_name?: string;
+      representative_phone?: string;
+      business_number?: string;
+      contact_name?: string;
+      contact_phone?: string;
+      license_type?: string;
+      is_women_owned?: boolean;
       phone?: string;
       memo?: string;
       is_active?: boolean;
@@ -1047,17 +1101,40 @@ export class MockAPIClient {
     const next: CustomerMaster = {
       ...current,
       ...(data.name !== undefined && { name: data.name.trim() }),
+      ...(data.customer_kind !== undefined && { customer_kind: data.customer_kind }),
+      ...(data.representative_name !== undefined && {
+        representative_name: data.representative_name,
+      }),
+      ...(data.representative_phone !== undefined && {
+        representative_phone: data.representative_phone,
+      }),
+      ...(data.business_number !== undefined && {
+        business_number: data.business_number,
+      }),
+      ...(data.contact_name !== undefined && { contact_name: data.contact_name }),
+      ...(data.contact_phone !== undefined && { contact_phone: data.contact_phone }),
+      ...(data.license_type !== undefined && { license_type: data.license_type }),
+      ...(data.is_women_owned !== undefined && { is_women_owned: data.is_women_owned }),
       ...(data.phone !== undefined && { phone: data.phone }),
       ...(data.memo !== undefined && { memo: data.memo }),
       ...(data.is_active !== undefined && { is_active: data.is_active }),
       updated_at: nowIso(),
     };
+    next.phone = this.getCustomerPrimaryPhone(next) || undefined;
     catalog[index] = next;
     return delay(ok(next));
   }
 
   async upsertCustomer(data: {
     name: string;
+    customer_kind?: "company" | "individual";
+    representative_name?: string;
+    representative_phone?: string;
+    business_number?: string;
+    contact_name?: string;
+    contact_phone?: string;
+    license_type?: string;
+    is_women_owned?: boolean;
     phone?: string;
     memo?: string;
   }) {
@@ -1065,17 +1142,28 @@ export class MockAPIClient {
     const organizationId = this.getCurrentOrganizationId();
     const catalog = this.getCustomerCatalog(organizationId);
     const normalizedName = data.name.trim();
-    const normalizedPhone = this.normalizePhone(data.phone);
+    const resolvedPhone =
+      data.phone || data.representative_phone || data.contact_phone;
+    const normalizedPhone = this.normalizePhone(resolvedPhone);
 
     const existing = catalog.find(
       (item) =>
         item.name === normalizedName &&
-        this.normalizePhone(item.phone) === normalizedPhone,
+        this.normalizePhone(this.getCustomerPrimaryPhone(item)) === normalizedPhone,
     );
     if (existing) {
       const updated: CustomerMaster = {
         ...existing,
-        phone: data.phone ?? existing.phone,
+        customer_kind: data.customer_kind ?? existing.customer_kind,
+        representative_name: data.representative_name ?? existing.representative_name,
+        representative_phone:
+          data.representative_phone ?? existing.representative_phone,
+        business_number: data.business_number ?? existing.business_number,
+        contact_name: data.contact_name ?? existing.contact_name,
+        contact_phone: data.contact_phone ?? existing.contact_phone,
+        license_type: data.license_type ?? existing.license_type,
+        is_women_owned: data.is_women_owned ?? existing.is_women_owned,
+        phone: resolvedPhone || this.getCustomerPrimaryPhone(existing) || undefined,
         memo: data.memo ?? existing.memo,
         is_active: true,
         updated_at: nowIso(),
@@ -1285,13 +1373,21 @@ export class MockAPIClient {
       selectedCustomer = customerCatalog.find(
         (customer) =>
           customer.name === normalizedName &&
-          this.normalizePhone(customer.phone) === normalizedPhone,
+          this.normalizePhone(this.getCustomerPrimaryPhone(customer)) === normalizedPhone,
       );
       if (!selectedCustomer) {
         selectedCustomer = {
           id: randomId("cm"),
           organization_id: organizationId,
           name: normalizedName,
+          customer_kind: "company",
+          representative_name: normalizedName,
+          representative_phone: data.client_phone,
+          business_number: undefined,
+          contact_name: undefined,
+          contact_phone: undefined,
+          license_type: undefined,
+          is_women_owned: false,
           phone: data.client_phone,
           memo: undefined,
           is_active: true,
@@ -1310,7 +1406,8 @@ export class MockAPIClient {
       category: data.category as any,
       customerMasterId: data.customer_master_id || selectedCustomer?.id,
       clientName: data.client_name || selectedCustomer?.name || "",
-      clientPhone: data.client_phone || selectedCustomer?.phone || "",
+      clientPhone:
+        data.client_phone || this.getCustomerPrimaryPhone(selectedCustomer || {}) || "",
       notes: data.notes,
       organization_id: organizationId,
       visibleToSiteManager: true,
@@ -1351,13 +1448,21 @@ export class MockAPIClient {
       selectedCustomer = customerCatalog.find(
         (customer) =>
           customer.name === normalizedName &&
-          this.normalizePhone(customer.phone) === normalizedPhone,
+          this.normalizePhone(this.getCustomerPrimaryPhone(customer)) === normalizedPhone,
       );
       if (!selectedCustomer) {
         selectedCustomer = {
           id: randomId("cm"),
           organization_id: organizationId,
           name: normalizedName,
+          customer_kind: "company",
+          representative_name: normalizedName,
+          representative_phone: data.client_phone,
+          business_number: undefined,
+          contact_name: undefined,
+          contact_phone: undefined,
+          license_type: undefined,
+          is_women_owned: false,
           phone: data.client_phone,
           memo: undefined,
           is_active: true,
@@ -1390,7 +1495,8 @@ export class MockAPIClient {
                 }),
               ...(data.customer_master_id !== undefined &&
                 data.client_phone === undefined && {
-                  clientPhone: selectedCustomer?.phone || p.clientPhone,
+                  clientPhone:
+                    this.getCustomerPrimaryPhone(selectedCustomer || {}) || p.clientPhone,
                 }),
               ...(data.client_name !== undefined && { clientName: data.client_name }),
               ...(data.client_phone !== undefined && { clientPhone: data.client_phone }),
@@ -2740,8 +2846,15 @@ export class MockAPIClient {
       {
         id: "p1",
         name: "협력사 A",
-        biz_no: "123-45-67890",
+        representative_name: "김철수",
+        representative_phone: "010-1234-1111",
+        business_number: "123-45-67890",
+        contact_name: "박대리",
+        contact_phone: "010-9000-1111",
+        license_type: "건설업등록증",
+        is_women_owned: false,
         owner: "김철수",
+        biz_no: "123-45-67890",
         license: "건설업등록증",
         is_female_owned: false,
         status: "active" as const,
@@ -2749,8 +2862,15 @@ export class MockAPIClient {
       {
         id: "p2",
         name: "협력사 B",
-        biz_no: "234-56-78901",
+        representative_name: "이영희",
+        representative_phone: "010-2222-3333",
+        business_number: "234-56-78901",
+        contact_name: "정과장",
+        contact_phone: "010-8000-2222",
+        license_type: "건설업등록증",
+        is_women_owned: true,
         owner: "이영희",
+        biz_no: "234-56-78901",
         license: "건설업등록증",
         is_female_owned: true,
         status: "active" as const,
@@ -2767,8 +2887,11 @@ export class MockAPIClient {
       filtered = filtered.filter(
         (p) =>
           p.name.toLowerCase().includes(search) ||
-          p.owner.toLowerCase().includes(search) ||
-          p.biz_no.includes(search)
+          p.representative_name.toLowerCase().includes(search) ||
+          p.business_number.includes(search) ||
+          p.representative_phone.includes(search) ||
+          p.contact_name.toLowerCase().includes(search) ||
+          p.contact_phone.includes(search)
       );
     }
 
@@ -2777,19 +2900,39 @@ export class MockAPIClient {
 
   async createPartner(data: {
     name: string;
-    owner: string;
-    biz_no: string;
+    representative_name?: string;
+    representative_phone?: string;
+    business_number?: string;
+    contact_name?: string;
+    contact_phone?: string;
+    license_type?: string;
+    is_women_owned?: boolean;
+    owner?: string;
+    biz_no?: string;
     license?: string;
     is_female_owned?: boolean;
   }) {
+    const representativeName = data.representative_name || data.owner || "대표";
+    const businessNumber = data.business_number || data.biz_no || "000-00-00000";
+    const licenseType = data.license_type || data.license;
+    const womenOwned =
+      data.is_women_owned ?? data.is_female_owned ?? false;
+
     return delay(
       ok({
         id: randomId("p"),
         name: data.name,
-        owner: data.owner,
-        biz_no: data.biz_no,
-        license: data.license,
-        is_female_owned: data.is_female_owned || false,
+        representative_name: representativeName,
+        representative_phone: data.representative_phone,
+        business_number: businessNumber,
+        contact_name: data.contact_name,
+        contact_phone: data.contact_phone,
+        license_type: licenseType,
+        is_women_owned: womenOwned,
+        owner: representativeName,
+        biz_no: businessNumber,
+        license: licenseType,
+        is_female_owned: womenOwned,
         status: "active" as const,
       })
     );
@@ -2799,20 +2942,39 @@ export class MockAPIClient {
     id: string,
     data: {
       name?: string;
+      representative_name?: string;
+      representative_phone?: string;
+      business_number?: string;
+      contact_name?: string;
+      contact_phone?: string;
+      license_type?: string;
+      is_women_owned?: boolean;
       owner?: string;
       biz_no?: string;
       license?: string;
       is_female_owned?: boolean;
     }
   ) {
+    const representativeName = data.representative_name || data.owner || "대표";
+    const businessNumber = data.business_number || data.biz_no || "000-00-00000";
+    const licenseType = data.license_type || data.license;
+    const womenOwned = data.is_women_owned ?? data.is_female_owned ?? false;
+
     return delay(
       ok({
         id,
         name: data.name || "협력사",
-        owner: data.owner || "대표",
-        biz_no: data.biz_no || "000-00-00000",
-        license: data.license,
-        is_female_owned: data.is_female_owned || false,
+        representative_name: representativeName,
+        representative_phone: data.representative_phone,
+        business_number: businessNumber,
+        contact_name: data.contact_name,
+        contact_phone: data.contact_phone,
+        license_type: licenseType,
+        is_women_owned: womenOwned,
+        owner: representativeName,
+        biz_no: businessNumber,
+        license: licenseType,
+        is_female_owned: womenOwned,
         status: "active" as const,
       })
     );
@@ -2873,6 +3035,23 @@ export class MockAPIClient {
     );
   }
 
+  async getDailyReport(projectId: string, reportId: string | number) {
+    return delay(
+      ok({
+        id: String(reportId),
+        project_id: projectId,
+        work_date: "2026-02-01",
+        weather: "sunny" as const,
+        temperature: "15°C",
+        work_description: "방수 작업 진행",
+        tomorrow_plan: "마감 작업 예정",
+        photos: [],
+        photo_count: 0,
+        created_at: nowIso(),
+      })
+    );
+  }
+
   async createDailyReport(
     projectId: string,
     data: {
@@ -2895,6 +3074,18 @@ export class MockAPIClient {
         tomorrow_plan: data.tomorrow_plan,
         photos: data.photos || [],
         created_at: nowIso(),
+      })
+    );
+  }
+
+  async downloadDailyReportHwpx(
+    projectId: string,
+    reportId: string | number,
+  ): Promise<Blob> {
+    const content = `공사일지 mock hwpx (${projectId}/${reportId})`;
+    return delay(
+      new Blob([content], {
+        type: "application/vnd.hancom.hwpx",
       })
     );
   }

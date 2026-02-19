@@ -38,7 +38,8 @@ export const PROJECT_DOCUMENT_SAMPLE_MANIFEST: Record<string, string> = {
 };
 
 export const PROJECT_MOCK_EXPORT_SAMPLE_FILES = {
-  contractPdf: "sample/10. 공사계약서(나라장터, S2B)/나라장터 계약서.pdf",
+  contractPdf:
+    "sample/6. 민간 계약관련 서류(간단)/1. 공사도급표준계약서(공사 전 계약에 필요한 서류).hwpx",
   albumPdf:
     "sample/3. 관공서 준공서류/준공서류_하하호호 장난감도서관 잠실점 방수 공사.pdf",
   startReportPdf:

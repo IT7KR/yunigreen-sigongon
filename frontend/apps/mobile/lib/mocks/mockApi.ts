@@ -1951,6 +1951,46 @@ export class MockAPIClient {
     return delay(ok(this.dailyReportsByProject[projectId]));
   }
 
+  async getDailyReport(projectId: string, reportId: string | number) {
+    const reports = this.dailyReportsByProject[projectId] || [];
+    const found = reports.find((report) => report.id === String(reportId));
+    if (found) {
+      return delay(
+        ok({
+          ...found,
+          photos: [],
+        }),
+      );
+    }
+
+    return delay(
+      ok({
+        id: String(reportId),
+        project_id: projectId,
+        work_date: "2026-02-01",
+        weather: "sunny",
+        temperature: "8°C",
+        work_description: "균열 보수 및 방수 프라이머 도포",
+        tomorrow_plan: "우레탄 1차 도포",
+        photos: [],
+        photo_count: 0,
+        created_at: nowIso(),
+      }),
+    );
+  }
+
+  async downloadDailyReportHwpx(
+    projectId: string,
+    reportId: string | number,
+  ): Promise<Blob> {
+    const content = `공사일지 mock hwpx (${projectId}/${reportId})`;
+    return delay(
+      new Blob([content], {
+        type: "application/vnd.hancom.hwpx",
+      }),
+    );
+  }
+
   async searchRAG(query: string, limit: number = 10) {
     const normalized = query.trim().toLowerCase();
     const catalog = [
