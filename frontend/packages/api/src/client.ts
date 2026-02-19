@@ -85,6 +85,44 @@ export interface APIClientConfig {
   retryDelay?: number;
 }
 
+// ─── 현장대리인 (Field Representatives) Types ───────────────
+
+export interface FieldRepresentativeRead {
+  id: number;
+  organization_id: number;
+  name: string;
+  phone: string;
+  grade?: string;
+  notes?: string;
+  booklet_filename?: string;
+  career_cert_filename?: string;
+  career_cert_uploaded_at?: string;
+  employment_cert_filename?: string;
+  created_at: string;
+  updated_at: string;
+  career_cert_days_remaining?: number;
+  assigned_project_ids: number[];
+}
+
+export interface FieldRepresentativeCreate {
+  name: string;
+  phone: string;
+  grade?: string;
+  notes?: string;
+  booklet_filename?: string;
+  career_cert_filename?: string;
+  career_cert_uploaded_at?: string;
+  employment_cert_filename?: string;
+}
+
+export interface RepresentativeAssignment {
+  id: number;
+  project_id: number;
+  representative_id: number;
+  effective_date: string;
+  assigned_at: string;
+}
+
 export class APIClient {
   private client: AxiosInstance;
   private accessToken: string | null = null;
@@ -2659,6 +2697,65 @@ export class APIClient {
     const response = await this.client.delete<APIResponse<void>>(
       `/material-orders/${orderId}`,
     );
+    return response.data;
+  }
+
+  // ============================================
+  // 현장대리인 (Field Representatives)
+  // ============================================
+
+  async listFieldRepresentatives() {
+    const response = await this.client.get<
+      APIResponse<FieldRepresentativeRead[]>
+    >("/field-representatives");
+    return response.data;
+  }
+
+  async createFieldRepresentative(data: FieldRepresentativeCreate) {
+    const response = await this.client.post<
+      APIResponse<FieldRepresentativeRead>
+    >("/field-representatives", data);
+    return response.data;
+  }
+
+  async updateFieldRepresentative(
+    repId: number,
+    data: FieldRepresentativeCreate,
+  ) {
+    const response = await this.client.put<
+      APIResponse<FieldRepresentativeRead>
+    >(`/field-representatives/${repId}`, data);
+    return response.data;
+  }
+
+  async deleteFieldRepresentative(repId: number) {
+    const response = await this.client.delete<
+      APIResponse<{ deleted: boolean; id: number }>
+    >(`/field-representatives/${repId}`);
+    return response.data;
+  }
+
+  async getProjectRepresentative(projectId: string) {
+    const response = await this.client.get<
+      APIResponse<RepresentativeAssignment>
+    >(`/projects/${projectId}/representative`);
+    return response.data;
+  }
+
+  async assignProjectRepresentative(
+    projectId: string,
+    data: { representative_id: number; effective_date: string },
+  ) {
+    const response = await this.client.post<
+      APIResponse<RepresentativeAssignment>
+    >(`/projects/${projectId}/representative`, data);
+    return response.data;
+  }
+
+  async removeProjectRepresentative(projectId: string) {
+    const response = await this.client.delete<
+      APIResponse<{ deleted: boolean; project_id: number }>
+    >(`/projects/${projectId}/representative`);
     return response.data;
   }
 }

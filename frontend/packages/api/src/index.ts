@@ -3,6 +3,9 @@ export {
   NetworkError,
   APIError,
   type APIClientConfig,
+  type FieldRepresentativeRead,
+  type FieldRepresentativeCreate,
+  type RepresentativeAssignment,
 } from "./client";
 
 // Re-export types for convenience
