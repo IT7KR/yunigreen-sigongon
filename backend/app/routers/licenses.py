@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,8 +49,8 @@ class LicenseCreateRequest(BaseModel):
     license_name: str
     license_number: Optional[str] = None
     issuer: Optional[str] = None
-    issued_on: Optional[datetime] = None
-    expires_on: Optional[datetime] = None
+    issued_on: Optional[date] = None
+    expires_on: Optional[date] = None
     status: LicenseStatus = LicenseStatus.ACTIVE
     is_primary: Optional[bool] = None
     notes: Optional[str] = None
@@ -60,8 +60,8 @@ class LicenseUpdateRequest(BaseModel):
     license_name: Optional[str] = None
     license_number: Optional[str] = None
     issuer: Optional[str] = None
-    issued_on: Optional[datetime] = None
-    expires_on: Optional[datetime] = None
+    issued_on: Optional[date] = None
+    expires_on: Optional[date] = None
     status: Optional[LicenseStatus] = None
     is_primary: Optional[bool] = None
     notes: Optional[str] = None
@@ -146,7 +146,7 @@ async def _sync_owner_license_summary(
     owner_type: LicenseOwnerType,
     owner_id: int,
 ) -> None:
-    if owner_type not {LicenseOwnerType.CUSTOMER, LicenseOwnerType.PARTNER}:
+    if owner_type not in {LicenseOwnerType.CUSTOMER, LicenseOwnerType.PARTNER}:
         return
 
     result = await db.execute(
@@ -365,8 +365,8 @@ async def create_license(
         license_name=_normalize_required_text(payload.license_name, "면허명"),
         license_number=_normalize_optional_text(payload.license_number),
         issuer=_normalize_optional_text(payload.issuer),
-        issued_on=payload.issued_on.date() if payload.issued_on else None,
-        expires_on=payload.expires_on.date() if payload.expires_on else None,
+        issued_on=payload.issued_on,
+        expires_on=payload.expires_on,
         status=payload.status,
         is_primary=is_primary,
         notes=_normalize_optional_text(payload.notes),
@@ -405,11 +405,9 @@ async def update_license(
     if "issuer" in updates:
         record.issuer = _normalize_optional_text(updates["issuer"])
     if "issued_on" in updates:
-        issued_on = updates["issued_on"]
-        record.issued_on = issued_on.date() if issued_on else None
+        record.issued_on = updates["issued_on"]
     if "expires_on" in updates:
-        expires_on = updates["expires_on"]
-        record.expires_on = expires_on.date() if expires_on else None
+        record.expires_on = updates["expires_on"]
     if "status" in updates:
         record.status = updates["status"]
     if "notes" in updates:
