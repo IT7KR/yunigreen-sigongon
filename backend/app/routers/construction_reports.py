@@ -10,7 +10,13 @@ from sqlalchemy import func
 from sqlmodel import select
 
 from app.core.database import get_async_db
-from app.core.permissions import get_project_for_user
+from app.core.permissions import (
+    ROLE_COMPANY_ADMIN,
+    ROLE_SITE_MANAGER,
+    ROLE_SUPER_ADMIN,
+    get_project_for_user,
+    role_value,
+)
 from app.core.security import get_current_user
 from app.core.exceptions import NotFoundException
 from app.models.user import User
@@ -29,6 +35,9 @@ router = APIRouter()
 # Type aliases
 DBSession = Annotated[AsyncSession, Depends(get_async_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+_REPORT_EDIT_ROLES = {ROLE_SUPER_ADMIN, ROLE_COMPANY_ADMIN, ROLE_SITE_MANAGER}
+_REPORT_APPROVE_ROLES = {ROLE_SUPER_ADMIN, ROLE_COMPANY_ADMIN}
 
 
 # Response Schemas
@@ -118,6 +127,22 @@ def _generate_report_number(report_type: ReportType, project_id: int) -> str:
     date_str = datetime.utcnow().strftime("%Y%m%d")
     id_suffix = str(project_id)[:8]
     return f"{prefix}-{date_str}-{id_suffix}"
+
+
+def _require_report_edit_role(current_user: User) -> None:
+    if role_value(current_user) not in _REPORT_EDIT_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="착공계/준공계 작성 권한이 없어요",
+        )
+
+
+def _require_report_approve_role(current_user: User) -> None:
+    if role_value(current_user) not in _REPORT_APPROVE_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="착공계/준공계 승인 권한이 없어요",
+        )
 
 
 async def _get_report_and_project(
@@ -210,6 +235,7 @@ async def create_start_report(
     프로젝트의 착공계를 생성해요.
     """
     await get_project_for_user(db, project_id, current_user)
+    _require_report_edit_role(current_user)
 
     # Check if start report already exists
     existing_result = await db.execute(
@@ -279,6 +305,7 @@ async def create_completion_report(
     프로젝트의 준공계를 생성해요. 착공계가 승인된 후에만 생성할 수 있어요.
     """
     await get_project_for_user(db, project_id, current_user)
+    _require_report_edit_role(current_user)
 
     # Check if start report exists and is approved
     start_report_result = await db.execute(
@@ -365,6 +392,7 @@ async def update_report(
     착공계 또는 준공계 정보를 수정해요. 초안(draft) 상태에서만 수정할 수 있어요.
     """
     report, _ = await _get_report_and_project(db, report_id, current_user)
+    _require_report_edit_role(current_user)
 
     # Only allow editing draft reports
     if report.status != ReportStatus.DRAFT:
@@ -396,6 +424,7 @@ async def submit_report(
     착공계 또는 준공계를 제출해요. 제출 후에는 수정할 수 없어요.
     """
     report, _ = await _get_report_and_project(db, report_id, current_user)
+    _require_report_edit_role(current_user)
 
     # Only draft reports can be submitted
     if report.status != ReportStatus.DRAFT:
@@ -424,6 +453,7 @@ async def approve_report(
     제출된 착공계 또는 준공계를 승인해요.
     """
     report, _ = await _get_report_and_project(db, report_id, current_user)
+    _require_report_approve_role(current_user)
 
     # Only submitted reports can be approved
     if report.status != ReportStatus.SUBMITTED:
@@ -454,6 +484,7 @@ async def reject_report(
     제출된 착공계 또는 준공계를 반려해요.
     """
     report, _ = await _get_report_and_project(db, report_id, current_user)
+    _require_report_approve_role(current_user)
 
     # Only submitted reports can be rejected
     if report.status != ReportStatus.SUBMITTED:
