@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     popbill_secret_key: Optional[str] = None
     popbill_corp_num: Optional[str] = None  # 유니그린 사업자번호
     popbill_is_test: bool = True  # 테스트 환경 여부
+    popbill_is_mock: bool = True  # Mock 모드 여부
 
     # Aligo SMS
     aligo_api_key: Optional[str] = None
@@ -73,6 +74,10 @@ class Settings(BaseSettings):
     modusign_api_url: str = "https://api.modusign.co.kr"
     modusign_callback_url: Optional[str] = None
     modusign_is_mock: bool = True
+
+    # 국세청 사업자 상태조회 API (공공데이터포털)
+    business_verification_api_key: Optional[str] = None
+    business_verification_is_mock: bool = True
 
     @property
     def async_database_url(self) -> str:

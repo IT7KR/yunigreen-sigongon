@@ -411,18 +411,17 @@ async def issue_tax_invoice(
             detail=", ".join(validation_errors),
         )
 
-    # TODO: Call Popbill API to issue invoice
-    # This is a placeholder for actual Popbill SDK integration
-    # Example:
-    # from popbill import TaxinvoiceService
-    # popbill = TaxinvoiceService(LinkID, SecretKey)
-    # response = popbill.Issue(invoice.supplier_corp_num, invoice.mgtkey)
+    # Call Popbill service to issue invoice
+    from app.services.popbill_service import get_tax_invoice_service
+    svc = get_tax_invoice_service()
+    result = await svc.issue(
+        tax_invoice_id=invoice.id,
+        write_date=invoice.issue_date.strftime("%Y%m%d") if invoice.issue_date else datetime.utcnow().strftime("%Y%m%d"),
+        memo=issue_data.memo,
+    )
 
-    # For now, simulate successful issue
-    popbill_issue_id = f"PBILL-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{str(invoice_id)[:8]}"
-
+    invoice.issue_id = result.issue_id
     invoice.status = TaxInvoiceStatus.ISSUED
-    invoice.issue_id = popbill_issue_id
     invoice.issued_at = datetime.utcnow()
     invoice.updated_at = datetime.utcnow()
 
@@ -473,12 +472,10 @@ async def cancel_tax_invoice(
                 detail="세금계산서는 발행 당일에만 취소할 수 있어요",
             )
 
-    # TODO: Call Popbill API to cancel invoice
-    # This is a placeholder for actual Popbill SDK integration
-    # Example:
-    # from popbill import TaxinvoiceService
-    # popbill = TaxinvoiceService(LinkID, SecretKey)
-    # response = popbill.CancelIssue(invoice.supplier_corp_num, invoice.mgtkey, reason)
+    # Call Popbill service to cancel invoice
+    from app.services.popbill_service import get_tax_invoice_service
+    svc = get_tax_invoice_service()
+    await svc.cancel_issue(invoice.issue_id, memo=reason)
 
     invoice.status = TaxInvoiceStatus.CANCELLED
     invoice.cancelled_at = datetime.utcnow()
@@ -561,15 +558,10 @@ async def get_popbill_popup_url(
             detail="발행된 세금계산서만 팝업에서 확인할 수 있어요",
         )
 
-    # TODO: Call Popbill API to get popup URL
-    # This is a placeholder for actual Popbill SDK integration
-    # Example:
-    # from popbill import TaxinvoiceService
-    # popbill = TaxinvoiceService(LinkID, SecretKey)
-    # url = popbill.GetPopUpURL(invoice.supplier_corp_num, invoice.mgtkey)
-
-    # For now, return a placeholder URL
-    popup_url = f"https://popbill.example.com/taxinvoice/{invoice.issue_id}"
+    # Call Popbill service to get popup URL
+    from app.services.popbill_service import get_tax_invoice_service
+    svc = get_tax_invoice_service()
+    popup_url = await svc.get_popup_url(invoice.issue_id, str(current_user.id))
     expires_at = datetime.utcnow().replace(hour=23, minute=59, second=59)
 
     return APIResponse.ok(
