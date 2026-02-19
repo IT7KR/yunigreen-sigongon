@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -274,7 +274,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
 
   const priorityOrder = getPriorityOrder();
 
-  const actionNodes: Record<ActionKey, React.ReactNode> = {
+  const actionNodes: Record<ActionKey, ReactNode> = {
     visit: (
       <Button key="visit" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
         <Link href={`/projects/${id}/visits/new`}>

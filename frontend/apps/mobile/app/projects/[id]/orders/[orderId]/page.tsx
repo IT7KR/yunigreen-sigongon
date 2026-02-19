@@ -213,7 +213,7 @@ export default function MobileMaterialOrderDetailPage({
 
         {isSiteManager && (
           <p className="text-xs text-slate-500">
-            현장소장은 `발주 요청`과 `수령 확인` 단계만 모바일에서 처리할 수 있습니다.
+            현장소장은 발주 요청과 수령 확인 단계만 모바일에서 처리할 수 있습니다.
           </p>
         )}
       </div>
