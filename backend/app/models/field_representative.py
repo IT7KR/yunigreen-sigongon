@@ -1,7 +1,8 @@
 """현장대리인 (Field Representative) models."""
-from datetime import datetime
+from datetime import datetime, date
+from enum import Enum
 from typing import Optional, TYPE_CHECKING
-from sqlalchemy import BigInteger, Text
+from sqlalchemy import BigInteger, Text, UniqueConstraint
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.core.snowflake import generate_snowflake_id
@@ -62,6 +63,41 @@ class ProjectRepresentativeAssignment(SQLModel, table=True):
             "foreign_keys": "[ProjectRepresentativeAssignment.representative_id]",
         },
     )
+
+
+class CareerReminderStage(str, Enum):
+    """경력증명서 리마인더 단계."""
+
+    D_30 = "d_30"
+    D_14 = "d_14"
+    D_7 = "d_7"
+    D_0 = "d_0"
+    EXPIRED_WEEKLY = "expired_weekly"
+
+
+class FieldRepresentativeCareerReminderLog(SQLModel, table=True):
+    """경력증명서 리마인더 발송 로그."""
+
+    __tablename__ = "field_representative_career_reminder_log"
+    __table_args__ = (
+        UniqueConstraint(
+            "representative_id",
+            "reminder_stage",
+            "target_date",
+            name="uq_rep_career_reminder_once",
+        ),
+    )
+
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    representative_id: int = Field(sa_type=BigInteger, index=True)
+    organization_id: int = Field(sa_type=BigInteger, index=True)
+    reminder_stage: CareerReminderStage = Field(index=True)
+    target_date: date = Field(index=True)
+    remaining_days: int = Field(default=0)
+    in_app_sent: bool = Field(default=False)
+    alimtalk_sent: bool = Field(default=False)
+    alimtalk_error: Optional[str] = Field(default=None, sa_type=Text)
+    sent_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
 # Pydantic schemas for API

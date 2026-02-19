@@ -1,13 +1,15 @@
 """현장대리인 (Field Representative) API 라우터."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.core.database import get_async_db
+from app.core.exceptions import NotFoundException
+from app.core.permissions import get_project_for_user
 from app.core.security import get_current_user
 from app.models.field_representative import (
     FieldRepresentative,
@@ -17,15 +19,24 @@ from app.models.field_representative import (
     AssignmentCreate,
     AssignmentRead,
 )
-from app.models.project import Project
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.response import APIResponse
+from app.services.field_representative_reminders import (
+    run_field_representative_career_reminders,
+)
 
 router = APIRouter()
 
 # Type aliases
 DBSession = Annotated[AsyncSession, Depends(get_async_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+class ReminderRunRequest(BaseModel):
+    """경력증명서 리마인더 수동 실행 요청."""
+
+    organization_id: Optional[int] = None
+    run_date: Optional[date] = None
 
 
 def _calculate_career_cert_days(career_cert_uploaded_at: Optional[datetime]) -> Optional[int]:
@@ -257,20 +268,13 @@ async def get_project_representative(
 
     프로젝트에 배정된 현장대리인 정보를 확인해요.
     """
-    # 프로젝트 접근 권한 확인
-    project_query = select(Project).where(Project.id == project_id)
-    if current_user.organization_id is not None:
-        project_query = project_query.where(
-            Project.organization_id == current_user.organization_id
-        )
-    project_result = await db.execute(project_query)
-    project = project_result.scalar_one_or_none()
-
-    if not project:
+    try:
+        await get_project_for_user(db, project_id, current_user)
+    except NotFoundException as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="프로젝트를 찾을 수 없어요.",
-        )
+        ) from exc
 
     # 배정 조회
     assignment_result = await db.execute(
@@ -312,20 +316,13 @@ async def assign_project_representative(
     프로젝트에 현장대리인을 배정해요.
     이미 배정된 경우 기존 배정을 교체해요.
     """
-    # 프로젝트 접근 권한 확인
-    project_query = select(Project).where(Project.id == project_id)
-    if current_user.organization_id is not None:
-        project_query = project_query.where(
-            Project.organization_id == current_user.organization_id
-        )
-    project_result = await db.execute(project_query)
-    project = project_result.scalar_one_or_none()
-
-    if not project:
+    try:
+        await get_project_for_user(db, project_id, current_user)
+    except NotFoundException as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="프로젝트를 찾을 수 없어요.",
-        )
+        ) from exc
 
     # 현장대리인 존재 확인
     rep_query = select(FieldRepresentative).where(
@@ -395,20 +392,13 @@ async def remove_project_representative(
 
     프로젝트에서 현장대리인 배정을 해제해요.
     """
-    # 프로젝트 접근 권한 확인
-    project_query = select(Project).where(Project.id == project_id)
-    if current_user.organization_id is not None:
-        project_query = project_query.where(
-            Project.organization_id == current_user.organization_id
-        )
-    project_result = await db.execute(project_query)
-    project = project_result.scalar_one_or_none()
-
-    if not project:
+    try:
+        await get_project_for_user(db, project_id, current_user)
+    except NotFoundException as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="프로젝트를 찾을 수 없어요.",
-        )
+        ) from exc
 
     # 배정 조회
     assignment_result = await db.execute(
@@ -427,3 +417,31 @@ async def remove_project_representative(
     await db.flush()
 
     return APIResponse.ok({"deleted": True, "project_id": project_id})
+
+
+@router.post(
+    "/field-representatives/reminders/run",
+    response_model=APIResponse[dict],
+)
+async def run_representative_career_reminders(
+    payload: ReminderRunRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """현장대리인 경력증명서 리마인더 수동 실행.
+
+    super_admin 전용 운영 엔드포인트예요.
+    """
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="이 기능은 최고 관리자만 실행할 수 있어요.",
+        )
+
+    summary = await run_field_representative_career_reminders(
+        db,
+        run_date=payload.run_date,
+        organization_id=payload.organization_id,
+    )
+
+    return APIResponse.ok(summary)

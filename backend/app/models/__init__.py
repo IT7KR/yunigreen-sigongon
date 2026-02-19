@@ -97,6 +97,8 @@ from app.models.operations import (
 from app.models.field_representative import (
     FieldRepresentative,
     ProjectRepresentativeAssignment,
+    CareerReminderStage,
+    FieldRepresentativeCareerReminderLog,
     FieldRepresentativeCreate,
     FieldRepresentativeRead,
     AssignmentCreate,
@@ -251,6 +253,8 @@ __all__ = [
     # Field Representative
     "FieldRepresentative",
     "ProjectRepresentativeAssignment",
+    "CareerReminderStage",
+    "FieldRepresentativeCareerReminderLog",
     "FieldRepresentativeCreate",
     "FieldRepresentativeRead",
     "AssignmentCreate",
