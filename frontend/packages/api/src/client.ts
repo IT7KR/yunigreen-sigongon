@@ -51,6 +51,7 @@ import type {
   SeasonCategoryPurpose,
   SeasonDocumentInfo,
   SeasonDocumentStatusInfo,
+  EstimationGovernanceOverview,
   DiagnosisCase,
   DiagnosisCaseImage,
   VisionResultDetail,
@@ -1775,6 +1776,133 @@ export class APIClient {
   }
 
   // ============================================
+  // Licenses (면허)
+  // ============================================
+
+  async getLicenses(params: {
+    owner_type: "organization" | "customer" | "partner";
+    owner_id: string | number;
+    include_deleted?: boolean;
+  }) {
+    const response = await this.client.get<
+      APIResponse<
+        Array<{
+          id: string;
+          organization_id: string;
+          owner_type: "organization" | "customer" | "partner";
+          owner_id: string;
+          license_name: string;
+          license_number?: string;
+          issuer?: string;
+          issued_on?: string;
+          expires_on?: string;
+          status: "active" | "expired" | "revoked";
+          is_primary: boolean;
+          notes?: string;
+          created_at: string;
+          updated_at: string;
+          files: Array<{
+            id: string;
+            license_record_id: string;
+            storage_path: string;
+            original_filename: string;
+            mime_type?: string;
+            file_size_bytes: number;
+            page_type: "front" | "back" | "attachment" | "unknown";
+            sort_order: number;
+            uploaded_at: string;
+          }>;
+        }>
+      >
+    >("/licenses", { params });
+    return response.data;
+  }
+
+  async createLicense(data: {
+    owner_type: "organization" | "customer" | "partner";
+    owner_id: string | number;
+    license_name: string;
+    license_number?: string;
+    issuer?: string;
+    issued_on?: string;
+    expires_on?: string;
+    status?: "active" | "expired" | "revoked";
+    is_primary?: boolean;
+    notes?: string;
+  }) {
+    const response = await this.client.post<APIResponse<any>>("/licenses", data);
+    return response.data;
+  }
+
+  async updateLicense(
+    licenseId: string,
+    data: {
+      license_name?: string;
+      license_number?: string;
+      issuer?: string;
+      issued_on?: string;
+      expires_on?: string;
+      status?: "active" | "expired" | "revoked";
+      is_primary?: boolean;
+      notes?: string;
+    },
+  ) {
+    const response = await this.client.patch<APIResponse<any>>(
+      `/licenses/${licenseId}`,
+      data,
+    );
+    return response.data;
+  }
+
+  async deleteLicense(licenseId: string) {
+    const response = await this.client.delete<
+      APIResponse<{ deleted: boolean; id: string }>
+    >(`/licenses/${licenseId}`);
+    return response.data;
+  }
+
+  async uploadLicenseFile(
+    licenseId: string,
+    file: File,
+    options?: {
+      page_type?: "front" | "back" | "attachment" | "unknown";
+      sort_order?: number;
+    },
+  ) {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (options?.page_type) {
+      formData.append("page_type", options.page_type);
+    }
+    if (typeof options?.sort_order === "number") {
+      formData.append("sort_order", String(options.sort_order));
+    }
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        license_record_id: string;
+        storage_path: string;
+        original_filename: string;
+        mime_type?: string;
+        file_size_bytes: number;
+        page_type: "front" | "back" | "attachment" | "unknown";
+        sort_order: number;
+        uploaded_at: string;
+      }>
+    >(`/licenses/${licenseId}/files`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  }
+
+  async deleteLicenseFile(licenseId: string, fileId: string) {
+    const response = await this.client.delete<
+      APIResponse<{ deleted: boolean; id: string }>
+    >(`/licenses/${licenseId}/files/${fileId}`);
+    return response.data;
+  }
+
+  // ============================================
   // Labor Overview (노무 관리)
   // ============================================
 
@@ -2776,6 +2904,7 @@ export class APIClient {
     season_id?: number;
     category_id?: number;
     purpose?: SeasonCategoryPurpose;
+    is_enabled?: boolean;
   }) {
     const response = await this.client.get<APIResponse<SeasonDocumentInfo[]>>(
       "/admin/documents",
@@ -2805,9 +2934,24 @@ export class APIClient {
     return response.data;
   }
 
+  async updateAdminDocument(documentId: number, data: { is_enabled: boolean }) {
+    const response = await this.client.patch<APIResponse<SeasonDocumentInfo>>(
+      `/admin/documents/${documentId}`,
+      data,
+    );
+    return response.data;
+  }
+
   async getAdminDocumentStatus(documentId: number) {
     const response = await this.client.get<APIResponse<SeasonDocumentStatusInfo>>(
       `/admin/documents/${documentId}/status`,
+    );
+    return response.data;
+  }
+
+  async getEstimationGovernanceOverview() {
+    const response = await this.client.get<APIResponse<EstimationGovernanceOverview>>(
+      "/admin/estimation-governance/overview",
     );
     return response.data;
   }

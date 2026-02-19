@@ -83,6 +83,7 @@ export type MaterialOrderStatus = "draft" | "requested" | "confirmed" | "shipped
 // Case/Season Estimation
 export type SeasonDocumentStatus = "queued" | "running" | "done" | "failed"
 export type SeasonCategoryPurpose = "estimation" | "labor_rule" | "legal" | "safety"
+export type EstimationGovernanceWarningSeverity = "warning" | "error"
 export type DiagnosisCaseStatus = "draft" | "vision_ready" | "estimated"
 export type EstimateExportType = "csv" | "xlsx"
 
@@ -499,6 +500,7 @@ export interface SeasonDocumentInfo {
   file_url: string
   version_hash: string
   status: SeasonDocumentStatus
+  is_enabled: boolean
   uploaded_at: string
   upload_url?: string
 }
@@ -510,6 +512,20 @@ export interface SeasonDocumentStatusInfo {
   last_error?: string
   trace_chunk_count: number
   cost_item_count: number
+}
+
+export interface EstimationGovernanceWarning {
+  code: string
+  message: string
+  severity: EstimationGovernanceWarningSeverity
+}
+
+export interface EstimationGovernanceOverview {
+  active_season: SeasonInfo | null
+  enabled_categories: SeasonCategoryInfo[]
+  enabled_documents: SeasonDocumentInfo[]
+  effective_cost_item_count: number
+  health_warnings: EstimationGovernanceWarning[]
 }
 
 export interface DiagnosisCase {
