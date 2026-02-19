@@ -322,7 +322,16 @@ export default function DailyWorkersPage() {
                       >
                         <td className="px-4 py-4 text-slate-500">{index + 1}</td>
                         <td className="px-4 py-4">
-                          <p className="font-medium text-slate-900">{worker.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-slate-900">{worker.name}</p>
+                            {(worker.registration_status === "pending_consent" ||
+                              worker.registration_status === "pending_docs" ||
+                              worker.has_id_card === false) && (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                서류 미완
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-slate-500">
                             {formatMaskedSSN(worker.birth_date, worker.gender)}
                           </p>

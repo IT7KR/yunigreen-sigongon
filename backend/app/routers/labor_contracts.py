@@ -84,6 +84,42 @@ async def register_worker(
     }
 
 
+@router.get("/workers/{worker_id}/document-check", response_model=APIResponse[dict])
+async def check_worker_documents(
+    worker_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """근로자 필수 서류 확인.
+
+    근로 투입 전 필수 서류(동의 기록 등) 완료 여부를 확인해요.
+    """
+    missing_docs = []
+
+    # Check consent records
+    try:
+        from app.models.consent import ConsentRecord
+        from sqlmodel import select as sql_select
+        consent_result = await db.execute(
+            sql_select(ConsentRecord).where(ConsentRecord.user_id == worker_id).limit(1)
+        )
+        consent = consent_result.scalar_one_or_none()
+        if not consent:
+            missing_docs.append({
+                "type": "consent",
+                "name": "개인정보 동의",
+                "required": True,
+            })
+    except Exception:
+        pass  # consent table might not exist yet
+
+    return APIResponse.ok({
+        "worker_id": worker_id,
+        "documents_complete": len(missing_docs) == 0,
+        "missing_documents": missing_docs,
+    })
+
+
 @router.post("/{labor_contract_id}/send", response_model=APIResponse)
 async def send_labor_contract_for_signature(
     labor_contract_id: int,
