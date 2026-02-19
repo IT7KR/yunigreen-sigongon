@@ -386,6 +386,44 @@ async def export_contract_pdf_alias(contract_id: int, db: DBSession, current_use
     return await export_contract(contract_id=contract_id, db=db, current_user=current_user)
 
 
+@router.get("/{contract_id}/source")
+async def download_contract_source(
+    contract_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    contract = await get_contract_with_auth(contract_id, db, current_user)
+    if not contract.source_document_path:
+        raise HTTPException(status_code=404, detail="원본 계약서가 아직 업로드되지 않았어요")
+
+    if not storage_service.file_exists(contract.source_document_path):
+        raise HTTPException(status_code=404, detail="원본 계약서 파일을 찾을 수 없어요")
+
+    absolute_path = storage_service.get_absolute_path(contract.source_document_path)
+    filename = absolute_path.name
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    media_type_map = {
+        "pdf": "application/pdf",
+        "hwp": "application/x-hwp",
+        "hwpx": "application/vnd.hancom.hwpx",
+        "doc": "application/msword",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    media_type = media_type_map.get(ext, "application/octet-stream")
+
+    with open(absolute_path, "rb") as f:
+        content = f.read()
+
+    filename_quoted = quote(filename)
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{filename}\"; filename*=UTF-8''{filename_quoted}",
+        },
+    )
+
+
 @router.post("/{contract_id}/modusign/request", response_model=APIResponse)
 async def request_modusign(
     contract_id: int,
