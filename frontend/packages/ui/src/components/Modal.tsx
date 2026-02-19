@@ -126,7 +126,7 @@ export function Modal({
           <motion.div
             ref={modalRef}
             className={cn(
-              "relative w-full rounded-xl bg-white p-6 shadow-xl mx-4",
+              "relative mx-4 w-full max-h-[calc(100dvh-2rem)] overflow-hidden rounded-xl bg-white p-6 shadow-xl",
               sizeClasses[size]
             )}
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -163,7 +163,9 @@ export function Modal({
             </div>
 
             {/* Content */}
-            <div className="mt-4">{children}</div>
+            <div className="mt-4 overflow-y-auto">
+              {children}
+            </div>
           </motion.div>
         </div>
       )}

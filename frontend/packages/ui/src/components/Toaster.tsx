@@ -1,11 +1,23 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Toaster as SonnerToaster } from "sonner";
 
 export function Toaster() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 767px)");
+    const onChange = () => setIsMobile(query.matches);
+
+    onChange();
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
   return (
     <SonnerToaster
-      position="bottom-right"
+      position={isMobile ? "top-center" : "bottom-right"}
       toastOptions={{
         duration: 4000,
         classNames: {
@@ -22,7 +34,6 @@ export function Toaster() {
       richColors
       expand={false}
       visibleToasts={3}
-      className="md:bottom-right sm:bottom-center"
     />
   );
 }

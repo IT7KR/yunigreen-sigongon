@@ -36,6 +36,11 @@ export { StatCard, type StatCardProps } from "./components/StatCard"
 export { PageHeader, type PageHeaderProps } from "./components/PageHeader"
 export { LoadingOverlay, type LoadingOverlayProps } from "./components/LoadingOverlay"
 export { ConfirmModal, type ConfirmModalProps } from "./components/ConfirmModal"
+export {
+  ConfirmDialogProvider,
+  useConfirmDialog,
+  type ConfirmDialogOptions,
+} from "./components/ConfirmDialogProvider"
 export { AnimatedPage, type AnimatedPageProps } from "./components/AnimatedPage"
 export { PageTransition, type PageTransitionProps, type PageTransitionStyle } from "./components/PageTransition"
 export { StaggerGrid, type StaggerGridProps } from "./components/StaggerGrid"

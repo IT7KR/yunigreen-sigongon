@@ -24,8 +24,6 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const generatedId = useId()
     const textareaId = id || generatedId
 
-    const hasValue = value !== undefined && value !== ""
-
     return (
       <div className="space-y-1.5">
         {label && (
@@ -45,9 +43,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             "focus:outline-none focus:ring-2 focus:ring-offset-0",
             "resize-none",
             error
-              ? "border-red-400 focus:border-red-400 focus:ring-red-200"
-              : hasValue && !error
-              ? "border-brand-point-400 focus:border-brand-point-400 focus:ring-brand-point-100"
+              ? "border-red-500 focus:border-red-500 focus:ring-red-200"
               : "border-slate-300 focus:border-brand-point-500 focus:ring-brand-point-200",
             "disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500",
             className

@@ -2,6 +2,7 @@
 
 import { forwardRef, type HTMLAttributes, type ComponentType } from "react"
 import { cn } from "../lib/utils"
+import { Button } from "./Button"
 
 interface EmptyStateProps extends HTMLAttributes<HTMLDivElement> {
   icon?: ComponentType<{ className?: string }>
@@ -38,18 +39,14 @@ const EmptyState = forwardRef<HTMLDivElement, EmptyStateProps>(
         <p className="mt-1 text-sm text-slate-500">{description}</p>
       )}
       {action && (
-        <button
+        <Button
           type="button"
           onClick={action.onClick}
-          className={cn(
-            "mt-4 inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-            action.variant === "secondary"
-              ? "text-brand-point-600 hover:bg-brand-point-50"
-              : "bg-brand-point-600 text-white hover:bg-brand-point-700"
-          )}
+          variant={action.variant === "secondary" ? "secondary" : "primary"}
+          className="mt-4"
         >
           {action.label}
-        </button>
+        </Button>
       )}
     </div>
   )

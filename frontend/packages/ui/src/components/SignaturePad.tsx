@@ -144,7 +144,7 @@ export function SignaturePad({
             "touch-none",
             !disabled && "cursor-crosshair"
           )}
-          style={{ width: '100%', height: `${height}px` }}
+          style={{ width: "100%", maxWidth: `${width}px`, height: `${height}px` }}
         />
       </div>
 

@@ -1,7 +1,22 @@
 import { cn } from "../lib/utils";
-import type { ProjectStatus, EstimateStatus, ReportStatus } from "@sigongon/types";
+import type {
+  ProjectStatus,
+  EstimateStatus,
+  ReportStatus,
+  ContractStatus,
+  LaborContractStatus,
+  DiagnosisStatus,
+  PhotoAlbumStatus,
+} from "@sigongon/types";
 
-type StatusType = ProjectStatus | EstimateStatus | ReportStatus;
+type StatusType =
+  | ProjectStatus
+  | EstimateStatus
+  | ReportStatus
+  | ContractStatus
+  | LaborContractStatus
+  | DiagnosisStatus
+  | PhotoAlbumStatus;
 
 const statusConfig: Record<StatusType, { label: string; className: string }> = {
   draft: {
@@ -62,6 +77,42 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
   },
   approved: {
     label: "승인됨",
+    className: "bg-green-50 text-green-700 before:bg-green-500",
+  },
+  pending: {
+    label: "대기중",
+    className: "bg-slate-100 text-slate-700 before:bg-slate-400",
+  },
+  processing: {
+    label: "처리중",
+    className: "bg-blue-50 text-blue-700 before:bg-blue-500",
+  },
+  failed: {
+    label: "실패",
+    className: "bg-red-50 text-red-700 before:bg-red-500",
+  },
+  sent: {
+    label: "발송됨",
+    className: "bg-blue-50 text-blue-700 before:bg-blue-500",
+  },
+  signed: {
+    label: "서명완료",
+    className: "bg-green-50 text-green-700 before:bg-green-500",
+  },
+  active: {
+    label: "활성",
+    className: "bg-brand-point-50 text-brand-point-700 before:bg-brand-point-500",
+  },
+  cancelled: {
+    label: "취소됨",
+    className: "bg-red-50 text-red-700 before:bg-red-500",
+  },
+  paid: {
+    label: "지급완료",
+    className: "bg-green-50 text-green-700 before:bg-green-500",
+  },
+  published: {
+    label: "발행",
     className: "bg-green-50 text-green-700 before:bg-green-500",
   },
 };
