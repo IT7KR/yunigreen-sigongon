@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { createContext, useContext, type ReactNode, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -26,16 +26,20 @@ import {
 import {
   AppLink,
   Button,
+  ContentTransitionBoundary,
   PrimitiveButton,
   cn,
   useNavigationProgress,
 } from "@sigongon/ui";
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
+import { AdminContentLoadingOverlay } from "./AdminContentLoadingOverlay";
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
+
+const AdminShellContext = createContext(false);
 
 // 일반 사용자용 메뉴 (company_admin, site_manager)
 const navItems = [
@@ -90,12 +94,12 @@ type NavItem = {
   children?: Array<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }>;
 };
 
-export function AdminLayout({ children }: AdminLayoutProps) {
+function AdminLayoutFrame({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const { logout, user } = useAuth();
-  const { isNavigating, start } = useNavigationProgress();
+  const { start } = useNavigationProgress();
 
   const isPathActive = (target: string) =>
     pathname === target || pathname.startsWith(`${target}/`);
@@ -110,10 +114,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const effectiveExpanded = expandedMenu ?? (autoExpandedMenu ? autoExpandedMenu.href : null);
 
   return (
-    <div
-      className="min-h-screen bg-slate-50 transition-opacity duration-150 data-[navigating=true]:opacity-[0.985]"
-      data-navigating={isNavigating ? "true" : "false"}
-    >
+    <div className="min-h-screen bg-slate-50">
       {/* Skip navigation */}
       <a
         href="#main-content"
@@ -332,8 +333,31 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Main content */}
       <main className="lg:ml-64">
-        <div id="main-content" className="mx-auto max-w-7xl p-4 lg:p-8">{children}</div>
+        <ContentTransitionBoundary
+          className="mx-auto max-w-7xl p-4 lg:p-8"
+          loadingOverlay={<AdminContentLoadingOverlay />}
+        >
+          <div id="main-content">{children}</div>
+        </ContentTransitionBoundary>
       </main>
     </div>
+  );
+}
+
+export function AdminLayout({ children }: AdminLayoutProps) {
+  const isInPersistentShell = useContext(AdminShellContext);
+
+  if (isInPersistentShell) {
+    return <>{children}</>;
+  }
+
+  return <AdminLayoutFrame>{children}</AdminLayoutFrame>;
+}
+
+export function AdminAppShell({ children }: AdminLayoutProps) {
+  return (
+    <AdminShellContext.Provider value={true}>
+      <AdminLayoutFrame>{children}</AdminLayoutFrame>
+    </AdminShellContext.Provider>
   );
 }
