@@ -24,7 +24,7 @@ const managerNavItems = [
 ];
 
 const workerNavItems = [
-  { href: "/worker/entry", icon: Home, label: "홈" },
+  { href: "/worker/home", icon: Home, label: "홈" },
   { href: "/worker/contracts", icon: FileText, label: "계약" },
   { href: "/worker/paystubs", icon: CreditCard, label: "명세서" },
   { href: "/notifications", icon: Bell, label: "알림" },

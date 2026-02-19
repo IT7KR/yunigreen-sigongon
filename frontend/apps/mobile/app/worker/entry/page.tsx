@@ -5,6 +5,7 @@ import { Droplets, ShieldCheck, Smartphone } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 type WorkerAccessApi = {
   requestWorkerAccess: (phone: string) => Promise<{
@@ -29,6 +30,7 @@ const workerAccessApi = api as unknown as WorkerAccessApi;
 function WorkerEntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const [phone, setPhone] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [requestId, setRequestId] = useState("");
@@ -37,6 +39,12 @@ function WorkerEntryContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inviteToken = searchParams.get("invite");
   const phoneFromQuery = searchParams.get("phone");
+
+  useEffect(() => {
+    if (user?.role === "worker") {
+      router.push("/worker/home");
+    }
+  }, [user, router]);
 
   useEffect(() => {
     if (!phoneFromQuery) return;
