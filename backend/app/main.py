@@ -128,6 +128,7 @@ from app.routers.photo_albums import router as photo_albums_router
 from app.routers.construction_reports import router as construction_reports_router
 from app.routers.billing import router as billing_router
 from app.routers.tax_invoices import router as tax_invoices_router
+from app.routers.field_representatives import router as field_representatives_router
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["인증"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["사용자 관리"])
@@ -149,3 +150,4 @@ app.include_router(construction_reports_router, prefix="/api/v1", tags=["착공�
 app.include_router(billing_router, prefix="/api/v1", tags=["결제 및 구독"])
 app.include_router(tax_invoices_router, prefix="/api/v1", tags=["세금계산서"])
 app.include_router(operations_router, prefix="/api/v1", tags=["운영 확장"])
+app.include_router(field_representatives_router, prefix="/api/v1", tags=["현장대리인"])
