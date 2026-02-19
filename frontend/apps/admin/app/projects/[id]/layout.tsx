@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -120,11 +120,6 @@ export default function ProjectDetailLayout({
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Close menu on navigation
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
-
   return (
     <AdminLayout>
       <div className="space-y-4 sm:space-y-6">
@@ -225,6 +220,7 @@ export default function ProjectDetailLayout({
                   <Link
                     key={tab.name}
                     href={tab.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
                     className={cn(
                       "flex-1 border-b-2 py-3 text-center text-sm font-medium transition-colors",
                       isActive
