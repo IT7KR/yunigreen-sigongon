@@ -39,6 +39,24 @@ function setAccessTokenCookie(token: string | null) {
   document.cookie = `access_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
 }
 
+// Parse per-domain real API overrides from environment.
+// NEXT_PUBLIC_REAL_DOMAINS is a comma-separated list of method-name prefixes
+// that should use the real API even when NEXT_PUBLIC_USE_MOCKS=true.
+// Example: NEXT_PUBLIC_REAL_DOMAINS=auth,fieldRepresentatives
+const _realDomainsEnv = process.env.NEXT_PUBLIC_REAL_DOMAINS ?? "";
+const _realDomains = _realDomainsEnv
+  ? new Set(_realDomainsEnv.split(",").map((d) => d.trim()).filter(Boolean))
+  : new Set<string>();
+
+function shouldUseMock(useMocks: boolean, methodName: string): boolean {
+  if (!useMocks) return false;
+  // If the method belongs to a "real" domain, bypass mock for that method.
+  for (const domain of _realDomains) {
+    if (methodName.startsWith(domain)) return false;
+  }
+  return true;
+}
+
 export function createApiBinding<TMockClient>(
   options: CreateApiBindingOptions<TMockClient>,
 ) {
@@ -72,8 +90,6 @@ export function createApiBinding<TMockClient>(
     },
   });
 
-  const api = (useMocks ? mockClient : realApi) as unknown as TMockClient;
-
   if (typeof window !== "undefined" && !useMocks) {
     const accessToken = getStoredValue("access_token");
     const refreshToken = getStoredValue("refresh_token");
@@ -85,6 +101,39 @@ export function createApiBinding<TMockClient>(
     if (refreshToken) {
       realApi.setRefreshToken(refreshToken);
     }
+  }
+
+  // When per-domain overrides are configured, wrap with a Proxy so each
+  // property access can decide independently whether to use mock or real API.
+  // When no overrides are configured this path is never taken, preserving
+  // identical behaviour to the previous simple ternary assignment.
+  let api: TMockClient;
+  if (useMocks && _realDomains.size > 0) {
+    api = new Proxy(mockClient as object, {
+      get(target, prop, receiver) {
+        const methodName = typeof prop === "string" ? prop : "";
+        if (shouldUseMock(useMocks, methodName)) {
+          return Reflect.get(target, prop, receiver);
+        }
+        return Reflect.get(realApi as object, prop, realApi);
+      },
+    }) as unknown as TMockClient;
+
+    // Ensure tokens are loaded for the real API when per-domain overrides exist.
+    if (typeof window !== "undefined") {
+      const accessToken = getStoredValue("access_token");
+      const refreshToken = getStoredValue("refresh_token");
+
+      if (accessToken) {
+        realApi.setAccessToken(accessToken);
+      }
+
+      if (refreshToken) {
+        realApi.setRefreshToken(refreshToken);
+      }
+    }
+  } else {
+    api = (useMocks ? mockClient : realApi) as unknown as TMockClient;
   }
 
   return {
