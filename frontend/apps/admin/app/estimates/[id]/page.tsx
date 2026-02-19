@@ -8,6 +8,8 @@ import {
   Send,
   Printer,
   Plus,
+  Check,
+  X,
   Trash2,
   Edit2,
   Loader2,
@@ -32,6 +34,9 @@ interface EstimateDetail {
   total_amount: string;
   created_at: string;
   issued_at?: string;
+  accepted_at?: string;
+  rejected_at?: string;
+  notes?: string;
   lines: Array<{
     id: string;
     sort_order: number;
@@ -97,6 +102,32 @@ export default function EstimateDetailPage({
       toast.success("견적서를 발송했어요");
     } catch (err) {
       toast.error("발송에 실패했어요");
+      console.error(err);
+    }
+  }
+
+  async function handleDecision(action: "accepted" | "rejected") {
+    const isAccepted = action === "accepted";
+    const confirmed = await confirm({
+      title: isAccepted
+        ? "고객 수락으로 처리할까요?"
+        : "고객 미선정(거절)으로 처리할까요?",
+      description: isAccepted
+        ? "이 견적을 기준으로 계약서를 생성할 수 있게 됩니다."
+        : "계약 생성 대상에서 제외됩니다.",
+      confirmLabel: isAccepted ? "수락 처리" : "거절 처리",
+      variant: isAccepted ? "default" : "destructive",
+    });
+    if (!confirmed) return;
+
+    try {
+      await api.decideEstimate(id, { action });
+      await loadEstimate();
+      toast.success(
+        isAccepted ? "고객 수락으로 반영했어요." : "고객 미선정으로 반영했어요.",
+      );
+    } catch (err) {
+      toast.error("상태 변경에 실패했어요");
       console.error(err);
     }
   }
@@ -304,6 +335,21 @@ export default function EstimateDetailPage({
                 발송
               </Button>
             )}
+            {estimate.status === "issued" && (
+              <>
+                <Button onClick={() => handleDecision("accepted")}>
+                  <Check className="h-4 w-4" />
+                  고객 수락
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDecision("rejected")}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  고객 미선정
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -497,6 +543,37 @@ export default function EstimateDetailPage({
                       {formatDate(estimate.issued_at)}
                     </p>
                   </div>
+                </div>
+              )}
+              {estimate.accepted_at && (
+                <div className="flex gap-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
+                    <Check className="h-4 w-4 text-emerald-700" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">고객 수락</p>
+                    <p className="text-sm text-slate-500">
+                      {formatDate(estimate.accepted_at)}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {estimate.rejected_at && (
+                <div className="flex gap-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                    <X className="h-4 w-4 text-red-700" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">고객 미선정</p>
+                    <p className="text-sm text-slate-500">
+                      {formatDate(estimate.rejected_at)}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {estimate.notes && (
+                <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                  {estimate.notes}
                 </div>
               )}
             </div>

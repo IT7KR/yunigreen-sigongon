@@ -21,6 +21,7 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Loading
 import {
   useEstimate,
   useIssueEstimate,
+  useDecideEstimate,
   useUpdateEstimateLine,
   useDeleteEstimateLine,
   useAddEstimateLine,
@@ -75,6 +76,7 @@ export default function EstimateDetailPage({
   const router = useRouter();
   const { data, isLoading, error } = useEstimate(id);
   const issueEstimate = useIssueEstimate(id);
+  const decideEstimate = useDecideEstimate(id);
   const updateLine = useUpdateEstimateLine(id);
   const deleteLine = useDeleteEstimateLine(id);
   const addLine = useAddEstimateLine(id);
@@ -100,6 +102,8 @@ export default function EstimateDetailPage({
 
   const estimate = data?.data;
   const isDraft = estimate?.status === "draft";
+  const isIssued = estimate?.status === "issued";
+  const isAccepted = estimate?.status === "accepted";
 
   const handleStartEdit = (line: {
     id: string;
@@ -173,6 +177,23 @@ export default function EstimateDetailPage({
     await issueEstimate.mutateAsync();
   };
 
+  const handleDecision = async (action: "accepted" | "rejected") => {
+    const isAcceptAction = action === "accepted";
+    const confirmed = await confirm({
+      title: isAcceptAction
+        ? "고객 수락으로 처리할까요?"
+        : "고객 미선정(거절)으로 처리할까요?",
+      description: isAcceptAction
+        ? "수락 처리 후 계약서를 생성할 수 있습니다."
+        : "이 견적은 계약 대상으로 사용되지 않습니다.",
+      confirmLabel: isAcceptAction ? "수락 처리" : "거절 처리",
+      variant: isAcceptAction ? "default" : "destructive",
+    });
+    if (!confirmed) return;
+
+    await decideEstimate.mutateAsync({ action });
+  };
+
   const downloadSampleFile = (samplePath: string, fileName: string) => {
     const anchor = document.createElement("a");
     anchor.href = buildSampleFileDownloadUrl(samplePath);
@@ -193,8 +214,8 @@ export default function EstimateDetailPage({
 
   const handleCreateContract = async () => {
     if (!estimate) return;
-    if (estimate.status === "draft") {
-      toast.warning("견적서를 먼저 발행해 주세요.");
+    if (estimate.status !== "accepted") {
+      toast.warning("고객 수락된 견적서만 계약서를 만들 수 있어요.");
       return;
     }
     if (!projectIdForEstimate) {
@@ -515,6 +536,34 @@ export default function EstimateDetailPage({
               발행하기
             </Button>
           </div>
+        ) : isIssued ? (
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="secondary"
+              className="col-span-2"
+              onClick={handleDownloadEstimate}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              견적서 다운로드
+            </Button>
+            <Button
+              onClick={() => handleDecision("accepted")}
+              loading={decideEstimate.isPending}
+              disabled={decideEstimate.isPending}
+            >
+              <Check className="mr-2 h-4 w-4" />
+              고객 수락
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => handleDecision("rejected")}
+              loading={decideEstimate.isPending}
+              disabled={decideEstimate.isPending}
+            >
+              <X className="mr-2 h-4 w-4" />
+              고객 미선정
+            </Button>
+          </div>
         ) : (
           <div className="flex gap-2">
             <Button
@@ -529,10 +578,10 @@ export default function EstimateDetailPage({
               className="flex-1"
               onClick={handleCreateContract}
               loading={createContract.isPending}
-              disabled={createContract.isPending}
+              disabled={createContract.isPending || !isAccepted}
             >
               <FileSignature className="h-4 w-4" />
-              계약서 만들기
+              {isAccepted ? "계약서 만들기" : "계약 생성 불가"}
             </Button>
           </div>
         )}

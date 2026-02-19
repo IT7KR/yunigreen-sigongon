@@ -7,7 +7,12 @@ import {
   useInfiniteQuery,
 } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { ProjectStatus, VisitType, PhotoType } from "@sigongon/types";
+import type {
+  ProjectStatus,
+  VisitType,
+  PhotoType,
+  ContractTemplateType,
+} from "@sigongon/types";
 
 export { useAuth, useRequireAuth } from "@/lib/auth";
 
@@ -62,6 +67,7 @@ export function useCreateProject() {
     mutationFn: (data: {
       name: string;
       address: string;
+      category?: string;
       customer_master_id?: string;
       client_name?: string;
       client_phone?: string;
@@ -92,6 +98,7 @@ export function useCreateSiteVisit(projectId: string) {
     mutationFn: (data: {
       visit_type: VisitType;
       visited_at: string;
+      estimated_area_m2?: string;
       notes?: string;
     }) => api.createSiteVisit(projectId, data),
     onSuccess: () => {
@@ -194,6 +201,20 @@ export function useIssueEstimate(estimateId: string) {
   });
 }
 
+export function useDecideEstimate(estimateId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { action: "accepted" | "rejected"; reason?: string }) =>
+      api.decideEstimate(estimateId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+      queryClient.invalidateQueries({ queryKey: ["project"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
 export function useUpdateEstimateLine(estimateId: string) {
   const queryClient = useQueryClient();
 
@@ -265,6 +286,7 @@ export function useCreateContract(projectId: string) {
   return useMutation({
     mutationFn: (data: {
       estimate_id: string;
+      template_type?: ContractTemplateType;
       start_date?: string;
       expected_end_date?: string;
       notes?: string;

@@ -216,6 +216,20 @@ export function useIssueEstimate(estimateId: string) {
   });
 }
 
+export function useDecideEstimate(estimateId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { action: "accepted" | "rejected"; reason?: string }) =>
+      api.decideEstimate(estimateId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+      queryClient.invalidateQueries({ queryKey: ["project"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
 export function useUpdateEstimateLine(estimateId: string) {
   const queryClient = useQueryClient();
 

@@ -14,7 +14,11 @@ import {
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Modal, PrimitiveSelect, formatDate } from "@sigongon/ui";
-import type { ContractStatus, ContractDetail } from "@sigongon/types";
+import type {
+  ContractStatus,
+  ContractDetail,
+  ContractTemplateType,
+} from "@sigongon/types";
 import { api } from "@/lib/api";
 import { ModusignModal } from "@/components/ModusignModal";
 import {
@@ -53,9 +57,16 @@ export default function ContractsPage({
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [availableEstimates, setAvailableEstimates] = useState<
-    Array<{ id: string; version: number; total_amount: string }>
+    Array<{
+      id: string;
+      version: number;
+      total_amount: string;
+      status: "accepted" | "issued" | "draft" | "rejected" | "void";
+    }>
   >([]);
   const [selectedEstimateId, setSelectedEstimateId] = useState("");
+  const [selectedTemplateType, setSelectedTemplateType] =
+    useState<ContractTemplateType>("public_office");
   const [creating, setCreating] = useState(false);
   const [showModusignModal, setShowModusignModal] = useState(false);
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
@@ -86,7 +97,7 @@ export default function ContractsPage({
       const response = await api.getProject(projectId);
       if (response.success && response.data) {
         const acceptedEstimates = response.data.estimates.filter(
-          (e) => e.status === "accepted" || e.status === "issued",
+          (e) => e.status === "accepted",
         );
         setAvailableEstimates(acceptedEstimates);
         if (acceptedEstimates.length > 0) {
@@ -104,6 +115,7 @@ export default function ContractsPage({
       setCreating(true);
       const response = await api.createContract(projectId, {
         estimate_id: selectedEstimateId,
+        template_type: selectedTemplateType,
         start_date: new Date().toISOString().split("T")[0],
       });
       if (response.success) {
@@ -253,6 +265,7 @@ export default function ContractsPage({
                   <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
                     <th className="pb-3 font-medium">계약번호</th>
                     <th className="pb-3 font-medium">상태</th>
+                    <th className="pb-3 font-medium">양식</th>
                     <th className="pb-3 font-medium">계약금액</th>
                     <th className="pb-3 font-medium">생성일</th>
                     <th className="pb-3 font-medium">서명일</th>
@@ -276,6 +289,11 @@ export default function ContractsPage({
                         >
                           {contractStatusLabels[contract.status]}
                         </Badge>
+                      </td>
+                      <td className="py-4 text-sm text-slate-600">
+                        {contract.template_type === "private_standard"
+                          ? "민간 표준계약"
+                          : "관공서 계약서류"}
                       </td>
                       <td className="py-4 font-medium text-slate-900">
                         {Number(contract.contract_amount).toLocaleString()}원
@@ -376,8 +394,10 @@ export default function ContractsPage({
       >
         {availableEstimates.length === 0 ? (
           <div className="py-8 text-center">
-            <p className="text-slate-500">승인된 견적서가 없습니다.</p>
-            <p className="mt-2 text-sm text-slate-400">먼저 견적서를 생성하고 발송해 주세요.</p>
+            <p className="text-slate-500">고객 수락된 견적서가 없습니다.</p>
+            <p className="mt-2 text-sm text-slate-400">
+              견적서 발송 후 고객 수락 처리까지 완료해 주세요.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -394,6 +414,26 @@ export default function ContractsPage({
                   </option>
                 ))}
               </PrimitiveSelect>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">
+                계약서 양식
+              </label>
+              <PrimitiveSelect
+                value={selectedTemplateType}
+                onChange={(e) =>
+                  setSelectedTemplateType(
+                    e.target.value as ContractTemplateType,
+                  )
+                }
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+              >
+                <option value="public_office">관공서 계약서류</option>
+                <option value="private_standard">민간 표준계약서</option>
+              </PrimitiveSelect>
+              <p className="mt-1 text-xs text-slate-500">
+                선택한 양식 기준으로 계약서 문서 생성 플로우를 연결합니다.
+              </p>
             </div>
           </div>
         )}

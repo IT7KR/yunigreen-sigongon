@@ -21,8 +21,10 @@ import type {
   VisitType,
   PhotoType,
   ContractStatus,
+  ContractTemplateType,
   LaborContractStatus,
   EstimateStatus,
+  ProjectUtilities,
   // Photo Album
   PhotoAlbumListItem,
   PhotoAlbumDetail,
@@ -638,6 +640,7 @@ export class APIClient {
     data: {
       visit_type: VisitType;
       visited_at: string;
+      estimated_area_m2?: string;
       notes?: string;
     },
   ) {
@@ -646,6 +649,7 @@ export class APIClient {
         id: string;
         visit_type: VisitType;
         visited_at: string;
+        estimated_area_m2?: string;
       }>
     >(`/projects/${projectId}/site-visits`, data);
     return response.data;
@@ -772,6 +776,25 @@ export class APIClient {
     return response.data;
   }
 
+  async decideEstimate(
+    estimateId: string,
+    data: {
+      action: "accepted" | "rejected";
+      reason?: string;
+    },
+  ) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        status: EstimateStatus;
+        accepted_at?: string;
+        rejected_at?: string;
+        message: string;
+      }>
+    >(`/estimates/${estimateId}/decision`, data);
+    return response.data;
+  }
+
   async updateEstimateLine(
     estimateId: string,
     lineId: string,
@@ -841,6 +864,7 @@ export class APIClient {
     projectId: string,
     data: {
       estimate_id: string;
+      template_type?: ContractTemplateType;
       start_date?: string;
       expected_end_date?: string;
       notes?: string;
@@ -850,6 +874,7 @@ export class APIClient {
       APIResponse<{
         id: string;
         contract_number: string;
+        template_type?: ContractTemplateType;
         status: ContractStatus;
       }>
     >(`/projects/${projectId}/contracts`, data);
@@ -1249,6 +1274,7 @@ export class APIClient {
       expected_end_date?: string;
       supervisor_name?: string;
       supervisor_phone?: string;
+      auto_link_representative_docs?: boolean;
       notes?: string;
     },
   ) {
@@ -1277,6 +1303,7 @@ export class APIClient {
     reportId: string,
     data: {
       notes?: string;
+      auto_link_representative_docs?: boolean;
       construction_name?: string;
       site_address?: string;
       start_date?: string;
@@ -1602,24 +1629,9 @@ export class APIClient {
   // ============================================
 
   async getUtilities(projectId: string) {
-    const response = await this.client.get<
-      APIResponse<{
-        items: Array<{
-          id: string;
-          type: "수도" | "전기" | "가스" | "기타";
-          month: string;
-          status: "pending" | "completed";
-          amount: number;
-          due_date: string;
-          doc_status: "pending" | "submitted";
-        }>;
-        timeline: Array<{
-          id: string;
-          date: string;
-          message: string;
-        }>;
-      }>
-    >(`/projects/${projectId}/utilities`);
+    const response = await this.client.get<APIResponse<ProjectUtilities>>(
+      `/projects/${projectId}/utilities`,
+    );
     return response.data;
   }
 
@@ -2076,6 +2088,7 @@ export class APIClient {
     phone: string;
     name: string;
     role: string;
+    organization_id?: string;
   }) {
     const response = await this.client.post<
       APIResponse<{
@@ -3041,6 +3054,24 @@ export class APIClient {
     const response = await this.client.delete<
       APIResponse<{ deleted: boolean; project_id: number }>
     >(`/projects/${projectId}/representative`);
+    return response.data;
+  }
+
+  async runFieldRepresentativeReminders(data?: {
+    organization_id?: number;
+    run_date?: string;
+  }) {
+    const response = await this.client.post<APIResponse<{
+      run_date: string;
+      organization_id?: number;
+      checked_count: number;
+      eligible_count: number;
+      notifications_created: number;
+      alimtalk_success: number;
+      alimtalk_failure: number;
+      skipped_duplicate: number;
+      skipped_no_receiver: number;
+    }>>("/field-representatives/reminders/run", data ?? {});
     return response.data;
   }
 

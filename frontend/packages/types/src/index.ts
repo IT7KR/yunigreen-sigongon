@@ -53,6 +53,7 @@ export type EstimateStatus = "draft" | "issued" | "accepted" | "rejected" | "voi
 export type EstimateLineSource = "ai" | "manual" | "template"
 
 export type ContractStatus = "draft" | "sent" | "signed" | "active" | "completed" | "cancelled"
+export type ContractTemplateType = "public_office" | "private_standard"
 
 export type LaborContractStatus = "draft" | "sent" | "signed" | "paid"
 
@@ -202,6 +203,7 @@ export interface SiteVisit {
   technician_id: string
   visit_type: VisitType
   visited_at: string
+  estimated_area_m2?: string
   notes?: string
   created_at: string
   photo_count: number
@@ -254,6 +256,8 @@ export interface Estimate {
   total_amount: string
   created_at: string
   issued_at?: string
+  accepted_at?: string
+  rejected_at?: string
 }
 
 export interface EstimateLine {
@@ -275,6 +279,7 @@ export interface Contract {
   estimate_id: string
   contract_number?: string
   contract_amount: string
+  template_type?: ContractTemplateType
   status: ContractStatus
   notes?: string
   created_at: string
@@ -333,6 +338,7 @@ export interface ConstructionReport {
   report_number?: string
   status: ReportStatus
   notes?: string
+  auto_link_representative_docs?: boolean
   // 착공계 fields
   construction_name?: string
   site_address?: string
@@ -665,6 +671,7 @@ export interface ProjectDetail {
     id: string
     visit_type: VisitType
     visited_at: string
+    estimated_area_m2?: string
     photo_count: number
   }>
   estimates: Array<{
@@ -691,6 +698,7 @@ export interface SiteVisitDetail {
   id: string
   visit_type: VisitType
   visited_at: string
+  estimated_area_m2?: string
   notes?: string
   photo_count: number
   photos: Array<{
@@ -733,6 +741,10 @@ export interface EstimateDetail {
   subtotal: string
   vat_amount: string
   total_amount: string
+  issued_at?: string
+  accepted_at?: string
+  rejected_at?: string
+  notes?: string
   lines: Array<{
     id: string
     sort_order: number
@@ -752,6 +764,7 @@ export interface ContractDetail {
   estimate_id: string
   contract_number?: string
   contract_amount: string
+  template_type?: ContractTemplateType
   status: ContractStatus
   notes?: string
   created_at: string
@@ -761,6 +774,26 @@ export interface ContractDetail {
   expected_end_date?: string
   project_name: string
   client_name?: string
+}
+
+export interface ProjectUtilities {
+  enabled: boolean
+  reason?: "school_only" | "completion_required" | null
+  message?: string | null
+  items: Array<{
+    id: string
+    type: "수도" | "전기" | "가스" | "기타"
+    month: string
+    status: "pending" | "completed"
+    amount: number
+    due_date: string
+    doc_status: "pending" | "submitted"
+  }>
+  timeline: Array<{
+    id: string
+    date: string
+    message: string
+  }>
 }
 
 export interface LaborContractListItem {
