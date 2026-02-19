@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Modal, PrimitiveInput, formatDate } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, LoadingOverlay, Modal, PrimitiveInput, Textarea, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
 import {
   Building2,
   Users,
@@ -93,6 +93,7 @@ export default function TenantDetailPage() {
   const [customEndDate, setCustomEndDate] = useState("");
   const [customTrialReason, setCustomTrialReason] = useState("");
   const [isSettingCustomTrial, setIsSettingCustomTrial] = useState(false);
+  const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     loadTenantDetail();
@@ -161,7 +162,7 @@ export default function TenantDetailPage() {
 
   async function handleSetCustomTrial() {
     if (!customEndDate) {
-      alert("종료일을 선택해 주세요");
+      toast.error("종료일을 선택해 주세요");
       return;
     }
 
@@ -173,17 +174,17 @@ export default function TenantDetailPage() {
       });
 
       if (response.success) {
-        alert("커스텀 무료 기간이 설정되었어요");
+        toast.success("커스텀 무료 기간이 설정되었어요");
         setShowCustomTrialModal(false);
         setCustomEndDate("");
         setCustomTrialReason("");
         loadTenantDetail(); // 리로드
       } else {
-        alert(response.error?.message || "설정에 실패했어요");
+        toast.error(response.error?.message || "설정에 실패했어요");
       }
     } catch (err) {
       console.error("Failed to set custom trial:", err);
-      alert("설정에 실패했어요");
+      toast.error("설정에 실패했어요");
     } finally {
       setIsSettingCustomTrial(false);
     }
@@ -192,24 +193,24 @@ export default function TenantDetailPage() {
   async function toggleActiveStatus() {
     if (!tenant) return;
 
-    if (
-      !confirm(
-        `정말 이 계정을 ${tenant.is_active ? "비활성화" : "활성화"}할까요?`,
-      )
-    ) {
+    const confirmed = await confirm({
+      title: `정말 이 계정을 ${tenant.is_active ? "비활성화" : "활성화"}할까요?`,
+      confirmLabel: tenant.is_active ? "비활성화" : "활성화",
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
 
     // Mock toggle
     setTenant({ ...tenant, is_active: !tenant.is_active });
+    toast.success(`계정을 ${tenant.is_active ? "비활성화" : "활성화"}했어요.`);
   }
 
   if (isLoading) {
     return (
       <AdminLayout>
-        <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-        </div>
+        <LoadingOverlay variant="inline" text="고객사 정보를 불러오는 중..." />
       </AdminLayout>
     );
   }
@@ -569,16 +570,13 @@ export default function TenantDetailPage() {
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
             />
           </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">사유 (선택)</label>
-            <textarea
-              value={customTrialReason}
-              onChange={(e) => setCustomTrialReason(e.target.value)}
-              placeholder="예: 파트너십 계약, 데모 기간 연장 등"
-              rows={3}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
-            />
-          </div>
+          <Textarea
+            label="사유 (선택)"
+            value={customTrialReason}
+            onChange={(e) => setCustomTrialReason(e.target.value)}
+            placeholder="예: 파트너십 계약, 데모 기간 연장 등"
+            rows={3}
+          />
         </div>
         <div className="mt-6 flex gap-3">
           <Button

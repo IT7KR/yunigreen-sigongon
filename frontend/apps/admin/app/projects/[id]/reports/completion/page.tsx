@@ -3,8 +3,8 @@
 import { use, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, Button } from "@sigongon/ui";
+import { ArrowLeft } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, Button, LoadingOverlay, toast } from "@sigongon/ui";
 import { ConstructionReportForm } from "@/components/ConstructionReportForm";
 import { api } from "@/lib/api";
 
@@ -101,7 +101,7 @@ export default function CompletionReportPage({
       router.push(`/projects/${id}/reports`);
     } catch (err) {
       console.error(err);
-      alert("오류가 발생했어요");
+      toast.error("오류가 발생했어요");
     }
   }
 
@@ -117,19 +117,17 @@ export default function CompletionReportPage({
       } else {
         await api.createCompletionReport(id, normalizedData);
       }
-      alert("저장했어요");
+      toast.success("저장했어요");
       router.push(`/projects/${id}/reports`);
     } catch (err) {
       console.error(err);
-      alert("오류가 발생했어요");
+      toast.error("오류가 발생했어요");
     }
   }
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-      </div>
+      <LoadingOverlay variant="inline" text="준공계를 불러오는 중..." />
     );
   }
 

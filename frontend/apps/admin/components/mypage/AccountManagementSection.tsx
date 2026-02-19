@@ -8,6 +8,8 @@ import {
   CardTitle,
   Button,
   Input,
+  Textarea,
+  useConfirmDialog,
 } from "@sigongon/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -20,13 +22,19 @@ export function AccountManagementSection() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteReason, setDeleteReason] = useState("");
   const [processing, setProcessing] = useState(false);
+  const { confirm } = useConfirmDialog();
 
   const isSuperAdmin = user?.role === "super_admin";
   const canDeactivate = user?.role === "company_admin" || user?.role === "site_manager";
   const canDelete = user?.role === "company_admin" || user?.role === "site_manager";
 
   const handleLogoutAll = async () => {
-    if (!window.confirm("모든 기기에서 로그아웃하시겠습니까?")) {
+    const confirmed = await confirm({
+      title: "모든 기기에서 로그아웃하시겠습니까?",
+      confirmLabel: "로그아웃",
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -46,7 +54,13 @@ export function AccountManagementSection() {
   };
 
   const handleDeactivate = async () => {
-    if (!window.confirm("정말 계정을 비활성화하시겠습니까?")) {
+    const confirmed = await confirm({
+      title: "정말 계정을 비활성화하시겠습니까?",
+      description: "비활성화 후에는 로그인할 수 없습니다.",
+      confirmLabel: "비활성화",
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -73,7 +87,13 @@ export function AccountManagementSection() {
       return;
     }
 
-    if (!window.confirm("정말 회원 탈퇴하시겠습니까? 모든 데이터가 삭제되며 복구할 수 없습니다.")) {
+    const confirmed = await confirm({
+      title: "정말 회원 탈퇴하시겠습니까?",
+      description: "모든 데이터가 삭제되며 복구할 수 없습니다.",
+      confirmLabel: "탈퇴",
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -190,17 +210,13 @@ export function AccountManagementSection() {
                     onChange={(e) => setDeletePassword(e.target.value)}
                   />
 
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      탈퇴 사유
-                    </label>
-                    <textarea
-                      className="h-20 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-500/20"
-                      placeholder="탈퇴 사유를 입력해 주세요"
-                      value={deleteReason}
-                      onChange={(e) => setDeleteReason(e.target.value)}
-                    />
-                  </div>
+                  <Textarea
+                    label="탈퇴 사유"
+                    rows={4}
+                    placeholder="탈퇴 사유를 입력해 주세요"
+                    value={deleteReason}
+                    onChange={(e) => setDeleteReason(e.target.value)}
+                  />
 
                   <div className="flex gap-2">
                     <Button

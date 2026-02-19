@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, Button } from "@sigongon/ui";
+import { Card, CardContent, CardHeader, CardTitle, Button, toast } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -65,7 +65,7 @@ function CheckoutContent() {
       });
     } catch (error) {
       console.error("결제 요청 실패:", error);
-      alert("결제 요청에 실패했습니다.");
+      toast.error("결제 요청에 실패했습니다.");
     } finally {
       setIsProcessing(false);
     }

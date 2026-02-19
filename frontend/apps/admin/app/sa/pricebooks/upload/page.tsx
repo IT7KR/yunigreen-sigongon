@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Button, Card, CardContent, CardHeader, CardTitle, FileUpload, Input, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, FileUpload, Input, PrimitiveButton, PrimitiveInput, Textarea, toast } from "@sigongon/ui";
 import { Upload, ArrowLeft, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -18,17 +18,17 @@ export default function PricebookUploadPage() {
 
   async function handleUpload() {
     if (!file) {
-      alert("PDF 파일을 선택해 주세요.");
+      toast.error("PDF 파일을 선택해 주세요.");
       return;
     }
 
     if (!versionLabel) {
-      alert("버전명을 입력해 주세요.");
+      toast.error("버전명을 입력해 주세요.");
       return;
     }
 
     if (!effectiveFrom) {
-      alert("적용 시작일을 선택해 주세요.");
+      toast.error("적용 시작일을 선택해 주세요.");
       return;
     }
 
@@ -57,15 +57,16 @@ export default function PricebookUploadPage() {
       setUploadProgress(100);
 
       if (response.success) {
+        toast.success("업로드를 시작했어요.");
         setTimeout(() => {
           router.push("/sa/pricebooks");
         }, 500);
       } else {
-        alert("업로드에 실패했어요. 다시 시도해 주세요.");
+        toast.error("업로드에 실패했어요. 다시 시도해 주세요.");
       }
     } catch (err) {
       console.error("Upload failed:", err);
-      alert("업로드 중 오류가 발생했어요.");
+      toast.error("업로드 중 오류가 발생했어요.");
     } finally {
       setIsUploading(false);
     }
@@ -123,7 +124,7 @@ export default function PricebookUploadPage() {
                 type="date"
                 value={effectiveFrom}
                 onChange={(e) => setEffectiveFrom(e.target.value)}
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+                className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 required
               />
               <p className="mt-1 text-sm text-slate-500">
@@ -131,18 +132,13 @@ export default function PricebookUploadPage() {
               </p>
             </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
-                메모 (선택사항)
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="버전에 대한 추가 정보를 입력하세요..."
-                rows={4}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
-              />
-            </div>
+            <Textarea
+              label="메모 (선택사항)"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="버전에 대한 추가 정보를 입력하세요..."
+              rows={4}
+            />
 
             {isUploading && (
               <div className="rounded-lg bg-blue-50 p-4">

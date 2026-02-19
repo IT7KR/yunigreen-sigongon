@@ -7,6 +7,7 @@ import {
   CardTitle,
   Button,
   Badge,
+  toast,
 } from "@sigongon/ui";
 import { Plus, FileDown } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -225,7 +226,7 @@ export default function LaborContractsPage() {
                                     URL.revokeObjectURL(url);
                                   } catch (e) {
                                     console.error("HWPX 다운로드 실패:", e);
-                                    alert("근로계약서 다운로드에 실패했어요.");
+                                    toast.error("근로계약서 다운로드에 실패했어요.");
                                   }
                                 }}
                               >

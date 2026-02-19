@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, CheckCircle2, XCircle, Clock, Send, Download, X as XIcon } from "lucide-react";
-import { Modal, Input, Button, Badge } from "@sigongon/ui";
+import { Modal, Input, Button, Badge, useConfirmDialog } from "@sigongon/ui";
 import type { ModusignStatus } from "@sigongon/types";
 import { api } from "@/lib/api";
 
@@ -30,6 +30,7 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
   const [error, setError] = useState<string | null>(null);
   const [modusignRequest, setModusignRequest] = useState<any>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     if (isOpen) {
@@ -87,7 +88,13 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
   }
 
   async function handleCancelRequest() {
-    if (!confirm("전자서명 요청을 취소하시겠어요?")) {
+    const confirmed = await confirm({
+      title: "전자서명 요청을 취소하시겠어요?",
+      description: "취소 후에는 다시 요청해야 합니다.",
+      confirmLabel: "요청 취소",
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
 

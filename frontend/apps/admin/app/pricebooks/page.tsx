@@ -12,12 +12,11 @@ import {
   Eye,
   Trash2,
   Download,
-  Loader2,
   Play,
   Archive,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, formatDate } from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, LoadingOverlay, PrimitiveButton, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
 import { api } from "@/lib/api";
 import { PdfUploadModal } from "@/components/PdfUploadModal";
 
@@ -75,6 +74,7 @@ export default function PricebooksPage() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -136,8 +136,9 @@ export default function PricebooksPage() {
     try {
       await api.reviewStagingItem(stagingId, { action: "approved" });
       setStagingItems(stagingItems.filter((item) => item.id !== stagingId));
+      toast.success("항목을 승인했어요");
     } catch (err) {
-      alert("승인에 실패했어요");
+      toast.error("승인에 실패했어요");
       console.error(err);
     }
   }
@@ -151,8 +152,9 @@ export default function PricebooksPage() {
         action: "approved",
       });
       setStagingItems([]);
+      toast.success("일괄 승인했어요");
     } catch (err) {
-      alert("일괄 승인에 실패했어요");
+      toast.error("일괄 승인에 실패했어요");
       console.error(err);
     }
   }
@@ -160,7 +162,13 @@ export default function PricebooksPage() {
   async function handleBulkReject() {
     if (!selectedRevisionId || stagingItems.length === 0) return;
 
-    if (!confirm("전체 항목을 거부하시겠어요?")) return;
+    const confirmed = await confirm({
+      title: "전체 항목을 거부하시겠어요?",
+      description: "거부된 항목은 재검토가 필요합니다.",
+      confirmLabel: "전체 거부",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     try {
       await api.bulkReviewStaging(selectedRevisionId, {
@@ -168,8 +176,9 @@ export default function PricebooksPage() {
         action: "rejected",
       });
       setStagingItems([]);
+      toast.success("일괄 거부했어요");
     } catch (err) {
-      alert("일괄 거부에 실패했어요");
+      toast.error("일괄 거부에 실패했어요");
       console.error(err);
     }
   }
@@ -178,8 +187,9 @@ export default function PricebooksPage() {
     try {
       await api.reviewStagingItem(stagingId, { action: "rejected" });
       setStagingItems(stagingItems.filter((item) => item.id !== stagingId));
+      toast.success("항목을 거부했어요");
     } catch (err) {
-      alert("거부에 실패했어요");
+      toast.error("거부에 실패했어요");
       console.error(err);
     }
   }
@@ -188,11 +198,11 @@ export default function PricebooksPage() {
     try {
       const result = await api.activateRevision(revisionId);
       if (result.success) {
-        alert(result.data?.message || "활성화했어요");
+        toast.success(result.data?.message || "활성화했어요");
         loadRevisions();
       }
     } catch (err) {
-      alert("활성화에 실패했어요");
+      toast.error("활성화에 실패했어요");
       console.error(err);
     } finally {
       setOpenMenuId(null);
@@ -203,11 +213,11 @@ export default function PricebooksPage() {
     try {
       const result = await api.promoteApprovedStaging(revisionId);
       if (result.success) {
-        alert(result.data?.message || "정식 DB로 이동했어요");
+        toast.success(result.data?.message || "정식 DB로 이동했어요");
         loadRevisions();
       }
     } catch (err) {
-      alert("이동에 실패했어요");
+      toast.error("이동에 실패했어요");
       console.error(err);
     } finally {
       setOpenMenuId(null);
@@ -218,13 +228,13 @@ export default function PricebooksPage() {
     try {
       const result = await api.autoApproveStaging(revisionId);
       if (result.success) {
-        alert(result.data?.message || "자동 승인 완료");
+        toast.success(result.data?.message || "자동 승인 완료");
         if (selectedRevisionId === revisionId) {
           loadStagingItems(revisionId);
         }
       }
     } catch (err) {
-      alert("자동 승인에 실패했어요");
+      toast.error("자동 승인에 실패했어요");
       console.error(err);
     } finally {
       setOpenMenuId(null);
@@ -234,9 +244,7 @@ export default function PricebooksPage() {
   if (loading && revisions.length === 0) {
     return (
       <AdminLayout>
-        <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-        </div>
+        <LoadingOverlay variant="inline" text="적산 자료를 불러오는 중..." />
       </AdminLayout>
     );
   }

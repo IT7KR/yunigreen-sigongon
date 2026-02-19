@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Modal, PrimitiveInput, PrimitiveSelect, toast } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, LoadingOverlay, Modal, PrimitiveInput, PrimitiveSelect, Textarea, toast, useConfirmDialog } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Plus, Edit2, Trash2, UserCheck, Calendar, Loader2 } from "lucide-react";
+import { Plus, Edit2, Trash2, UserCheck, Calendar } from "lucide-react";
 import { api } from "@/lib/api";
 import type { ProjectListItem } from "@sigongon/types";
 import type { FieldRepresentative } from "@/lib/fieldRepresentatives";
@@ -55,6 +55,7 @@ export default function LaborRepresentativesPage() {
   const [assignRepresentative, setAssignRepresentative] = useState<FieldRepresentative | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().slice(0, 10));
+  const { confirm } = useConfirmDialog();
 
   const refreshRepresentatives = useCallback(async () => {
     try {
@@ -143,7 +144,13 @@ export default function LaborRepresentativesPage() {
   }
 
   async function handleDeleteRepresentative(item: FieldRepresentative) {
-    if (!confirm(`${item.name}님을 삭제할까요?`)) return;
+    const confirmed = await confirm({
+      title: `${item.name}님을 삭제할까요?`,
+      description: "삭제 후에는 복구할 수 없습니다.",
+      confirmLabel: "삭제",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     try {
       await deleteFieldRepresentative(item.id);
       await refreshRepresentatives();
@@ -216,9 +223,7 @@ export default function LaborRepresentativesPage() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-        </div>
+        <LoadingOverlay variant="inline" text="현장대리인 목록을 불러오는 중..." />
       </AdminLayout>
     );
   }
@@ -378,17 +383,14 @@ export default function LaborRepresentativesPage() {
               }))
             }
           />
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">메모</label>
-            <textarea
-              rows={3}
-              value={formState.notes}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, notes: event.target.value }))
-              }
-              className="w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
-            />
-          </div>
+          <Textarea
+            label="메모"
+            rows={3}
+            value={formState.notes}
+            onChange={(event) =>
+              setFormState((prev) => ({ ...prev, notes: event.target.value }))
+            }
+          />
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setIsFormOpen(false)}>
               취소

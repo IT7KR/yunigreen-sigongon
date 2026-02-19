@@ -4,7 +4,7 @@ import { use, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Camera, Loader2, X, UploadCloud } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, PrimitiveInput, Textarea } from "@sigongon/ui";
 import { api } from "@/lib/api";
 import type { PhotoType, VisitType } from "@sigongon/types";
 
@@ -178,18 +178,13 @@ export default function NewVisitPage({
             />
           </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              메모
-            </label>
-            <textarea
-              rows={3}
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="현장 상황이나 특이사항을 입력하세요."
-              className="w-full rounded-lg border border-slate-300 p-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
-            />
-          </div>
+          <Textarea
+            label="메모"
+            rows={3}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="현장 상황이나 특이사항을 입력하세요."
+          />
         </CardContent>
       </Card>
 

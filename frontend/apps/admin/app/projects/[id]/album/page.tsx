@@ -4,7 +4,7 @@ import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Image, Loader2, Trash2 } from "lucide-react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, formatDate } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, LoadingOverlay, PrimitiveButton, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
 
 interface PhotoAlbum {
@@ -29,6 +29,7 @@ export default function ProjectAlbumListPage({
   const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     loadAlbums();
@@ -66,21 +67,27 @@ export default function ProjectAlbumListPage({
   }
 
   async function handleDeleteAlbum(albumId: string) {
-    if (!confirm("앨범을 삭제하시겠어요?")) return;
+    const confirmed = await confirm({
+      title: "앨범을 삭제하시겠어요?",
+      description: "앨범에 포함된 구성 정보가 삭제됩니다.",
+      confirmLabel: "삭제",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     try {
       await mockApiClient.deletePhotoAlbum(albumId);
       loadAlbums();
+      toast.success("앨범을 삭제했어요.");
     } catch (err) {
       console.error(err);
+      toast.error("앨범 삭제에 실패했어요.");
     }
   }
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-      </div>
+      <LoadingOverlay variant="inline" text="앨범 목록을 불러오는 중..." />
     );
   }
 

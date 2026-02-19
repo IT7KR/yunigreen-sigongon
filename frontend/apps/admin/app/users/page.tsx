@@ -10,7 +10,6 @@ import {
   Shield,
   Edit2,
   Trash2,
-  Loader2,
   Clock,
   RotateCcw,
   X,
@@ -20,7 +19,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { UserModal } from "@/components/UserModal";
 import { InviteUserModal } from "@/components/InviteUserModal";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Card, CardContent, PrimitiveButton, PrimitiveInput, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, LoadingOverlay, PrimitiveButton, PrimitiveInput, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
 import type { UserRole } from "@sigongon/types";
 import { api } from "@/lib/api";
 import type { InvitationStatus } from "@/lib/mocks/db";
@@ -103,6 +102,7 @@ export default function UsersPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+  const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     loadUsers();
@@ -156,29 +156,35 @@ export default function UsersPage() {
     try {
       const response = await api.resendInvitation(invitationId);
       if (response.success) {
-        alert("초대를 재발송했어요");
+        toast.success("초대를 재발송했어요");
         await loadInvitations();
       } else {
-        alert(response.error?.message || "재발송에 실패했어요");
+        toast.error(response.error?.message || "재발송에 실패했어요");
       }
     } catch (err) {
-      alert("재발송에 실패했어요");
+      toast.error("재발송에 실패했어요");
       console.error(err);
     }
   }
 
   async function handleRevokeInvitation(invitationId: string) {
-    if (!confirm("정말 이 초대를 취소할까요?")) return;
+    const confirmed = await confirm({
+      title: "정말 이 초대를 취소할까요?",
+      description: "취소하면 다시 초대해야 합니다.",
+      confirmLabel: "취소하기",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     try {
       const response = await api.revokeInvitation(invitationId);
       if (response.success) {
         setInvitations(invitations.filter((inv) => inv.id !== invitationId));
       } else {
-        alert(response.error?.message || "취소에 실패했어요");
+        toast.error(response.error?.message || "취소에 실패했어요");
       }
     } catch (err) {
-      alert("취소에 실패했어요");
+      toast.error("취소에 실패했어요");
       console.error(err);
     }
   }
@@ -207,13 +213,20 @@ export default function UsersPage() {
   }
 
   async function handleDelete(userId: string) {
-    if (!confirm("정말 이 사용자를 삭제할까요?")) return;
+    const confirmed = await confirm({
+      title: "정말 이 사용자를 삭제할까요?",
+      description: "삭제 후에는 되돌릴 수 없습니다.",
+      confirmLabel: "삭제",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     try {
       await api.deleteUser(userId);
       setUsers(users.filter((u) => u.id !== userId));
+      toast.success("사용자를 삭제했어요");
     } catch (err) {
-      alert("삭제에 실패했어요");
+      toast.error("삭제에 실패했어요");
       console.error(err);
     }
   }
@@ -244,9 +257,7 @@ export default function UsersPage() {
   if (loading && users.length === 0) {
     return (
       <AdminLayout>
-        <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-        </div>
+        <LoadingOverlay variant="inline" text="사용자 목록을 불러오는 중..." />
       </AdminLayout>
     );
   }

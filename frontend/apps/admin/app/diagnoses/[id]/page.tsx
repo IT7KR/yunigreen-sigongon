@@ -22,6 +22,7 @@ import {
   CardHeader,
   CardTitle,
   Button,
+  Textarea,
   PrimitiveButton,
   Badge,
   toast,
@@ -250,12 +251,11 @@ export default function DiagnosisDetailPage({
                 <CardTitle>현장 소견 (수기)</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <textarea
+                <Textarea
                   value={fieldOpinion}
                   onChange={(event) => setFieldOpinion(event.target.value)}
                   placeholder="현장 확인 결과를 수기로 보완해 주세요."
                   rows={5}
-                  className="w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 />
                 <div className="flex justify-end">
                   <Button

@@ -17,7 +17,7 @@ import {
 import { AdminLayout } from "@/components/AdminLayout";
 import { EstimateLineModal } from "@/components/EstimateLineModal";
 import { RAGSearchPanel } from "@/components/RAGSearchPanel";
-import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, StatusBadge, formatDate } from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, LoadingOverlay, PrimitiveButton, StatusBadge, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
 import type { EstimateStatus, EstimateLineSource } from "@sigongon/types";
 import { api } from "@/lib/api";
 import ExcelJS from "exceljs";
@@ -68,6 +68,7 @@ export default function EstimateDetailPage({
     EstimateDetail["lines"][0] | null
   >(null);
   const [ragPanelOpen, setRagPanelOpen] = useState(false);
+  const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     loadEstimate();
@@ -93,20 +94,27 @@ export default function EstimateDetailPage({
     try {
       await api.issueEstimate(id);
       await loadEstimate();
+      toast.success("견적서를 발송했어요");
     } catch (err) {
-      alert("발송에 실패했어요");
+      toast.error("발송에 실패했어요");
       console.error(err);
     }
   }
 
   async function handleDeleteLine(lineId: string) {
-    if (!confirm("이 항목을 삭제할까요?")) return;
+    const confirmed = await confirm({
+      title: "이 항목을 삭제할까요?",
+      description: "삭제 후에는 복구할 수 없습니다.",
+      confirmLabel: "삭제",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     try {
       await api.deleteEstimateLine(id, lineId);
       await loadEstimate();
     } catch (err) {
-      alert("삭제에 실패했어요");
+      toast.error("삭제에 실패했어요");
       console.error(err);
     }
   }
@@ -149,7 +157,7 @@ export default function EstimateDetailPage({
       await loadEstimate();
       setRagPanelOpen(false);
     } catch (err) {
-      alert("항목 추가에 실패했어요");
+      toast.error("항목 추가에 실패했어요");
       console.error(err);
     }
   }
@@ -234,9 +242,7 @@ export default function EstimateDetailPage({
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-        </div>
+        <LoadingOverlay variant="inline" text="견적서를 불러오는 중..." />
       </AdminLayout>
     );
   }

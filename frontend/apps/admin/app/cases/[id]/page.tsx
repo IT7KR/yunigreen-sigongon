@@ -4,7 +4,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/AdminLayout";
 import { api } from "@/lib/api";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, LoadingOverlay, Textarea, toast } from "@sigongon/ui";
 import type {
   DiagnosisCase,
   DiagnosisCaseEstimate,
@@ -97,7 +97,6 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
       const parsed = JSON.parse(visionEditor) as VisionResultDetail["result_json"];
       const res = await api.updateCaseVision(caseId, {
         result_json: parsed,
-        confidence: vision?.confidence,
       });
       if (res.success && res.data) setVision(res.data);
     } finally {
@@ -123,7 +122,7 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
       saveAs(blob, `case-${caseId}-estimate.csv`);
     } catch (err) {
       console.error("CSV 다운로드 실패:", err);
-      alert("CSV 다운로드에 실패했어요.");
+      toast.error("CSV 다운로드에 실패했어요.");
     }
   }
 
@@ -133,14 +132,14 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
       saveAs(blob, `case-${caseId}-estimate.xlsx`);
     } catch (err) {
       console.error("XLSX 다운로드 실패:", err);
-      alert("XLSX 다운로드에 실패했어요.");
+      toast.error("XLSX 다운로드에 실패했어요.");
     }
   }
 
   if (loading) {
     return (
       <AdminLayout>
-        <p className="text-sm text-slate-500">불러오는 중...</p>
+        <LoadingOverlay variant="inline" text="케이스를 불러오는 중..." />
       </AdminLayout>
     );
   }
@@ -209,11 +208,11 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <textarea
+            <Textarea
               value={visionEditor}
               onChange={(e) => setVisionEditor(e.target.value)}
               rows={18}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs text-slate-700"
+              className="font-mono text-xs text-slate-700"
               placeholder="분석 실행 후 JSON이 표시됩니다."
             />
           </CardContent>

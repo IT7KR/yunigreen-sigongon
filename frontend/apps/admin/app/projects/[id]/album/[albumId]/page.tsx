@@ -10,7 +10,7 @@ import {
   Loader2,
   LayoutGrid,
 } from "lucide-react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveButton, toast } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, LoadingOverlay, PrimitiveButton, Textarea, toast, useConfirmDialog } from "@sigongon/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
 import { PhotoAlbumGrid } from "@/components/PhotoAlbumGrid";
 import { PhotoSelector } from "@/components/PhotoSelector";
@@ -51,6 +51,7 @@ export default function AlbumDetailPage({
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showPhotoSelector, setShowPhotoSelector] = useState(false);
+  const { confirm } = useConfirmDialog();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -145,13 +146,21 @@ export default function AlbumDetailPage({
   }
 
   async function handleRemovePhoto(photoId: string) {
-    if (!confirm("사진을 삭제하시겠어요?")) return;
+    const confirmed = await confirm({
+      title: "사진을 삭제하시겠어요?",
+      description: "앨범에서만 제거됩니다.",
+      confirmLabel: "삭제",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     try {
       await mockApiClient.removePhotoFromAlbum(albumId, photoId);
       loadAlbum();
+      toast.success("사진을 삭제했어요.");
     } catch (err) {
       console.error(err);
+      toast.error("사진 삭제에 실패했어요.");
     }
   }
 
@@ -167,9 +176,7 @@ export default function AlbumDetailPage({
 
   if (loading || !album) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-      </div>
+      <LoadingOverlay variant="inline" text="앨범을 불러오는 중..." />
     );
   }
 
@@ -222,17 +229,13 @@ export default function AlbumDetailPage({
             />
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              설명
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="앨범 설명을 입력하세요 (선택)"
-              className="min-h-[80px] w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
-            />
-          </div>
+          <Textarea
+            label="설명"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            placeholder="앨범 설명을 입력하세요 (선택)"
+          />
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>

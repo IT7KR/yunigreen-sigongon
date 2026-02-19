@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button, Calendar, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
+import { Button, Calendar, PrimitiveButton, PrimitiveInput, Textarea } from "@sigongon/ui";
 import { Loader2, Calendar as CalendarIcon } from "lucide-react";
 
 interface TaxInvoiceFormData {
@@ -337,18 +337,13 @@ export function TaxInvoiceForm({
             )}
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              비고
-            </label>
-            <textarea
-              value={formData.remark}
-              onChange={(e) => handleChange("remark", e.target.value)}
-              rows={3}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
-              placeholder="추가 메모"
-            />
-          </div>
+          <Textarea
+            label="비고"
+            value={formData.remark}
+            onChange={(e) => handleChange("remark", e.target.value)}
+            rows={3}
+            placeholder="추가 메모"
+          />
         </div>
       </div>
 

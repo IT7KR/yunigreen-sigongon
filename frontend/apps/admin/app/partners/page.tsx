@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Modal, PrimitiveInput } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Modal, PrimitiveInput, toast, useConfirmDialog } from "@sigongon/ui";
 import { Plus, Upload, Search, Loader2, Check, Trash2, Pencil, Save, X, ToggleLeft, ToggleRight } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
@@ -35,6 +35,7 @@ export default function PartnersPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const { confirm } = useConfirmDialog();
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -173,7 +174,12 @@ export default function PartnersPage() {
 
   const handleToggleStatus = async (partner: Partner) => {
     const action = partner.status === "active" ? "비활성화" : "활성화";
-    if (!confirm(`${partner.name}을(를) ${action}하시겠습니까?`)) {
+    const confirmed = await confirm({
+      title: `${partner.name}을(를) ${action}하시겠습니까?`,
+      confirmLabel: action,
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -181,14 +187,21 @@ export default function PartnersPage() {
       const res = await api.togglePartnerStatus(partner.id);
       if (res.success) {
         await fetchData();
+        toast.success(`협력사를 ${action}했어요`);
       }
     } catch {
-      alert("상태 변경에 실패했습니다");
+      toast.error("상태 변경에 실패했습니다");
     }
   };
 
   const handleDelete = async (partner: Partner) => {
-    if (!confirm(`${partner.name}을(를) 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+    const confirmed = await confirm({
+      title: `${partner.name}을(를) 삭제하시겠습니까?`,
+      description: "이 작업은 되돌릴 수 없습니다.",
+      confirmLabel: "삭제",
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -197,9 +210,10 @@ export default function PartnersPage() {
       if (res.success) {
         await fetchData();
         closeModal();
+        toast.success("협력사를 삭제했어요");
       }
     } catch {
-      alert("삭제에 실패했습니다");
+      toast.error("삭제에 실패했습니다");
     }
   };
 

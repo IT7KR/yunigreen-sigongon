@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Card, Input, PrimitiveInput, PrimitiveSelect } from "@sigongon/ui";
+import { Button, Card, Input, PrimitiveInput, PrimitiveSelect, Textarea } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { PROJECT_CATEGORIES } from "@sigongon/types";
 import { api } from "@/lib/api";
@@ -207,16 +207,13 @@ export default function NewProjectPage() {
             </p>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-700">메모</label>
-            <textarea
-              className="w-full rounded-md border border-slate-300 p-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
-              rows={4}
-              placeholder="프로젝트 관련 특이사항을 입력하세요"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
+          <Textarea
+            label="메모"
+            rows={4}
+            placeholder="프로젝트 관련 특이사항을 입력하세요"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
 
           {errors.submit && (
             <p className="text-sm text-red-600">{errors.submit}</p>

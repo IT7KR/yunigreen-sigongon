@@ -3,16 +3,14 @@
 import { use, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveInput } from "@sigongon/ui";
+import { ArrowLeft } from "lucide-react";
+import { Button, Card, CardContent, CardHeader, CardTitle, LoadingOverlay, PrimitiveInput, toast } from "@sigongon/ui";
 import { ConstructionReportForm } from "@/components/ConstructionReportForm";
 import { api } from "@/lib/api";
 import {
   getRepresentativeAssignmentByProjectId,
   getRepresentativeById,
 } from "@/lib/fieldRepresentatives";
-import { getSamplePathForDocument } from "@/lib/sampleFiles";
-import { upsertProjectDocumentOverride } from "@/lib/projectDocumentState";
 
 interface StartReportData {
   id?: string;
@@ -72,16 +70,6 @@ export default function StartReportPage({
     loadRepresentative();
   }, [id]);
 
-  function syncRepresentativeDocument() {
-    if (!autoLinkRepresentativeDocs || !assignedRepresentative) return;
-    upsertProjectDocumentOverride(id, "m3", {
-      status: "uploaded",
-      file_path: getSamplePathForDocument("m3"),
-      file_size: 102400,
-      generated_at: new Date().toISOString(),
-    });
-  }
-
   async function loadReport() {
     if (!reportId) return;
 
@@ -109,7 +97,6 @@ export default function StartReportPage({
 
   async function handleSubmit(data: any, isDraft: boolean) {
     try {
-      syncRepresentativeDocument();
       const payload = buildPayloadWithRepresentative(data);
       if (reportId) {
         // Update existing report
@@ -127,32 +114,29 @@ export default function StartReportPage({
       router.push(`/projects/${id}/reports`);
     } catch (err) {
       console.error(err);
-      alert("오류가 발생했어요");
+      toast.error("오류가 발생했어요");
     }
   }
 
   async function handleSave(data: any) {
     try {
-      syncRepresentativeDocument();
       const payload = buildPayloadWithRepresentative(data);
       if (reportId) {
         await api.updateConstructionReport(reportId, payload);
       } else {
         await api.createStartReport(id, payload);
       }
-      alert("저장했어요");
+      toast.success("저장했어요");
       router.push(`/projects/${id}/reports`);
     } catch (err) {
       console.error(err);
-      alert("오류가 발생했어요");
+      toast.error("오류가 발생했어요");
     }
   }
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-      </div>
+      <LoadingOverlay variant="inline" text="착공계를 불러오는 중..." />
     );
   }
 

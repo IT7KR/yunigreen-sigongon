@@ -9,6 +9,8 @@ import {
   CardTitle,
   Button,
   Badge,
+  LoadingOverlay,
+  useConfirmDialog,
 } from "@sigongon/ui";
 import { Loader2, ArrowLeft, FileText, X, RefreshCw, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
@@ -66,6 +68,7 @@ export default function TaxInvoiceDetailPage({
   const [isEditing, setIsEditing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { confirm } = useConfirmDialog();
 
   const fetchInvoice = async () => {
     setIsLoading(true);
@@ -114,7 +117,13 @@ export default function TaxInvoiceDetailPage({
   };
 
   const handleCancel = async () => {
-    if (!confirm("정말 이 세금계산서를 취소하시겠어요?")) {
+    const confirmed = await confirm({
+      title: "정말 이 세금계산서를 취소하시겠어요?",
+      description: "취소 후에는 다시 발행해야 합니다.",
+      confirmLabel: "취소하기",
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
     try {
@@ -160,9 +169,7 @@ export default function TaxInvoiceDetailPage({
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-      </div>
+      <LoadingOverlay variant="inline" text="세금계산서를 불러오는 중..." />
     );
   }
 

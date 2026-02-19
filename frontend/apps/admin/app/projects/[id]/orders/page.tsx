@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import { Plus, Package, CheckCircle, Clock, Truck, AlertCircle } from "lucide-react";
-import { Card, Button, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Modal, Input, cn } from "@sigongon/ui";
+import { Card, Button, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Modal, Input, Textarea, cn } from "@sigongon/ui";
 import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -514,16 +514,14 @@ function CreateOrderModal({
           + 품목 추가
         </Button>
 
-        <div>
-          <label className="text-sm font-medium text-slate-700">메모 (선택)</label>
-          <textarea
-            className="mt-2 w-full rounded-md border border-slate-300 p-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
-            rows={3}
-            placeholder="특이사항이 있으면 입력하세요"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
+        <Textarea
+          label="메모 (선택)"
+          className="mt-2"
+          rows={3}
+          placeholder="특이사항이 있으면 입력하세요"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
 
         <div className="flex items-center justify-between border-t border-slate-200 pt-4">
           <span className="font-semibold text-slate-900">총 금액</span>

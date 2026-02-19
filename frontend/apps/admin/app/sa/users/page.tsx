@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Badge, Button, Card, CardContent, Modal, Pagination, PrimitiveButton, PrimitiveInput, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, LoadingOverlay, Modal, Pagination, PrimitiveButton, PrimitiveInput, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
 import {
   Search,
   Shield,
@@ -11,7 +11,6 @@ import {
   Building2,
   Key,
   Ban,
-  Loader2,
   Eye,
   Calendar,
   Clock,
@@ -52,6 +51,7 @@ export default function SAUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<SAUserItem | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const { confirm } = useConfirmDialog();
 
   function openDetailModal(user: SAUserItem) {
     setSelectedUser(user);
@@ -112,21 +112,30 @@ export default function SAUsersPage() {
     setFilteredUsers(filtered);
   }
 
-  async function handleResetPassword(userId: string, userName: string) {
-    if (!confirm(`${userName} 사용자의 비밀번호를 초기화할까요?`)) return;
+  async function handleResetPassword(_userId: string, userName: string) {
+    const confirmed = await confirm({
+      title: `${userName} 사용자의 비밀번호를 초기화할까요?`,
+      confirmLabel: "초기화",
+    });
+    if (!confirmed) return;
 
     // Mock reset
-    alert("비밀번호 초기화 링크를 이메일로 전송했어요.");
+    toast.success("비밀번호 초기화 링크를 이메일로 전송했어요.");
   }
 
   async function handleToggleActive(userId: string, isActive: boolean) {
-    if (!confirm(`정말 이 계정을 ${isActive ? "비활성화" : "활성화"}할까요?`))
-      return;
+    const confirmed = await confirm({
+      title: `정말 이 계정을 ${isActive ? "비활성화" : "활성화"}할까요?`,
+      confirmLabel: isActive ? "비활성화" : "활성화",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     // Mock toggle
     setUsers(
       users.map((u) => (u.id === userId ? { ...u, is_active: !isActive } : u)),
     );
+    toast.success(`계정을 ${isActive ? "비활성화" : "활성화"}했어요.`);
   }
 
   return (
@@ -157,9 +166,7 @@ export default function SAUsersPage() {
         </Card>
 
         {isLoading ? (
-          <div className="flex h-64 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-          </div>
+          <LoadingOverlay variant="inline" text="사용자 목록을 불러오는 중..." />
         ) : (
           <>
             <Card>

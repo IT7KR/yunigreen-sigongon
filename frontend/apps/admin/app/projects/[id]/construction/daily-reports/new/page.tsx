@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Camera, X, ArrowLeft, LocateFixed } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, PrimitiveInput, Textarea, toast } from "@sigongon/ui";
 import { api } from "@/lib/api";
 import Link from "next/link";
 
@@ -70,7 +70,7 @@ export default function NewDailyReportPage({
       router.push(`/projects/${id}/construction/daily-reports`);
     } catch (error) {
       console.error("Failed to create daily report:", error);
-      alert("작업일지 작성에 실패했습니다.");
+      toast.error("작업일지 작성에 실패했습니다.");
     } finally {
       setSubmitting(false);
     }
@@ -210,28 +210,22 @@ export default function NewDailyReportPage({
               </div>
             </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-900">
-                금일 작업내용 *
-              </label>
-              <textarea
-                name="work_description"
-                className="h-32 w-full rounded-lg border border-slate-300 p-3"
-                placeholder="오늘 진행한 작업을 상세히 기록해주세요."
-                required
-              />
-            </div>
+            <Textarea
+              label="금일 작업내용 *"
+              name="work_description"
+              className="h-32"
+              placeholder="오늘 진행한 작업을 상세히 기록해주세요."
+              rows={5}
+              required
+            />
 
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-900">
-                익일 작업예정
-              </label>
-              <textarea
-                name="tomorrow_plan"
-                className="h-24 w-full rounded-lg border border-slate-300 p-3"
-                placeholder="내일 진행할 작업을 입력해주세요."
-              />
-            </div>
+            <Textarea
+              label="익일 작업예정"
+              name="tomorrow_plan"
+              className="h-24"
+              placeholder="내일 진행할 작업을 입력해주세요."
+              rows={4}
+            />
 
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-900">
