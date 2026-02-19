@@ -30,6 +30,7 @@ import type {
   SeasonCategoryPurpose,
   SeasonDocumentInfo,
   SeasonDocumentStatusInfo,
+  EstimationGovernanceOverview,
   DiagnosisCase,
   DiagnosisCaseImage,
   VisionResultDetail,
@@ -173,10 +174,45 @@ interface MockRepresentativeAssignment {
   assigned_at: string;
 }
 
+type MockLicenseOwnerType = "organization" | "customer" | "partner";
+type MockLicenseStatus = "active" | "expired" | "revoked";
+type MockLicenseFilePageType = "front" | "back" | "attachment" | "unknown";
+
+type MockLicenseFile = {
+  id: string;
+  license_record_id: string;
+  storage_path: string;
+  original_filename: string;
+  mime_type?: string;
+  file_size_bytes: number;
+  page_type: MockLicenseFilePageType;
+  sort_order: number;
+  uploaded_at: string;
+};
+
+type MockLicenseRecord = {
+  id: string;
+  organization_id: string;
+  owner_type: MockLicenseOwnerType;
+  owner_id: string;
+  license_name: string;
+  license_number?: string;
+  issuer?: string;
+  issued_on?: string;
+  expires_on?: string;
+  status: MockLicenseStatus;
+  is_primary: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  files: MockLicenseFile[];
+};
+
 export class MockAPIClient {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
   private customersByOrg: Record<string, CustomerMaster[]> = {};
+  private licenseRecordsByOwner: Record<string, MockLicenseRecord[]> = {};
 
   private siteVisitsByProject: Record<string, SiteVisitDetail[]> = {};
   private visitProjectId: Record<string, string> = {};
@@ -816,6 +852,18 @@ export class MockAPIClient {
     });
 
     return catalog;
+  }
+
+  private getLicenseOwnerKey(ownerType: MockLicenseOwnerType, ownerId: string | number) {
+    return `${this.getCurrentOrganizationId()}:${ownerType}:${String(ownerId)}`;
+  }
+
+  private getLicenseCatalog(ownerType: MockLicenseOwnerType, ownerId: string | number) {
+    const key = this.getLicenseOwnerKey(ownerType, ownerId);
+    if (!this.licenseRecordsByOwner[key]) {
+      this.licenseRecordsByOwner[key] = [];
+    }
+    return this.licenseRecordsByOwner[key];
   }
 
   async login(username: string, _password: string) {
@@ -3118,6 +3166,168 @@ export class MockAPIClient {
         message: "상태가 변경되었습니다",
       })
     );
+  }
+
+  async getLicenses(params: {
+    owner_type: MockLicenseOwnerType;
+    owner_id: string | number;
+    include_deleted?: boolean;
+  }) {
+    const catalog = this.getLicenseCatalog(params.owner_type, params.owner_id);
+    return delay(
+      ok(
+        catalog.map((record) => ({
+          ...record,
+          files: [...record.files],
+        })),
+      ),
+    );
+  }
+
+  async createLicense(data: {
+    owner_type: MockLicenseOwnerType;
+    owner_id: string | number;
+    license_name: string;
+    license_number?: string;
+    issuer?: string;
+    issued_on?: string;
+    expires_on?: string;
+    status?: MockLicenseStatus;
+    is_primary?: boolean;
+    notes?: string;
+  }) {
+    const catalog = this.getLicenseCatalog(data.owner_type, data.owner_id);
+    const primary = data.is_primary ?? catalog.length === 0;
+    if (primary) {
+      catalog.forEach((item) => {
+        item.is_primary = false;
+        item.updated_at = nowIso();
+      });
+    }
+
+    const record: MockLicenseRecord = {
+      id: randomId("lic"),
+      organization_id: this.getCurrentOrganizationId(),
+      owner_type: data.owner_type,
+      owner_id: String(data.owner_id),
+      license_name: data.license_name,
+      license_number: data.license_number,
+      issuer: data.issuer,
+      issued_on: data.issued_on,
+      expires_on: data.expires_on,
+      status: data.status || "active",
+      is_primary: primary,
+      notes: data.notes,
+      created_at: nowIso(),
+      updated_at: nowIso(),
+      files: [],
+    };
+    catalog.push(record);
+    return delay(ok(record));
+  }
+
+  async updateLicense(
+    licenseId: string,
+    data: {
+      license_name?: string;
+      license_number?: string;
+      issuer?: string;
+      issued_on?: string;
+      expires_on?: string;
+      status?: MockLicenseStatus;
+      is_primary?: boolean;
+      notes?: string;
+    },
+  ) {
+    for (const ownerKey of Object.keys(this.licenseRecordsByOwner)) {
+      const catalog = this.licenseRecordsByOwner[ownerKey];
+      const index = catalog.findIndex((item) => item.id === licenseId);
+      if (index < 0) continue;
+      if (data.is_primary) {
+        catalog.forEach((item) => {
+          item.is_primary = false;
+        });
+      }
+      const current = catalog[index];
+      const next: MockLicenseRecord = {
+        ...current,
+        ...(data.license_name !== undefined && { license_name: data.license_name }),
+        ...(data.license_number !== undefined && { license_number: data.license_number }),
+        ...(data.issuer !== undefined && { issuer: data.issuer }),
+        ...(data.issued_on !== undefined && { issued_on: data.issued_on }),
+        ...(data.expires_on !== undefined && { expires_on: data.expires_on }),
+        ...(data.status !== undefined && { status: data.status }),
+        ...(data.is_primary !== undefined && { is_primary: data.is_primary }),
+        ...(data.notes !== undefined && { notes: data.notes }),
+        updated_at: nowIso(),
+      };
+      catalog[index] = next;
+      return delay(ok(next));
+    }
+    return delay(fail("NOT_FOUND", "면허 정보를 찾을 수 없어요"));
+  }
+
+  async deleteLicense(licenseId: string) {
+    for (const ownerKey of Object.keys(this.licenseRecordsByOwner)) {
+      const catalog = this.licenseRecordsByOwner[ownerKey];
+      const next = catalog.filter((item) => item.id !== licenseId);
+      if (next.length === catalog.length) continue;
+      this.licenseRecordsByOwner[ownerKey] = next;
+      return delay(ok({ deleted: true, id: licenseId }));
+    }
+    return delay(fail("NOT_FOUND", "면허 정보를 찾을 수 없어요"));
+  }
+
+  async uploadLicenseFile(
+    licenseId: string,
+    file: File,
+    options?: { page_type?: MockLicenseFilePageType; sort_order?: number },
+  ) {
+    for (const ownerKey of Object.keys(this.licenseRecordsByOwner)) {
+      const catalog = this.licenseRecordsByOwner[ownerKey];
+      const index = catalog.findIndex((item) => item.id === licenseId);
+      if (index < 0) continue;
+
+      const license = catalog[index];
+      const uploaded: MockLicenseFile = {
+        id: randomId("lf"),
+        license_record_id: license.id,
+        storage_path: `mock://licenses/${license.id}/${file.name}`,
+        original_filename: file.name,
+        mime_type: file.type,
+        file_size_bytes: file.size,
+        page_type: options?.page_type || "unknown",
+        sort_order:
+          typeof options?.sort_order === "number"
+            ? options.sort_order
+            : (license.files.length + 1) * 10,
+        uploaded_at: nowIso(),
+      };
+      license.files = [...license.files, uploaded];
+      license.updated_at = nowIso();
+      catalog[index] = license;
+      return delay(ok(uploaded));
+    }
+    return delay(fail("NOT_FOUND", "면허 정보를 찾을 수 없어요"));
+  }
+
+  async deleteLicenseFile(licenseId: string, fileId: string) {
+    for (const ownerKey of Object.keys(this.licenseRecordsByOwner)) {
+      const catalog = this.licenseRecordsByOwner[ownerKey];
+      const index = catalog.findIndex((item) => item.id === licenseId);
+      if (index < 0) continue;
+
+      const license = catalog[index];
+      const nextFiles = license.files.filter((item) => item.id !== fileId);
+      if (nextFiles.length === license.files.length) {
+        return delay(fail("NOT_FOUND", "면허 첨부파일을 찾을 수 없어요"));
+      }
+      license.files = nextFiles;
+      license.updated_at = nowIso();
+      catalog[index] = license;
+      return delay(ok({ deleted: true, id: fileId }));
+    }
+    return delay(fail("NOT_FOUND", "면허 정보를 찾을 수 없어요"));
   }
 
   async getLaborOverview() {
@@ -5546,6 +5756,7 @@ export class MockAPIClient {
     season_id?: number;
     category_id?: number;
     purpose?: SeasonCategoryPurpose;
+    is_enabled?: boolean;
   }): Promise<APIResponse<SeasonDocumentInfo[]>> {
     if (params?.season_id) {
       this.ensureEstimationCategory(params.season_id);
@@ -5570,6 +5781,9 @@ export class MockAPIClient {
         );
         return category?.purpose === params.purpose;
       });
+    }
+    if (typeof params?.is_enabled === "boolean") {
+      rows = rows.filter((row) => row.is_enabled === params.is_enabled);
     }
     rows = rows.map((row) => {
       const category = this.seasonCategories.find(
@@ -5624,6 +5838,7 @@ export class MockAPIClient {
       file_url: `pricebooks/${data.season_id}/${data.file_name}`,
       version_hash: randomId("vh"),
       status: "queued",
+      is_enabled: true,
       uploaded_at: nowIso(),
       upload_url: `/api/v1/admin/documents/${id}/upload`,
     };
@@ -5656,6 +5871,108 @@ export class MockAPIClient {
         uploaded_at: doc.uploaded_at,
         trace_chunk_count: doc.status === "done" ? 2 : 0,
         cost_item_count: doc.status === "done" ? 3 : 0,
+      }),
+    );
+  }
+
+  async updateAdminDocument(
+    documentId: number,
+    data: { is_enabled: boolean },
+  ): Promise<APIResponse<SeasonDocumentInfo>> {
+    const idx = this.seasonDocuments.findIndex((d) => d.id === documentId);
+    if (idx === -1) return delay(fail("NOT_FOUND", "문서를 찾을 수 없습니다"));
+    const next = {
+      ...this.seasonDocuments[idx],
+      is_enabled: data.is_enabled,
+    };
+    this.seasonDocuments[idx] = next;
+    return delay(ok(next));
+  }
+
+  async getEstimationGovernanceOverview(): Promise<APIResponse<EstimationGovernanceOverview>> {
+    const activeSeason = this.seasons.find((season) => season.is_active) ?? null;
+    const warnings: EstimationGovernanceOverview["health_warnings"] = [];
+
+    if (!activeSeason) {
+      warnings.push({
+        code: "NO_ACTIVE_SEASON",
+        message: "활성 시즌이 없어요. 시즌을 활성화해 주세요.",
+        severity: "error",
+      });
+      return delay(
+        ok({
+          active_season: null,
+          enabled_categories: [],
+          enabled_documents: [],
+          effective_cost_item_count: 0,
+          health_warnings: warnings,
+        }),
+      );
+    }
+
+    const enabledCategories = this.seasonCategories
+      .filter(
+        (category) =>
+          category.season_id === activeSeason.id &&
+          category.purpose === "estimation" &&
+          category.is_enabled,
+      )
+      .sort((a, b) => {
+        if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+        return a.created_at.localeCompare(b.created_at);
+      });
+
+    if (enabledCategories.length === 0) {
+      warnings.push({
+        code: "NO_ENABLED_CATEGORY",
+        message: "활성화된 적산 카테고리가 없어요.",
+        severity: "warning",
+      });
+    }
+
+    const enabledCategoryNames = new Set(enabledCategories.map((category) => category.name));
+    const enabledDocuments = this.seasonDocuments
+      .filter(
+        (document) =>
+          document.season_id === activeSeason.id &&
+          document.is_enabled &&
+          enabledCategoryNames.has(document.category),
+      )
+      .sort((a, b) => b.id - a.id);
+
+    if (enabledDocuments.length === 0) {
+      warnings.push({
+        code: "NO_ENABLED_DOCUMENT",
+        message: "활성화된 적산 문서가 없어요.",
+        severity: "warning",
+      });
+    }
+
+    const doneDocumentCount = enabledDocuments.filter((document) => document.status === "done").length;
+    if (doneDocumentCount === 0) {
+      warnings.push({
+        code: "NO_DONE_ENABLED_DOCUMENT",
+        message: "인덱싱 완료된 활성 문서가 없어요.",
+        severity: "warning",
+      });
+    }
+
+    const effectiveCostItemCount = doneDocumentCount * 3;
+    if (doneDocumentCount > 0 && effectiveCostItemCount === 0) {
+      warnings.push({
+        code: "NO_COST_ITEMS",
+        message: "활성 문서에서 추출된 적산 항목이 없어요.",
+        severity: "warning",
+      });
+    }
+
+    return delay(
+      ok({
+        active_season: activeSeason,
+        enabled_categories: enabledCategories,
+        enabled_documents: enabledDocuments,
+        effective_cost_item_count: effectiveCostItemCount,
+        health_warnings: warnings,
       }),
     );
   }
@@ -5771,6 +6088,35 @@ export class MockAPIClient {
     const target = this.diagnosisCases.find((c) => c.id === caseId);
     if (!target) return delay(fail("NOT_FOUND", "케이스를 찾을 수 없습니다"));
     const season = this.seasons.find((s) => s.id === target.season_id);
+    if (!season || !season.is_active) {
+      return delay(fail("INVALID_STATE", "활성 시즌에서만 견적 생성할 수 있어요"));
+    }
+
+    const enabledCategoryNames = new Set(
+      this.seasonCategories
+        .filter(
+          (category) =>
+            category.season_id === season.id &&
+            category.purpose === "estimation" &&
+            category.is_enabled,
+        )
+        .map((category) => category.name),
+    );
+    if (enabledCategoryNames.size === 0) {
+      return delay(fail("INVALID_STATE", "활성화된 적산 카테고리가 없어요"));
+    }
+
+    const hasDoneEnabledDocument = this.seasonDocuments.some(
+      (document) =>
+        document.season_id === season.id &&
+        document.is_enabled &&
+        document.status === "done" &&
+        enabledCategoryNames.has(document.category),
+    );
+    if (!hasDoneEnabledDocument) {
+      return delay(fail("INVALID_STATE", "적산 자료 문서 인덱싱이 필요해요"));
+    }
+
     const estimate: DiagnosisCaseEstimate = {
       id: nextSnowflake(),
       case_id: caseId,
@@ -5788,7 +6134,7 @@ export class MockAPIClient {
           evidence: [
             {
               doc_title: "종합적산정보 공통",
-              season_name: season?.name || "2026H1",
+              season_name: season.name,
               page: 11,
               table_id: "T-11",
               row_id: "R-07",
