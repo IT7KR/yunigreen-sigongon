@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -24,7 +23,13 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { Button, PrimitiveButton, cn } from "@sigongon/ui";
+import {
+  AppLink,
+  Button,
+  PrimitiveButton,
+  cn,
+  useNavigationProgress,
+} from "@sigongon/ui";
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
 
@@ -90,6 +95,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const { logout, user } = useAuth();
+  const { isNavigating, start } = useNavigationProgress();
 
   const isPathActive = (target: string) =>
     pathname === target || pathname.startsWith(`${target}/`);
@@ -104,7 +110,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const effectiveExpanded = expandedMenu ?? (autoExpandedMenu ? autoExpandedMenu.href : null);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div
+      className="min-h-screen bg-slate-50 transition-opacity duration-150 data-[navigating=true]:opacity-[0.985]"
+      data-navigating={isNavigating ? "true" : "false"}
+    >
       {/* Skip navigation */}
       <a
         href="#main-content"
@@ -123,12 +132,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         >
           <Menu className="h-6 w-6" />
         </PrimitiveButton>
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <AppLink href="/dashboard" className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-point-500 text-white">
             <Droplets className="h-4 w-4" />
           </div>
           <span className="font-semibold text-slate-900">시공ON</span>
-        </Link>
+        </AppLink>
         <div className="w-10" /> {/* Spacer */}
       </header>
 
@@ -153,7 +162,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         )}
       >
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <AppLink href="/dashboard" className="flex items-center gap-2">
             <Image
               src="/logo-sq.png"
               alt="시공ON 로고"
@@ -162,7 +171,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               className="object-contain"
             />
             <span className="font-semibold text-slate-900">시공ON 관리자</span>
-          </Link>
+          </AppLink>
 
           <PrimitiveButton
             onClick={() => setSidebarOpen(false)}
@@ -208,7 +217,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       {item.children!.map((child) => {
                         const isChildActive = isPathActive(child.href);
                         return (
-                          <Link
+                          <AppLink
                             key={child.href}
                             href={child.href}
                             onClick={() => setSidebarOpen(false)}
@@ -221,7 +230,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                           >
                             <child.icon className="h-4 w-4" />
                             {child.label}
-                          </Link>
+                          </AppLink>
                         );
                       })}
                     </div>
@@ -231,7 +240,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             }
 
             return (
-              <Link
+              <AppLink
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
@@ -244,7 +253,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}
-              </Link>
+              </AppLink>
             );
           })}
 
@@ -264,7 +273,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   : pathname.startsWith(item.href);
 
                 return (
-                  <Link
+                  <AppLink
                     key={item.href}
                     href={item.href}
                     onClick={() => setSidebarOpen(false)}
@@ -277,7 +286,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   >
                     <item.icon className="h-5 w-5" />
                     {item.label}
-                  </Link>
+                  </AppLink>
                 );
               })}
             </>
@@ -285,7 +294,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         <div className="shrink-0 border-t border-slate-200 p-4">
-          <Link
+          <AppLink
             href="/mypage"
             onClick={() => setSidebarOpen(false)}
             className="mb-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-slate-100"
@@ -305,12 +314,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       : "작업자"}
               </p>
             </div>
-          </Link>
+          </AppLink>
           <Button
             variant="ghost"
             fullWidth
             className="justify-start gap-3"
-            onClick={logout}
+            onClick={() => {
+              start();
+              logout();
+            }}
           >
             <LogOut className="h-5 w-5" />
             로그아웃
