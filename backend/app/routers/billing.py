@@ -165,12 +165,22 @@ async def confirm_payment(
             detail="이미 처리된 주문이에요",
         )
 
-    # TODO: Call Toss Payments API to confirm payment
-    # For now, we'll create the payment record directly
-    # In production, you should:
-    # 1. Call Toss API: POST https://api.tosspayments.com/v1/payments/confirm
-    # 2. Verify response
-    # 3. Store payment details
+    # Call payment service to confirm payment
+    from app.services.billing_service import get_payment_service
+    payment_service = get_payment_service()
+    try:
+        toss_response = await payment_service.confirm_payment(
+            payment_key=payment_data.payment_key,
+            order_id=payment_data.order_id,
+            amount=str(int(payment_data.amount)),
+        )
+        receipt_url = toss_response.get("receiptUrl")
+        method = toss_response.get("method")
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"결제 승인 실패: {str(e)}",
+        )
 
     payment = Payment(
         subscription_id=subscription.id,
@@ -180,6 +190,8 @@ async def confirm_payment(
         amount=payment_data.amount,
         status=PaymentStatus.PAID,
         paid_at=datetime.utcnow(),
+        receipt_url=receipt_url,
+        method=method,
     )
 
     db.add(payment)
@@ -231,14 +243,23 @@ async def issue_billing_key(
             detail="구독 정보를 찾을 수 없어요",
         )
 
-    # TODO: Call Toss Payments API to issue billing key
-    # For now, we'll store the auth_key as billing_key
-    # In production, you should:
-    # 1. Call Toss API: POST https://api.tosspayments.com/v1/billing/authorizations/issue
-    # 2. Get billing key from response
-    # 3. Encrypt billing key before storing
+    # Call payment service to issue billing key
+    from app.services.billing_service import get_payment_service
+    payment_service = get_payment_service()
+    customer_key = billing_data.customer_key or f"org-{organization.id}"
+    try:
+        toss_response = await payment_service.issue_billing_key(
+            auth_key=billing_data.auth_key,
+            customer_key=customer_key,
+        )
+        actual_billing_key = toss_response.get("billingKey", billing_data.auth_key)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"빌링키 발급 실패: {str(e)}",
+        )
 
-    subscription.billing_key = billing_data.auth_key  # In production: encrypt this
+    subscription.billing_key = actual_billing_key
     subscription.updated_at = datetime.utcnow()
 
     await db.commit()
@@ -469,20 +490,11 @@ async def handle_webhook(
     # Get raw body for signature verification
     body = await request.body()
 
-    # TODO: Verify webhook signature
-    # In production, you should:
-    # 1. Get webhook secret from config
-    # 2. Calculate HMAC-SHA256 signature
-    # 3. Compare with toss_signature header
-    # Example:
-    # webhook_secret = get_settings().toss_webhook_secret
-    # expected_signature = hmac.new(
-    #     webhook_secret.encode(),
-    #     body,
-    #     hashlib.sha256
-    # ).hexdigest()
-    # if not hmac.compare_digest(expected_signature, toss_signature or ""):
-    #     raise HTTPException(status_code=400, detail="Invalid signature")
+    # Verify webhook signature
+    from app.services.billing_service import get_payment_service
+    payment_service = get_payment_service()
+    if not await payment_service.verify_webhook(body, toss_signature):
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
     # Parse event
     event_data = await request.json()

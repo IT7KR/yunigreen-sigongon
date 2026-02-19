@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     toss_client_key: Optional[str] = None
     toss_secret_key: Optional[str] = None
     toss_webhook_secret: Optional[str] = None
+    toss_is_mock: bool = True
 
     # Popbill (팝빌 세금계산서)
     popbill_link_id: Optional[str] = None
@@ -66,7 +67,13 @@ class Settings(BaseSettings):
     aligo_user_id: Optional[str] = None
     aligo_sender: Optional[str] = None
     aligo_is_mock: bool = True
-    
+
+    # Modusign (전자서명)
+    modusign_api_key: Optional[str] = None
+    modusign_api_url: str = "https://api.modusign.co.kr"
+    modusign_callback_url: Optional[str] = None
+    modusign_is_mock: bool = True
+
     @property
     def async_database_url(self) -> str:
         """비동기 데이터베이스 URL 반환."""
