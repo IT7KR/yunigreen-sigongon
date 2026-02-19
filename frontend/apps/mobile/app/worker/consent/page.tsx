@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
+import { Button, PrimitiveButton, PrimitiveInput, toast } from "@sigongon/ui";
 import { Shield, ChevronDown, ChevronUp } from "lucide-react";
 
 interface ConsentSection {
@@ -101,6 +101,7 @@ function WorkerConsentContent() {
       });
     } catch (e) {
       console.error("[Consent] 저장 실패 (계속 진행):", e);
+      toast.warning("동의 정보 저장 중 오류가 발생했어요. 나중에 다시 시도해주세요.");
     }
 
     router.push(`/worker/profile?workerId=${encodeURIComponent(workerId)}`);

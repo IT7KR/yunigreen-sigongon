@@ -11,6 +11,7 @@ import {
 } from "@sigongon/ui";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 type WorkerContract = {
   id: string;
@@ -38,9 +39,8 @@ type Notification = {
   read: boolean;
 };
 
-const WORKER_ID = "worker_1";
-
 export default function WorkerHomePage() {
+  const { user } = useAuth();
   const [contracts, setContracts] = useState<WorkerContract[]>([]);
   const [paystubs, setPaystubs] = useState<WorkerPaystub[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -52,9 +52,9 @@ export default function WorkerHomePage() {
       setIsLoading(true);
       const [profileRes, contractsRes, paystubsRes, notificationsRes] =
         await Promise.all([
-          (api as unknown as { getWorkerProfile: (id: string) => Promise<{ success: boolean; data: { name: string } | null }> }).getWorkerProfile(WORKER_ID),
-          (api as unknown as { getWorkerContracts: (id: string) => Promise<{ success: boolean; data: WorkerContract[] | null }> }).getWorkerContracts(WORKER_ID),
-          (api as unknown as { getWorkerPaystubs: (id: string) => Promise<{ success: boolean; data: WorkerPaystub[] | null }> }).getWorkerPaystubs(WORKER_ID),
+          (api as unknown as { getWorkerProfile: (id: string) => Promise<{ success: boolean; data: { name: string } | null }> }).getWorkerProfile(user?.id ?? ""),
+          (api as unknown as { getWorkerContracts: (id: string) => Promise<{ success: boolean; data: WorkerContract[] | null }> }).getWorkerContracts(user?.id ?? ""),
+          (api as unknown as { getWorkerPaystubs: (id: string) => Promise<{ success: boolean; data: WorkerPaystub[] | null }> }).getWorkerPaystubs(user?.id ?? ""),
           (api as unknown as { getNotifications: () => Promise<{ success: boolean; data: Notification[] | null }> }).getNotifications(),
         ]);
 
@@ -138,7 +138,7 @@ export default function WorkerHomePage() {
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">최근 근로계약서</h2>
               <Link
-                href={`/worker/contracts?workerId=${WORKER_ID}`}
+                href={`/worker/contracts?workerId=${user?.id ?? ""}`}
                 className="text-sm text-brand-point-600"
               >
                 전체보기
@@ -155,7 +155,7 @@ export default function WorkerHomePage() {
               </Card>
             ) : latestContract ? (
               <Link
-                href={`/worker/contracts/${latestContract.id}?workerId=${WORKER_ID}`}
+                href={`/worker/contracts/${latestContract.id}?workerId=${user?.id ?? ""}`}
               >
                 <InteractiveCard className="hover:border-brand-point-200">
                   <CardContent className="p-4">
@@ -202,7 +202,7 @@ export default function WorkerHomePage() {
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">최근 지급명세서</h2>
               <Link
-                href={`/worker/paystubs?workerId=${WORKER_ID}`}
+                href={`/worker/paystubs?workerId=${user?.id ?? ""}`}
                 className="text-sm text-brand-point-600"
               >
                 전체보기
@@ -219,7 +219,7 @@ export default function WorkerHomePage() {
               </Card>
             ) : latestPaystub ? (
               <Link
-                href={`/worker/paystubs/${latestPaystub.id}?workerId=${WORKER_ID}`}
+                href={`/worker/paystubs/${latestPaystub.id}?workerId=${user?.id ?? ""}`}
               >
                 <InteractiveCard className="hover:border-brand-primary-200">
                   <CardContent className="p-4">
