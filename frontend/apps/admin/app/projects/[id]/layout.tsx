@@ -24,17 +24,17 @@ export default function ProjectDetailLayout({
   const tabs = [
     { name: "개요", href: `/projects/${id}`, exact: true },
     { name: "현장방문", href: `/projects/${id}/visits` },
-    { name: "AI 진단", href: `/projects/${id}/diagnoses` },
+    { name: "AI진단", href: `/projects/${id}/diagnoses` },
     { name: "견적", href: `/projects/${id}/estimates` },
     { name: "계약", href: `/projects/${id}/contracts` },
-    { name: "문서함", href: `/projects/${id}/documents` },
     { name: "시공", href: `/projects/${id}/construction` },
-    { name: "자재 발주", href: `/projects/${id}/orders` },
-    { name: "준공/정산", href: `/projects/${id}/completion/closeout-report` },
-    { name: "하자/보증", href: `/projects/${id}/warranty` },
+    { name: "자재발주", href: `/projects/${id}/orders` },
+    { name: "준공정산", href: `/projects/${id}/completion/closeout-report` },
+    { name: "하자보증", href: `/projects/${id}/warranty` },
     { name: "세금계산서", href: `/projects/${id}/tax-invoice` },
-    { name: "노무", href: `/projects/${id}/labor` },
+    { name: "관련노무", href: `/projects/${id}/labor` },
     { name: "수도광열비", href: `/projects/${id}/utilities` },
+    { name: "문서함", href: `/projects/${id}/documents` },
   ];
 
   return (

@@ -308,12 +308,6 @@ export default function DiagnosisDetailPage({
                             <p className="font-medium text-slate-900">
                               {material.suggested_name}
                             </p>
-                            {material.match_confidence &&
-                              material.match_confidence >= 0.8 && (
-                                <Badge variant="success" className="text-xs">
-                                  정확도 높음
-                                </Badge>
-                              )}
                           </div>
                           {material.suggested_spec && (
                             <p className="mt-1 text-sm text-slate-500">
