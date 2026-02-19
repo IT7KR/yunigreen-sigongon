@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     business_verification_api_key: Optional[str] = None
     business_verification_is_mock: bool = True
 
+    # 노동/신고 정책 플래그
+    labor_code_validation_enabled: bool = True
+    labor_deployment_gate_enabled: bool = True
+
     @property
     def async_database_url(self) -> str:
         """비동기 데이터베이스 URL 반환."""

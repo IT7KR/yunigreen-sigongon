@@ -12,6 +12,7 @@ from app.core.security import bearer_scheme, decode_token, get_current_user
 from app.models.user import User
 from app.models.consent import ConsentRecord, ConsentRecordRead, BulkConsentRequest
 from app.schemas.response import APIResponse
+from app.services.audit_log import write_activity_log
 
 router = APIRouter()
 
@@ -87,6 +88,15 @@ async def save_consent_records(
     await db.commit()
     for r in created_records:
         await db.refresh(r)
+
+    await write_activity_log(
+        db,
+        user_id=current_user.id if current_user else None,
+        action="consent_recorded",
+        description=f"동의 기록 저장: count={len(created_records)}",
+        ip_address=ip_address or "0.0.0.0",
+        device_info=user_agent or "unknown",
+    )
 
     result = [
         ConsentRecordRead(

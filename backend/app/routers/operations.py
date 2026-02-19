@@ -19,10 +19,12 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from app.core.config import settings
 from app.core.database import get_async_db
 from app.core.exceptions import NotFoundException
 from app.core.security import get_current_user, get_password_hash, verify_password
 from app.models.billing import Payment, PaymentStatus, Subscription, SubscriptionPlan, SubscriptionStatus
+from app.models.consent import ConsentRecord
 from app.models.contract import LaborContract, LaborContractStatus
 from app.models.diagnosis import AIDiagnosis
 from app.models.operations import (
@@ -56,6 +58,14 @@ from app.models.operations import (
 from app.models.project import Project, SiteVisit
 from app.models.user import Organization, User, UserRole
 from app.schemas.response import APIResponse, PaginatedResponse
+from app.services.audit_log import write_activity_log
+from app.services.labor_codebook import (
+    get_labor_codebook_payload,
+    is_valid_job_type_code,
+    is_valid_nationality_code,
+    is_valid_visa_status,
+    normalize_code,
+)
 from app.services.storage import storage_service
 
 router = APIRouter()
@@ -124,16 +134,93 @@ async def _log_activity(
     action: str,
     description: str,
 ) -> None:
-    db.add(
-        ActivityLog(
-            user_id=user_id,
-            action=action,
-            description=description,
-            ip_address="0.0.0.0",
-            device_info="web",
-        )
+    await write_activity_log(
+        db,
+        user_id=user_id,
+        action=action,
+        description=description,
+        ip_address="0.0.0.0",
+        device_info="web",
     )
-    await db.flush()
+
+
+def _normalized_or_none(value: Optional[str]) -> Optional[str]:
+    normalized = normalize_code(value)
+    return normalized or None
+
+
+def _normalize_phone_digits(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    return "".join(ch for ch in value if ch.isdigit())
+
+
+def _validate_daily_worker_payload(payload: "DailyWorkerUpsertRequest") -> None:
+    if not settings.labor_code_validation_enabled:
+        return
+
+    errors: list[dict] = []
+    job_type_code = normalize_code(payload.job_type_code)
+    if not job_type_code:
+        errors.append({"field": "job_type_code", "reason": "required"})
+    elif not is_valid_job_type_code(job_type_code):
+        errors.append({"field": "job_type_code", "reason": "invalid", "value": job_type_code})
+
+    if payload.is_foreign:
+        nationality_code = normalize_code(payload.nationality_code)
+        visa_status = normalize_code(payload.visa_status)
+
+        if not nationality_code:
+            errors.append({"field": "nationality_code", "reason": "required"})
+        elif not is_valid_nationality_code(nationality_code):
+            errors.append({"field": "nationality_code", "reason": "invalid", "value": nationality_code})
+
+        if not visa_status:
+            errors.append({"field": "visa_status", "reason": "required"})
+        elif not is_valid_visa_status(visa_status):
+            errors.append({"field": "visa_status", "reason": "invalid", "value": visa_status})
+
+    if errors:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "근로자 코드 매핑 값이 올바르지 않아요.",
+                "errors": errors,
+            },
+        )
+
+
+async def _has_consent_record_for_worker(db: AsyncSession, worker: DailyWorker) -> bool:
+    if worker.invite_token:
+        invite_token_result = await db.execute(
+            select(ConsentRecord.id)
+            .where(ConsentRecord.invite_token == worker.invite_token)
+            .where(ConsentRecord.consented == True)
+            .limit(1)
+        )
+        if invite_token_result.scalar_one_or_none():
+            return True
+
+    normalized_phone = _normalize_phone_digits(worker.phone)
+    if not normalized_phone:
+        return False
+
+    user_ids_result = await db.execute(
+        select(User.id)
+        .where(User.organization_id == worker.organization_id)
+        .where(func.replace(func.coalesce(User.phone, ""), "-", "") == normalized_phone)
+    )
+    user_ids = [row[0] for row in user_ids_result.all()]
+    if not user_ids:
+        return False
+
+    consent_result = await db.execute(
+        select(ConsentRecord.id)
+        .where(ConsentRecord.user_id.in_(user_ids))
+        .where(ConsentRecord.consented == True)
+        .limit(1)
+    )
+    return consent_result.scalar_one_or_none() is not None
 
 
 async def _get_or_create_notification_prefs(
@@ -1121,6 +1208,12 @@ async def create_invitation(
     )
     db.add(invitation)
     await db.flush()
+    await _log_activity(
+        db,
+        current_user.id,
+        "invitation_create",
+        f"초대 생성: invitation_id={invitation.id}",
+    )
 
     # 초대 알림톡 발송
     try:
@@ -1135,9 +1228,21 @@ async def create_invitation(
                 "invite_url": invite_url,
             },
         )
+        await _log_activity(
+            db,
+            current_user.id,
+            "notification_send_success",
+            f"초대 알림톡 발송 성공: invitation_id={invitation.id}",
+        )
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"초대 알림톡 발송 실패 (무시): {e}")
+        await _log_activity(
+            db,
+            current_user.id,
+            "notification_send_failure",
+            f"초대 알림톡 발송 실패: invitation_id={invitation.id}",
+        )
     # 알림톡 실패해도 초대 생성은 성공으로 처리
 
     return APIResponse.ok(
@@ -1211,6 +1316,12 @@ async def resend_invitation(
     invitation.token = secrets.token_urlsafe(24)
     invitation.expires_at = datetime.utcnow() + timedelta(days=7)
     invitation.status = InvitationStatus.PENDING
+    await _log_activity(
+        db,
+        current_user.id,
+        "invitation_resend",
+        f"초대 재발송: invitation_id={invitation.id}",
+    )
 
     # 재초대 알림톡 발송
     try:
@@ -1225,9 +1336,21 @@ async def resend_invitation(
                 "invite_url": invite_url,
             },
         )
+        await _log_activity(
+            db,
+            current_user.id,
+            "notification_send_success",
+            f"재초대 알림톡 발송 성공: invitation_id={invitation.id}",
+        )
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"재초대 알림톡 발송 실패 (무시): {e}")
+        await _log_activity(
+            db,
+            current_user.id,
+            "notification_send_failure",
+            f"재초대 알림톡 발송 실패: invitation_id={invitation.id}",
+        )
     # 알림톡 실패해도 재초대 처리는 성공으로 처리
 
     return APIResponse.ok(
@@ -1257,6 +1380,12 @@ async def revoke_invitation(
         raise NotFoundException("invitation", invitation_id)
 
     invitation.status = InvitationStatus.REVOKED
+    await _log_activity(
+        db,
+        current_user.id,
+        "invitation_revoke",
+        f"초대 취소: invitation_id={invitation.id}",
+    )
 
     return APIResponse.ok({"id": str(invitation.id), "status": "revoked"})
 
@@ -1339,6 +1468,12 @@ async def accept_invitation(
     invitation.status = InvitationStatus.ACCEPTED
     invitation.accepted_at = datetime.utcnow()
     invitation.accepted_user_id = user.id
+    await write_activity_log(
+        db,
+        user_id=user.id,
+        action="invitation_accept",
+        description=f"초대 수락: invitation_id={invitation.id}",
+    )
 
     return APIResponse.ok({"id": str(invitation.id), "status": invitation.status.value})
 
@@ -1620,6 +1755,13 @@ async def batch_send_paystubs(
     )
 
 
+@router.get("/labor/codebook", response_model=APIResponse[dict])
+async def get_labor_codebook(
+    current_user: CurrentUser,
+):
+    return APIResponse.ok(get_labor_codebook_payload())
+
+
 class DailyWorkerUpsertRequest(BaseModel):
     name: str
     job_type: str = "보통인부"
@@ -1637,6 +1779,8 @@ class DailyWorkerUpsertRequest(BaseModel):
     bank_name: str = ""
     phone: str = ""
     is_foreign: bool = False
+    has_id_card: bool = False
+    has_safety_cert: bool = False
     organization_id: Optional[str] = None
 
 
@@ -1687,6 +1831,8 @@ async def create_daily_worker(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    _validate_daily_worker_payload(payload)
+
     if current_user.organization_id is not None:
         org_id = current_user.organization_id
     else:
@@ -1701,11 +1847,11 @@ async def create_daily_worker(
         organization_id=org_id,
         name=payload.name,
         job_type=payload.job_type,
-        job_type_code=payload.job_type_code,
+        job_type_code=normalize_code(payload.job_type_code),
         team=payload.team,
         hire_date=date.fromisoformat(payload.hire_date),
-        visa_status=payload.visa_status,
-        nationality_code=payload.nationality_code,
+        visa_status=_normalized_or_none(payload.visa_status) if payload.is_foreign else None,
+        nationality_code=_normalized_or_none(payload.nationality_code) if payload.is_foreign else None,
         english_name=payload.english_name,
         birth_date=payload.birth_date,
         gender=payload.gender,
@@ -1715,6 +1861,8 @@ async def create_daily_worker(
         bank_name=payload.bank_name,
         phone=payload.phone,
         is_foreign=payload.is_foreign,
+        has_id_card=payload.has_id_card,
+        has_safety_cert=payload.has_safety_cert,
     )
     db.add(worker)
     await db.flush()
@@ -1729,6 +1877,8 @@ async def update_daily_worker(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    _validate_daily_worker_payload(payload)
+
     query = select(DailyWorker).where(DailyWorker.id == worker_id)
     if current_user.organization_id is not None:
         query = query.where(DailyWorker.organization_id == current_user.organization_id)
@@ -1739,11 +1889,11 @@ async def update_daily_worker(
 
     worker.name = payload.name
     worker.job_type = payload.job_type
-    worker.job_type_code = payload.job_type_code
+    worker.job_type_code = normalize_code(payload.job_type_code)
     worker.team = payload.team
     worker.hire_date = date.fromisoformat(payload.hire_date)
-    worker.visa_status = payload.visa_status
-    worker.nationality_code = payload.nationality_code
+    worker.visa_status = _normalized_or_none(payload.visa_status) if payload.is_foreign else None
+    worker.nationality_code = _normalized_or_none(payload.nationality_code) if payload.is_foreign else None
     worker.english_name = payload.english_name
     worker.birth_date = payload.birth_date
     worker.gender = payload.gender
@@ -1753,6 +1903,8 @@ async def update_daily_worker(
     worker.bank_name = payload.bank_name
     worker.phone = payload.phone
     worker.is_foreign = payload.is_foreign
+    worker.has_id_card = payload.has_id_card
+    worker.has_safety_cert = payload.has_safety_cert
     worker.updated_at = datetime.utcnow()
 
     return APIResponse.ok({"id": str(worker.id)})
@@ -1827,6 +1979,54 @@ async def upsert_work_records(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    if settings.labor_deployment_gate_enabled and payload.records:
+        worker_ids = sorted({_to_int(record.worker_id) for record in payload.records})
+        worker_query = select(DailyWorker).where(DailyWorker.id.in_(worker_ids))
+        if current_user.organization_id is not None:
+            worker_query = worker_query.where(DailyWorker.organization_id == current_user.organization_id)
+
+        workers = (await db.execute(worker_query)).scalars().all()
+        workers_by_id = {worker.id: worker for worker in workers}
+
+        unknown_worker_ids = [worker_id for worker_id in worker_ids if worker_id not in workers_by_id]
+        if unknown_worker_ids:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "message": "일부 근로자를 찾을 수 없어요.",
+                    "missing_worker_ids": unknown_worker_ids,
+                },
+            )
+
+        blocked_workers: list[dict] = []
+        for worker in workers:
+            missing_requirements: list[str] = []
+            if not worker.has_id_card:
+                missing_requirements.append("id_card")
+            if not worker.has_safety_cert:
+                missing_requirements.append("safety_cert")
+            has_consent = await _has_consent_record_for_worker(db, worker)
+            if not has_consent:
+                missing_requirements.append("consent_record")
+
+            if missing_requirements:
+                blocked_workers.append(
+                    {
+                        "worker_id": str(worker.id),
+                        "worker_name": worker.name,
+                        "missing_requirements": missing_requirements,
+                    }
+                )
+
+        if blocked_workers:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "필수 서류/동의가 완료되지 않은 근로자가 있어 투입 기록을 저장할 수 없어요.",
+                    "blocked_workers": blocked_workers,
+                },
+            )
+
     updated = 0
 
     for record in payload.records:
@@ -2338,19 +2538,35 @@ def _validate_welfare_required_codes(entries: list[dict]) -> list[dict]:
     missing: list[dict] = []
     for entry in entries:
         missing_fields: list[str] = []
-        if not entry.get("job_type_code"):
+        invalid_values: dict[str, str] = {}
+
+        job_type_code = normalize_code(entry.get("job_type_code"))
+        if not job_type_code:
             missing_fields.append("job_type_code")
+        elif not is_valid_job_type_code(job_type_code):
+            invalid_values["job_type_code"] = job_type_code
+
         if entry.get("is_foreign"):
-            if not entry.get("nationality_code"):
+            nationality_code = normalize_code(entry.get("nationality_code"))
+            visa_status = normalize_code(entry.get("visa_status"))
+
+            if not nationality_code:
                 missing_fields.append("nationality_code")
-            if not entry.get("visa_status"):
+            elif not is_valid_nationality_code(nationality_code):
+                invalid_values["nationality_code"] = nationality_code
+
+            if not visa_status:
                 missing_fields.append("visa_status")
-        if missing_fields:
+            elif not is_valid_visa_status(visa_status):
+                invalid_values["visa_status"] = visa_status
+
+        if missing_fields or invalid_values:
             missing.append(
                 {
                     "worker_id": entry["worker_id"],
                     "worker_name": entry["worker_name"],
                     "missing_fields": missing_fields,
+                    "invalid_values": invalid_values,
                 }
             )
     return missing
@@ -2534,7 +2750,7 @@ async def download_welfare_form(
         raise HTTPException(
             status_code=422,
             detail={
-                "message": "근로복지공단 코드 매핑 누락으로 파일을 생성할 수 없어요.",
+                "message": "근로복지공단 코드 매핑 누락/오류로 파일을 생성할 수 없어요.",
                 "missing": missing_codes,
             },
         )
