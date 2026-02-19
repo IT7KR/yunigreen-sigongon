@@ -5846,6 +5846,27 @@ export class MockAPIClient {
     return delay(ok(doc));
   }
 
+  async uploadAdminDocumentFile(data: {
+    season_id: number;
+    category_id?: number;
+    category?: string;
+    title?: string;
+    file: File;
+  }): Promise<APIResponse<SeasonDocumentInfo>> {
+    const title =
+      (data.title || "").trim() ||
+      data.file.name.replace(/\.[^.]+$/, "") ||
+      "적산 자료";
+
+    return this.createAdminDocument({
+      season_id: data.season_id,
+      category_id: data.category_id,
+      category: data.category,
+      title,
+      file_name: data.file.name,
+    });
+  }
+
   async ingestAdminDocument(documentId: number): Promise<APIResponse<SeasonDocumentStatusInfo>> {
     const idx = this.seasonDocuments.findIndex((d) => d.id === documentId);
     if (idx === -1) return delay(fail("NOT_FOUND", "문서를 찾을 수 없습니다"));

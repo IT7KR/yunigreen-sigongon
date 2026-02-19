@@ -2927,6 +2927,34 @@ export class APIClient {
     return response.data;
   }
 
+  async uploadAdminDocumentFile(data: {
+    season_id: number;
+    category_id?: number;
+    category?: string;
+    title?: string;
+    file: File;
+  }) {
+    const formData = new FormData();
+    formData.append("season_id", String(data.season_id));
+    if (data.category_id) {
+      formData.append("category_id", String(data.category_id));
+    }
+    if (data.category) {
+      formData.append("category", data.category);
+    }
+    if (data.title) {
+      formData.append("title", data.title);
+    }
+    formData.append("file", data.file);
+
+    const response = await this.client.post<APIResponse<SeasonDocumentInfo>>(
+      "/admin/documents/upload",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return response.data;
+  }
+
   async ingestAdminDocument(documentId: number) {
     const response = await this.client.post<APIResponse<SeasonDocumentStatusInfo>>(
       `/admin/documents/${documentId}/ingest`,

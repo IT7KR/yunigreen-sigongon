@@ -2451,6 +2451,7 @@ export class MockAPIClient {
       file_url: `pricebooks/${data.season_id}/${data.file_name}`,
       version_hash: randomId("vh"),
       status: "queued",
+      is_enabled: mappedCategory?.is_enabled ?? true,
       uploaded_at: nowIso(),
       upload_url: `/api/v1/admin/documents/${id}/upload`,
     };
