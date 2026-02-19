@@ -335,7 +335,7 @@ export const DEFAULT_RATES_2026: Omit<LaborInsuranceRates, "id"> = {
   simplified_tax_rate: 0.027,
   local_tax_rate: 0.1,
   employment_insurance_rate: 0.009,
-  health_insurance_rate: 0.03595,
+  health_insurance_rate: 0.03545, // 2026년 건강보험료율 7.09% (근로자 3.545%, 사용자 3.545%)
   longterm_care_rate: 0.1314,
   national_pension_rate: 0.045,
   pension_upper_limit: 6170000,
