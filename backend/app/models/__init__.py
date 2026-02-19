@@ -1,6 +1,13 @@
 # Models package - Export all models
 from app.models.base import BaseModel, TimestampMixin, TenantMixin, require_same_org
 from app.models.user import Organization, User, UserRole
+from app.models.customer import (
+    CustomerMaster,
+    CustomerMasterCreate,
+    CustomerMasterRead,
+    CustomerMasterUpdate,
+    CustomerMasterSummary,
+)
 from app.models.project import (
     Project, ProjectStatus, SiteVisit, VisitType, Photo, PhotoType,
     ASRequest, ASRequestStatus, ASRequestCreate, ASRequestRead
@@ -111,6 +118,12 @@ __all__ = [
     "Organization",
     "User",
     "UserRole",
+    # Customer Master
+    "CustomerMaster",
+    "CustomerMasterCreate",
+    "CustomerMasterRead",
+    "CustomerMasterUpdate",
+    "CustomerMasterSummary",
     # Project
     "Project",
     "ProjectStatus",

@@ -110,6 +110,7 @@ async def health_check():
 
 from app.routers import (
     auth_router,
+    customers_router,
     projects_router,
     site_visits_router,
     diagnoses_router,
@@ -136,6 +137,7 @@ from app.routers.dashboard import router as dashboard_router
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["인증"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["사용자 관리"])
+app.include_router(customers_router, prefix="/api/v1/customers", tags=["발주처"])
 app.include_router(projects_router, prefix="/api/v1/projects", tags=["프로젝트"])
 app.include_router(site_visits_router, prefix="/api/v1", tags=["현장 방문"])
 app.include_router(diagnoses_router, prefix="/api/v1", tags=["AI 진단"])

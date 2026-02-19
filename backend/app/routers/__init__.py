@@ -1,5 +1,6 @@
 """API 라우터 패키지."""
 from app.routers.auth import router as auth_router
+from app.routers.customers import router as customers_router
 from app.routers.projects import router as projects_router
 from app.routers.site_visits import router as site_visits_router
 from app.routers.diagnoses import router as diagnoses_router
@@ -11,6 +12,7 @@ from app.routers.harness import router as harness_router
 
 __all__ = [
     "auth_router",
+    "customers_router",
     "projects_router",
     "site_visits_router",
     "diagnoses_router",
