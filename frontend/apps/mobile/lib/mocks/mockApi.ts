@@ -1940,6 +1940,303 @@ export class MockAPIClient {
     return delay(ok(reports));
   }
 
+  async createStartReport(
+    projectId: string,
+    data: {
+      construction_name: string;
+      site_address?: string;
+      start_date: string;
+      expected_end_date?: string;
+      supervisor_name?: string;
+      supervisor_phone?: string;
+      auto_link_representative_docs?: boolean;
+      notes?: string;
+    },
+  ) {
+    const reportsResponse = await this.getConstructionReports(projectId);
+    if (!reportsResponse.success || !reportsResponse.data) {
+      return delay(
+        fail<{
+          id: string;
+          project_id: string;
+          report_type: "start" | "completion";
+          report_number?: string;
+          status: "draft" | "submitted" | "approved" | "rejected";
+          construction_name?: string;
+          site_address?: string;
+          start_date?: string;
+          expected_end_date?: string;
+          supervisor_name?: string;
+          supervisor_phone?: string;
+          actual_end_date?: string;
+          final_amount?: string;
+          defect_warranty_period?: number;
+          notes?: string;
+          created_at: string;
+          submitted_at?: string;
+          approved_at?: string;
+        }>("NOT_FOUND", "프로젝트를 찾을 수 없어요"),
+      );
+    }
+
+    const reports = reportsResponse.data;
+    const existingStartReport = reports.find((report) => report.report_type === "start");
+    if (existingStartReport) {
+      return delay(
+        fail<typeof existingStartReport>(
+          "ALREADY_EXISTS",
+          "이 프로젝트에는 이미 착공계가 있어요",
+        ),
+      );
+    }
+
+    const id = randomId("cr_start");
+    const createdAt = nowIso();
+    const reportNumber = `SCR-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${id.slice(-6)}`;
+
+    const createdReport = {
+      id,
+      project_id: projectId,
+      report_type: "start" as const,
+      report_number: reportNumber,
+      status: "draft" as const,
+      construction_name: data.construction_name,
+      site_address: data.site_address,
+      start_date: data.start_date,
+      expected_end_date: data.expected_end_date,
+      supervisor_name: data.supervisor_name,
+      supervisor_phone: data.supervisor_phone,
+      notes: data.notes,
+      created_at: createdAt,
+    };
+
+    this.constructionReportsByProject[projectId] = [createdReport, ...reports];
+    return delay(ok(createdReport));
+  }
+
+  async updateConstructionReport(
+    reportId: string,
+    data: {
+      notes?: string;
+      auto_link_representative_docs?: boolean;
+      construction_name?: string;
+      site_address?: string;
+      start_date?: string;
+      expected_end_date?: string;
+      supervisor_name?: string;
+      supervisor_phone?: string;
+      actual_end_date?: string;
+      final_amount?: string;
+      defect_warranty_period?: number;
+    },
+  ) {
+    for (const projectId of Object.keys(this.constructionReportsByProject)) {
+      const reports = this.constructionReportsByProject[projectId];
+      const idx = reports.findIndex((report) => report.id === reportId);
+      if (idx < 0) {
+        continue;
+      }
+
+      const current = reports[idx];
+      if (current.status !== "draft") {
+        return delay(
+          fail<typeof current>(
+            "INVALID_STATE",
+            "초안 상태의 보고서만 수정할 수 있어요",
+          ),
+        );
+      }
+
+      const updated = {
+        ...current,
+        ...data,
+      };
+      reports[idx] = updated;
+      this.constructionReportsByProject[projectId] = [...reports];
+      return delay(ok(updated));
+    }
+
+    return delay(
+      fail<{
+        id: string;
+        project_id: string;
+        report_type: "start" | "completion";
+        report_number?: string;
+        status: "draft" | "submitted" | "approved" | "rejected";
+        construction_name?: string;
+        site_address?: string;
+        start_date?: string;
+        expected_end_date?: string;
+        supervisor_name?: string;
+        supervisor_phone?: string;
+        actual_end_date?: string;
+        final_amount?: string;
+        defect_warranty_period?: number;
+        notes?: string;
+        created_at: string;
+        submitted_at?: string;
+        approved_at?: string;
+      }>("NOT_FOUND", "보고서를 찾을 수 없어요"),
+    );
+  }
+
+  async submitConstructionReport(reportId: string) {
+    for (const projectId of Object.keys(this.constructionReportsByProject)) {
+      const reports = this.constructionReportsByProject[projectId];
+      const idx = reports.findIndex((report) => report.id === reportId);
+      if (idx < 0) {
+        continue;
+      }
+
+      const current = reports[idx];
+      if (current.status !== "draft") {
+        return delay(
+          fail<typeof current>(
+            "INVALID_STATE",
+            "이미 제출된 보고서예요",
+          ),
+        );
+      }
+
+      const submitted = {
+        ...current,
+        status: "submitted" as const,
+        submitted_at: nowIso(),
+      };
+      reports[idx] = submitted;
+      this.constructionReportsByProject[projectId] = [...reports];
+      return delay(ok(submitted));
+    }
+
+    return delay(
+      fail<{
+        id: string;
+        project_id: string;
+        report_type: "start" | "completion";
+        report_number?: string;
+        status: "draft" | "submitted" | "approved" | "rejected";
+        construction_name?: string;
+        site_address?: string;
+        start_date?: string;
+        expected_end_date?: string;
+        supervisor_name?: string;
+        supervisor_phone?: string;
+        actual_end_date?: string;
+        final_amount?: string;
+        defect_warranty_period?: number;
+        notes?: string;
+        created_at: string;
+        submitted_at?: string;
+        approved_at?: string;
+      }>("NOT_FOUND", "보고서를 찾을 수 없어요"),
+    );
+  }
+
+  async approveConstructionReport(reportId: string) {
+    for (const projectId of Object.keys(this.constructionReportsByProject)) {
+      const reports = this.constructionReportsByProject[projectId];
+      const idx = reports.findIndex((report) => report.id === reportId);
+      if (idx < 0) {
+        continue;
+      }
+
+      const current = reports[idx];
+      if (current.status !== "submitted") {
+        return delay(
+          fail<typeof current>(
+            "INVALID_STATE",
+            "제출된 보고서만 승인할 수 있어요",
+          ),
+        );
+      }
+
+      const approved = {
+        ...current,
+        status: "approved" as const,
+        approved_at: nowIso(),
+      };
+      reports[idx] = approved;
+      this.constructionReportsByProject[projectId] = [...reports];
+      return delay(ok(approved));
+    }
+
+    return delay(
+      fail<{
+        id: string;
+        project_id: string;
+        report_type: "start" | "completion";
+        report_number?: string;
+        status: "draft" | "submitted" | "approved" | "rejected";
+        construction_name?: string;
+        site_address?: string;
+        start_date?: string;
+        expected_end_date?: string;
+        supervisor_name?: string;
+        supervisor_phone?: string;
+        actual_end_date?: string;
+        final_amount?: string;
+        defect_warranty_period?: number;
+        notes?: string;
+        created_at: string;
+        submitted_at?: string;
+        approved_at?: string;
+      }>("NOT_FOUND", "보고서를 찾을 수 없어요"),
+    );
+  }
+
+  async rejectConstructionReport(reportId: string, reason?: string) {
+    for (const projectId of Object.keys(this.constructionReportsByProject)) {
+      const reports = this.constructionReportsByProject[projectId];
+      const idx = reports.findIndex((report) => report.id === reportId);
+      if (idx < 0) {
+        continue;
+      }
+
+      const current = reports[idx];
+      if (current.status !== "submitted") {
+        return delay(
+          fail<typeof current>(
+            "INVALID_STATE",
+            "제출된 보고서만 반려할 수 있어요",
+          ),
+        );
+      }
+
+      const rejectNote = reason ? `\n[반려 사유] ${reason}` : "";
+      const rejected = {
+        ...current,
+        status: "rejected" as const,
+        notes: `${current.notes || ""}${rejectNote}`.trim(),
+      };
+      reports[idx] = rejected;
+      this.constructionReportsByProject[projectId] = [...reports];
+      return delay(ok(rejected));
+    }
+
+    return delay(
+      fail<{
+        id: string;
+        project_id: string;
+        report_type: "start" | "completion";
+        report_number?: string;
+        status: "draft" | "submitted" | "approved" | "rejected";
+        construction_name?: string;
+        site_address?: string;
+        start_date?: string;
+        expected_end_date?: string;
+        supervisor_name?: string;
+        supervisor_phone?: string;
+        actual_end_date?: string;
+        final_amount?: string;
+        defect_warranty_period?: number;
+        notes?: string;
+        created_at: string;
+        submitted_at?: string;
+        approved_at?: string;
+      }>("NOT_FOUND", "보고서를 찾을 수 없어요"),
+    );
+  }
+
   async getConstructionReport(reportId: string) {
     for (const reports of Object.values(this.constructionReportsByProject)) {
       const report = reports.find((r) => r.id === reportId);

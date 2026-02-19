@@ -54,16 +54,24 @@ export default function MobileStartReportPage({
     }
   }
 
+  const latestStartReport = reports[0];
+  const canEditExistingStartReport =
+    latestStartReport?.status === "draft" || latestStartReport?.status === "rejected";
+
   return (
     <MobileLayout title="착공계" showBack>
       <div className="space-y-4 p-4">
         <StartReportActionsCard
           title="착공계"
-          description="모바일에서는 착공계 확인과 샘플 다운로드를 지원합니다."
+          description="모바일에서 착공계 작성, 임시저장, 제출까지 진행할 수 있습니다."
           projectId={projectId}
           reportListPath="/projects/{projectId}/reports"
           samplePath={MOBILE_MOCK_EXPORT_SAMPLE_FILES.startReportPdf}
-          createReportPath={undefined}
+          createReportPath={
+            canEditExistingStartReport && latestStartReport
+              ? `/projects/${projectId}/reports/start?reportId=${latestStartReport.id}`
+              : "/projects/{projectId}/reports/start"
+          }
           listLabel="전체 보고서"
           sampleLabel="샘플"
         />
@@ -85,7 +93,11 @@ export default function MobileStartReportPage({
           reports.map((report) => (
             <Link
               key={report.id}
-              href={`/projects/${projectId}/reports/${report.id}`}
+              href={
+                report.status === "draft" || report.status === "rejected"
+                  ? `/projects/${projectId}/reports/start?reportId=${report.id}`
+                  : `/projects/${projectId}/reports/${report.id}`
+              }
             >
               <Card className="transition-shadow hover:shadow-md">
                 <CardContent className="p-4">
