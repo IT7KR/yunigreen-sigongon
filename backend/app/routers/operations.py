@@ -110,6 +110,14 @@ def _require_org_id(user: User) -> int:
     return user.organization_id
 
 
+def _require_non_super_admin_for_labor_actions(user: User) -> None:
+    if _role_value(user) == ROLE_SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="회원기업 노무관리에서만 가능한 작업이에요.",
+        )
+
+
 async def _get_project_for_user(
     db: AsyncSession,
     project_id: int,
@@ -2140,12 +2148,108 @@ async def get_labor_overview(
     )
 
 
+@router.get("/admin/labor/overview", response_model=APIResponse[dict])
+async def get_admin_labor_overview(
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    if _role_value(current_user) != "super_admin":
+        raise HTTPException(status_code=403, detail="슈퍼관리자만 접근 가능해요")
+
+    workers_result = await db.execute(
+        select(DailyWorker, Organization)
+        .outerjoin(Organization, Organization.id == DailyWorker.organization_id)
+        .order_by(DailyWorker.created_at.desc())
+        .limit(200)
+    )
+    workers_joined = workers_result.all()
+
+    active_workers = (
+        await db.execute(select(func.count()).select_from(DailyWorker))
+    ).scalar() or 0
+    pending_paystubs = (
+        await db.execute(
+            select(func.count())
+            .select_from(Paystub)
+            .where(Paystub.status == PaystubStatus.SENT)
+        )
+    ).scalar() or 0
+    unsigned_contracts = (
+        await db.execute(
+            select(func.count())
+            .select_from(LaborContract)
+            .where(
+                LaborContract.status.in_(
+                    [LaborContractStatus.DRAFT, LaborContractStatus.SENT]
+                )
+            )
+        )
+    ).scalar() or 0
+
+    tenant_distribution_raw = (
+        await db.execute(
+            select(
+                Organization.id,
+                Organization.name,
+                func.count(DailyWorker.id),
+            )
+            .join(DailyWorker, DailyWorker.organization_id == Organization.id)
+            .group_by(Organization.id, Organization.name)
+            .order_by(func.count(DailyWorker.id).desc())
+            .limit(10)
+        )
+    ).all()
+
+    today = date.today().isoformat()
+    workers = [
+        {
+            "id": str(worker.id),
+            "name": worker.name,
+            "role": worker.job_type,
+            "organization_id": str(worker.organization_id),
+            "organization_name": org.name if org else "미지정",
+            "status": "active",
+            "contract_status": "signed" if worker.registration_status == "registered" else "pending",
+            "last_work_date": today,
+        }
+        for worker, org in workers_joined
+    ]
+
+    tenant_worker_distribution = [
+        {
+            "organization_id": str(org_id),
+            "organization_name": org_name,
+            "worker_count": int(worker_count or 0),
+        }
+        for org_id, org_name, worker_count in tenant_distribution_raw
+    ]
+
+    return APIResponse.ok(
+        {
+            "summary": {
+                "active_workers": int(active_workers),
+                "pending_paystubs": int(pending_paystubs),
+                "unsigned_contracts": int(unsigned_contracts),
+                "organizations_with_workers": len(tenant_worker_distribution),
+            },
+            "workers": workers,
+            "tenant_worker_distribution": tenant_worker_distribution,
+        }
+    )
+
+
 @router.post("/labor/paystubs/batch-send", response_model=APIResponse[dict])
 async def batch_send_paystubs(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    _require_non_super_admin_for_labor_actions(current_user)
+
     query = select(Paystub).where(Paystub.status == PaystubStatus.SENT)
+    if current_user.organization_id is not None:
+        query = query.join(DailyWorker, DailyWorker.id == Paystub.worker_id).where(
+            DailyWorker.organization_id == current_user.organization_id
+        )
     pending = (await db.execute(query)).scalars().all()
 
     for paystub in pending:
@@ -2235,6 +2339,7 @@ async def create_daily_worker(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    _require_non_super_admin_for_labor_actions(current_user)
     _validate_daily_worker_payload(payload)
 
     if current_user.organization_id is not None:
@@ -2281,6 +2386,7 @@ async def update_daily_worker(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    _require_non_super_admin_for_labor_actions(current_user)
     _validate_daily_worker_payload(payload)
 
     query = select(DailyWorker).where(DailyWorker.id == worker_id)
@@ -2320,6 +2426,7 @@ async def delete_daily_worker(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    _require_non_super_admin_for_labor_actions(current_user)
     query = select(DailyWorker).where(DailyWorker.id == worker_id)
     if current_user.organization_id is not None:
         query = query.where(DailyWorker.organization_id == current_user.organization_id)
@@ -2383,6 +2490,8 @@ async def upsert_work_records(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    _require_non_super_admin_for_labor_actions(current_user)
+
     if settings.labor_deployment_gate_enabled and payload.records:
         worker_ids = sorted({_to_int(record.worker_id) for record in payload.records})
         worker_query = select(DailyWorker).where(DailyWorker.id.in_(worker_ids))
@@ -2471,6 +2580,7 @@ async def delete_work_record(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    _require_non_super_admin_for_labor_actions(current_user)
     result = await db.execute(select(WorkRecord).where(WorkRecord.id == work_record_id))
     row = result.scalar_one_or_none()
     if not row:
@@ -3221,6 +3331,7 @@ async def create_insurance_rate(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    _require_non_super_admin_for_labor_actions(current_user)
     org_id = _require_org_id(current_user)
 
     existing = (
@@ -3261,6 +3372,7 @@ async def update_insurance_rate(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    _require_non_super_admin_for_labor_actions(current_user)
     org_id = _require_org_id(current_user)
 
     rate = (
