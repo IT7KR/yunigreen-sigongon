@@ -54,6 +54,9 @@ export type EstimateLineSource = "ai" | "manual" | "template"
 
 export type ContractStatus = "draft" | "sent" | "signed" | "active" | "completed" | "cancelled"
 export type ContractTemplateType = "public_office" | "private_standard"
+export type ContractKind = "private_standard" | "public_platform"
+export type ContractExecutionMode = "modusign" | "upload_only"
+export type PublicPlatformType = "narajangteo" | "s2b" | "etc"
 
 export type LaborContractStatus = "draft" | "sent" | "signed" | "paid"
 
@@ -78,7 +81,16 @@ export type TaxInvoiceStatus = "draft" | "issued" | "cancelled" | "failed"
 export type TaxInvoiceType = "regular" | "simplified"
 
 // Material Orders (자재 발주)
-export type MaterialOrderStatus = "draft" | "requested" | "confirmed" | "shipped" | "delivered" | "cancelled"
+export type MaterialOrderStatus =
+  | "draft"
+  | "requested"
+  | "invoice_received"
+  | "payment_completed"
+  | "shipped"
+  | "delivered"
+  | "closed"
+  | "cancelled"
+  | "confirmed" // Legacy compatibility
 
 // Case/Season Estimation
 export type SeasonDocumentStatus = "queued" | "running" | "done" | "failed"
@@ -458,21 +470,46 @@ export interface MaterialOrder {
   status: MaterialOrderStatus
   items: MaterialOrderItem[]
   total_amount: number
+  vendor_id?: string | null
+  invoice_number?: string | null
+  invoice_amount?: number | null
+  invoice_file_url?: string | null
   requested_at?: string
   confirmed_at?: string
+  payment_at?: string
+  shipped_at?: string
   delivered_at?: string
+  received_at?: string
+  received_by_user_id?: string | null
+  closed_at?: string
   notes?: string
   created_at: string
+  updated_at?: string
 }
 
 export interface MaterialOrderItem {
   id: string
+  catalog_item_id?: string | null
+  pricebook_revision_id?: string | null
+  price_source?: string
+  override_reason?: string | null
   description: string
   specification?: string
   unit: string
   quantity: number
   unit_price: number
   amount: number
+}
+
+export interface MaterialOrderMobileSummary {
+  id: string
+  order_number: string
+  status: MaterialOrderStatus
+  item_count: number
+  summary_amount?: number | null
+  requested_at?: string
+  delivered_at?: string
+  updated_at?: string
 }
 
 export interface SeasonInfo {
@@ -783,13 +820,61 @@ export interface ContractDetail {
   contract_number?: string
   contract_amount: string
   template_type?: ContractTemplateType
+  contract_kind?: ContractKind
+  execution_mode?: ContractExecutionMode
   status: ContractStatus
   notes?: string
+  special_terms?: string
   created_at: string
   sent_at?: string
   signed_at?: string
   start_date?: string
   expected_end_date?: string
+  contract_date?: string
+  work_start_date?: string
+  work_end_date?: string
+  supply_amount?: string
+  vat_amount?: string
+  total_amount?: string
+  delay_penalty_rate?: string
+  retention_rate?: string
+  performance_bond_required?: boolean
+  performance_bond_rate?: string
+  performance_bond_amount?: string
+  defect_warranty_required?: boolean
+  defect_warranty_rate?: string
+  defect_warranty_period_months?: number
+  owner_name?: string
+  owner_business_number?: string
+  owner_representative_name?: string
+  owner_address?: string
+  owner_phone?: string
+  contractor_name?: string
+  contractor_business_number?: string
+  contractor_representative_name?: string
+  contractor_address?: string
+  contractor_phone?: string
+  public_platform_type?: PublicPlatformType
+  public_notice_number?: string
+  public_bid_number?: string
+  public_contract_reference?: string
+  source_document_path?: string
+  generated_document_path?: string
+  completeness?: {
+    is_complete: boolean
+    completion_rate: number
+    required_field_count: number
+    filled_field_count: number
+    missing_fields: string[]
+    missing_field_keys: string[]
+  }
+  warranty_items?: Array<{
+    id?: string
+    work_type: string
+    warranty_rate?: string
+    warranty_period_months?: number
+    notes?: string
+  }>
   project_name: string
   client_name?: string
 }

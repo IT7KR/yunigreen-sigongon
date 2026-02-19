@@ -21,6 +21,9 @@ import type {
   VisitType,
   PhotoType,
   ContractStatus,
+  ContractKind,
+  ContractExecutionMode,
+  PublicPlatformType,
   ContractTemplateType,
   LaborContractStatus,
   EstimateStatus,
@@ -56,6 +59,10 @@ import type {
   DiagnosisCaseImage,
   VisionResultDetail,
   DiagnosisCaseEstimate,
+  MaterialOrder,
+  MaterialOrderItem,
+  MaterialOrderMobileSummary,
+  MaterialOrderStatus,
   DailyWorker,
   WorkerDocument,
   WorkerDocumentReviewAction,
@@ -871,19 +878,109 @@ export class APIClient {
     data: {
       estimate_id: string;
       template_type?: ContractTemplateType;
+      contract_kind?: ContractKind;
+      execution_mode?: ContractExecutionMode;
       start_date?: string;
       expected_end_date?: string;
+      contract_date?: string;
+      work_start_date?: string;
+      work_end_date?: string;
+      supply_amount?: string;
+      vat_amount?: string;
+      total_amount?: string;
+      delay_penalty_rate?: string;
+      retention_rate?: string;
+      performance_bond_required?: boolean;
+      performance_bond_rate?: string;
+      performance_bond_amount?: string;
+      defect_warranty_required?: boolean;
+      defect_warranty_rate?: string;
+      defect_warranty_period_months?: number;
+      owner_name?: string;
+      owner_business_number?: string;
+      owner_representative_name?: string;
+      owner_address?: string;
+      owner_phone?: string;
+      contractor_name?: string;
+      contractor_business_number?: string;
+      contractor_representative_name?: string;
+      contractor_address?: string;
+      contractor_phone?: string;
+      public_platform_type?: PublicPlatformType;
+      public_notice_number?: string;
+      public_bid_number?: string;
+      public_contract_reference?: string;
+      source_document_path?: string;
       notes?: string;
+      special_terms?: string;
+      warranty_items?: Array<{
+        work_type: string;
+        warranty_rate?: string;
+        warranty_period_months?: number;
+        notes?: string;
+      }>;
     },
   ) {
     const response = await this.client.post<
       APIResponse<{
         id: string;
         contract_number: string;
+        contract_kind?: ContractKind;
+        execution_mode?: ContractExecutionMode;
         template_type?: ContractTemplateType;
         status: ContractStatus;
       }>
     >(`/projects/${projectId}/contracts`, data);
+    return response.data;
+  }
+
+  async finalizeContract(contractId: string) {
+    const response = await this.client.post<
+      APIResponse<{
+        id: string;
+        status: ContractStatus;
+        completeness?: {
+          is_complete: boolean;
+          completion_rate: number;
+          missing_fields: string[];
+        };
+      }>
+    >(`/contracts/${contractId}/finalize`);
+    return response.data;
+  }
+
+  async uploadContractSource(
+    contractId: string,
+    data: {
+      file: File;
+      public_platform_type?: PublicPlatformType;
+      public_contract_reference?: string;
+      public_notice_number?: string;
+      public_bid_number?: string;
+    },
+  ) {
+    const form = new FormData();
+    form.append("file", data.file);
+    if (data.public_platform_type) {
+      form.append("public_platform_type", data.public_platform_type);
+    }
+    if (data.public_contract_reference) {
+      form.append("public_contract_reference", data.public_contract_reference);
+    }
+    if (data.public_notice_number) {
+      form.append("public_notice_number", data.public_notice_number);
+    }
+    if (data.public_bid_number) {
+      form.append("public_bid_number", data.public_bid_number);
+    }
+
+    const response = await this.client.post<APIResponse<any>>(
+      `/contracts/${contractId}/upload-source`,
+      form,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      },
+    );
     return response.data;
   }
 
@@ -3218,34 +3315,39 @@ export class APIClient {
   // ============================================
 
   async getMaterialOrders(projectId: string) {
+    const response = await this.client.get<APIResponse<MaterialOrder[]>>(
+      `/projects/${projectId}/material-orders`,
+    );
+    return response.data;
+  }
+
+  async getMaterialOrdersMobile(projectId: string) {
     const response = await this.client.get<
-      APIResponse<
-        Array<{
-          id: string;
-          project_id: string;
-          order_number: string;
-          status: string;
-          total_amount: number;
-          requested_at?: string;
-          confirmed_at?: string;
-          delivered_at?: string;
-          created_at: string;
-        }>
-      >
-    >(`/projects/${projectId}/material-orders`);
+      APIResponse<MaterialOrderMobileSummary[]>
+    >(`/projects/${projectId}/material-orders/mobile`);
     return response.data;
   }
 
   async createMaterialOrder(
     projectId: string,
     data: {
-      items: Array<{
-        description: string;
-        specification?: string;
-        unit: string;
-        quantity: number;
-        unit_price: number;
-      }>;
+      vendor_id?: number;
+      items: Array<
+        Partial<
+          Pick<
+            MaterialOrderItem,
+            | "description"
+            | "specification"
+            | "unit"
+            | "unit_price"
+            | "catalog_item_id"
+            | "pricebook_revision_id"
+            | "override_reason"
+          >
+        > & {
+          quantity: number;
+        }
+      >;
       notes?: string;
     },
   ) {
@@ -3256,45 +3358,63 @@ export class APIClient {
         status: string;
         total_amount: number;
       }>
-    >(`/projects/${projectId}/material-orders`, data);
+    >(`/projects/${projectId}/material-orders`, {
+      ...data,
+      items: data.items.map((item) => {
+        const rawCatalogId = item.catalog_item_id;
+        const rawRevisionId = item.pricebook_revision_id;
+        const parsedCatalogId =
+          rawCatalogId === undefined || rawCatalogId === null || rawCatalogId === ""
+            ? undefined
+            : Number(rawCatalogId);
+        const parsedRevisionId =
+          rawRevisionId === undefined || rawRevisionId === null || rawRevisionId === ""
+            ? undefined
+            : Number(rawRevisionId);
+
+        return {
+          ...item,
+          catalog_item_id: Number.isFinite(parsedCatalogId)
+            ? parsedCatalogId
+            : undefined,
+          pricebook_revision_id: Number.isFinite(parsedRevisionId)
+            ? parsedRevisionId
+            : undefined,
+        };
+      }),
+    });
     return response.data;
   }
 
   async getMaterialOrder(orderId: string) {
-    const response = await this.client.get<
-      APIResponse<{
-        id: string;
-        project_id: string;
-        order_number: string;
-        status: string;
-        items: Array<{
-          id: string;
-          description: string;
-          specification?: string;
-          unit: string;
-          quantity: number;
-          unit_price: number;
-          amount: number;
-        }>;
-        total_amount: number;
-        requested_at?: string;
-        confirmed_at?: string;
-        delivered_at?: string;
-        notes?: string;
-        created_at: string;
-      }>
-    >(`/material-orders/${orderId}`);
+    const response = await this.client.get<APIResponse<MaterialOrder>>(
+      `/material-orders/${orderId}`,
+    );
     return response.data;
   }
 
-  async updateMaterialOrderStatus(orderId: string, status: string) {
+  async updateMaterialOrderStatus(
+    orderId: string,
+    payload:
+      | MaterialOrderStatus
+      | {
+          status: MaterialOrderStatus;
+          reason?: string;
+          invoice_number?: string;
+          invoice_amount?: number;
+          invoice_file_url?: string;
+        },
+  ) {
+    const data =
+      typeof payload === "string" ? { status: payload } : payload;
+
     const response = await this.client.patch<
       APIResponse<{
         id: string;
-        status: string;
+        status: MaterialOrderStatus;
         message: string;
       }>
-    >(`/material-orders/${orderId}`, { status });
+    >(`/material-orders/${orderId}`, data);
     return response.data;
   }
 
