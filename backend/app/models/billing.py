@@ -48,7 +48,7 @@ class Subscription(SubscriptionBase, table=True):
 
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
     organization_id: int = Field(
-        foreign_key="organization.id", sa_type=BigInteger,
+        sa_type=BigInteger,
         unique=True,
         index=True
     )
@@ -66,7 +66,12 @@ class Subscription(SubscriptionBase, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
-    organization: Optional["Organization"] = Relationship()
+    organization: Optional["Organization"] = Relationship(
+        sa_relationship_kwargs={
+            "primaryjoin": "Subscription.organization_id == Organization.id",
+            "foreign_keys": "[Subscription.organization_id]",
+        },
+    )
 
 
 class SubscriptionCreate(SQLModel):
@@ -109,11 +114,11 @@ class Payment(PaymentBase, table=True):
 
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
     subscription_id: int = Field(
-        foreign_key="subscription.id", sa_type=BigInteger,
+        sa_type=BigInteger,
         index=True
     )
     organization_id: int = Field(
-        foreign_key="organization.id", sa_type=BigInteger,
+        sa_type=BigInteger,
         index=True
     )
 
@@ -135,7 +140,12 @@ class Payment(PaymentBase, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
-    subscription: Optional["Subscription"] = Relationship()
+    subscription: Optional["Subscription"] = Relationship(
+        sa_relationship_kwargs={
+            "primaryjoin": "Payment.subscription_id == Subscription.id",
+            "foreign_keys": "[Payment.subscription_id]",
+        },
+    )
 
 
 class PaymentCreate(SQLModel):

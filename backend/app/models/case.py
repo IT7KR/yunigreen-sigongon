@@ -4,7 +4,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import BigInteger, ForeignKey, JSON, Column, UniqueConstraint
+from sqlalchemy import BigInteger, JSON, Column, UniqueConstraint
 from sqlmodel import SQLModel, Field
 
 from app.core.snowflake import generate_snowflake_id
@@ -60,7 +60,7 @@ class Season(SeasonBase, table=True):
 
 class SeasonCategoryBase(SQLModel):
     season_id: int = Field(
-        sa_column=Column(BigInteger, ForeignKey("season.id"), index=True, nullable=False)
+        sa_column=Column(BigInteger, index=True, nullable=False)
     )
     name: str = Field(max_length=100)
     purpose: SeasonCategoryPurpose = Field(
@@ -86,7 +86,7 @@ class SeasonCategory(SeasonCategoryBase, table=True):
 
 class SeasonDocumentBase(SQLModel):
     season_id: int = Field(
-        sa_column=Column(BigInteger, ForeignKey("season.id"), index=True, nullable=False)
+        sa_column=Column(BigInteger, index=True, nullable=False)
     )
     category: str = Field(max_length=100, index=True)
     title: str = Field(max_length=255)
@@ -115,10 +115,10 @@ class TraceChunk(SQLModel, table=True):
         sa_column=Column(BigInteger, primary_key=True),
     )
     season_id: int = Field(
-        sa_column=Column(BigInteger, ForeignKey("season.id"), index=True, nullable=False)
+        sa_column=Column(BigInteger, index=True, nullable=False)
     )
     doc_id: int = Field(
-        sa_column=Column(BigInteger, ForeignKey("season_document.id"), index=True, nullable=False)
+        sa_column=Column(BigInteger, index=True, nullable=False)
     )
     page: int = Field(index=True)
     section_title: Optional[str] = Field(default=None, max_length=255)
@@ -135,12 +135,11 @@ class CostItem(SQLModel, table=True):
         sa_column=Column(BigInteger, primary_key=True),
     )
     season_id: int = Field(
-        sa_column=Column(BigInteger, ForeignKey("season.id"), index=True, nullable=False)
+        sa_column=Column(BigInteger, index=True, nullable=False)
     )
     source_doc_id: int = Field(
         sa_column=Column(
             BigInteger,
-            ForeignKey("season_document.id"),
             index=True,
             nullable=False,
         )
@@ -169,10 +168,10 @@ class Case(SQLModel, table=True):
         default_factory=generate_snowflake_id,
         sa_column=Column(BigInteger, primary_key=True),
     )
-    user_id: int = Field(foreign_key="user.id", sa_type=BigInteger, index=True)
-    organization_id: Optional[int] = Field(default=None, foreign_key="organization.id", sa_type=BigInteger, index=True)
+    user_id: int = Field(sa_type=BigInteger, index=True)
+    organization_id: Optional[int] = Field(default=None, sa_type=BigInteger, index=True)
     season_id: int = Field(
-        sa_column=Column(BigInteger, ForeignKey("season.id"), index=True, nullable=False)
+        sa_column=Column(BigInteger, index=True, nullable=False)
     )
     status: CaseStatus = Field(default=CaseStatus.DRAFT, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -189,7 +188,6 @@ class CaseImage(SQLModel, table=True):
     case_id: int = Field(
         sa_column=Column(
             BigInteger,
-            ForeignKey("diagnosis_case.id"),
             index=True,
             nullable=False,
         )
@@ -209,7 +207,6 @@ class VisionResult(SQLModel, table=True):
     case_id: int = Field(
         sa_column=Column(
             BigInteger,
-            ForeignKey("diagnosis_case.id"),
             index=True,
             nullable=False,
         )
@@ -232,7 +229,6 @@ class CaseEstimate(SQLModel, table=True):
     case_id: int = Field(
         sa_column=Column(
             BigInteger,
-            ForeignKey("diagnosis_case.id"),
             index=True,
             nullable=False,
         )
@@ -254,7 +250,6 @@ class EstimateExport(SQLModel, table=True):
     estimate_id: int = Field(
         sa_column=Column(
             BigInteger,
-            ForeignKey("case_estimate.id"),
             index=True,
             nullable=False,
         )

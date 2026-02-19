@@ -42,13 +42,13 @@ class Estimate(EstimateBase, table=True):
     __tablename__ = "estimate"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
+    project_id: int = Field(sa_type=BigInteger, index=True)
     
     # Version control (multiple estimates per project possible)
     version: int = Field(default=1)
     
     # Pricebook reference (CRITICAL)
-    pricebook_revision_id: int = Field(foreign_key="pricebook_revision.id", sa_type=BigInteger)
+    pricebook_revision_id: int = Field(sa_type=BigInteger, index=True)
     
     # Status
     status: EstimateStatus = Field(default=EstimateStatus.DRAFT, index=True)
@@ -64,12 +64,24 @@ class Estimate(EstimateBase, table=True):
     issued_at: Optional[datetime] = Field(default=None)
     
     # Audit
-    created_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
-    issued_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
+    created_by: Optional[int] = Field(default=None, sa_type=BigInteger)
+    issued_by: Optional[int] = Field(default=None, sa_type=BigInteger)
     
     # Relationships
-    project: Optional["Project"] = Relationship(back_populates="estimates")
-    lines: List["EstimateLine"] = Relationship(back_populates="estimate")
+    project: Optional["Project"] = Relationship(
+        back_populates="estimates",
+        sa_relationship_kwargs={
+            "primaryjoin": "Estimate.project_id == Project.id",
+            "foreign_keys": "[Estimate.project_id]",
+        },
+    )
+    lines: List["EstimateLine"] = Relationship(
+        back_populates="estimate",
+        sa_relationship_kwargs={
+            "primaryjoin": "Estimate.id == EstimateLine.estimate_id",
+            "foreign_keys": "[EstimateLine.estimate_id]",
+        },
+    )
 
 
 class EstimateCreate(SQLModel):
@@ -112,14 +124,14 @@ class EstimateLine(EstimateLineBase, table=True):
     __tablename__ = "estimate_line"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    estimate_id: int = Field(foreign_key="estimate.id", sa_type=BigInteger, index=True)
+    estimate_id: int = Field(sa_type=BigInteger, index=True)
     
     # Line ordering
     sort_order: int = Field(default=0)
     
     # Item reference (nullable for custom items)
     catalog_item_id: Optional[int] = Field(
-        default=None, foreign_key="catalog_item.id", sa_type=BigInteger
+        default=None, sa_type=BigInteger, index=True
     )
     
     # Pricing snapshot (frozen at time of creation/issue)
@@ -129,16 +141,22 @@ class EstimateLine(EstimateLineBase, table=True):
     # Source tracking
     source: LineSource = Field(default=LineSource.MANUAL)
     ai_suggestion_id: Optional[int] = Field(
-        default=None, foreign_key="ai_material_suggestion.id", sa_type=BigInteger
+        default=None, sa_type=BigInteger, index=True
     )
     
     # Audit
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    last_edited_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
+    last_edited_by: Optional[int] = Field(default=None, sa_type=BigInteger)
     
     # Relationships
-    estimate: Optional[Estimate] = Relationship(back_populates="lines")
+    estimate: Optional[Estimate] = Relationship(
+        back_populates="lines",
+        sa_relationship_kwargs={
+            "primaryjoin": "EstimateLine.estimate_id == Estimate.id",
+            "foreign_keys": "[EstimateLine.estimate_id]",
+        },
+    )
 
 
 class EstimateLineCreate(EstimateLineBase):

@@ -37,17 +37,23 @@ class PhotoAlbum(PhotoAlbumBase, table=True):
     __tablename__ = "photo_album"
 
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
+    project_id: int = Field(sa_type=BigInteger, index=True)
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Audit
-    created_by: int = Field(foreign_key="user.id", sa_type=BigInteger)
+    created_by: int = Field(sa_type=BigInteger)
 
     # Relationships
-    album_photos: List["AlbumPhoto"] = Relationship(back_populates="album")
+    album_photos: List["AlbumPhoto"] = Relationship(
+        back_populates="album",
+        sa_relationship_kwargs={
+            "primaryjoin": "PhotoAlbum.id == AlbumPhoto.album_id",
+            "foreign_keys": "[AlbumPhoto.album_id]",
+        },
+    )
 
 
 class PhotoAlbumCreate(PhotoAlbumBase):
@@ -84,13 +90,19 @@ class AlbumPhoto(AlbumPhotoBase, table=True):
     __tablename__ = "album_photo"
 
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    album_id: int = Field(foreign_key="photo_album.id", sa_type=BigInteger, index=True)
-    photo_id: int = Field(foreign_key="photo.id", sa_type=BigInteger, index=True)
+    album_id: int = Field(sa_type=BigInteger, index=True)
+    photo_id: int = Field(sa_type=BigInteger, index=True)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
-    album: Optional["PhotoAlbum"] = Relationship(back_populates="album_photos")
+    album: Optional["PhotoAlbum"] = Relationship(
+        back_populates="album_photos",
+        sa_relationship_kwargs={
+            "primaryjoin": "AlbumPhoto.album_id == PhotoAlbum.id",
+            "foreign_keys": "[AlbumPhoto.album_id]",
+        },
+    )
 
 
 class AlbumPhotoCreate(AlbumPhotoBase):

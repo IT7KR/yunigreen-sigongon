@@ -27,14 +27,20 @@ class DocumentChunk(DocumentChunkBase, table=True):
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
     pricebook_revision_id: Optional[int] = Field(
-        default=None, foreign_key="pricebook_revision.id", sa_type=BigInteger, index=True
+        default=None, sa_type=BigInteger, index=True
     )
     
     embedding: Optional[List[float]] = Field(default=None, sa_column=Column(ARRAY(Float)))
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
-    revision: Optional["PricebookRevision"] = Relationship(back_populates="document_chunks")
+    revision: Optional["PricebookRevision"] = Relationship(
+        back_populates="document_chunks",
+        sa_relationship_kwargs={
+            "primaryjoin": "DocumentChunk.pricebook_revision_id == PricebookRevision.id",
+            "foreign_keys": "[DocumentChunk.pricebook_revision_id]",
+        },
+    )
 
 
 class DocumentChunkCreate(DocumentChunkBase):

@@ -18,7 +18,6 @@ class TenantMixin(SQLModel):
     """Mixin for organization-scoped (tenant) models."""
     organization_id: Optional[int] = Field(
         default=None,
-        foreign_key="organization.id",
         sa_type=BigInteger,
         index=True,
     )

@@ -49,7 +49,13 @@ class Pricebook(PricebookBase, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    revisions: List["PricebookRevision"] = Relationship(back_populates="pricebook")
+    revisions: List["PricebookRevision"] = Relationship(
+        back_populates="pricebook",
+        sa_relationship_kwargs={
+            "primaryjoin": "Pricebook.id == PricebookRevision.pricebook_id",
+            "foreign_keys": "[PricebookRevision.pricebook_id]",
+        },
+    )
 
 
 class PricebookCreate(PricebookBase):
@@ -76,7 +82,7 @@ class PricebookRevision(PricebookRevisionBase, table=True):
     __tablename__ = "pricebook_revision"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    pricebook_id: int = Field(foreign_key="pricebook.id", sa_type=BigInteger, index=True)
+    pricebook_id: int = Field(sa_type=BigInteger, index=True)
     
     # Status
     status: RevisionStatus = Field(default=RevisionStatus.DRAFT, index=True)
@@ -85,15 +91,33 @@ class PricebookRevision(PricebookRevisionBase, table=True):
     source_files: Optional[List[dict]] = Field(default=None, sa_column=Column(JSON))
     
     # Metadata
-    created_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
+    created_by: Optional[int] = Field(default=None, sa_type=BigInteger)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     activated_at: Optional[datetime] = Field(default=None)
     deprecated_at: Optional[datetime] = Field(default=None)
     
     # Relationships
-    pricebook: Optional[Pricebook] = Relationship(back_populates="revisions")
-    prices: List["CatalogItemPrice"] = Relationship(back_populates="revision")
-    document_chunks: List["DocumentChunk"] = Relationship(back_populates="revision")
+    pricebook: Optional[Pricebook] = Relationship(
+        back_populates="revisions",
+        sa_relationship_kwargs={
+            "primaryjoin": "PricebookRevision.pricebook_id == Pricebook.id",
+            "foreign_keys": "[PricebookRevision.pricebook_id]",
+        },
+    )
+    prices: List["CatalogItemPrice"] = Relationship(
+        back_populates="revision",
+        sa_relationship_kwargs={
+            "primaryjoin": "PricebookRevision.id == CatalogItemPrice.pricebook_revision_id",
+            "foreign_keys": "[CatalogItemPrice.pricebook_revision_id]",
+        },
+    )
+    document_chunks: List["DocumentChunk"] = Relationship(
+        back_populates="revision",
+        sa_relationship_kwargs={
+            "primaryjoin": "PricebookRevision.id == DocumentChunk.pricebook_revision_id",
+            "foreign_keys": "[DocumentChunk.pricebook_revision_id]",
+        },
+    )
 
 
 class PricebookRevisionCreate(PricebookRevisionBase):
@@ -134,8 +158,20 @@ class CatalogItem(CatalogItemBase, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    prices: List["CatalogItemPrice"] = Relationship(back_populates="catalog_item")
-    aliases: List["CatalogItemAlias"] = Relationship(back_populates="catalog_item")
+    prices: List["CatalogItemPrice"] = Relationship(
+        back_populates="catalog_item",
+        sa_relationship_kwargs={
+            "primaryjoin": "CatalogItem.id == CatalogItemPrice.catalog_item_id",
+            "foreign_keys": "[CatalogItemPrice.catalog_item_id]",
+        },
+    )
+    aliases: List["CatalogItemAlias"] = Relationship(
+        back_populates="catalog_item",
+        sa_relationship_kwargs={
+            "primaryjoin": "CatalogItem.id == CatalogItemAlias.catalog_item_id",
+            "foreign_keys": "[CatalogItemAlias.catalog_item_id]",
+        },
+    )
 
 
 class CatalogItemCreate(CatalogItemBase):
@@ -162,8 +198,8 @@ class CatalogItemPrice(CatalogItemPriceBase, table=True):
     __tablename__ = "catalog_item_price"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    pricebook_revision_id: int = Field(foreign_key="pricebook_revision.id", sa_type=BigInteger, index=True)
-    catalog_item_id: int = Field(foreign_key="catalog_item.id", sa_type=BigInteger, index=True)
+    pricebook_revision_id: int = Field(sa_type=BigInteger, index=True)
+    catalog_item_id: int = Field(sa_type=BigInteger, index=True)
     
     # Source reference (for audit)
     source_pdf_page: Optional[int] = Field(default=None)
@@ -172,8 +208,20 @@ class CatalogItemPrice(CatalogItemPriceBase, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    revision: Optional[PricebookRevision] = Relationship(back_populates="prices")
-    catalog_item: Optional[CatalogItem] = Relationship(back_populates="prices")
+    revision: Optional[PricebookRevision] = Relationship(
+        back_populates="prices",
+        sa_relationship_kwargs={
+            "primaryjoin": "CatalogItemPrice.pricebook_revision_id == PricebookRevision.id",
+            "foreign_keys": "[CatalogItemPrice.pricebook_revision_id]",
+        },
+    )
+    catalog_item: Optional[CatalogItem] = Relationship(
+        back_populates="prices",
+        sa_relationship_kwargs={
+            "primaryjoin": "CatalogItemPrice.catalog_item_id == CatalogItem.id",
+            "foreign_keys": "[CatalogItemPrice.catalog_item_id]",
+        },
+    )
 
 
 class CatalogItemPriceCreate(CatalogItemPriceBase):
@@ -204,11 +252,17 @@ class CatalogItemAlias(CatalogItemAliasBase, table=True):
     __tablename__ = "catalog_item_alias"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    catalog_item_id: int = Field(foreign_key="catalog_item.id", sa_type=BigInteger, index=True)
+    catalog_item_id: int = Field(sa_type=BigInteger, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    catalog_item: Optional[CatalogItem] = Relationship(back_populates="aliases")
+    catalog_item: Optional[CatalogItem] = Relationship(
+        back_populates="aliases",
+        sa_relationship_kwargs={
+            "primaryjoin": "CatalogItemAlias.catalog_item_id == CatalogItem.id",
+            "foreign_keys": "[CatalogItemAlias.catalog_item_id]",
+        },
+    )
 
 
 class CatalogItemAliasCreate(CatalogItemAliasBase):

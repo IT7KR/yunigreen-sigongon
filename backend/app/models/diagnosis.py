@@ -41,7 +41,7 @@ class AIDiagnosis(AIDiagnosisBase, table=True):
     __tablename__ = "ai_diagnosis"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    site_visit_id: int = Field(foreign_key="site_visit.id", sa_type=BigInteger, index=True)
+    site_visit_id: int = Field(sa_type=BigInteger, index=True)
     
     # Output
     leak_opinion_text: str  # 누수소견서 본문
@@ -60,7 +60,13 @@ class AIDiagnosis(AIDiagnosisBase, table=True):
     processing_time_ms: Optional[int] = Field(default=None)
     
     # Relationships
-    suggestions: List["AIMaterialSuggestion"] = Relationship(back_populates="diagnosis")
+    suggestions: List["AIMaterialSuggestion"] = Relationship(
+        back_populates="diagnosis",
+        sa_relationship_kwargs={
+            "primaryjoin": "AIDiagnosis.id == AIMaterialSuggestion.ai_diagnosis_id",
+            "foreign_keys": "[AIMaterialSuggestion.ai_diagnosis_id]",
+        },
+    )
 
 
 class AIDiagnosisCreate(SQLModel):
@@ -95,24 +101,30 @@ class AIMaterialSuggestion(AIMaterialSuggestionBase, table=True):
     __tablename__ = "ai_material_suggestion"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    ai_diagnosis_id: int = Field(foreign_key="ai_diagnosis.id", sa_type=BigInteger, index=True)
+    ai_diagnosis_id: int = Field(sa_type=BigInteger, index=True)
     
     # Matching to our catalog
     matched_catalog_item_id: Optional[int] = Field(
-        default=None, foreign_key="catalog_item.id", sa_type=BigInteger
+        default=None, sa_type=BigInteger, index=True
     )
     match_confidence: Optional[Decimal] = Field(default=None, max_digits=3, decimal_places=2)
     match_method: Optional[MatchMethod] = Field(default=None)
     
     # For review
     is_confirmed: bool = Field(default=False)
-    confirmed_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
+    confirmed_by: Optional[int] = Field(default=None, sa_type=BigInteger)
     confirmed_at: Optional[datetime] = Field(default=None)
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    diagnosis: Optional[AIDiagnosis] = Relationship(back_populates="suggestions")
+    diagnosis: Optional[AIDiagnosis] = Relationship(
+        back_populates="suggestions",
+        sa_relationship_kwargs={
+            "primaryjoin": "AIMaterialSuggestion.ai_diagnosis_id == AIDiagnosis.id",
+            "foreign_keys": "[AIMaterialSuggestion.ai_diagnosis_id]",
+        },
+    )
 
 
 class AIMaterialSuggestionRead(AIMaterialSuggestionBase):

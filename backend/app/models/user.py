@@ -75,7 +75,13 @@ class Organization(OrganizationBase, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    users: List["User"] = Relationship(back_populates="organization")
+    users: List["User"] = Relationship(
+        back_populates="organization",
+        sa_relationship_kwargs={
+            "primaryjoin": "Organization.id == User.organization_id",
+            "foreign_keys": "[User.organization_id]",
+        },
+    )
 
 
 class OrganizationCreate(OrganizationBase):
@@ -109,8 +115,7 @@ class User(UserBase, table=True):
 
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
     organization_id: Optional[int] = Field(
-        default=None,
-        foreign_key="organization.id", sa_type=BigInteger,
+        default=None, sa_type=BigInteger,
         index=True
     )
     password_hash: str = Field(max_length=255)
@@ -119,7 +124,13 @@ class User(UserBase, table=True):
     last_login_at: Optional[datetime] = Field(default=None)
 
     # Relationships
-    organization: Optional[Organization] = Relationship(back_populates="users")
+    organization: Optional[Organization] = Relationship(
+        back_populates="users",
+        sa_relationship_kwargs={
+            "primaryjoin": "User.organization_id == Organization.id",
+            "foreign_keys": "[User.organization_id]",
+        },
+    )
 
 
 class UserCreate(SQLModel):

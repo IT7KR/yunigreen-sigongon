@@ -23,7 +23,7 @@ class FieldRepresentative(FieldRepresentativeBase, table=True):
     __tablename__ = "field_representative"
 
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    organization_id: int = Field(foreign_key="organization.id", sa_type=BigInteger, index=True)
+    organization_id: int = Field(sa_type=BigInteger, index=True)
 
     # Document tracking
     booklet_filename: Optional[str] = Field(default=None, max_length=255)  # 기술수첩
@@ -36,7 +36,11 @@ class FieldRepresentative(FieldRepresentativeBase, table=True):
 
     # Relationships
     assignments: list["ProjectRepresentativeAssignment"] = Relationship(
-        back_populates="representative"
+        back_populates="representative",
+        sa_relationship_kwargs={
+            "primaryjoin": "FieldRepresentative.id == ProjectRepresentativeAssignment.representative_id",
+            "foreign_keys": "[ProjectRepresentativeAssignment.representative_id]",
+        },
     )
 
 
@@ -45,13 +49,19 @@ class ProjectRepresentativeAssignment(SQLModel, table=True):
     __tablename__ = "project_representative_assignment"
 
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True, unique=True)  # unique ensures one-to-one
-    representative_id: int = Field(foreign_key="field_representative.id", sa_type=BigInteger, index=True)
+    project_id: int = Field(sa_type=BigInteger, index=True, unique=True)  # unique ensures one-to-one
+    representative_id: int = Field(sa_type=BigInteger, index=True)
     effective_date: str = Field(max_length=20)  # 기준일 (YYYY-MM-DD format)
     assigned_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
-    representative: Optional[FieldRepresentative] = Relationship(back_populates="assignments")
+    representative: Optional[FieldRepresentative] = Relationship(
+        back_populates="assignments",
+        sa_relationship_kwargs={
+            "primaryjoin": "ProjectRepresentativeAssignment.representative_id == FieldRepresentative.id",
+            "foreign_keys": "[ProjectRepresentativeAssignment.representative_id]",
+        },
+    )
 
 
 # Pydantic schemas for API

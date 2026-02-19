@@ -44,8 +44,8 @@ class Contract(ContractBase, table=True):
     __tablename__ = "contract"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
-    estimate_id: int = Field(foreign_key="estimate.id", sa_type=BigInteger)
+    project_id: int = Field(sa_type=BigInteger, index=True)
+    estimate_id: int = Field(sa_type=BigInteger, index=True)
     
     # Contract details
     contract_amount: Decimal = Field(max_digits=15, decimal_places=2)
@@ -69,7 +69,13 @@ class Contract(ContractBase, table=True):
     document_path: Optional[str] = Field(default=None, max_length=500)  # Generated PDF path
     
     # Relationships
-    project: Optional["Project"] = Relationship(back_populates="contracts")
+    project: Optional["Project"] = Relationship(
+        back_populates="contracts",
+        sa_relationship_kwargs={
+            "primaryjoin": "Contract.project_id == Project.id",
+            "foreign_keys": "[Contract.project_id]",
+        },
+    )
 
 
 class ContractCreate(SQLModel):
@@ -119,7 +125,7 @@ class LaborContract(LaborContractBase, table=True):
     __tablename__ = "labor_contract"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
+    project_id: int = Field(sa_type=BigInteger, index=True)
     
     # Worker info (sensitive - should be encrypted in production)
     worker_id_number: Optional[str] = Field(default=None, max_length=20)  # 주민등록번호
@@ -132,7 +138,7 @@ class LaborContract(LaborContractBase, table=True):
     signed_at: Optional[datetime] = Field(default=None)
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    created_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
+    created_by: Optional[int] = Field(default=None, sa_type=BigInteger)
 
 
 class LaborContractCreate(LaborContractBase):

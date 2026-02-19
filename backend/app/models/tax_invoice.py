@@ -66,8 +66,8 @@ class TaxInvoice(TaxInvoiceBase, table=True):
     __tablename__ = "tax_invoice"
 
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
-    organization_id: int = Field(foreign_key="organization.id", sa_type=BigInteger, index=True)
+    project_id: int = Field(sa_type=BigInteger, index=True)
+    organization_id: int = Field(sa_type=BigInteger, index=True)
 
     # Popbill issue ID (set after successful issue)
     issue_id: Optional[str] = Field(default=None, max_length=50, unique=True, index=True)
@@ -82,10 +82,15 @@ class TaxInvoice(TaxInvoiceBase, table=True):
     cancelled_at: Optional[datetime] = Field(default=None)
 
     # Audit
-    created_by: int = Field(foreign_key="user.id", sa_type=BigInteger)
+    created_by: int = Field(sa_type=BigInteger)
 
     # Relationships
-    project: Optional["Project"] = Relationship()
+    project: Optional["Project"] = Relationship(
+        sa_relationship_kwargs={
+            "primaryjoin": "TaxInvoice.project_id == Project.id",
+            "foreign_keys": "[TaxInvoice.project_id]",
+        },
+    )
 
 
 class TaxInvoiceCreate(SQLModel):

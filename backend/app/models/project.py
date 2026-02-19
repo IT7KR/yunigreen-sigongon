@@ -46,6 +46,7 @@ class ProjectBase(SQLModel):
     """Project base fields."""
     name: str = Field(max_length=255, index=True)
     address: str
+    customer_master_id: Optional[int] = Field(default=None, sa_type=BigInteger, index=True)
     client_name: Optional[str] = Field(default=None, max_length=100)
     client_phone: Optional[str] = Field(default=None, max_length=20)
     notes: Optional[str] = Field(default=None)
@@ -56,14 +57,14 @@ class Project(ProjectBase, table=True):
     __tablename__ = "project"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    organization_id: int = Field(foreign_key="organization.id", sa_type=BigInteger, index=True)
+    organization_id: int = Field(sa_type=BigInteger, index=True)
     
     # Status tracking
     status: ProjectStatus = Field(default=ProjectStatus.DRAFT, index=True)
     
     # Pricebook version pinning (CRITICAL for accurate estimates)
     pricebook_revision_id: Optional[int] = Field(
-        default=None, foreign_key="pricebook_revision.id", sa_type=BigInteger
+        default=None, sa_type=BigInteger, index=True
     )
     
     # Dates
@@ -75,17 +76,35 @@ class Project(ProjectBase, table=True):
     warranty_expires_at: Optional[datetime] = Field(default=None)  # completed_at + 3 years
     
     # Audit
-    created_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
+    created_by: Optional[int] = Field(default=None, sa_type=BigInteger)
     
     # Relationships
-    site_visits: List["SiteVisit"] = Relationship(back_populates="project")
-    estimates: List["Estimate"] = Relationship(back_populates="project")
-    contracts: List["Contract"] = Relationship(back_populates="project")
+    site_visits: List["SiteVisit"] = Relationship(
+        back_populates="project",
+        sa_relationship_kwargs={
+            "primaryjoin": "Project.id == SiteVisit.project_id",
+            "foreign_keys": "[SiteVisit.project_id]",
+        },
+    )
+    estimates: List["Estimate"] = Relationship(
+        back_populates="project",
+        sa_relationship_kwargs={
+            "primaryjoin": "Project.id == Estimate.project_id",
+            "foreign_keys": "[Estimate.project_id]",
+        },
+    )
+    contracts: List["Contract"] = Relationship(
+        back_populates="project",
+        sa_relationship_kwargs={
+            "primaryjoin": "Project.id == Contract.project_id",
+            "foreign_keys": "[Contract.project_id]",
+        },
+    )
 
 
 class ProjectCreate(ProjectBase):
     """Schema for creating project."""
-    organization_id: int
+    organization_id: Optional[int] = None
 
 
 class ProjectRead(ProjectBase):
@@ -104,6 +123,7 @@ class ProjectUpdate(SQLModel):
     """Schema for updating project."""
     name: Optional[str] = None
     address: Optional[str] = None
+    customer_master_id: Optional[int] = None
     client_name: Optional[str] = None
     client_phone: Optional[str] = None
     notes: Optional[str] = None
@@ -123,13 +143,25 @@ class SiteVisit(SiteVisitBase, table=True):
     __tablename__ = "site_visit"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
-    technician_id: int = Field(foreign_key="user.id", sa_type=BigInteger)
+    project_id: int = Field(sa_type=BigInteger, index=True)
+    technician_id: int = Field(sa_type=BigInteger, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    project: Optional[Project] = Relationship(back_populates="site_visits")
-    photos: List["Photo"] = Relationship(back_populates="site_visit")
+    project: Optional[Project] = Relationship(
+        back_populates="site_visits",
+        sa_relationship_kwargs={
+            "primaryjoin": "SiteVisit.project_id == Project.id",
+            "foreign_keys": "[SiteVisit.project_id]",
+        },
+    )
+    photos: List["Photo"] = Relationship(
+        back_populates="site_visit",
+        sa_relationship_kwargs={
+            "primaryjoin": "SiteVisit.id == Photo.site_visit_id",
+            "foreign_keys": "[Photo.site_visit_id]",
+        },
+    )
 
 
 class SiteVisitCreate(SiteVisitBase):
@@ -158,7 +190,7 @@ class Photo(PhotoBase, table=True):
     __tablename__ = "photo"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    site_visit_id: int = Field(foreign_key="site_visit.id", sa_type=BigInteger, index=True)
+    site_visit_id: int = Field(sa_type=BigInteger, index=True)
     
     # File storage
     storage_path: str = Field(max_length=500)
@@ -174,7 +206,13 @@ class Photo(PhotoBase, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    site_visit: Optional[SiteVisit] = Relationship(back_populates="photos")
+    site_visit: Optional[SiteVisit] = Relationship(
+        back_populates="photos",
+        sa_relationship_kwargs={
+            "primaryjoin": "Photo.site_visit_id == SiteVisit.id",
+            "foreign_keys": "[Photo.site_visit_id]",
+        },
+    )
 
 
 class PhotoCreate(PhotoBase):
@@ -210,7 +248,7 @@ class ASRequest(SQLModel, table=True):
     __tablename__ = "as_request"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
+    project_id: int = Field(sa_type=BigInteger, index=True)
     
     description: str
     status: ASRequestStatus = Field(default=ASRequestStatus.PENDING)
@@ -220,7 +258,7 @@ class ASRequest(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     resolved_at: Optional[datetime] = Field(default=None)
     
-    created_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
+    created_by: Optional[int] = Field(default=None, sa_type=BigInteger)
 
 
 class ASRequestCreate(SQLModel):

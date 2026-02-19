@@ -40,7 +40,7 @@ class PriceStaging(SQLModel, table=True):
     __tablename__ = "price_staging"
     
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    pricebook_revision_id: int = Field(foreign_key="pricebook_revision.id", sa_type=BigInteger, index=True)
+    pricebook_revision_id: int = Field(sa_type=BigInteger, index=True)
     
     # 추출된 데이터
     item_name: str = Field(max_length=255, index=True)
@@ -68,13 +68,13 @@ class PriceStaging(SQLModel, table=True):
     
     # 기존 카탈로그 매칭 (선택)
     matched_catalog_item_id: Optional[int] = Field(
-        default=None, foreign_key="catalog_item.id", sa_type=BigInteger
+        default=None, sa_type=BigInteger, index=True
     )
     
     # 감사 추적
     created_at: datetime = Field(default_factory=datetime.utcnow)
     reviewed_at: Optional[datetime] = Field(default=None)
-    reviewed_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
+    reviewed_by: Optional[int] = Field(default=None, sa_type=BigInteger)
     review_note: Optional[str] = Field(default=None)
     
     # 승인 후 생성된 정식 가격 레코드 ID

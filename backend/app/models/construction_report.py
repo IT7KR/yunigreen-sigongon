@@ -51,7 +51,7 @@ class ConstructionReport(ConstructionReportBase, table=True):
     __tablename__ = "construction_report"
 
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
-    project_id: int = Field(foreign_key="project.id", sa_type=BigInteger, index=True)
+    project_id: int = Field(sa_type=BigInteger, index=True)
 
     # Auto-generated report number
     report_number: Optional[str] = Field(default=None, max_length=50, index=True)
@@ -66,11 +66,16 @@ class ConstructionReport(ConstructionReportBase, table=True):
     approved_at: Optional[datetime] = Field(default=None)
 
     # Audit
-    created_by: int = Field(foreign_key="user.id", sa_type=BigInteger)
-    approved_by: Optional[int] = Field(default=None, foreign_key="user.id", sa_type=BigInteger)
+    created_by: int = Field(sa_type=BigInteger)
+    approved_by: Optional[int] = Field(default=None, sa_type=BigInteger)
 
     # Relationships
-    project: Optional["Project"] = Relationship()
+    project: Optional["Project"] = Relationship(
+        sa_relationship_kwargs={
+            "primaryjoin": "ConstructionReport.project_id == Project.id",
+            "foreign_keys": "[ConstructionReport.project_id]",
+        },
+    )
 
 
 class ConstructionReportCreate(SQLModel):
