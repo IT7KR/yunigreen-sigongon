@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   FolderKanban,
@@ -8,10 +7,6 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Users,
-  DollarSign,
-  Receipt,
-  ClipboardList,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import {
@@ -27,36 +22,12 @@ import {
   EmptyState,
   AlertBox,
   PageTransition,
-  StaggerGrid,
 } from "@sigongon/ui";
 import { useDashboardStats } from "@/hooks";
-import { api } from "@/lib/api";
 import type { ProjectStatus } from "@sigongon/types";
 
 export default function DashboardPage() {
   const { stats, recentProjects, isLoading, error } = useDashboardStats();
-
-  const [extendedStats, setExtendedStats] = useState({
-    monthlyRevenue: 0,
-    monthlyCollection: 0,
-    receivables: 0,
-    monthlyWorkers: 0,
-    recentLogs: [] as Array<{ id: string; project: string; date: string; summary: string }>,
-  });
-
-  useEffect(() => {
-    api.getDashboardSummary().then((r) => {
-      if (r.success && r.data) {
-        setExtendedStats({
-          monthlyRevenue: r.data.monthly_revenue,
-          monthlyCollection: r.data.monthly_collection,
-          receivables: r.data.receivables,
-          monthlyWorkers: r.data.monthly_workers,
-          recentLogs: r.data.recent_logs,
-        });
-      }
-    });
-  }, []);
 
   const statCards = [
     {
@@ -78,34 +49,6 @@ export default function DashboardPage() {
       title: "완료",
       value: stats.completed.toString(),
       icon: CheckCircle2,
-    },
-  ];
-
-  const financeCards = [
-    {
-      title: "금월 매출",
-      value: extendedStats.monthlyRevenue,
-      icon: DollarSign,
-      color: "green",
-    },
-    {
-      title: "금월 수금",
-      value: extendedStats.monthlyCollection,
-      icon: Receipt,
-      color: "blue",
-    },
-    {
-      title: "미수금",
-      value: extendedStats.receivables,
-      icon: AlertCircle,
-      color: "amber",
-    },
-    {
-      title: "금월 투입 인원",
-      value: extendedStats.monthlyWorkers,
-      icon: Users,
-      color: "purple",
-      suffix: "명",
     },
   ];
 
@@ -224,62 +167,6 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Finance Stats */}
-            <StaggerGrid
-              items={financeCards}
-              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-              keyExtractor={(card) => card.title}
-              renderItem={(card) => (
-                <StatCard
-                  title={card.title}
-                  value={card.suffix ? card.value : Math.round(card.value / 10000)}
-                  icon={card.icon}
-                  color={card.color as "green" | "blue" | "amber" | "purple"}
-                  suffix={card.suffix || "만원"}
-                />
-              )}
-            />
-
-            {/* Recent Work Logs */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5 text-brand-point-600" />
-                  최근 작업일지
-                </CardTitle>
-              </CardHeader>
-                <CardContent>
-                  {extendedStats.recentLogs.length > 0 ? (
-                  <StaggerGrid
-                    items={extendedStats.recentLogs}
-                    className="space-y-3"
-                    keyExtractor={(log) => log.id}
-                    renderItem={(log) => (
-                      <div
-                        className="flex items-start justify-between rounded-lg border border-slate-100 p-3"
-                      >
-                        <div>
-                          <p className="font-medium text-slate-900">
-                            {log.project}
-                          </p>
-                          <p className="mt-0.5 text-sm text-slate-600">
-                            {log.summary}
-                          </p>
-                        </div>
-                        <span className="text-sm text-slate-500">{log.date}</span>
-                      </div>
-                    )}
-                  />
-                ) : (
-                  <EmptyState
-                    icon={ClipboardList}
-                    title="최근 작업일지가 없어요"
-                    size="sm"
-                  />
-                )}
-              </CardContent>
-            </Card>
-
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -292,11 +179,6 @@ export default function DashboardPage() {
                   {stats.inProgress > 0 && (
                     <AlertBox variant="info" action={{ label: "확인하기", href: "/projects?status=in_progress" }}>
                       {stats.inProgress}개 프로젝트가 진행 중이에요
-                    </AlertBox>
-                  )}
-                  {extendedStats.receivables > 0 && (
-                    <AlertBox variant="error" action={{ label: "확인하기", href: "/billing" }}>
-                      미수금 {(extendedStats.receivables / 10000).toLocaleString()}만원
                     </AlertBox>
                   )}
                   <AlertBox variant="warning" action={{ label: "확인하기", href: "/pricebooks" }}>
