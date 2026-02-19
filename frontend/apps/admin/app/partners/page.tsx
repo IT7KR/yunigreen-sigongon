@@ -1,19 +1,92 @@
 "use client";
 
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Modal, PrimitiveInput, toast, useConfirmDialog } from "@sigongon/ui";
-import { Plus, Upload, Search, Loader2, Check, Trash2, Pencil, Save, X, ToggleLeft, ToggleRight } from "lucide-react";
-import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  Input,
+  Modal,
+  PrimitiveInput,
+  toast,
+  useConfirmDialog,
+} from "@sigongon/ui";
+import {
+  Check,
+  Loader2,
+  Pencil,
+  Plus,
+  Save,
+  Search,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+} from "lucide-react";
+import { AdminLayout } from "@/components/AdminLayout";
 import { api } from "@/lib/api";
 
 type Partner = {
   id: string;
   name: string;
-  biz_no: string;
-  owner: string;
-  is_female_owned: boolean;
-  license: string;
+  representative_name: string;
+  representative_phone: string;
+  business_number: string;
+  contact_name: string;
+  contact_phone: string;
+  license_type: string;
+  is_women_owned: boolean;
   status: "active" | "inactive";
+};
+
+type PartnerForm = {
+  name: string;
+  representative_name: string;
+  representative_phone: string;
+  business_number: string;
+  contact_name: string;
+  contact_phone: string;
+  license_type: string;
+  is_women_owned: boolean;
+};
+
+const EMPTY_FORM: PartnerForm = {
+  name: "",
+  representative_name: "",
+  representative_phone: "",
+  business_number: "",
+  contact_name: "",
+  contact_phone: "",
+  license_type: "",
+  is_women_owned: false,
+};
+
+const normalizePartner = (partner: any): Partner => {
+  const representativeName =
+    partner.representative_name || partner.owner || "";
+  const businessNumber =
+    partner.business_number || partner.biz_no || "";
+  const licenseType = partner.license_type || partner.license || "";
+  const legacyWomenOwned =
+    typeof partner.is_female_owned === "boolean"
+      ? partner.is_female_owned
+      : false;
+
+  return {
+    id: String(partner.id),
+    name: partner.name || "",
+    representative_name: representativeName,
+    representative_phone: partner.representative_phone || "",
+    business_number: businessNumber,
+    contact_name: partner.contact_name || "",
+    contact_phone: partner.contact_phone || "",
+    license_type: licenseType,
+    is_women_owned:
+      typeof partner.is_women_owned === "boolean"
+        ? partner.is_women_owned
+        : legacyWomenOwned,
+    status: partner.status === "inactive" ? "inactive" : "active",
+  };
 };
 
 export default function PartnersPage() {
@@ -22,57 +95,21 @@ export default function PartnersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    owner: "",
-    biz_no: "",
-    license: "",
-    is_female_owned: false,
-  });
-  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState<PartnerForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const { confirm } = useConfirmDialog();
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.getPartners();
-      if (response.success && response.data) {
-        setPartners(response.data);
-        setFilteredPartners(response.data);
-      }
-    } catch (err) {
-      console.error("파트너 목록 불러오기 실패:", err);
-    } finally {
-      setIsLoading(false);
-    }
+  const formatPhone = (value: string) => {
+    const cleaned = value.replace(/\D/g, "");
+    if (cleaned.length <= 3) return cleaned;
+    if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // Search filter
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredPartners(partners);
-      return;
-    }
-    const term = searchTerm.toLowerCase();
-    const filtered = partners.filter(
-      (p) =>
-        p.name.toLowerCase().includes(term) ||
-        p.biz_no.includes(term) ||
-        p.owner.toLowerCase().includes(term)
-    );
-    setFilteredPartners(filtered);
-  }, [searchTerm, partners]);
-
-  // Format business number: XXX-XX-XXXXX
   const formatBizNo = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
     if (cleaned.length <= 3) return cleaned;
@@ -80,15 +117,50 @@ export default function PartnersPage() {
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 5)}-${cleaned.slice(5, 10)}`;
   };
 
+  const fetchPartners = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.getPartners();
+      if (response.success && response.data) {
+        const normalized = response.data.map(normalizePartner);
+        setPartners(normalized);
+        setFilteredPartners(normalized);
+      }
+    } catch (error) {
+      console.error("협력사 목록 조회 실패:", error);
+      toast.error("협력사 목록을 불러오지 못했습니다");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPartners();
+  }, []);
+
+  useEffect(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) {
+      setFilteredPartners(partners);
+      return;
+    }
+
+    const filtered = partners.filter((partner) => {
+      return (
+        partner.name.toLowerCase().includes(term) ||
+        partner.representative_name.toLowerCase().includes(term) ||
+        partner.representative_phone.includes(term) ||
+        partner.contact_name.toLowerCase().includes(term) ||
+        partner.contact_phone.includes(term) ||
+        partner.business_number.includes(term)
+      );
+    });
+    setFilteredPartners(filtered);
+  }, [searchTerm, partners]);
+
   const openCreateModal = () => {
     setEditingPartner(null);
-    setFormData({
-      name: "",
-      owner: "",
-      biz_no: "",
-      license: "",
-      is_female_owned: false,
-    });
+    setFormData(EMPTY_FORM);
     setFormErrors({});
     setSaveSuccess(false);
     setShowModal(true);
@@ -98,10 +170,13 @@ export default function PartnersPage() {
     setEditingPartner(partner);
     setFormData({
       name: partner.name,
-      owner: partner.owner,
-      biz_no: partner.biz_no,
-      license: partner.license,
-      is_female_owned: partner.is_female_owned,
+      representative_name: partner.representative_name,
+      representative_phone: partner.representative_phone,
+      business_number: partner.business_number,
+      contact_name: partner.contact_name,
+      contact_phone: partner.contact_phone,
+      license_type: partner.license_type,
+      is_women_owned: partner.is_women_owned,
     });
     setFormErrors({});
     setSaveSuccess(false);
@@ -111,86 +186,96 @@ export default function PartnersPage() {
   const closeModal = () => {
     setShowModal(false);
     setEditingPartner(null);
-    setFormData({
-      name: "",
-      owner: "",
-      biz_no: "",
-      license: "",
-      is_female_owned: false,
-    });
+    setFormData(EMPTY_FORM);
     setFormErrors({});
     setSaveSuccess(false);
   };
 
-  const handleSubmit = async () => {
+  const validateForm = () => {
     const errors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
       errors.name = "업체명을 입력하세요";
     }
-    if (!formData.owner.trim()) {
-      errors.owner = "대표자명을 입력하세요";
+    if (!formData.representative_name.trim()) {
+      errors.representative_name = "대표자명을 입력하세요";
+    }
+    if (!formData.representative_phone.trim()) {
+      errors.representative_phone = "대표자 연락처를 입력하세요";
     }
 
     const bizNoRegex = /^\d{3}-\d{2}-\d{5}$/;
-    if (!formData.biz_no || !bizNoRegex.test(formData.biz_no)) {
-      errors.biz_no = "사업자번호를 올바른 형식으로 입력하세요 (XXX-XX-XXXXX)";
+    if (!bizNoRegex.test(formData.business_number)) {
+      errors.business_number = "사업자번호 형식은 XXX-XX-XXXXX 입니다";
     }
 
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
-    setIsSaving(true);
-    setFormErrors({});
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+
+    const payload = {
+      name: formData.name.trim(),
+      representative_name: formData.representative_name.trim(),
+      representative_phone: formData.representative_phone.trim() || undefined,
+      business_number: formData.business_number.trim(),
+      contact_name: formData.contact_name.trim() || undefined,
+      contact_phone: formData.contact_phone.trim() || undefined,
+      license_type: formData.license_type.trim() || undefined,
+      is_women_owned: formData.is_women_owned,
+    };
 
     try {
+      setIsSaving(true);
+      setFormErrors({});
+
       if (editingPartner) {
-        const res = await api.updatePartner(editingPartner.id, formData);
-        if (res.success) {
-          setSaveSuccess(true);
-          await fetchData();
-          setTimeout(() => {
-            closeModal();
-          }, 1500);
+        const response = await api.updatePartner(editingPartner.id, payload);
+        if (!response.success) {
+          setFormErrors({ submit: "수정에 실패했습니다" });
+          return;
         }
       } else {
-        const res = await api.createPartner(formData);
-        if (res.success) {
-          setSaveSuccess(true);
-          await fetchData();
-          setTimeout(() => {
-            closeModal();
-          }, 1500);
+        const response = await api.createPartner(payload);
+        if (!response.success) {
+          setFormErrors({ submit: "등록에 실패했습니다" });
+          return;
         }
       }
-    } catch {
-      setFormErrors({ submit: "저장에 실패했습니다" });
-    }
 
-    setIsSaving(false);
+      setSaveSuccess(true);
+      await fetchPartners();
+      setTimeout(closeModal, 1000);
+    } catch (error) {
+      console.error("협력사 저장 실패:", error);
+      setFormErrors({ submit: "저장 중 오류가 발생했습니다" });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleToggleStatus = async (partner: Partner) => {
-    const action = partner.status === "active" ? "비활성화" : "활성화";
+    const actionLabel = partner.status === "active" ? "비활성화" : "활성화";
     const confirmed = await confirm({
-      title: `${partner.name}을(를) ${action}하시겠습니까?`,
-      confirmLabel: action,
+      title: `${partner.name}을(를) ${actionLabel}하시겠습니까?`,
+      confirmLabel: actionLabel,
       variant: "destructive",
     });
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     try {
-      const res = await api.togglePartnerStatus(partner.id);
-      if (res.success) {
-        await fetchData();
-        toast.success(`협력사를 ${action}했어요`);
+      const response = await api.togglePartnerStatus(partner.id);
+      if (!response.success) {
+        toast.error("상태 변경에 실패했습니다");
+        return;
       }
-    } catch {
-      toast.error("상태 변경에 실패했습니다");
+      await fetchPartners();
+      toast.success(`협력사를 ${actionLabel}했습니다`);
+    } catch (error) {
+      console.error("협력사 상태 변경 실패:", error);
+      toast.error("상태 변경 중 오류가 발생했습니다");
     }
   };
 
@@ -201,19 +286,20 @@ export default function PartnersPage() {
       confirmLabel: "삭제",
       variant: "destructive",
     });
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     try {
-      const res = await api.deletePartner(partner.id);
-      if (res.success) {
-        await fetchData();
-        closeModal();
-        toast.success("협력사를 삭제했어요");
+      const response = await api.deletePartner(partner.id);
+      if (!response.success) {
+        toast.error("삭제에 실패했습니다");
+        return;
       }
-    } catch {
-      toast.error("삭제에 실패했습니다");
+      await fetchPartners();
+      closeModal();
+      toast.success("협력사를 삭제했습니다");
+    } catch (error) {
+      console.error("협력사 삭제 실패:", error);
+      toast.error("삭제 중 오류가 발생했습니다");
     }
   };
 
@@ -228,17 +314,15 @@ export default function PartnersPage() {
           </Button>
         </div>
 
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <PrimitiveInput
-              type="text"
-              placeholder="업체명, 사업자번호 검색"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 pl-10 py-2 focus:outline-none focus:ring-2 focus:ring-brand-point-500"
-            />
-          </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <PrimitiveInput
+            type="text"
+            placeholder="업체명, 대표자, 연락처, 사업자번호 검색"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            className="w-full rounded-lg border border-slate-200 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-point-500"
+          />
         </div>
 
         <Card>
@@ -248,6 +332,7 @@ export default function PartnersPage() {
                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-sm text-slate-500">
                   <th className="px-6 py-3 font-medium">업체명</th>
                   <th className="px-6 py-3 font-medium">대표자</th>
+                  <th className="px-6 py-3 font-medium">실무자</th>
                   <th className="px-6 py-3 font-medium">사업자번호</th>
                   <th className="px-6 py-3 font-medium">면허</th>
                   <th className="px-6 py-3 font-medium">여성기업</th>
@@ -258,19 +343,13 @@ export default function PartnersPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-6 text-center text-sm text-slate-400"
-                    >
+                    <td colSpan={8} className="px-6 py-6 text-center text-sm text-slate-400">
                       불러오는 중...
                     </td>
                   </tr>
                 ) : filteredPartners.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-6 text-center text-sm text-slate-400"
-                    >
+                    <td colSpan={8} className="px-6 py-6 text-center text-sm text-slate-400">
                       {searchTerm ? "검색 결과가 없습니다." : "등록된 협력사가 없습니다."}
                     </td>
                   </tr>
@@ -280,37 +359,35 @@ export default function PartnersPage() {
                       key={partner.id}
                       className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
                     >
-                      <td className="px-6 py-4 font-medium text-slate-900">
-                        {partner.name}
+                      <td className="px-6 py-4 font-medium text-slate-900">{partner.name}</td>
+                      <td className="px-6 py-4 text-slate-500">
+                        <p>{partner.representative_name}</p>
+                        <p className="text-xs text-slate-400">
+                          {partner.representative_phone || "-"}
+                        </p>
                       </td>
                       <td className="px-6 py-4 text-slate-500">
-                        {partner.owner}
+                        <p>{partner.contact_name || "-"}</p>
+                        <p className="text-xs text-slate-400">{partner.contact_phone || "-"}</p>
                       </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        {partner.biz_no}
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        {partner.license}
-                      </td>
+                      <td className="px-6 py-4 text-slate-500">{partner.business_number}</td>
+                      <td className="px-6 py-4 text-slate-500">{partner.license_type || "-"}</td>
                       <td className="px-6 py-4">
-                        {partner.is_female_owned && (
+                        {partner.is_women_owned && (
                           <span className="inline-flex items-center rounded-full bg-pink-100 px-2.5 py-0.5 text-xs font-medium text-pink-800">
                             여성기업
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <Badge
-                          variant={
-                            partner.status === "active" ? "success" : "default"
-                          }
-                        >
+                        <Badge variant={partner.status === "active" ? "success" : "default"}>
                           {partner.status === "active" ? "정상" : "정지"}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <Button size="sm" variant="ghost" onClick={() => openEditModal(partner)}>
-                          <Pencil className="h-3.5 w-3.5" />수정
+                          <Pencil className="h-3.5 w-3.5" />
+                          수정
                         </Button>
                       </td>
                     </tr>
@@ -322,7 +399,6 @@ export default function PartnersPage() {
         </Card>
       </div>
 
-      {/* Partner Create/Edit Modal */}
       <Modal
         isOpen={showModal}
         onClose={closeModal}
@@ -339,53 +415,92 @@ export default function PartnersPage() {
           </div>
         ) : (
           <div className="space-y-5">
-            {/* Form Fields */}
             <div className="space-y-4">
               <Input
                 label="업체명"
                 placeholder="(주)가나건설"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(event) => setFormData({ ...formData, name: event.target.value })}
                 error={formErrors.name}
                 required
               />
               <div className="grid grid-cols-2 gap-3">
                 <Input
-                  label="대표자"
+                  label="대표자명"
                   placeholder="홍길동"
-                  value={formData.owner}
-                  onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
-                  error={formErrors.owner}
+                  value={formData.representative_name}
+                  onChange={(event) =>
+                    setFormData({ ...formData, representative_name: event.target.value })
+                  }
+                  error={formErrors.representative_name}
                   required
                 />
                 <Input
-                  label="사업자번호"
-                  placeholder="123-45-67890"
-                  value={formData.biz_no}
-                  onChange={(e) => {
-                    const formatted = formatBizNo(e.target.value);
-                    setFormData({ ...formData, biz_no: formatted });
-                  }}
-                  error={formErrors.biz_no}
+                  label="대표자 연락처"
+                  placeholder="010-1234-5678"
+                  value={formData.representative_phone}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      representative_phone: formatPhone(event.target.value),
+                    })
+                  }
+                  error={formErrors.representative_phone}
                   required
+                />
+              </div>
+              <Input
+                label="사업자번호"
+                placeholder="123-45-67890"
+                value={formData.business_number}
+                onChange={(event) =>
+                  setFormData({
+                    ...formData,
+                    business_number: formatBizNo(event.target.value),
+                  })
+                }
+                error={formErrors.business_number}
+                required
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="실무자명"
+                  placeholder="김대리"
+                  value={formData.contact_name}
+                  onChange={(event) =>
+                    setFormData({ ...formData, contact_name: event.target.value })
+                  }
+                />
+                <Input
+                  label="실무자 연락처"
+                  placeholder="010-0000-0000"
+                  value={formData.contact_phone}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      contact_phone: formatPhone(event.target.value),
+                    })
+                  }
                 />
               </div>
               <Input
                 label="면허"
                 placeholder="건축공사업"
-                value={formData.license}
-                onChange={(e) => setFormData({ ...formData, license: e.target.value })}
+                value={formData.license_type}
+                onChange={(event) =>
+                  setFormData({ ...formData, license_type: event.target.value })
+                }
               />
               <label
-                htmlFor="is_female_owned"
-                className="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
+                htmlFor="is_women_owned"
+                className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 transition-colors hover:bg-slate-50"
               >
                 <PrimitiveInput
                   type="checkbox"
-                  id="is_female_owned"
-                  checked={formData.is_female_owned}
-                  onChange={(e) =>
-                    setFormData({ ...formData, is_female_owned: e.target.checked })
+                  id="is_women_owned"
+                  checked={formData.is_women_owned}
+                  onChange={(event) =>
+                    setFormData({ ...formData, is_women_owned: event.target.checked })
                   }
                   className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
                 />
@@ -396,18 +511,10 @@ export default function PartnersPage() {
               </label>
             </div>
 
-            {/* Error Message */}
-            {formErrors.submit && (
-              <p className="text-sm text-red-600">{formErrors.submit}</p>
-            )}
+            {formErrors.submit && <p className="text-sm text-red-600">{formErrors.submit}</p>}
 
-            {/* Primary Actions */}
             <div className="flex gap-2 pt-1">
-              <Button
-                onClick={handleSubmit}
-                disabled={isSaving}
-                className="flex-1"
-              >
+              <Button onClick={handleSubmit} disabled={isSaving} className="flex-1">
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -430,10 +537,9 @@ export default function PartnersPage() {
               </Button>
             </div>
 
-            {/* Danger Zone - only for edit mode */}
             {editingPartner && (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">관리</p>
+              <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">관리</p>
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"
