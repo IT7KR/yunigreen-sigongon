@@ -15,6 +15,8 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { cn, StatusBadge, Button, formatDate } from "@sigongon/ui";
 import { PROJECT_CATEGORIES } from "@sigongon/types";
 import { useProject } from "@/hooks";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 interface ProjectTab {
   name: string;
@@ -36,6 +38,11 @@ export default function ProjectDetailLayout({
   const pathname = usePathname();
   const { data: response, isLoading } = useProject(id);
   const project = response?.success ? response.data : null;
+  const { data: materialOrderSummary } = useQuery({
+    queryKey: ["material-orders-mobile", id],
+    queryFn: () => api.getMaterialOrdersMobile(id),
+    enabled: !!id,
+  });
 
   const rawTabs: ProjectTab[] = [
     {
@@ -103,9 +110,24 @@ export default function ProjectDetailLayout({
     return true;
   });
 
+  const hasActiveMaterialOrders =
+    materialOrderSummary?.success &&
+    (materialOrderSummary.data || []).some((order) => {
+      const normalizedStatus =
+        order.status === "confirmed" ? "invoice_received" : order.status;
+      return !["closed", "cancelled"].includes(normalizedStatus);
+    });
+
   // Mobile: Top 3 + More
-  const mobilePrimaryTabs = tabs.slice(0, 3);
-  const mobileMenuTabs = tabs.slice(3);
+  const defaultMobilePrimaryTabs = tabs.slice(0, 3);
+  const ordersTab = tabs.find((tab) => tab.href === `/projects/${id}/orders`);
+  const mobilePrimaryTabs =
+    hasActiveMaterialOrders && ordersTab
+      ? [...defaultMobilePrimaryTabs.filter((tab) => tab.href !== ordersTab.href).slice(0, 2), ordersTab]
+      : defaultMobilePrimaryTabs;
+  const mobileMenuTabs = tabs.filter(
+    (tab) => !mobilePrimaryTabs.some((primaryTab) => primaryTab.href === tab.href),
+  );
 
   // Desktop: All in one line (scrollable if needed)
 
