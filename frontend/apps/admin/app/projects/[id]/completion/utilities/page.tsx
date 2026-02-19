@@ -99,14 +99,23 @@ export default function CompletionUtilitiesPage({
               학교 프로젝트 등에서 필요한 수도/전기/가스 정산 문서를 관리합니다.
             </p>
           </div>
-          <Badge className={pendingCount > 0 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}>
+          <Badge
+            className={
+              pendingCount > 0
+                ? "bg-amber-100 text-amber-700"
+                : "bg-emerald-100 text-emerald-700"
+            }
+          >
             {pendingCount > 0 ? `대기 ${pendingCount}건` : "정산 완료"}
           </Badge>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
           <MetricCard title="정산 항목" value={`${items.length}건`} />
           <MetricCard title="대기 항목" value={`${pendingCount}건`} />
-          <MetricCard title="합계 금액" value={`${totalAmount.toLocaleString()}원`} />
+          <MetricCard
+            title="합계 금액"
+            value={`${totalAmount.toLocaleString()}원`}
+          />
         </CardContent>
       </Card>
 
@@ -115,17 +124,19 @@ export default function CompletionUtilitiesPage({
           <CardTitle>정산 액션</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 md:grid-cols-2">
-          <Button className="w-full justify-between" asChild><Link href={`/projects/${projectId}/utilities`}>
+          <Button className="w-full justify-between" asChild>
+            <Link href={`/projects/${projectId}/utilities`}>
               수도광열비 관리 화면
               <ArrowRight className="h-4 w-4" />
-            </Link></Button>
+            </Link>
+          </Button>
           <Button
             variant="secondary"
             className="w-full justify-between"
             onClick={() =>
               downloadSample(
-                "sample/9. 학교 서류/1. 수도전기공문.hwp",
-                "수도전기공문_샘플.hwp",
+                "sample/9. 학교 서류/1. 수도전기공문.hwpx",
+                "수도전기공문_샘플.hwpx",
               )
             }
           >
@@ -180,7 +191,11 @@ export default function CompletionUtilitiesPage({
                       </p>
                     </div>
                   </div>
-                  <Badge variant={item.status === "completed" ? "success" : "warning"}>
+                  <Badge
+                    variant={
+                      item.status === "completed" ? "success" : "warning"
+                    }
+                  >
                     {item.status === "completed" ? "완료" : "대기"}
                   </Badge>
                 </div>
@@ -201,4 +216,3 @@ function MetricCard({ title, value }: { title: string; value: string }) {
     </div>
   );
 }
-

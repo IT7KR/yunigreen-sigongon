@@ -6,8 +6,7 @@ import { normalizeSamplePath } from "@/lib/sampleFiles";
 
 const MIME_TYPE_BY_EXTENSION: Record<string, string> = {
   ".pdf": "application/pdf",
-  ".xlsx":
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   ".xls": "application/vnd.ms-excel",
   ".xlsm": "application/vnd.ms-excel.sheet.macroEnabled.12",
   ".docx":

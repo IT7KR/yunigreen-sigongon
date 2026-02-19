@@ -12,7 +12,15 @@ import {
   Info,
   Download,
 } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, cn } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  PrimitiveButton,
+  cn,
+} from "@sigongon/ui";
 import { useProject } from "@/hooks";
 import { buildSampleFileDownloadUrl, buildSamplePath } from "@/lib/sampleFiles";
 
@@ -121,7 +129,7 @@ function buildSteps(id: string): WorkflowStep[] {
           name: "시방서",
           samplePath: "sample/1. 관공서 계약서류/",
           files: [
-            "3. 시방서_연동경로당 외 1개소(성산1동 제2경로당) 도장 및 방수공사.hwp",
+            "3. 시방서_연동경로당 외 1개소(성산1동 제2경로당) 도장 및 방수공사.hwpx",
           ],
         },
       ],
@@ -143,7 +151,7 @@ function buildSteps(id: string): WorkflowStep[] {
           name: "수의계약체결제한여부확인서",
           samplePath: "sample/1. 관공서 계약서류/",
           files: [
-            "2. 수의계약체결제한여부확인서_연동경로당 외 1개소(성산1동 제2경로당) 도장 및 방수공사.hwp",
+            "2. 수의계약체결제한여부확인서_연동경로당 외 1개소(성산1동 제2경로당) 도장 및 방수공사.hwpx",
           ],
         },
         {
@@ -159,15 +167,13 @@ function buildSteps(id: string): WorkflowStep[] {
         {
           name: "계약보증금 지급각서 (보증서 대체 시)",
           samplePath: "sample/1. 관공서 계약서류/",
-          files: ["5-1. 계약보증금 지급각서.hwp"],
+          files: ["5-1. 계약보증금 지급각서.hwpx"],
           conditional: true,
         },
         {
           name: "공사도급표준계약서 (민간)",
           samplePath: "sample/6. 민간 계약관련 서류(간단)/",
-          files: [
-            "1. 공사도급표준계약서(공사 전 계약에 필요한 서류).hwp",
-          ],
+          files: ["1. 공사도급표준계약서(공사 전 계약에 필요한 서류).hwpx"],
           conditional: true,
         },
         {
@@ -192,50 +198,48 @@ function buildSteps(id: string): WorkflowStep[] {
         {
           name: "착공공문",
           samplePath: "sample/2. 관공서 착공서류/",
-          files: ["0. 착공공문.hwp"],
+          files: ["0. 착공공문.hwpx"],
         },
         {
           name: "착공신고서",
           samplePath: "sample/2. 관공서 착공서류/",
-          files: ["1. 착공신고서.hwp"],
+          files: ["1. 착공신고서.hwpx"],
         },
         {
           name: "재직증명서 (현장대리인)",
           samplePath: "sample/2. 관공서 착공서류/",
-          files: ["2. 재직증명서_이시대(현장대리인).hwp"],
+          files: ["2. 재직증명서_이시대(현장대리인).hwpx"],
         },
         {
           name: "계약내역서",
           samplePath: "sample/2. 관공서 착공서류/",
-          files: [
-            "3. 계약내역서_하하호호 장난감도서관 잠실점 방수공사.xlsx",
-          ],
+          files: ["3. 계약내역서_하하호호 장난감도서관 잠실점 방수공사.xlsx"],
         },
         {
           name: "노무비 관련 서류",
           samplePath: "sample/2. 관공서 착공서류/",
-          files: ["4. 노무비 관련 서류.hwp"],
+          files: ["4. 노무비 관련 서류.hwpx"],
         },
         {
           name: "안전보건관리 준수 서약서",
           samplePath: "sample/2. 관공서 착공서류/",
-          files: ["5. 안전보건관리 준수 서약서.hwp"],
+          files: ["5. 안전보건관리 준수 서약서.hwpx"],
         },
         {
           name: "착공 전 사진",
           samplePath: "sample/2. 관공서 착공서류/",
-          files: ["6. 착공 전 사진.hwp"],
+          files: ["6. 착공 전 사진.hwpx"],
         },
         {
           name: "직접시공계획서",
           samplePath: "sample/2. 관공서 착공서류/",
-          files: ["7. 직접시공계획서.hwp"],
+          files: ["7. 직접시공계획서.hwpx"],
         },
         {
           name: "안전보건관리계획서",
           samplePath: "sample/2. 관공서 착공서류/",
           files: [
-            "8. 안전보건관리계획서(산업안전보건관리비 사용계획서 포함).hwp",
+            "8. 안전보건관리계획서(산업안전보건관리비 사용계획서 포함).hwpx",
           ],
         },
         {
@@ -256,9 +260,7 @@ function buildSteps(id: string): WorkflowStep[] {
         {
           name: "공사일지",
           samplePath: "sample/7. 공사일지/",
-          files: [
-            "공사일지_방배중 외1교(역삼중)균열보수공사_25.08.08.hwp",
-          ],
+          files: ["공사일지_방배중 외1교(역삼중)균열보수공사_25.08.08.hwpx"],
         },
       ],
       action: {
@@ -288,7 +290,7 @@ function buildSteps(id: string): WorkflowStep[] {
           name: "표준근로계약서",
           samplePath: "sample/5. 일용신고 서류/",
           files: [
-            "서울시+건설일용근로자+표준근로계약서(2019.2_개정_서울계약마당).hwp",
+            "서울시+건설일용근로자+표준근로계약서(2019.2_개정_서울계약마당).hwpx",
           ],
         },
       ],
@@ -297,18 +299,17 @@ function buildSteps(id: string): WorkflowStep[] {
     {
       id: "completion-docs",
       title: "준공 서류 제출",
-      description:
-        "공사 완료 후 준공계와 각종 증빙서류를 발주처에 제출합니다.",
+      description: "공사 완료 후 준공계와 각종 증빙서류를 발주처에 제출합니다.",
       documents: [
         {
           name: "준공공문",
           samplePath: "sample/3. 관공서 준공서류/",
-          files: ["0. 준공공문.hwp"],
+          files: ["0. 준공공문.hwpx"],
         },
         {
           name: "준공계",
           samplePath: "sample/3. 관공서 준공서류/",
-          files: ["1. 준공계.hwp"],
+          files: ["1. 준공계.hwpx"],
         },
         {
           name: "준공내역서",
@@ -318,17 +319,13 @@ function buildSteps(id: string): WorkflowStep[] {
         {
           name: "준공내역서 (금액 변동 시)",
           samplePath: "sample/3. 관공서 준공서류/",
-          files: [
-            "2-1. 준공내역서_준공금액이 계약금액과 상이한 경우.xlsx",
-          ],
+          files: ["2-1. 준공내역서_준공금액이 계약금액과 상이한 경우.xlsx"],
           conditional: true,
         },
         {
           name: "준공정산동의서 (금액 변동 시)",
           samplePath: "sample/3. 관공서 준공서류/",
-          files: [
-            "3. 준공정산동의서(준공금 변동이 있을 경우에만 작성).pdf",
-          ],
+          files: ["3. 준공정산동의서(준공금 변동이 있을 경우에만 작성).pdf"],
           conditional: true,
         },
         {
@@ -344,12 +341,12 @@ function buildSteps(id: string): WorkflowStep[] {
         {
           name: "노무비 미체불확약서/지급내역서",
           samplePath: "sample/3. 관공서 준공서류/",
-          files: ["5-1. 노무비 미체불확약서,지급내역서.hwp"],
+          files: ["5-1. 노무비 미체불확약서,지급내역서.hwpx"],
         },
         {
           name: "근로자 인적사항표",
           samplePath: "sample/3. 관공서 준공서류/",
-          files: ["5-2. 근로자 인적사항표.hwp"],
+          files: ["5-2. 근로자 인적사항표.hwpx"],
         },
         {
           name: "위임장 (인력사무소 대납 시)",
@@ -360,16 +357,14 @@ function buildSteps(id: string): WorkflowStep[] {
         {
           name: "산업안전보건관리비 집행내역 (2천만원 이상)",
           samplePath: "sample/3. 관공서 준공서류/",
-          files: [
-            "6. 산업안전보건관리비 집행내역 증빙자료.hwp",
-          ],
+          files: ["6. 산업안전보건관리비 집행내역 증빙자료.hwpx"],
           conditional: true,
         },
         {
           name: "하자보수보증금 지급각서",
           samplePath: "sample/3. 관공서 준공서류/",
           files: [
-            "7. 하자보수보증금 지급각서(발주처에서 요청하는 경우 하자보증증권으로 제출).hwp",
+            "7. 하자보수보증금 지급각서(발주처에서 요청하는 경우 하자보증증권으로 제출).hwpx",
           ],
         },
         {
@@ -397,14 +392,12 @@ function buildSteps(id: string): WorkflowStep[] {
         {
           name: "수도전기공문",
           samplePath: "sample/9. 학교 서류/",
-          files: ["1. 수도전기공문.hwp"],
+          files: ["1. 수도전기공문.hwpx"],
         },
         {
           name: "교육청 원클릭 프로그램",
           samplePath: "sample/9. 학교 서류/",
-          files: [
-            "공사서류 원클릭 프로그램(2025.3.수정)-서울시교육청용.xlsm",
-          ],
+          files: ["공사서류 원클릭 프로그램(2025.3.수정)-서울시교육청용.xlsm"],
           note: "교육청 제공 VBA 매크로 프로그램",
         },
       ],
@@ -413,8 +406,7 @@ function buildSteps(id: string): WorkflowStep[] {
     {
       id: "tax-invoice",
       title: "세금계산서 발행",
-      description:
-        "발주처 승인 후 세금계산서를 발행합니다. (팝빌 연동)",
+      description: "발주처 승인 후 세금계산서를 발행합니다. (팝빌 연동)",
       documents: [],
       action: {
         label: "세금계산서",
@@ -467,7 +459,11 @@ function resolveStatuses(projectStatus: string): StepStatus[] {
       ? "current"
       : "pending";
   // Step 6: completed if quoted or later
-  const s6: StepStatus = atLeast("quoted") ? "completed" : s5 === "current" ? "current" : "pending";
+  const s6: StepStatus = atLeast("quoted")
+    ? "completed"
+    : s5 === "current"
+      ? "current"
+      : "pending";
   // Step 7: completed if contracted or later
   const s7: StepStatus = atLeast("contracted")
     ? "completed"
@@ -562,9 +558,7 @@ function DocumentList({ documents }: { documents: SampleDocument[] }) {
             </p>
           )}
           {doc.samplePath && (
-            <p className="mt-1 text-[11px] text-slate-400">
-              {doc.samplePath}
-            </p>
+            <p className="mt-1 text-[11px] text-slate-400">{doc.samplePath}</p>
           )}
           <ul className="mt-1.5 space-y-1">
             {doc.files.map((file) => {
@@ -576,7 +570,9 @@ function DocumentList({ documents }: { documents: SampleDocument[] }) {
                 >
                   <div className="min-w-0 flex items-center gap-1.5">
                     <FileIcon fileName={file} />
-                    <span className="truncate text-xs text-slate-500">{file}</span>
+                    <span className="truncate text-xs text-slate-500">
+                      {file}
+                    </span>
                   </div>
                   {sampleFilePath && (
                     <a
@@ -685,13 +681,16 @@ function StepCard({
           <div className="flex items-center gap-2">
             {step.action && (
               <Button
-                  variant={isCurrent ? "primary" : "secondary"}
-                  size="sm"
-                  className="whitespace-nowrap text-xs"
-                 asChild><Link href={step.action.href}>
+                variant={isCurrent ? "primary" : "secondary"}
+                size="sm"
+                className="whitespace-nowrap text-xs"
+                asChild
+              >
+                <Link href={step.action.href}>
                   {step.action.label}
                   <ArrowRight className="ml-1 h-3 w-3" />
-                </Link></Button>
+                </Link>
+              </Button>
             )}
             {hasDocuments && (
               <PrimitiveButton

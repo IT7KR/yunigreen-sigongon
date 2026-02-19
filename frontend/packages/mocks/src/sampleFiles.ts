@@ -26,7 +26,7 @@ export const PROJECT_DOCUMENT_SAMPLE_MANIFEST: Record<string, string> = {
   p5: "sample/3. 관공서 준공서류/준공서류_하하호호 장난감도서관 잠실점 방수 공사.pdf",
   p6: "sample/3. 관공서 준공서류/5-1. 노무비 미체불확약서,지급내역서.hwpx",
   p_worker_list: "sample/3. 관공서 준공서류/5-2. 근로자 인적사항표.hwpx",
-  p7: "sample/3. 관공서 준공서류/6. 산업안전보건관리비 집행내역 증빙자료.hwp",
+  p7: "sample/3. 관공서 준공서류/6. 산업안전보건관리비 집행내역 증빙자료.hwpx",
   p8: "sample/3. 관공서 준공서류/7. 하자보수보증금 지급각서(발주처에서 요청하는 경우 하자보증증권으로 제출).hwpx",
   p9: "sample/3. 관공서 준공서류/준공서류_대경중학교 본관동 균열보수공사.pdf",
   l1: "sample/5. 일용신고 서류/근로내용확인신고_전자신고용.xlsx",
@@ -38,8 +38,7 @@ export const PROJECT_DOCUMENT_SAMPLE_MANIFEST: Record<string, string> = {
 };
 
 export const PROJECT_MOCK_EXPORT_SAMPLE_FILES = {
-  contractPdf:
-    "sample/10. 공사계약서(나라장터, S2B)/나라장터 계약서.pdf",
+  contractPdf: "sample/10. 공사계약서(나라장터, S2B)/나라장터 계약서.pdf",
   albumPdf:
     "sample/3. 관공서 준공서류/준공서류_하하호호 장난감도서관 잠실점 방수 공사.pdf",
   startReportPdf:
@@ -78,7 +77,9 @@ export function buildSampleFileDownloadUrl(samplePath: string): string {
   return `/api/sample-files?${params.toString()}`;
 }
 
-export function getSamplePathForDocument(documentId: string): string | undefined {
+export function getSamplePathForDocument(
+  documentId: string,
+): string | undefined {
   return PROJECT_DOCUMENT_SAMPLE_MANIFEST[documentId];
 }
 

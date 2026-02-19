@@ -12,14 +12,7 @@ import {
   formatDate,
   toast,
 } from "@sigongon/ui";
-import {
-  Shield,
-  Clock3,
-  Download,
-  Wrench,
-  Loader2,
-  Plus,
-} from "lucide-react";
+import { Shield, Clock3, Download, Wrench, Loader2, Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import { buildSampleFileDownloadUrl } from "@/lib/sampleFiles";
 
@@ -109,9 +102,9 @@ export default function WarrantyPage({
   function downloadWarrantySample() {
     const anchor = document.createElement("a");
     anchor.href = buildSampleFileDownloadUrl(
-      "sample/3. 관공서 준공서류/7. 하자보수보증금 지급각서(발주처에서 요청하는 경우 하자보증증권으로 제출).hwp",
+      "sample/3. 관공서 준공서류/7. 하자보수보증금 지급각서(발주처에서 요청하는 경우 하자보증증권으로 제출).hwpx",
     );
-    anchor.download = "하자보수보증금_지급각서_샘플.hwp";
+    anchor.download = "하자보수보증금_지급각서_샘플.hwpx";
     anchor.target = "_blank";
     anchor.rel = "noopener noreferrer";
     document.body.append(anchor);
@@ -217,7 +210,8 @@ export default function WarrantyPage({
                     </p>
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                        asStatusClass[request.status] || "bg-slate-100 text-slate-600"
+                        asStatusClass[request.status] ||
+                        "bg-slate-100 text-slate-600"
                       }`}
                     >
                       {asStatusLabel[request.status] || request.status}
@@ -238,4 +232,3 @@ export default function WarrantyPage({
     </div>
   );
 }
-
