@@ -54,6 +54,10 @@ export { ActionButton, type ActionButtonProps } from "./components/ActionButton"
 export { AnimatedCard, type AnimatedCardProps } from "./components/AnimatedCard"
 export { AnimatedList } from "./components/AnimatedList"
 export {
+  ContentTransitionBoundary,
+  type ContentTransitionBoundaryProps,
+} from "./components/ContentTransitionBoundary"
+export {
   NavigationProgress,
   NavigationProgressProvider,
   useNavigationProgress,

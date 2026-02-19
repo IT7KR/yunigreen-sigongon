@@ -22,14 +22,12 @@ export function runWithViewTransition(
   }
 
   const doc = getDocumentWithViewTransition()
-  const startViewTransition = doc?.startViewTransition
-
-  if (!startViewTransition) {
+  if (!doc?.startViewTransition) {
     run()
     return
   }
 
-  startViewTransition(() => {
+  doc.startViewTransition(() => {
     run()
   })
 }
