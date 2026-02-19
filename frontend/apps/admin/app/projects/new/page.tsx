@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Card, Input, PrimitiveInput, PrimitiveSelect, Textarea } from "@sigongon/ui";
+import { Button, Card, Input, PrimitiveInput, Select, Textarea } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { PROJECT_CATEGORIES } from "@sigongon/types";
 import { api } from "@/lib/api";
@@ -103,31 +103,17 @@ export default function NewProjectPage() {
 
           {/* 공사 분류 필드 */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-900">
-              공사 분류 (필수)
-            </label>
-            <PrimitiveSelect
+            <Select
+              label="공사 분류 (필수)"
+              placeholder="분류 선택"
+              options={PROJECT_CATEGORIES.map((cat) => ({ value: cat.id, label: cat.label }))}
               value={category}
-              onChange={(e) => {
-                setCategory(e.target.value);
+              onChange={(value) => {
+                setCategory(value);
                 setErrors({ ...errors, category: "" });
               }}
-              className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-point-500 ${
-                errors.category
-                  ? "border-red-300 focus:border-red-500"
-                  : "border-slate-300 focus:border-brand-point-500"
-              }`}
-            >
-              <option value="">분류 선택</option>
-              {PROJECT_CATEGORIES.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.label}
-                </option>
-              ))}
-            </PrimitiveSelect>
-            {errors.category && (
-              <p className="mt-1 text-sm text-red-600">{errors.category}</p>
-            )}
+              error={errors.category}
+            />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">

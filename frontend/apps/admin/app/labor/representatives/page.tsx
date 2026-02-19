@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, LoadingOverlay, Modal, PrimitiveInput, PrimitiveSelect, Textarea, toast, useConfirmDialog } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, LoadingOverlay, Modal, PrimitiveInput, Select, Textarea, toast, useConfirmDialog } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Plus, Edit2, Trash2, UserCheck, Calendar } from "lucide-react";
 import { api } from "@/lib/api";
@@ -416,19 +416,13 @@ export default function LaborRepresentativesPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">프로젝트</label>
-            <PrimitiveSelect
+            <Select
+              label="프로젝트"
+              placeholder="프로젝트 선택"
+              options={projects.map((project) => ({ value: project.id, label: project.name }))}
               value={selectedProjectId}
-              onChange={(event) => setSelectedProjectId(event.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
-            >
-              <option value="">프로젝트 선택</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </PrimitiveSelect>
+              onChange={(value) => setSelectedProjectId(value)}
+            />
           </div>
 
           <div>
