@@ -169,7 +169,7 @@ class TableExtractor:
         if match:
             try:
                 return Decimal(match.group(1))
-            except:
+            except Exception:
                 return None
         return None
     

@@ -60,18 +60,23 @@ export default function BillingPage() {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      const response = await api.getBillingOverview();
-      if (response.success && response.data) {
-        setOverview({
-          ...initialOverview,
-          ...response.data,
-        });
-        // 구독이 없으면 플랜 선택 표시
-        if (!response.data.plan || response.data.plan === "무료 체험") {
-          setShowPlanSelector(true);
+      try {
+        const response = await api.getBillingOverview();
+        if (response.success && response.data) {
+          setOverview({
+            ...initialOverview,
+            ...response.data,
+          });
+          // 구독이 없으면 플랜 선택 표시
+          if (!response.data.plan || response.data.plan === "무료 체험") {
+            setShowPlanSelector(true);
+          }
         }
+      } catch (err) {
+        console.error("결제 정보 불러오기 실패:", err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     fetchData();

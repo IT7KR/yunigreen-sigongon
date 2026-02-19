@@ -38,12 +38,17 @@ export default function PartnersPage() {
 
   const fetchData = async () => {
     setIsLoading(true);
-    const response = await api.getPartners();
-    if (response.success && response.data) {
-      setPartners(response.data);
-      setFilteredPartners(response.data);
+    try {
+      const response = await api.getPartners();
+      if (response.success && response.data) {
+        setPartners(response.data);
+        setFilteredPartners(response.data);
+      }
+    } catch (err) {
+      console.error("파트너 목록 불러오기 실패:", err);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   useEffect(() => {

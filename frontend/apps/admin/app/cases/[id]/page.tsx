@@ -37,15 +37,20 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
 
   async function load() {
     setLoading(true);
-    const [caseRes, imageRes, estimateRes] = await Promise.all([
-      api.getCase(caseId),
-      api.getCaseImages(caseId),
-      api.getCaseEstimate(caseId).catch(() => null),
-    ]);
-    if (caseRes.success && caseRes.data) setCaseData(caseRes.data);
-    if (imageRes.success && imageRes.data) setImages(imageRes.data);
-    if (estimateRes?.success && estimateRes.data) setEstimate(estimateRes.data);
-    setLoading(false);
+    try {
+      const [caseRes, imageRes, estimateRes] = await Promise.all([
+        api.getCase(caseId),
+        api.getCaseImages(caseId),
+        api.getCaseEstimate(caseId).catch(() => null),
+      ]);
+      if (caseRes.success && caseRes.data) setCaseData(caseRes.data);
+      if (imageRes.success && imageRes.data) setImages(imageRes.data);
+      if (estimateRes?.success && estimateRes.data) setEstimate(estimateRes.data);
+    } catch (err) {
+      console.error("케이스 데이터 불러오기 실패:", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const previewJson = useMemo(() => {
@@ -113,13 +118,23 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
   }
 
   async function handleDownloadCsv() {
-    const blob = await api.downloadCaseEstimateCsv(caseId);
-    saveAs(blob, `case-${caseId}-estimate.csv`);
+    try {
+      const blob = await api.downloadCaseEstimateCsv(caseId);
+      saveAs(blob, `case-${caseId}-estimate.csv`);
+    } catch (err) {
+      console.error("CSV 다운로드 실패:", err);
+      alert("CSV 다운로드에 실패했어요.");
+    }
   }
 
   async function handleDownloadXlsx() {
-    const blob = await api.downloadCaseEstimateXlsx(caseId);
-    saveAs(blob, `case-${caseId}-estimate.xlsx`);
+    try {
+      const blob = await api.downloadCaseEstimateXlsx(caseId);
+      saveAs(blob, `case-${caseId}-estimate.xlsx`);
+    } catch (err) {
+      console.error("XLSX 다운로드 실패:", err);
+      alert("XLSX 다운로드에 실패했어요.");
+    }
   }
 
   if (loading) {

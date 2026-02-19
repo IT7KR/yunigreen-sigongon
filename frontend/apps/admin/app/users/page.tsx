@@ -192,11 +192,16 @@ export default function UsersPage() {
     password?: string;
   }) {
     if (data.id) {
-      await api.updateUser(data.id, {
-        name: data.name,
-        phone: data.phone,
-        role: data.role,
-      });
+      try {
+        await api.updateUser(data.id, {
+          name: data.name,
+          phone: data.phone,
+          role: data.role,
+        });
+      } catch (err) {
+        console.error("사용자 수정 실패:", err);
+        throw err;
+      }
     }
     await loadUsers();
   }

@@ -22,13 +22,18 @@ export default function CasesPage() {
 
   async function load() {
     setLoading(true);
-    const [casesRes, seasonRes] = await Promise.all([
-      api.listCases(),
-      api.getActiveSeason().catch(() => null),
-    ]);
-    if (casesRes.success && casesRes.data) setCases(casesRes.data);
-    if (seasonRes?.success && seasonRes.data) setActiveSeason(seasonRes.data);
-    setLoading(false);
+    try {
+      const [casesRes, seasonRes] = await Promise.all([
+        api.listCases(),
+        api.getActiveSeason().catch(() => null),
+      ]);
+      if (casesRes.success && casesRes.data) setCases(casesRes.data);
+      if (seasonRes?.success && seasonRes.data) setActiveSeason(seasonRes.data);
+    } catch (err) {
+      console.error("케이스 목록 불러오기 실패:", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleCreateCase() {
