@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import {
   Badge,
   Button,
@@ -11,6 +11,7 @@ import {
   Input,
   LoadingOverlay,
   Modal,
+  PrimitiveInput,
   Textarea,
   toast,
   useConfirmDialog,
@@ -33,10 +34,13 @@ interface RepresentativeFormState {
   grade: string;
   notes: string;
   bookletFileName: string;
+  bookletFile: File | null;
   careerFileName: string;
+  careerFile: File | null;
   initialCareerFileName: string;
   careerCertUploadedAt?: string;
   employmentFileName: string;
+  employmentFile: File | null;
 }
 
 const EMPTY_FORM: RepresentativeFormState = {
@@ -45,17 +49,28 @@ const EMPTY_FORM: RepresentativeFormState = {
   grade: "",
   notes: "",
   bookletFileName: "",
+  bookletFile: null,
   careerFileName: "",
+  careerFile: null,
   initialCareerFileName: "",
   careerCertUploadedAt: undefined,
   employmentFileName: "",
+  employmentFile: null,
 };
+
+const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf"];
 
 function formatPhone(value: string): string {
   const cleaned = value.replace(/\D/g, "");
   if (cleaned.length <= 3) return cleaned;
   if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
   return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
+}
+
+function formatFileSize(size: number): string {
+  if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)}MB`;
+  return `${Math.ceil(size / 1024)}KB`;
 }
 
 export default function OrganizationFieldRepresentativesPage() {
@@ -102,12 +117,65 @@ export default function OrganizationFieldRepresentativesPage() {
       grade: item.grade || "",
       notes: item.notes || "",
       bookletFileName: item.booklet_filename || "",
+      bookletFile: null,
       careerFileName: item.career_cert_filename || "",
+      careerFile: null,
       initialCareerFileName: item.career_cert_filename || "",
       careerCertUploadedAt: item.career_cert_uploaded_at,
       employmentFileName: item.employment_cert_filename || "",
+      employmentFile: null,
     });
     setIsFormOpen(true);
+  }
+
+  function validateAttachmentFile(file: File): boolean {
+    const extension = file.name.includes(".")
+      ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
+      : "";
+
+    if (!ALLOWED_ATTACHMENT_EXTENSIONS.includes(extension)) {
+      toast.error("PDF 또는 JPG/PNG 파일만 첨부할 수 있어요.");
+      return false;
+    }
+    if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+      toast.error("파일은 10MB 이하로 첨부해 주세요.");
+      return false;
+    }
+    return true;
+  }
+
+  function handleAttachmentChange(
+    event: ChangeEvent<HTMLInputElement>,
+    attachmentType: "booklet" | "career" | "employment",
+  ) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!validateAttachmentFile(file)) {
+      event.target.value = "";
+      return;
+    }
+
+    setFormState((prev) => {
+      if (attachmentType === "booklet") {
+        return {
+          ...prev,
+          bookletFile: file,
+          bookletFileName: file.name,
+        };
+      }
+      if (attachmentType === "career") {
+        return {
+          ...prev,
+          careerFile: file,
+          careerFileName: file.name,
+        };
+      }
+      return {
+        ...prev,
+        employmentFile: file,
+        employmentFileName: file.name,
+      };
+    });
   }
 
   async function handleSaveRepresentative() {
@@ -129,6 +197,7 @@ export default function OrganizationFieldRepresentativesPage() {
     try {
       const nowIso = new Date().toISOString();
       const careerFileChanged =
+        Boolean(formState.careerFile) ||
         formState.careerFileName !== formState.initialCareerFileName;
       const careerCertUploadedAt = formState.careerFileName
         ? formState.id
@@ -215,7 +284,7 @@ export default function OrganizationFieldRepresentativesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
-              현장대리인 명단
+              현장대리인
             </h1>
             <p className="mt-1 text-sm text-slate-500">
               회사 공통 현장대리인 인력풀과 자격서류를 관리합니다.
@@ -229,6 +298,11 @@ export default function OrganizationFieldRepresentativesPage() {
             현장대리인 등록
           </Button>
         </div>
+        {!canManageRegistry && (
+          <p className="text-xs text-slate-400">
+            대표 권한에서만 현장대리인 정보를 등록/수정할 수 있어요.
+          </p>
+        )}
 
         <Card>
           <CardHeader>
@@ -351,36 +425,65 @@ export default function OrganizationFieldRepresentativesPage() {
               setFormState((prev) => ({ ...prev, grade: event.target.value }))
             }
           />
-          <Input
-            label="기술수첩 사본 파일명"
-            value={formState.bookletFileName}
-            onChange={(event) =>
-              setFormState((prev) => ({
-                ...prev,
-                bookletFileName: event.target.value,
-              }))
-            }
-          />
-          <Input
-            label="현장경력증명서 파일명"
-            value={formState.careerFileName}
-            onChange={(event) =>
-              setFormState((prev) => ({
-                ...prev,
-                careerFileName: event.target.value,
-              }))
-            }
-          />
-          <Input
-            label="재직증명서 파일명"
-            value={formState.employmentFileName}
-            onChange={(event) =>
-              setFormState((prev) => ({
-                ...prev,
-                employmentFileName: event.target.value,
-              }))
-            }
-          />
+          <div className="rounded-lg border border-slate-200 p-3">
+            <p className="mb-1 text-sm font-medium text-slate-700">기술수첩 사본 첨부</p>
+            <p className="mb-2 text-xs text-slate-500">JPG/PNG/PDF, 10MB 이하</p>
+            <PrimitiveInput
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={(event) => handleAttachmentChange(event, "booklet")}
+              className="w-full text-sm"
+            />
+            {formState.bookletFile ? (
+              <p className="mt-2 text-xs text-slate-600">
+                선택 파일: {formState.bookletFile.name} ({formatFileSize(formState.bookletFile.size)})
+              </p>
+            ) : formState.bookletFileName ? (
+              <p className="mt-2 text-xs text-slate-500">
+                현재 파일명: {formState.bookletFileName}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="rounded-lg border border-slate-200 p-3">
+            <p className="mb-1 text-sm font-medium text-slate-700">현장경력증명서 첨부</p>
+            <p className="mb-2 text-xs text-slate-500">JPG/PNG/PDF, 10MB 이하</p>
+            <PrimitiveInput
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={(event) => handleAttachmentChange(event, "career")}
+              className="w-full text-sm"
+            />
+            {formState.careerFile ? (
+              <p className="mt-2 text-xs text-slate-600">
+                선택 파일: {formState.careerFile.name} ({formatFileSize(formState.careerFile.size)})
+              </p>
+            ) : formState.careerFileName ? (
+              <p className="mt-2 text-xs text-slate-500">
+                현재 파일명: {formState.careerFileName}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="rounded-lg border border-slate-200 p-3">
+            <p className="mb-1 text-sm font-medium text-slate-700">재직증명서 첨부</p>
+            <p className="mb-2 text-xs text-slate-500">JPG/PNG/PDF, 10MB 이하</p>
+            <PrimitiveInput
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={(event) => handleAttachmentChange(event, "employment")}
+              className="w-full text-sm"
+            />
+            {formState.employmentFile ? (
+              <p className="mt-2 text-xs text-slate-600">
+                선택 파일: {formState.employmentFile.name} ({formatFileSize(formState.employmentFile.size)})
+              </p>
+            ) : formState.employmentFileName ? (
+              <p className="mt-2 text-xs text-slate-500">
+                현재 파일명: {formState.employmentFileName}
+              </p>
+            ) : null}
+          </div>
           <Textarea
             label="메모"
             rows={3}
