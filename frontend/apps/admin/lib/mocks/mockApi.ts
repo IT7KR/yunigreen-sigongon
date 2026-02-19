@@ -93,11 +93,14 @@ type StoredEstimate = {
   project_id: string;
   version: number;
   status: EstimateStatus;
+  notes?: string;
   subtotal: string;
   vat_amount: string;
   total_amount: string;
   created_at: string;
   issued_at?: string;
+  accepted_at?: string;
+  rejected_at?: string;
   lines: Array<{
     id: string;
     sort_order: number;
@@ -1252,6 +1255,8 @@ export class MockAPIClient {
         version: e.version,
         status: e.status,
         total_amount: e.total_amount,
+        created_at: e.created_at,
+        issued_at: e.issued_at,
       }));
 
     const contractIds = this.projectContractIds[id] || [];
@@ -1285,6 +1290,7 @@ export class MockAPIClient {
           id: v.id,
           visit_type: v.visit_type,
           visited_at: v.visited_at,
+          estimated_area_m2: v.estimated_area_m2,
           photo_count: v.photo_count,
         })),
         estimates,
@@ -1522,6 +1528,7 @@ export class MockAPIClient {
     data: {
       visit_type: VisitType;
       visited_at: string;
+      estimated_area_m2?: string;
       notes?: string;
     },
   ) {
@@ -1530,6 +1537,7 @@ export class MockAPIClient {
       id: visitId,
       visit_type: data.visit_type,
       visited_at: data.visited_at,
+      estimated_area_m2: data.estimated_area_m2,
       notes: data.notes,
       photo_count: 0,
       photos: [],
@@ -1547,6 +1555,7 @@ export class MockAPIClient {
         id: visitId,
         visit_type: data.visit_type,
         visited_at: data.visited_at,
+        estimated_area_m2: data.estimated_area_m2,
       }),
     );
   }
@@ -1799,6 +1808,8 @@ export class MockAPIClient {
       ...estimate,
       status: "issued",
       issued_at,
+      accepted_at: undefined,
+      rejected_at: undefined,
     };
 
     return delay(
@@ -1807,6 +1818,60 @@ export class MockAPIClient {
         status: "issued",
         issued_at,
         message: "발송했어요",
+      }),
+    );
+  }
+
+  async decideEstimate(
+    estimateId: string,
+    data: { action: "accepted" | "rejected"; reason?: string },
+  ) {
+    const estimate = this.estimatesById[estimateId];
+    if (!estimate) {
+      return delay(
+        fail<{
+          id: string;
+          status: EstimateStatus;
+          accepted_at?: string;
+          rejected_at?: string;
+          message: string;
+        }>("NOT_FOUND", "견적서를 찾을 수 없어요"),
+      );
+    }
+    if (estimate.status !== "issued") {
+      return delay(
+        fail<{
+          id: string;
+          status: EstimateStatus;
+          accepted_at?: string;
+          rejected_at?: string;
+          message: string;
+        }>("INVALID_STATUS", "발행된 견적서만 결정할 수 있어요"),
+      );
+    }
+
+    const decidedAt = nowIso();
+    const nextStatus: EstimateStatus =
+      data.action === "accepted" ? "accepted" : "rejected";
+    const nextEstimate: StoredEstimate = {
+      ...estimate,
+      status: nextStatus,
+      accepted_at: nextStatus === "accepted" ? decidedAt : undefined,
+      rejected_at: nextStatus === "rejected" ? decidedAt : undefined,
+      notes: data.reason ? `[고객 결정 메모] ${data.reason}` : estimate.notes,
+    };
+    this.estimatesById[estimateId] = nextEstimate;
+
+    return delay(
+      ok({
+        id: estimateId,
+        status: nextStatus,
+        accepted_at: nextEstimate.accepted_at,
+        rejected_at: nextEstimate.rejected_at,
+        message:
+          nextStatus === "accepted"
+            ? "고객 수락으로 반영했어요."
+            : "고객 미선정으로 반영했어요.",
       }),
     );
   }
@@ -1957,6 +2022,7 @@ export class MockAPIClient {
     projectId: string,
     data: {
       estimate_id: string;
+      template_type?: "public_office" | "private_standard";
       start_date?: string;
       expected_end_date?: string;
       notes?: string;
@@ -1971,6 +2037,23 @@ export class MockAPIClient {
         ),
       );
     }
+    const estimate = this.estimatesById[data.estimate_id];
+    if (!estimate) {
+      return delay(
+        fail<{ id: string; contract_number: string; status: ContractStatus }>(
+          "NOT_FOUND",
+          "견적서를 찾을 수 없어요",
+        ),
+      );
+    }
+    if (estimate.status !== "accepted") {
+      return delay(
+        fail<{ id: string; contract_number: string; status: ContractStatus }>(
+          "INVALID_STATUS",
+          "고객 수락된 견적서만 계약서를 생성할 수 있어요",
+        ),
+      );
+    }
 
     const contractId = randomId("c");
     const contract: ContractDetail = {
@@ -1978,8 +2061,8 @@ export class MockAPIClient {
       project_id: projectId,
       estimate_id: data.estimate_id,
       contract_number: `CT-${Date.now()}`,
-      contract_amount:
-        this.estimatesById[data.estimate_id]?.total_amount || "0",
+      contract_amount: estimate.total_amount || "0",
+      template_type: data.template_type || "public_office",
       status: "draft",
       notes: data.notes,
       created_at: nowIso(),
@@ -2466,8 +2549,39 @@ export class MockAPIClient {
   }
 
   async getUtilities(_projectId: string) {
+    const project = mockDb.get("projects").find((p) => p.id === _projectId);
+    if (project?.category !== "school") {
+      return delay(
+        ok({
+          enabled: false,
+          reason: "school_only" as const,
+          message: "수도광열비는 학교 프로젝트에서만 관리해요.",
+          items: [],
+          timeline: [],
+        }),
+      );
+    }
+    if (!["completed", "warranty", "closed"].includes(project.status)) {
+      return delay(
+        ok({
+          enabled: false,
+          reason: "completion_required" as const,
+          message: "실준공/준공 이후에 수도광열비 정산을 시작해요.",
+          items: [],
+          timeline: [],
+        }),
+      );
+    }
+
     this.ensureUtilities(_projectId);
-    return delay(ok(this.utilitiesByProject[_projectId]));
+    return delay(
+      ok({
+        enabled: true,
+        reason: null,
+        message: null,
+        ...this.utilitiesByProject[_projectId],
+      }),
+    );
   }
 
   async updateUtilityStatus(
@@ -2478,6 +2592,18 @@ export class MockAPIClient {
       doc_status?: "pending" | "submitted";
     },
   ) {
+    const project = mockDb.get("projects").find((p) => p.id === projectId);
+    if (
+      project?.category !== "school" ||
+      !["completed", "warranty", "closed"].includes(project.status)
+    ) {
+      return delay(
+        fail<{ id: string }>(
+          "INVALID_STATUS",
+          "수도광열비 상태를 변경할 수 없는 프로젝트 단계입니다",
+        ),
+      );
+    }
     this.ensureUtilities(projectId);
     const utilities = this.utilitiesByProject[projectId];
     const item = utilities.items.find((entry) => entry.id === utilityId);
@@ -3755,6 +3881,7 @@ export class MockAPIClient {
       project_id: string;
       report_type: "start" | "completion";
       status: "draft" | "submitted" | "approved" | "rejected";
+      auto_link_representative_docs?: boolean;
       construction_name?: string;
       site_address?: string;
       start_date?: string;
@@ -3799,6 +3926,7 @@ export class MockAPIClient {
       expected_end_date: string;
       supervisor_name: string;
       supervisor_phone: string;
+      auto_link_representative_docs?: boolean;
       notes?: string;
     },
   ) {
@@ -3808,6 +3936,7 @@ export class MockAPIClient {
       project_id: projectId,
       report_type: "start" as const,
       status: "draft" as const,
+      auto_link_representative_docs: data.auto_link_representative_docs ?? true,
       construction_name: data.construction_name,
       site_address: data.site_address,
       start_date: data.start_date,
@@ -3861,6 +3990,7 @@ export class MockAPIClient {
       project_id: projectId,
       report_type: "completion" as const,
       status: "draft" as const,
+      auto_link_representative_docs: startReport.auto_link_representative_docs ?? true,
       construction_name: startReport.construction_name,
       site_address: startReport.site_address,
       start_date: startReport.start_date,
@@ -3888,6 +4018,7 @@ export class MockAPIClient {
   async updateConstructionReport(
     reportId: string,
     data: {
+      auto_link_representative_docs?: boolean;
       construction_name?: string;
       site_address?: string;
       start_date?: string;
@@ -4167,7 +4298,7 @@ export class MockAPIClient {
   /**
    * Create an invitation for a new user
    * Only company_admin can invite site_manager within same org
-   * Only super_admin can invite any role
+   * Only super_admin can invite company_admin
    */
   async createInvitation(data: {
     phone: string;
@@ -4194,7 +4325,16 @@ export class MockAPIClient {
           )
         );
       }
-    } else if (currentUser.role !== "super_admin") {
+    } else if (currentUser.role === "super_admin") {
+      if (data.role !== "company_admin") {
+        return delay(
+          fail<{ id: string; token: string; invite_url: string }>(
+            "FORBIDDEN",
+            "슈퍼관리자는 대표 계정만 초대할 수 있어요"
+          )
+        );
+      }
+    } else {
       return delay(
         fail<{ id: string; token: string; invite_url: string }>(
           "FORBIDDEN",
@@ -5826,6 +5966,25 @@ export class MockAPIClient {
     );
     this.refreshRepAssignedProjects();
     return delay(ok({ deleted: true, project_id: projectIdNum }));
+  }
+
+  async runFieldRepresentativeReminders(data?: {
+    organization_id?: number;
+    run_date?: string;
+  }) {
+    return delay(
+      ok({
+        run_date: data?.run_date ?? nowIso().slice(0, 10),
+        organization_id: data?.organization_id,
+        checked_count: this.fieldRepresentatives.length,
+        eligible_count: 0,
+        notifications_created: 0,
+        alimtalk_success: 0,
+        alimtalk_failure: 0,
+        skipped_duplicate: 0,
+        skipped_no_receiver: 0,
+      }),
+    );
   }
 
   private calcCareerDaysRemaining(uploadedAt: string): number {

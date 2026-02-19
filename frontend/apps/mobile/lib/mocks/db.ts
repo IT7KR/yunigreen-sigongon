@@ -1,4 +1,4 @@
-import type { ProjectStatus, UserRole } from "@sigongon/types";
+import type { ProjectStatus, UserRole, ProjectCategory } from "@sigongon/types";
 
 export interface User {
   id: string;
@@ -17,6 +17,7 @@ export interface Project {
   name: string;
   address: string;
   status: ProjectStatus;
+  category?: ProjectCategory;
   clientName: string;
   clientPhone: string;
   notes?: string;
@@ -90,7 +91,8 @@ const normalizeStatus = (status: unknown): ProjectStatus => {
     status === "contracted" ||
     status === "in_progress" ||
     status === "completed" ||
-    status === "warranty"
+    status === "warranty" ||
+    status === "closed"
   ) {
     return status;
   }
@@ -123,6 +125,7 @@ const normalizeProject = (raw: any): Project => {
     name: String(raw?.name || "프로젝트"),
     address: String(raw?.address || ""),
     status: normalizeStatus(raw?.status),
+    category: raw?.category as ProjectCategory | undefined,
     clientName: String(raw?.clientName || raw?.client_name || ""),
     clientPhone: String(raw?.clientPhone || raw?.client_phone || ""),
     notes: raw?.notes ? String(raw.notes) : undefined,
@@ -176,6 +179,7 @@ const INITIAL_DATA: MockSchema = {
       name: "서울 강남구 삼성동 누수 공사",
       address: "서울 강남구 삼성동 123-45",
       status: "draft",
+      category: "school",
       clientName: "홍길동",
       clientPhone: "010-1234-5678",
       organization_id: "org_1",
@@ -187,6 +191,7 @@ const INITIAL_DATA: MockSchema = {
       name: "경기도 성남시 판교 아파트",
       address: "경기도 성남시 분당구 판교동 555",
       status: "in_progress",
+      category: "commercial",
       clientName: "이순신",
       clientPhone: "010-9876-5432",
       organization_id: "org_1",

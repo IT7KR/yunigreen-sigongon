@@ -69,11 +69,14 @@ type StoredEstimate = {
   project_id: string;
   version: number;
   status: EstimateStatus;
+  notes?: string;
   subtotal: string;
   vat_amount: string;
   total_amount: string;
   created_at: string;
   issued_at?: string;
+  accepted_at?: string;
+  rejected_at?: string;
   lines: Array<{
     id: string;
     sort_order: number;
@@ -626,6 +629,7 @@ export class MockAPIClient {
         name: p.name,
         address: p.address,
         status: p.status,
+        category: (p as { category?: ProjectListItem["category"] }).category,
         client_name: p.clientName,
         created_at: p.createdAt,
         site_visit_count: siteVisits.length,
@@ -654,6 +658,8 @@ export class MockAPIClient {
         version: e.version,
         status: e.status,
         total_amount: e.total_amount,
+        created_at: e.created_at,
+        issued_at: e.issued_at,
       }));
 
     return delay(
@@ -662,6 +668,8 @@ export class MockAPIClient {
         name: project.name,
         address: project.address,
         status: project.status,
+        category: (project as { category?: ProjectDetail["category"] })
+          .category,
         client_name: project.clientName,
         client_phone: project.clientPhone,
         notes: project.notes,
@@ -670,6 +678,7 @@ export class MockAPIClient {
           id: v.id,
           visit_type: v.visit_type,
           visited_at: v.visited_at,
+          estimated_area_m2: v.estimated_area_m2,
           photo_count: v.photo_count,
         })),
         estimates,
@@ -680,6 +689,7 @@ export class MockAPIClient {
   async createProject(data: {
     name: string;
     address: string;
+    category?: string;
     client_name?: string;
     client_phone?: string;
     notes?: string;
@@ -689,6 +699,7 @@ export class MockAPIClient {
       name: data.name,
       address: data.address,
       status: "draft",
+      category: data.category as any,
       clientName: data.client_name || "",
       clientPhone: data.client_phone || "",
       notes: data.notes,
@@ -717,6 +728,7 @@ export class MockAPIClient {
     data: {
       visit_type: VisitType;
       visited_at: string;
+      estimated_area_m2?: string;
       notes?: string;
     },
   ) {
@@ -725,6 +737,7 @@ export class MockAPIClient {
       id: visitId,
       visit_type: data.visit_type,
       visited_at: data.visited_at,
+      estimated_area_m2: data.estimated_area_m2,
       notes: data.notes,
       photo_count: 0,
       photos: [],
@@ -742,6 +755,7 @@ export class MockAPIClient {
         id: visitId,
         visit_type: data.visit_type,
         visited_at: data.visited_at,
+        estimated_area_m2: data.estimated_area_m2,
       }),
     );
   }
@@ -978,6 +992,8 @@ export class MockAPIClient {
       ...estimate,
       status: "issued",
       issued_at,
+      accepted_at: undefined,
+      rejected_at: undefined,
     };
 
     return delay(
@@ -986,6 +1002,60 @@ export class MockAPIClient {
         status: "issued",
         issued_at,
         message: "발송했어요",
+      }),
+    );
+  }
+
+  async decideEstimate(
+    estimateId: string,
+    data: { action: "accepted" | "rejected"; reason?: string },
+  ) {
+    const estimate = this.estimatesById[estimateId];
+    if (!estimate) {
+      return delay(
+        fail<{
+          id: string;
+          status: EstimateStatus;
+          accepted_at?: string;
+          rejected_at?: string;
+          message: string;
+        }>("NOT_FOUND", "견적서를 찾을 수 없어요"),
+      );
+    }
+    if (estimate.status !== "issued") {
+      return delay(
+        fail<{
+          id: string;
+          status: EstimateStatus;
+          accepted_at?: string;
+          rejected_at?: string;
+          message: string;
+        }>("INVALID_STATUS", "발행된 견적서만 결정할 수 있어요"),
+      );
+    }
+
+    const decidedAt = nowIso();
+    const nextStatus: EstimateStatus =
+      data.action === "accepted" ? "accepted" : "rejected";
+    const nextEstimate: StoredEstimate = {
+      ...estimate,
+      status: nextStatus,
+      accepted_at: nextStatus === "accepted" ? decidedAt : undefined,
+      rejected_at: nextStatus === "rejected" ? decidedAt : undefined,
+      notes: data.reason ? `[고객 결정 메모] ${data.reason}` : estimate.notes,
+    };
+    this.estimatesById[estimateId] = nextEstimate;
+
+    return delay(
+      ok({
+        id: estimateId,
+        status: nextStatus,
+        accepted_at: nextEstimate.accepted_at,
+        rejected_at: nextEstimate.rejected_at,
+        message:
+          nextStatus === "accepted"
+            ? "고객 수락으로 반영했어요."
+            : "고객 미선정으로 반영했어요.",
       }),
     );
   }
@@ -1136,6 +1206,7 @@ export class MockAPIClient {
     projectId: string,
     data: {
       estimate_id: string;
+      template_type?: "public_office" | "private_standard";
       start_date?: string;
       expected_end_date?: string;
       notes?: string;
@@ -1150,6 +1221,23 @@ export class MockAPIClient {
         ),
       );
     }
+    const estimate = this.estimatesById[data.estimate_id];
+    if (!estimate) {
+      return delay(
+        fail<{ id: string; contract_number: string; status: ContractStatus }>(
+          "NOT_FOUND",
+          "견적서를 찾을 수 없어요",
+        ),
+      );
+    }
+    if (estimate.status !== "accepted") {
+      return delay(
+        fail<{ id: string; contract_number: string; status: ContractStatus }>(
+          "INVALID_STATUS",
+          "고객 수락된 견적서만 계약서를 생성할 수 있어요",
+        ),
+      );
+    }
 
     const contractId = randomId("c");
     const contract: ContractDetail = {
@@ -1157,8 +1245,8 @@ export class MockAPIClient {
       project_id: projectId,
       estimate_id: data.estimate_id,
       contract_number: `CT-${Date.now()}`,
-      contract_amount:
-        this.estimatesById[data.estimate_id]?.total_amount || "0",
+      contract_amount: estimate.total_amount || "0",
+      template_type: data.template_type || "public_office",
       status: "draft",
       notes: data.notes,
       created_at: nowIso(),
@@ -1370,8 +1458,39 @@ export class MockAPIClient {
   }
 
   async getUtilities(_projectId: string) {
+    const project = mockDb.get("projects").find((p) => p.id === _projectId);
+    if ((project as { category?: string } | undefined)?.category !== "school") {
+      return delay(
+        ok({
+          enabled: false,
+          reason: "school_only" as const,
+          message: "수도광열비는 학교 프로젝트에서만 관리해요.",
+          items: [],
+          timeline: [],
+        }),
+      );
+    }
+    if (!["completed", "warranty", "closed"].includes(project?.status || "")) {
+      return delay(
+        ok({
+          enabled: false,
+          reason: "completion_required" as const,
+          message: "실준공/준공 이후에 수도광열비 정산을 시작해요.",
+          items: [],
+          timeline: [],
+        }),
+      );
+    }
+
     this.ensureUtilities(_projectId);
-    return delay(ok(this.utilitiesByProject[_projectId]));
+    return delay(
+      ok({
+        enabled: true,
+        reason: null,
+        message: null,
+        ...this.utilitiesByProject[_projectId],
+      }),
+    );
   }
 
   async updateUtilityStatus(
@@ -1382,6 +1501,19 @@ export class MockAPIClient {
       doc_status?: "pending" | "submitted";
     },
   ) {
+    const project = mockDb.get("projects").find((p) => p.id === _projectId);
+    const category = (project as { category?: string } | undefined)?.category;
+    if (
+      category !== "school" ||
+      !["completed", "warranty", "closed"].includes(project?.status || "")
+    ) {
+      return delay(
+        fail<{ id: string }>(
+          "INVALID_STATUS",
+          "수도광열비 상태를 변경할 수 없는 프로젝트 단계입니다",
+        ),
+      );
+    }
     this.ensureUtilities(_projectId);
     const utilities = this.utilitiesByProject[_projectId];
     const item = utilities.items.find((entry) => entry.id === _utilityId);

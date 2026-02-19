@@ -187,7 +187,8 @@ const normalizeStatus = (status: unknown): ProjectStatus => {
     status === "contracted" ||
     status === "in_progress" ||
     status === "completed" ||
-    status === "warranty"
+    status === "warranty" ||
+    status === "closed"
   ) {
     return status;
   }
