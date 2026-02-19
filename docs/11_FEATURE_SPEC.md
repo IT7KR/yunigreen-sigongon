@@ -461,32 +461,29 @@ Response (200):
 #### API 명세
 
 ```
-POST /api/v1/projects/{projectId}/visits
+POST /api/v1/projects/{projectId}/site-visits
 
 Request:
 {
-  "visit_type": "enum",        // initial, revisit, inspection
-  "purpose": "enum",           // defect_survey, estimate_confirm, inspection, completion
-  "memo": "string",
-  "location": {
-    "lat": number,
-    "lng": number,
-    "accuracy": number
-  }
+  "visit_type": "enum",        // initial, progress, completion
+  "visited_at": "datetime",
+  "notes": "string"            // optional
 }
 
 Response (201):
 {
   "id": "uuid",
   "project_id": "uuid",
+  "technician_id": "uuid",
   "visit_type": "string",
-  "purpose": "string",
   "visited_at": "datetime",
-  "location": {...},
-  "photos": [],
-  "diagnosis": null
+  "notes": "string",
+  "created_at": "datetime",
+  "photo_count": 0
 }
 ```
+
+> 참고: `purpose`, `location` 필드는 현재 구현 범위에서 제외되며, 필요 시 후속 기능으로 재정의합니다.
 
 ---
 
@@ -501,30 +498,25 @@ Response (201):
 #### API 명세
 
 ```
-POST /api/v1/visits/{visitId}/photos
+POST /api/v1/site-visits/{visitId}/photos
 
 Request: (multipart/form-data)
 {
   "file": File,
-  "photo_type": "enum",        // before, during, after, detail, overview
-  "caption": "string",
-  "taken_at": "datetime",      // EXIF에서 추출 또는 현재 시간
-  "metadata": {
-    "device": "string",
-    "location": {...}
-  }
+  "photo_type": "enum",        // before, during, after, detail
+  "caption": "string"          // optional
 }
 
 Response (201):
 {
   "id": "uuid",
-  "visit_id": "uuid",
+  "site_visit_id": "uuid",
   "photo_type": "string",
   "storage_path": "string",
-  "thumbnail_path": "string",
+  "original_filename": "string",
   "caption": "string",
   "taken_at": "datetime",
-  "uploaded_at": "datetime"
+  "created_at": "datetime"
 }
 ```
 
@@ -535,18 +527,16 @@ Response (201):
    file = receive_multipart(request)
 
 2. 유효성 검사
-   validate_file_type(file, ["image/jpeg", "image/png", "image/heic"])
-   validate_file_size(file, max_size=20MB)
+   validate_file_type(file, ["image/jpeg", "image/png", "image/webp"])
+   validate_file_size(file, max_size=10MB)
 
 3. EXIF 메타데이터 추출
    metadata = extract_exif(file)
    taken_at = metadata.datetime_original OR now()
 
-4. 이미지 처리 (비동기)
+4. 이미지 저장
    - 원본 저장 (S3/Cloud Storage)
-   - 썸네일 생성 (300x300)
-   - 웹 최적화 버전 생성 (1200x1200, JPEG 품질 85)
-   - HEIC → JPEG 변환 (iOS)
+   - 프로젝트/방문 단위 경로 구성
 
 5. 데이터베이스 저장
    photo = CREATE Photo(...)
@@ -571,12 +561,12 @@ Response (201):
 #### API 명세
 
 ```
-POST /api/v1/visits/{visitId}/diagnose
+POST /api/v1/site-visits/{visitId}/diagnose
 
 Request:
 {
   "photo_ids": ["uuid", ...],   // 분석할 사진 ID 목록
-  "additional_context": "string" // 추가 컨텍스트 (선택)
+  "additional_notes": "string"  // 현장 소견/추가 메모 (선택)
 }
 
 Response (202):
