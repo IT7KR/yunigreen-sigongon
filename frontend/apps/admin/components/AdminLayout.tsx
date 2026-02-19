@@ -59,6 +59,7 @@ const navItems = [
       { href: "/onboarding/invite", label: "초대 발송", icon: UserPlus },
     ],
   },
+  { href: "/customers", icon: Building2, label: "발주처" },
   { href: "/partners", icon: Users, label: "협력사" },
   { href: "/billing", icon: FileText, label: "결제/구독" },
   { href: "/settings", icon: Settings, label: "설정" },
