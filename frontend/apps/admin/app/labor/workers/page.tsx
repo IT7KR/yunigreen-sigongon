@@ -21,11 +21,36 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Modal, 
 import { api } from "@/lib/api";
 import type { DailyWorker } from "@sigongon/types";
 
+interface LaborCodebook {
+  version: string;
+  nationality_codes: Record<string, string>;
+  visa_status_codes: Record<string, string>;
+  job_type_codes: Record<string, string>;
+}
+
+const FALLBACK_NATIONALITY_CODES: Record<string, string> = {
+  "100": "한국",
+  "156": "중국",
+  "704": "베트남",
+};
+
+const FALLBACK_VISA_CODES: Record<string, string> = {
+  "E-9": "비전문취업",
+  "H-2": "방문취업",
+};
+
+const FALLBACK_JOB_CODES: Record<string, string> = {
+  "701": "건설구조 기능원",
+  "705": "기타 건설 기능원",
+  "706": "건설·채국 단순 종사자",
+};
+
 export default function DailyWorkersPage() {
   const [workers, setWorkers] = useState<DailyWorker[]>([]);
   const [filteredWorkers, setFilteredWorkers] = useState<DailyWorker[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [codebook, setCodebook] = useState<LaborCodebook | null>(null);
 
   // Registration modal state
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -59,10 +84,16 @@ export default function DailyWorkersPage() {
     visa_status: "",
     nationality_code: "",
     english_name: "",
+    has_id_card: false,
+    has_safety_cert: false,
   });
+  const nationalityCodes = codebook?.nationality_codes ?? FALLBACK_NATIONALITY_CODES;
+  const visaCodes = codebook?.visa_status_codes ?? FALLBACK_VISA_CODES;
+  const jobCodes = codebook?.job_type_codes ?? FALLBACK_JOB_CODES;
 
   useEffect(() => {
     fetchWorkers();
+    fetchCodebook();
   }, []);
 
   useEffect(() => {
@@ -95,6 +126,17 @@ export default function DailyWorkersPage() {
     }
   };
 
+  const fetchCodebook = async () => {
+    try {
+      const response = await api.getLaborCodebook();
+      if (response.success && response.data) {
+        setCodebook(response.data as LaborCodebook);
+      }
+    } catch {
+      // 코드북 조회 실패 시 입력은 계속 허용하되, 백엔드 검증을 신뢰한다.
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: "",
@@ -113,6 +155,8 @@ export default function DailyWorkersPage() {
       visa_status: "",
       nationality_code: "",
       english_name: "",
+      has_id_card: false,
+      has_safety_cert: false,
     });
   };
 
@@ -151,7 +195,7 @@ export default function DailyWorkersPage() {
         fetchWorkers();
       }
     } catch (error) {
-      toast.error("근로자 등록에 실패했습니다.");
+      toast.error(error instanceof Error ? error.message : "근로자 등록에 실패했습니다.");
     } finally {
       setIsRegistering(false);
     }
@@ -176,6 +220,8 @@ export default function DailyWorkersPage() {
       visa_status: worker.visa_status || "",
       nationality_code: worker.nationality_code || "",
       english_name: worker.english_name || "",
+      has_id_card: worker.has_id_card ?? false,
+      has_safety_cert: worker.has_safety_cert ?? false,
     });
     setShowEditModal(true);
   };
@@ -217,7 +263,7 @@ export default function DailyWorkersPage() {
         fetchWorkers();
       }
     } catch (error) {
-      toast.error("근로자 정보 수정에 실패했습니다.");
+      toast.error(error instanceof Error ? error.message : "근로자 정보 수정에 실패했습니다.");
     } finally {
       setIsUpdating(false);
     }
@@ -431,14 +477,25 @@ export default function DailyWorkersPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Input
-              label="직종코드"
-              placeholder="0101"
-              value={formData.job_type_code}
-              onChange={(e) =>
-                setFormData({ ...formData, job_type_code: e.target.value })
-              }
-            />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                직종코드 *
+              </label>
+              <PrimitiveSelect
+                value={formData.job_type_code}
+                onChange={(e) =>
+                  setFormData({ ...formData, job_type_code: e.target.value })
+                }
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              >
+                <option value="">선택하세요</option>
+                {Object.entries(jobCodes).map(([code, label]) => (
+                  <option key={code} value={code}>
+                    {code} - {label}
+                  </option>
+                ))}
+              </PrimitiveSelect>
+            </div>
             <Input
               label="소속반"
               placeholder="1반"
@@ -548,22 +605,44 @@ export default function DailyWorkersPage() {
 
           {formData.is_foreign && (
             <div className="grid gap-4 md:grid-cols-3">
-              <Input
-                label="비자유형"
-                placeholder="E-9"
-                value={formData.visa_status}
-                onChange={(e) =>
-                  setFormData({ ...formData, visa_status: e.target.value })
-                }
-              />
-              <Input
-                label="국적코드"
-                placeholder="VN"
-                value={formData.nationality_code}
-                onChange={(e) =>
-                  setFormData({ ...formData, nationality_code: e.target.value })
-                }
-              />
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  비자유형 *
+                </label>
+                <PrimitiveSelect
+                  value={formData.visa_status}
+                  onChange={(e) =>
+                    setFormData({ ...formData, visa_status: e.target.value })
+                  }
+                  className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+                >
+                  <option value="">선택하세요</option>
+                  {Object.entries(visaCodes).map(([code, label]) => (
+                    <option key={code} value={code}>
+                      {code} - {label}
+                    </option>
+                  ))}
+                </PrimitiveSelect>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  국적코드 *
+                </label>
+                <PrimitiveSelect
+                  value={formData.nationality_code}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nationality_code: e.target.value })
+                  }
+                  className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+                >
+                  <option value="">선택하세요</option>
+                  {Object.entries(nationalityCodes).map(([code, label]) => (
+                    <option key={code} value={code}>
+                      {code} - {label}
+                    </option>
+                  ))}
+                </PrimitiveSelect>
+              </div>
               <Input
                 label="영문이름"
                 placeholder="NGUYEN VAN A"
@@ -574,6 +653,31 @@ export default function DailyWorkersPage() {
               />
             </div>
           )}
+
+          <div className="grid gap-3 rounded-lg border border-slate-200 p-3 md:grid-cols-2">
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <PrimitiveInput
+                type="checkbox"
+                checked={formData.has_id_card}
+                onChange={(e) =>
+                  setFormData({ ...formData, has_id_card: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
+              />
+              신분증 등록 완료
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <PrimitiveInput
+                type="checkbox"
+                checked={formData.has_safety_cert}
+                onChange={(e) =>
+                  setFormData({ ...formData, has_safety_cert: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
+              />
+              안전교육 이수증 등록 완료
+            </label>
+          </div>
 
           <div className="flex gap-3 pt-2">
             <Button
@@ -645,14 +749,25 @@ export default function DailyWorkersPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Input
-              label="직종코드"
-              placeholder="0101"
-              value={formData.job_type_code}
-              onChange={(e) =>
-                setFormData({ ...formData, job_type_code: e.target.value })
-              }
-            />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                직종코드 *
+              </label>
+              <PrimitiveSelect
+                value={formData.job_type_code}
+                onChange={(e) =>
+                  setFormData({ ...formData, job_type_code: e.target.value })
+                }
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              >
+                <option value="">선택하세요</option>
+                {Object.entries(jobCodes).map(([code, label]) => (
+                  <option key={code} value={code}>
+                    {code} - {label}
+                  </option>
+                ))}
+              </PrimitiveSelect>
+            </div>
             <Input
               label="소속반"
               placeholder="1반"
@@ -762,22 +877,44 @@ export default function DailyWorkersPage() {
 
           {formData.is_foreign && (
             <div className="grid gap-4 md:grid-cols-3">
-              <Input
-                label="비자유형"
-                placeholder="E-9"
-                value={formData.visa_status}
-                onChange={(e) =>
-                  setFormData({ ...formData, visa_status: e.target.value })
-                }
-              />
-              <Input
-                label="국적코드"
-                placeholder="VN"
-                value={formData.nationality_code}
-                onChange={(e) =>
-                  setFormData({ ...formData, nationality_code: e.target.value })
-                }
-              />
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  비자유형 *
+                </label>
+                <PrimitiveSelect
+                  value={formData.visa_status}
+                  onChange={(e) =>
+                    setFormData({ ...formData, visa_status: e.target.value })
+                  }
+                  className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+                >
+                  <option value="">선택하세요</option>
+                  {Object.entries(visaCodes).map(([code, label]) => (
+                    <option key={code} value={code}>
+                      {code} - {label}
+                    </option>
+                  ))}
+                </PrimitiveSelect>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  국적코드 *
+                </label>
+                <PrimitiveSelect
+                  value={formData.nationality_code}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nationality_code: e.target.value })
+                  }
+                  className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+                >
+                  <option value="">선택하세요</option>
+                  {Object.entries(nationalityCodes).map(([code, label]) => (
+                    <option key={code} value={code}>
+                      {code} - {label}
+                    </option>
+                  ))}
+                </PrimitiveSelect>
+              </div>
               <Input
                 label="영문이름"
                 placeholder="NGUYEN VAN A"
@@ -788,6 +925,31 @@ export default function DailyWorkersPage() {
               />
             </div>
           )}
+
+          <div className="grid gap-3 rounded-lg border border-slate-200 p-3 md:grid-cols-2">
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <PrimitiveInput
+                type="checkbox"
+                checked={formData.has_id_card}
+                onChange={(e) =>
+                  setFormData({ ...formData, has_id_card: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
+              />
+              신분증 등록 완료
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <PrimitiveInput
+                type="checkbox"
+                checked={formData.has_safety_cert}
+                onChange={(e) =>
+                  setFormData({ ...formData, has_safety_cert: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
+              />
+              안전교육 이수증 등록 완료
+            </label>
+          </div>
 
           <div className="flex gap-3 pt-2">
             <Button

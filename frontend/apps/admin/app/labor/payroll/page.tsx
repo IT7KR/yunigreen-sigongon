@@ -13,6 +13,7 @@ import {
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { api } from "@/lib/api";
+import { APIError } from "@sigongon/api";
 import { calculateWorkerDeductions } from "@/lib/labor/calculations";
 import type {
   DailyWorker,
@@ -315,12 +316,40 @@ export default function PayrollPage() {
         });
       });
 
-      await api.upsertWorkRecords(records);
+      const result = await api.upsertWorkRecords(records);
+      if (!result.success) {
+        toast.error(result.error?.message || "근무 기록 저장에 실패했습니다.");
+        return;
+      }
       toast.success("근무 기록이 저장되었습니다.");
-    } catch {
-      toast.error("근무 기록 저장에 실패했습니다.");
+    } catch (error) {
+      if (error instanceof APIError && error.status === 422) {
+        const details = error.details as
+          | {
+              blocked_workers?: Array<{
+                worker_name?: string;
+                missing_requirements?: string[];
+              }>;
+            }
+          | undefined;
+        const blockedWorkers = details?.blocked_workers ?? [];
+        if (blockedWorkers.length > 0) {
+          const blockedNames = blockedWorkers
+            .map((item) => item.worker_name)
+            .filter(Boolean)
+            .join(", ");
+          toast.error(
+            blockedNames
+              ? `필수서류/동의 미완료로 저장할 수 없어요: ${blockedNames}`
+              : "필수서류/동의 미완료 근로자가 있어 저장할 수 없어요.",
+          );
+          return;
+        }
+      }
+      toast.error(error instanceof Error ? error.message : "근무 기록 저장에 실패했습니다.");
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   // ============================================
