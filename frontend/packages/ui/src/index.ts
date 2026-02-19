@@ -9,6 +9,7 @@ export {
   CardFooter 
 } from "./components/Card"
 export { Input, type InputProps } from "./components/Input"
+export { Textarea, type TextareaProps } from "./components/Textarea"
 export { Badge, StatusBadge } from "./components/Badge"
 export { Toaster, toast } from "./components/Toaster"
 export {
@@ -42,6 +43,9 @@ export { InteractiveCard, type InteractiveCardProps } from "./components/Interac
 export { PrimitiveButton, type PrimitiveButtonProps } from "./components/PrimitiveButton"
 export { PrimitiveInput, type PrimitiveInputProps } from "./components/PrimitiveInput"
 export { PrimitiveSelect, type PrimitiveSelectProps } from "./components/PrimitiveSelect"
+export { ActionButton, type ActionButtonProps } from "./components/ActionButton"
+export { AnimatedCard, type AnimatedCardProps } from "./components/AnimatedCard"
+export { AnimatedList } from "./components/AnimatedList"
 
 // Table
 export {
