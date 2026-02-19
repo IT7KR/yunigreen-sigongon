@@ -98,18 +98,28 @@ export default function StartReportPage({
     }
   }
 
+  function buildPayloadWithRepresentative(data: any): any {
+    if (!autoLinkRepresentativeDocs || !assignedRepresentative) return data;
+    return {
+      ...data,
+      ...(data.supervisor_name ? {} : { supervisor_name: assignedRepresentative.name }),
+      ...(data.supervisor_phone ? {} : { supervisor_phone: assignedRepresentative.phone }),
+    };
+  }
+
   async function handleSubmit(data: any, isDraft: boolean) {
     try {
       syncRepresentativeDocument();
+      const payload = buildPayloadWithRepresentative(data);
       if (reportId) {
         // Update existing report
-        await api.updateConstructionReport(reportId, data);
+        await api.updateConstructionReport(reportId, payload);
         if (!isDraft) {
           await api.submitConstructionReport(reportId);
         }
       } else {
         // Create new report
-        const response = await api.createStartReport(id, data);
+        const response = await api.createStartReport(id, payload);
         if (response.success && response.data && !isDraft) {
           await api.submitConstructionReport(response.data.id);
         }
@@ -124,10 +134,11 @@ export default function StartReportPage({
   async function handleSave(data: any) {
     try {
       syncRepresentativeDocument();
+      const payload = buildPayloadWithRepresentative(data);
       if (reportId) {
-        await api.updateConstructionReport(reportId, data);
+        await api.updateConstructionReport(reportId, payload);
       } else {
-        await api.createStartReport(id, data);
+        await api.createStartReport(id, payload);
       }
       alert("저장했어요");
       router.push(`/projects/${id}/reports`);

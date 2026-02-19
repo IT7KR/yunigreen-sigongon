@@ -239,6 +239,27 @@ async def create_start_report(
         created_by=current_user.id,
     )
 
+    # 현장대리인 자동 연동 (supervisor 정보가 비어있을 때)
+    if not report.supervisor_name:
+        from app.models.field_representative import ProjectRepresentativeAssignment, FieldRepresentative
+        assignment_result = await db.execute(
+            select(ProjectRepresentativeAssignment)
+            .where(ProjectRepresentativeAssignment.project_id == project_id)
+            .order_by(ProjectRepresentativeAssignment.assigned_at.desc())
+        )
+        assignment = assignment_result.scalar_one_or_none()
+        if assignment:
+            rep_result = await db.execute(
+                select(FieldRepresentative)
+                .where(FieldRepresentative.id == assignment.representative_id)
+            )
+            rep = rep_result.scalar_one_or_none()
+            if rep:
+                if not report.supervisor_name:
+                    report.supervisor_name = rep.name
+                if not report.supervisor_phone:
+                    report.supervisor_phone = rep.phone
+
     db.add(report)
     await db.commit()
     await db.refresh(report)
