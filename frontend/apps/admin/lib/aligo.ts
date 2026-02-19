@@ -169,9 +169,32 @@ const TEMPLATES: Record<AlimTalkTemplateCode, TemplateDefinition> = {
 let mockMessageCounter = 1000
 
 /**
- * 알림톡 발송 (Mock)
+ * 알림톡 발송
  */
 export async function sendAlimTalk(request: AlimTalkSendRequest): Promise<AlimTalkSendResponse> {
+  const useMocks = process.env.NEXT_PUBLIC_USE_MOCKS === "true"
+
+  if (!useMocks) {
+    // Real API call
+    try {
+      const { api } = await import("@/lib/api")
+      const result = await api.sendAlimTalk({
+        phone: request.phone.replace(/-/g, ""),
+        template_code: request.template_code,
+        variables: request.variables,
+      })
+      if (result.success && result.data) {
+        return { success: true, message_id: result.data.message_id }
+      }
+      const errMsg = (result as unknown as { error?: { message?: string } }).error?.message || "발송 실패"
+      return { success: false, error_message: errMsg }
+    } catch (e) {
+      console.error("[Aligo] API call failed:", e)
+      return { success: false, error_message: String(e) }
+    }
+  }
+
+  // Mock implementation
   // Simulate network delay
   await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 200))
 
@@ -226,9 +249,31 @@ export async function sendAlimTalk(request: AlimTalkSendRequest): Promise<AlimTa
 }
 
 /**
- * 알림톡 발송 상태 조회 (Mock)
+ * 알림톡 발송 상태 조회
  */
 export async function getAlimTalkStatus(request: AlimTalkStatusRequest): Promise<AlimTalkStatusResponse> {
+  const useMocks = process.env.NEXT_PUBLIC_USE_MOCKS === "true"
+
+  if (!useMocks) {
+    // Real API call
+    try {
+      const { api } = await import("@/lib/api")
+      const result = await api.getAlimTalkStatus(request.message_id)
+      if (result.success && result.data) {
+        return {
+          success: true,
+          status: result.data.status as AlimTalkStatusResponse["status"],
+        }
+      }
+      const errMsg2 = (result as unknown as { error?: { message?: string } }).error?.message || "조회 실패"
+      return { success: false, status: "failed", error_message: errMsg2 }
+    } catch (e) {
+      console.error("[Aligo] Status API call failed:", e)
+      return { success: false, status: "failed", error_message: String(e) }
+    }
+  }
+
+  // Mock implementation
   await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 100))
 
   if (typeof window === "undefined") {

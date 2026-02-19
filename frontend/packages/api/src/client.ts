@@ -2758,4 +2758,56 @@ export class APIClient {
     >(`/projects/${projectId}/representative`);
     return response.data;
   }
+
+  // ─── 알림톡 ───────────────────────────────────────────────
+
+  async sendAlimTalk(payload: {
+    phone: string;
+    template_code: string;
+    variables: Record<string, string>;
+  }) {
+    const response = await this.client.post<APIResponse<{
+      message_id: string;
+      success: boolean;
+      message: string;
+    }>>("/notifications/alimtalk", payload);
+    return response.data;
+  }
+
+  async getAlimTalkStatus(messageId: string) {
+    const response = await this.client.get<APIResponse<{
+      message_id: string;
+      status: string;
+    }>>(`/notifications/alimtalk/${messageId}/status`);
+    return response.data;
+  }
+
+  // ─── 동의 기록 ────────────────────────────────────────────
+
+  async saveConsentRecords(payload: {
+    records: Array<{
+      consent_type: string;
+      consented: boolean;
+      invite_token?: string;
+      consent_version?: string;
+    }>;
+    invite_token?: string;
+  }) {
+    const response = await this.client.post<APIResponse<Array<{
+      id: number;
+      consent_type: string;
+      consented: boolean;
+      consented_at: string;
+    }>>>("/consent/records", payload);
+    return response.data;
+  }
+
+  async checkWorkerDocuments(workerId: number) {
+    const response = await this.client.get<APIResponse<{
+      worker_id: number;
+      documents_complete: boolean;
+      missing_documents: Array<{ type: string; name: string; required: boolean }>;
+    }>>(`/labor-contracts/workers/${workerId}/document-check`);
+    return response.data;
+  }
 }

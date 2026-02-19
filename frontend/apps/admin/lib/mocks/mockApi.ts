@@ -5252,6 +5252,20 @@ export class MockAPIClient {
       total_net_pay: entries.reduce((s, e) => s + e.net_pay, 0),
     };
   }
+
+  async sendAlimTalk(payload: { phone: string; template_code: string; variables: Record<string, string> }) {
+    console.log("[MockAPI] sendAlimTalk:", payload);
+    return delay({ success: true, data: { message_id: `mock_alimtalk_${Date.now()}`, success: true, message: "Mock 알림톡 발송" }, error: null });
+  }
+
+  async getAlimTalkStatus(messageId: string) {
+    return delay({ success: true, data: { message_id: messageId, status: "delivered" }, error: null });
+  }
+
+  async saveConsentRecords(payload: { records: Array<{ consent_type: string; consented: boolean }>; invite_token?: string }) {
+    console.log("[MockAPI] saveConsentRecords:", payload);
+    return delay({ success: true, data: payload.records.map((r, i) => ({ id: i + 1, consent_type: r.consent_type, consented: r.consented, consented_at: new Date().toISOString() })), error: null });
+  }
 }
 
 export const mockApiClient = new MockAPIClient();
