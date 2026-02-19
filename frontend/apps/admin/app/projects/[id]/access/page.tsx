@@ -1,8 +1,26 @@
 "use client";
 
 import { use, useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, PrimitiveInput, toast } from "@sigongon/ui";
-import { Eye, EyeOff, Loader2, Search, ShieldCheck, Users, X } from "lucide-react";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  PrimitiveButton,
+  PrimitiveInput,
+  toast,
+} from "@sigongon/ui";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  Search,
+  ShieldCheck,
+  Users,
+  X,
+} from "lucide-react";
 import { api } from "@/lib/api";
 
 interface ManagerAccessItem {
@@ -166,7 +184,6 @@ export default function ProjectAccessPage({
 
           <div className="flex flex-wrap gap-2">
             <Button
-              size="sm"
               variant="secondary"
               onClick={() => setAllVisibility(true)}
               disabled={loading || managers.length === 0}
@@ -175,7 +192,6 @@ export default function ProjectAccessPage({
               전체 공개
             </Button>
             <Button
-              size="sm"
               variant="secondary"
               onClick={() => setAllVisibility(false)}
               disabled={loading || managers.length === 0}
@@ -196,7 +212,9 @@ export default function ProjectAccessPage({
           <div className="space-y-2 rounded-lg border border-slate-200">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5">
               <p className="text-sm font-medium text-slate-700">검색 결과</p>
-              <p className="text-xs text-slate-500">{filteredManagers.length}명</p>
+              <p className="text-xs text-slate-500">
+                {filteredManagers.length}명
+              </p>
             </div>
 
             {loading ? (
@@ -215,8 +233,12 @@ export default function ProjectAccessPage({
                     className="flex cursor-pointer items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 hover:bg-slate-50"
                   >
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-slate-900">{manager.name}</p>
-                      <p className="truncate text-xs text-slate-500">{manager.phone || "-"}</p>
+                      <p className="truncate font-medium text-slate-900">
+                        {manager.name}
+                      </p>
+                      <p className="truncate text-xs text-slate-500">
+                        {manager.phone || "-"}
+                      </p>
                     </div>
                     <input
                       type="checkbox"
