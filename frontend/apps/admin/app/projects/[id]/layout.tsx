@@ -21,6 +21,8 @@ interface ProjectTab {
   href: string;
   exact?: boolean;
   category: "overview" | "field" | "admin" | "finance" | "closeout";
+  requiresSchool?: boolean;
+  requiresCompletion?: boolean;
 }
 
 export default function ProjectDetailLayout({
@@ -35,7 +37,7 @@ export default function ProjectDetailLayout({
   const { data: response, isLoading } = useProject(id);
   const project = response?.success ? response.data : null;
 
-  const tabs: ProjectTab[] = [
+  const rawTabs: ProjectTab[] = [
     {
       name: "개요",
       href: `/projects/${id}`,
@@ -68,6 +70,8 @@ export default function ProjectDetailLayout({
       name: "수도광열비",
       href: `/projects/${id}/utilities`,
       category: "finance",
+      requiresSchool: true,
+      requiresCompletion: true,
     },
     {
       name: "준공정산",
@@ -80,6 +84,18 @@ export default function ProjectDetailLayout({
       category: "closeout",
     },
   ];
+
+  const tabs = rawTabs.filter((tab) => {
+    if (tab.requiresSchool && project?.category !== "school") return false;
+    if (
+      tab.requiresCompletion &&
+      project &&
+      !["completed", "warranty", "closed"].includes(project.status)
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   // Mobile: Top 3 + More
   const mobilePrimaryTabs = tabs.slice(0, 3);

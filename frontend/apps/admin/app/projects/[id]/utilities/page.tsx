@@ -39,14 +39,18 @@ export default function UtilitiesPage({
   const [timeline, setTimeline] = useState<
     Array<{ id: string; date: string; message: string }>
   >([]);
+  const [enabled, setEnabled] = useState(true);
+  const [disabledMessage, setDisabledMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = async () => {
     setIsLoading(true);
     const response = await api.getUtilities(id);
     if (response.success && response.data) {
-      setUtilities(response.data.items);
-      setTimeline(response.data.timeline);
+      setEnabled(response.data.enabled !== false);
+      setDisabledMessage(response.data.message || null);
+      setUtilities(response.data.items || []);
+      setTimeline(response.data.timeline || []);
     }
     setIsLoading(false);
   };
@@ -59,6 +63,7 @@ export default function UtilitiesPage({
     itemId: string,
     status: "pending" | "completed",
   ) => {
+    if (!enabled) return;
     await api.updateUtilityStatus(id, itemId, {
       status: status === "completed" ? "pending" : "completed",
     });
@@ -71,11 +76,28 @@ export default function UtilitiesPage({
         <h2 className="text-xl font-semibold text-slate-900">
           수도광열비 관리
         </h2>
-        <Button>
+        <Button disabled={!enabled}>
           <Upload className="mr-2 h-4 w-4" />
           영수증/공문 업로드
         </Button>
       </div>
+
+      {!enabled && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <AlertCircle className="mt-0.5 h-5 w-5 text-amber-600" />
+              <div>
+                <p className="font-medium text-amber-900">현재 단계에서는 비활성</p>
+                <p className="mt-1 text-sm text-amber-800">
+                  {disabledMessage ||
+                    "수도광열비는 학교 프로젝트의 준공 이후 단계에서만 진행합니다."}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-3">
         {isLoading ? (

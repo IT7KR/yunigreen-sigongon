@@ -39,6 +39,8 @@ export default function CompletionUtilitiesPage({
 }) {
   const { id: projectId } = use(params);
   const [loading, setLoading] = useState(true);
+  const [enabled, setEnabled] = useState(true);
+  const [disabledMessage, setDisabledMessage] = useState<string | null>(null);
   const [items, setItems] = useState<UtilityItem[]>([]);
 
   useEffect(() => {
@@ -59,7 +61,9 @@ export default function CompletionUtilitiesPage({
       setLoading(true);
       const response = await api.getUtilities(projectId);
       if (response.success && response.data) {
-        setItems(response.data.items);
+        setEnabled(response.data.enabled !== false);
+        setDisabledMessage(response.data.message || null);
+        setItems(response.data.items || []);
       }
     } catch (error) {
       console.error(error);
@@ -101,12 +105,18 @@ export default function CompletionUtilitiesPage({
           </div>
           <Badge
             className={
-              pendingCount > 0
+              !enabled
+                ? "bg-slate-100 text-slate-600"
+                : pendingCount > 0
                 ? "bg-amber-100 text-amber-700"
                 : "bg-emerald-100 text-emerald-700"
             }
           >
-            {pendingCount > 0 ? `대기 ${pendingCount}건` : "정산 완료"}
+            {!enabled
+              ? "조건 미충족"
+              : pendingCount > 0
+              ? `대기 ${pendingCount}건`
+              : "정산 완료"}
           </Badge>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
@@ -124,7 +134,7 @@ export default function CompletionUtilitiesPage({
           <CardTitle>정산 액션</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 md:grid-cols-2">
-          <Button className="w-full justify-between" asChild>
+          <Button className="w-full justify-between" asChild disabled={!enabled}>
             <Link href={`/projects/${projectId}/utilities`}>
               수도광열비 관리 화면
               <ArrowRight className="h-4 w-4" />
@@ -158,6 +168,15 @@ export default function CompletionUtilitiesPage({
           </Button>
         </CardContent>
       </Card>
+
+      {!enabled && (
+        <Card>
+          <CardContent className="p-5 text-sm text-slate-600">
+            {disabledMessage ||
+              "수도광열비는 학교 프로젝트의 준공 이후 단계에서만 진행합니다."}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
