@@ -28,6 +28,7 @@ import {
   buildSampleFileDownloadUrl,
   getSamplePathForDocument,
 } from "@/lib/sampleFiles";
+import { api } from "@/lib/api";
 import {
   getProjectDocumentOverrides,
   upsertProjectDocumentOverride,
@@ -235,6 +236,67 @@ function applyDocumentOverrides(
   );
 }
 
+async function hydrateRepresentativeDocumentState(
+  projectId: string,
+  phases: ProjectDocumentPhaseGroup[],
+) {
+  try {
+    const assignmentResponse = await api.getProjectRepresentative(projectId);
+    const assignment = assignmentResponse.success ? assignmentResponse.data : null;
+    if (!assignment) {
+      return phases;
+    }
+
+    const repsResponse = await api.listFieldRepresentatives();
+    const representatives = repsResponse.success ? repsResponse.data : null;
+    if (!representatives) {
+      return phases;
+    }
+
+    const representative = representatives.find(
+      (item) => item.id === assignment.representative_id,
+    );
+    if (!representative) {
+      return phases;
+    }
+
+    const linkedFilePath =
+      representative.career_cert_filename ||
+      representative.employment_cert_filename ||
+      representative.booklet_filename;
+    if (!linkedFilePath) {
+      return phases;
+    }
+    const resolvedPath = linkedFilePath.includes("/")
+      ? linkedFilePath
+      : getSamplePathForDocument("m3") ?? linkedFilePath;
+
+    return phases.map((group) => {
+      if (group.phase !== "commencement") {
+        return group;
+      }
+
+      const nextDocuments = group.documents.map((docItem) => {
+        if (docItem.id !== "m3") {
+          return docItem;
+        }
+        return {
+          ...docItem,
+          status: "uploaded" as const,
+          file_path: resolvedPath,
+          file_size: docItem.file_size ?? 102400,
+          generated_at:
+            representative.career_cert_uploaded_at || docItem.generated_at,
+        };
+      });
+
+      return makePhaseGroup(group.phase, nextDocuments);
+    });
+  } catch {
+    return phases;
+  }
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function DocumentsPage({
@@ -266,12 +328,23 @@ export default function DocumentsPage({
     totalDocs > 0 ? Math.round((completedDocs / totalDocs) * 100) : 0;
 
   useEffect(() => {
-    setDocumentPhases(
-      applyDocumentOverrides(
+    let isMounted = true;
+
+    const loadPhases = async () => {
+      const localPhases = applyDocumentOverrides(
         MOCK_DOCUMENT_PHASES,
         getProjectDocumentOverrides(id),
-      ),
-    );
+      );
+      const hydrated = await hydrateRepresentativeDocumentState(id, localPhases);
+      if (isMounted) {
+        setDocumentPhases(hydrated);
+      }
+    };
+
+    void loadPhases();
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   function togglePhase(phase: DocumentPhase) {
