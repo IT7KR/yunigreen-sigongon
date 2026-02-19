@@ -251,7 +251,7 @@ export default function ProjectDetailPage({
       </div>
 
       {/* 2. Minimal Quick Actions (V2: Max 4 items, flat style) */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
         {quickActions.slice(0, 4).map((action) => (
           <Link
             key={action.label}
@@ -274,6 +274,7 @@ export default function ProjectDetailPage({
           title="기본 및 고객 정보"
           icon={<User className="h-5 w-5 text-slate-400" />}
           summary={project.client_name ? `${project.client_name}` : undefined}
+          defaultOpen={true}
         >
           <div className="grid gap-6 py-2 sm:grid-cols-2">
             <div className="space-y-3">
@@ -289,7 +290,7 @@ export default function ProjectDetailPage({
                 고객 정보
               </h4>
               <InfoRow label="고객명" value={project.client_name || "-"} />
-              <InfoRow label="연락처" value={project.client_phone || "-"} />
+              <InfoRow label="연락처" value={project.client_phone || "-"} href={project.client_phone ? `tel:${project.client_phone}` : undefined} />
             </div>
           </div>
         </CollapsibleCard>
@@ -308,7 +309,7 @@ export default function ProjectDetailPage({
             ) : representativeInfo ? (
               <div className="space-y-3">
                 <InfoRow label="이름" value={representativeInfo.name} />
-                <InfoRow label="연락처" value={representativeInfo.phone} />
+                <InfoRow label="연락처" value={representativeInfo.phone} href={`tel:${representativeInfo.phone}`} />
                 <InfoRow
                   label="배정일"
                   value={formatDate(representativeInfo.effectiveDate)}
@@ -319,6 +320,13 @@ export default function ProjectDetailPage({
                 배정된 현장대리인이 없습니다.
               </p>
             )}
+            <div className="mt-4 flex justify-end">
+              <Button variant="secondary" size="sm" asChild>
+                <Link href={`/projects/${id}/representative`}>
+                  현장대리인 배정 관리
+                </Link>
+              </Button>
+            </div>
           </div>
         </CollapsibleCard>
 
@@ -326,6 +334,7 @@ export default function ProjectDetailPage({
           title="진행 타임라인"
           icon={<CalendarDays className="h-5 w-5 text-slate-400" />}
           summary={`현재: ${PROJECT_PHASE_LABELS[project.status]}`}
+          defaultOpen={true}
         >
           <div className="py-2">
             <ProjectWorkflowTimeline
@@ -389,11 +398,17 @@ function CollapsibleCard({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, href }: { label: string; value: string; href?: string }) {
   return (
     <div>
       <p className="text-xs text-slate-500">{label}</p>
-      <p className="font-medium text-slate-900">{value}</p>
+      {href ? (
+        <a href={href} className="font-medium text-brand-point-600 hover:underline">
+          {value}
+        </a>
+      ) : (
+        <p className="font-medium text-slate-900">{value}</p>
+      )}
     </div>
   );
 }

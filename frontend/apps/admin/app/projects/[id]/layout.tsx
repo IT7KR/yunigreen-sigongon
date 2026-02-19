@@ -55,6 +55,11 @@ export default function ProjectDetailLayout({
       href: `/projects/${id}/construction`,
       category: "field",
     },
+    {
+      name: "현장대리인",
+      href: `/projects/${id}/representative`,
+      category: "field",
+    },
     { name: "문서함", href: `/projects/${id}/documents`, category: "admin" }, // Increased priority for mobile access
     { name: "AI진단", href: `/projects/${id}/diagnoses`, category: "field" },
     { name: "견적", href: `/projects/${id}/estimates`, category: "admin" },
@@ -147,11 +152,11 @@ export default function ProjectDetailLayout({
                   </h1>
                   <StatusBadge
                     status={project.status}
-                    className="hidden sm:inline-flex"
+                    className="inline-flex"
                   />
                 </div>
 
-                <div className="hidden sm:flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 sm:text-sm">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 sm:text-sm">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5" />
                     <span className="truncate max-w-xs">
@@ -159,7 +164,7 @@ export default function ProjectDetailLayout({
                     </span>
                   </span>
                   {project.category && (
-                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                    <span className="hidden sm:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
                       {PROJECT_CATEGORIES.find((c) => c.id === project.category)
                         ?.label || project.category}
                     </span>

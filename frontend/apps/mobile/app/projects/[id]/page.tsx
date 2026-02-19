@@ -26,6 +26,7 @@ import {
   CardTitle,
   Button,
   StatusBadge,
+  cn,
   formatDate,
   toast,
 } from "@sigongon/ui";
@@ -111,6 +112,116 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     );
   }
 
+  // 상태 기반 빠른 액션 우선순위
+  const hasVisits = visits.length > 0;
+  const hasDiagnosis = (project.diagnoses_count ?? 0) > 0;
+  const hasEstimate = (project.estimates?.length ?? 0) > 0;
+  const hasContract = (project.contracts?.length ?? 0) > 0;
+  const projectStatus = project.status as ProjectStatus;
+
+  type ActionKey = "visit" | "photo" | "diagnosis" | "estimate" | "start" | "daily" | "closeout" | "album";
+
+  const getPriorityOrder = (): ActionKey[] => {
+    if (!hasVisits) return ["visit", "photo", "diagnosis", "estimate", "start", "daily", "closeout", "album"];
+    if (!hasDiagnosis) return ["diagnosis", "visit", "estimate", "photo", "start", "daily", "closeout", "album"];
+    if (!hasEstimate) return ["estimate", "diagnosis", "visit", "photo", "start", "daily", "closeout", "album"];
+    if (!hasContract) return ["start", "estimate", "daily", "visit", "diagnosis", "photo", "closeout", "album"];
+    if (projectStatus === "contracted" || projectStatus === "in_progress") return ["daily", "start", "photo", "estimate", "visit", "diagnosis", "closeout", "album"];
+    if (["completed", "warranty", "closed"].includes(projectStatus)) return ["closeout", "album", "daily", "estimate", "visit", "diagnosis", "photo", "start"];
+    return ["visit", "photo", "diagnosis", "estimate", "start", "daily", "closeout", "album"];
+  };
+
+  const priorityOrder = getPriorityOrder();
+
+  const actionNodes: Record<ActionKey, React.ReactNode> = {
+    visit: (
+      <Button key="visit" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
+        <Link href={`/projects/${id}/visits/new`}>
+          <Camera className="h-5 w-5" />
+          <span className="text-xs">현장방문</span>
+        </Link>
+      </Button>
+    ),
+    photo: (
+      <Button key="photo" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
+        <Link href={`/projects/${id}/photos`}>
+          <Camera className="h-5 w-5" />
+          <span className="text-xs">사진촬영</span>
+        </Link>
+      </Button>
+    ),
+    diagnosis: (
+      <Button
+        key="diagnosis"
+        variant="secondary"
+        fullWidth
+        className="flex-col gap-1 py-3"
+        onClick={handleRequestDiagnosis}
+        disabled={!latestVisit || requestDiagnosis.isPending}
+        loading={requestDiagnosis.isPending}
+      >
+        <Sparkles className="h-5 w-5" />
+        <span className="text-xs">AI 진단</span>
+      </Button>
+    ),
+    estimate: (
+      <Button
+        key="estimate"
+        variant="secondary"
+        fullWidth
+        className="flex-col gap-1 py-3"
+        onClick={handleCreateEstimate}
+        disabled={createEstimate.isPending}
+        loading={createEstimate.isPending}
+      >
+        <FileText className="h-5 w-5" />
+        <span className="text-xs">견적서</span>
+      </Button>
+    ),
+    start: (
+      <Button key="start" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
+        <Link href={`/projects/${id}/construction/start-report`}>
+          <FileCheck className="h-5 w-5" />
+          <span className="text-xs">착공계</span>
+        </Link>
+      </Button>
+    ),
+    daily: (
+      <Button key="daily" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
+        <Link href={`/projects/${id}/construction/daily-reports`}>
+          <ClipboardList className="h-5 w-5" />
+          <span className="text-xs">작업일지</span>
+        </Link>
+      </Button>
+    ),
+    closeout: (
+      <Button key="closeout" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
+        <Link href={`/projects/${id}/completion/closeout-report`}>
+          <CheckCircle2 className="h-5 w-5" />
+          <span className="text-xs">준공/정산</span>
+        </Link>
+      </Button>
+    ),
+    album: (
+      <Button key="album" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
+        <Link href={`/projects/${id}/completion/photo-album`}>
+          <Image className="h-5 w-5" />
+          <span className="text-xs">준공사진첩</span>
+        </Link>
+      </Button>
+    ),
+  };
+
+  // 진행 단계 상태 계산
+  const progressSteps: { key: string; label: string; state: "done" | "active" | "pending" }[] = [
+    { key: "visit", label: "현장방문", state: hasVisits ? "done" : "active" },
+    { key: "diagnosis", label: "AI진단", state: hasDiagnosis ? "done" : hasVisits ? "active" : "pending" },
+    { key: "estimate", label: "견적", state: hasEstimate ? "done" : hasDiagnosis ? "active" : "pending" },
+    { key: "contract", label: "계약", state: hasContract ? "done" : hasEstimate ? "active" : "pending" },
+    { key: "construction", label: "시공", state: ["completed", "warranty", "closed"].includes(projectStatus) ? "done" : (projectStatus === "in_progress" || projectStatus === "contracted") ? "active" : "pending" },
+    { key: "closeout", label: "준공", state: ["completed", "warranty", "closed"].includes(projectStatus) ? "done" : projectStatus === "in_progress" ? "active" : "pending" },
+  ];
+
   return (
     <MobileLayout
       title={project.name}
@@ -162,85 +273,36 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
           </CardContent>
         </Card>
 
-        {/* 빠른 액션 */}
+        {/* 수평 진행 표시기 */}
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <div className="flex items-start">
+            {progressSteps.map((step, index) => (
+              <div key={step.key} className="flex flex-1 flex-col items-center gap-1">
+                <div className="flex w-full items-center">
+                  <div
+                    className={cn(
+                      "h-2.5 w-2.5 flex-shrink-0 rounded-full",
+                      step.state === "done" ? "bg-brand-point-500" : step.state === "active" ? "bg-brand-point-300 ring-2 ring-brand-point-100" : "bg-slate-200",
+                    )}
+                  />
+                  {index < progressSteps.length - 1 && (
+                    <div className={cn("h-0.5 flex-1", step.state === "done" ? "bg-brand-point-400" : "bg-slate-200")} />
+                  )}
+                </div>
+                <span className={cn(
+                  "text-center text-[9px] leading-tight",
+                  step.state === "done" ? "font-medium text-brand-point-600" : step.state === "active" ? "font-medium text-brand-point-400" : "text-slate-400",
+                )}>
+                  {step.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 빠른 액션 (상태 기반 우선순위) */}
         <div className="grid grid-cols-3 gap-2">
-          <Button
-              variant="secondary"
-              fullWidth
-              className="flex-col gap-1 py-3"
-             asChild><Link href={`/projects/${id}/visits/new`}>
-              <Camera className="h-5 w-5" />
-              <span className="text-xs">현장방문</span>
-            </Link></Button>
-
-          <Button
-              variant="secondary"
-              fullWidth
-              className="flex-col gap-1 py-3"
-             asChild><Link href={`/projects/${id}/photos`}>
-              <Camera className="h-5 w-5" />
-              <span className="text-xs">사진촬영</span>
-            </Link></Button>
-
-          <Button
-            variant="secondary"
-            fullWidth
-            className="flex-col gap-1 py-3"
-            onClick={handleRequestDiagnosis}
-            disabled={!latestVisit || requestDiagnosis.isPending}
-            loading={requestDiagnosis.isPending}
-          >
-            <Sparkles className="h-5 w-5" />
-            <span className="text-xs">AI 진단</span>
-          </Button>
-
-          <Button
-            variant="secondary"
-            fullWidth
-            className="flex-col gap-1 py-3"
-            onClick={handleCreateEstimate}
-            disabled={createEstimate.isPending}
-            loading={createEstimate.isPending}
-          >
-            <FileText className="h-5 w-5" />
-            <span className="text-xs">견적서</span>
-          </Button>
-
-          <Button
-              variant="secondary"
-              fullWidth
-              className="flex-col gap-1 py-3"
-             asChild><Link href={`/projects/${id}/construction/start-report`}>
-              <FileCheck className="h-5 w-5" />
-              <span className="text-xs">착공계</span>
-            </Link></Button>
-
-          <Button
-              variant="secondary"
-              fullWidth
-              className="flex-col gap-1 py-3"
-             asChild><Link href={`/projects/${id}/construction/daily-reports`}>
-              <ClipboardList className="h-5 w-5" />
-              <span className="text-xs">작업일지</span>
-            </Link></Button>
-
-          <Button
-              variant="secondary"
-              fullWidth
-              className="flex-col gap-1 py-3"
-             asChild><Link href={`/projects/${id}/completion/closeout-report`}>
-              <CheckCircle2 className="h-5 w-5" />
-              <span className="text-xs">준공/정산</span>
-            </Link></Button>
-
-          <Button
-              variant="secondary"
-              fullWidth
-              className="flex-col gap-1 py-3"
-             asChild><Link href={`/projects/${id}/completion/photo-album`}>
-              <Image className="h-5 w-5" />
-              <span className="text-xs">준공사진첩</span>
-            </Link></Button>
+          {priorityOrder.map((key) => actionNodes[key])}
         </div>
 
         {/* 현장방문 기록 */}
