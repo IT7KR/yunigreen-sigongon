@@ -1,5 +1,6 @@
 """Customer master models."""
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
 from sqlalchemy import BigInteger, Index, UniqueConstraint
@@ -8,10 +9,26 @@ from sqlmodel import Field, SQLModel
 from app.core.snowflake import generate_snowflake_id
 
 
+class CustomerKind(str, Enum):
+    """Customer kind classification."""
+
+    COMPANY = "company"
+    INDIVIDUAL = "individual"
+
+
 class CustomerMasterBase(SQLModel):
     """Customer master base fields."""
 
     name: str = Field(max_length=100)
+    customer_kind: CustomerKind = Field(default=CustomerKind.COMPANY, index=True)
+    representative_name: Optional[str] = Field(default=None, max_length=100)
+    representative_phone: Optional[str] = Field(default=None, max_length=20)
+    business_number: Optional[str] = Field(default=None, max_length=20)
+    contact_name: Optional[str] = Field(default=None, max_length=100)
+    contact_phone: Optional[str] = Field(default=None, max_length=20)
+    license_type: Optional[str] = Field(default=None, max_length=100)
+    is_women_owned: bool = Field(default=False)
+    # Legacy compatibility fields
     phone: Optional[str] = Field(default=None, max_length=20)
     memo: Optional[str] = Field(default=None)
 
@@ -72,6 +89,14 @@ class CustomerMasterUpdate(SQLModel):
     """Schema for updating customer master."""
 
     name: Optional[str] = None
+    customer_kind: Optional[CustomerKind] = None
+    representative_name: Optional[str] = None
+    representative_phone: Optional[str] = None
+    business_number: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+    license_type: Optional[str] = None
+    is_women_owned: Optional[bool] = None
     phone: Optional[str] = None
     memo: Optional[str] = None
     is_active: Optional[bool] = None
@@ -82,4 +107,12 @@ class CustomerMasterSummary(SQLModel):
 
     id: int
     name: str
+    customer_kind: CustomerKind = CustomerKind.COMPANY
+    representative_name: Optional[str] = None
+    representative_phone: Optional[str] = None
+    business_number: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+    license_type: Optional[str] = None
+    is_women_owned: bool = False
     phone: Optional[str] = None

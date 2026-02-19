@@ -93,6 +93,14 @@ async def _load_customer_summary_map(
         customer.id: CustomerMasterSummary(
             id=customer.id,
             name=customer.name,
+            customer_kind=customer.customer_kind,
+            representative_name=customer.representative_name,
+            representative_phone=customer.representative_phone,
+            business_number=customer.business_number,
+            contact_name=customer.contact_name,
+            contact_phone=customer.contact_phone,
+            license_type=customer.license_type,
+            is_women_owned=customer.is_women_owned,
             phone=customer.phone,
         )
         for customer in customers

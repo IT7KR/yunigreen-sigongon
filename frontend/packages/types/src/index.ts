@@ -142,9 +142,19 @@ export interface Organization {
   phone?: string
 }
 
+export type CustomerKind = "company" | "individual"
+
 export interface CustomerMasterSummary {
   id: string
   name: string
+  customer_kind?: CustomerKind
+  representative_name?: string
+  representative_phone?: string
+  business_number?: string
+  contact_name?: string
+  contact_phone?: string
+  license_type?: string
+  is_women_owned?: boolean
   phone?: string
 }
 
@@ -152,6 +162,14 @@ export interface CustomerMaster {
   id: string
   organization_id: string
   name: string
+  customer_kind?: CustomerKind
+  representative_name?: string
+  representative_phone?: string
+  business_number?: string
+  contact_name?: string
+  contact_phone?: string
+  license_type?: string
+  is_women_owned?: boolean
   phone?: string
   memo?: string
   is_active: boolean

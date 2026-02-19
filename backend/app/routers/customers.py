@@ -25,6 +25,8 @@ from app.services.customer_master import (
     get_customer_master_for_org,
     normalize_customer_name,
     normalize_phone,
+    normalize_optional_text,
+    resolve_customer_phone,
     upsert_customer_master,
 )
 
@@ -80,7 +82,12 @@ async def list_customers(
         normalized_search_phone = normalize_phone(search)
         search_conditions = [
             CustomerMaster.name.ilike(search_filter),
+            CustomerMaster.representative_name.ilike(search_filter),
+            CustomerMaster.contact_name.ilike(search_filter),
+            CustomerMaster.business_number.ilike(search_filter),
             CustomerMaster.phone.ilike(search_filter),
+            CustomerMaster.representative_phone.ilike(search_filter),
+            CustomerMaster.contact_phone.ilike(search_filter),
         ]
         if normalized_search_phone:
             search_conditions.append(
@@ -124,11 +131,17 @@ async def create_customer(
             detail="발주처명을 입력해 주세요.",
         )
 
+    resolved_phone = resolve_customer_phone(
+        phone=customer_data.phone,
+        representative_phone=customer_data.representative_phone,
+        contact_phone=customer_data.contact_phone,
+    )
+
     duplicate = await find_customer_master_by_identity(
         db=db,
         organization_id=organization_id,
         name=normalized_name,
-        phone=customer_data.phone,
+        phone=resolved_phone,
         include_inactive=True,
     )
     if duplicate:
@@ -140,9 +153,17 @@ async def create_customer(
     customer = CustomerMaster(
         organization_id=organization_id,
         name=normalized_name,
-        phone=customer_data.phone,
-        normalized_phone=normalize_phone(customer_data.phone),
-        memo=customer_data.memo,
+        customer_kind=customer_data.customer_kind,
+        representative_name=normalize_optional_text(customer_data.representative_name),
+        representative_phone=normalize_optional_text(customer_data.representative_phone),
+        business_number=normalize_optional_text(customer_data.business_number),
+        contact_name=normalize_optional_text(customer_data.contact_name),
+        contact_phone=normalize_optional_text(customer_data.contact_phone),
+        license_type=normalize_optional_text(customer_data.license_type),
+        is_women_owned=customer_data.is_women_owned,
+        phone=resolved_phone,
+        normalized_phone=normalize_phone(resolved_phone),
+        memo=normalize_optional_text(customer_data.memo),
         is_active=True,
         created_by=current_user.id,
         updated_by=current_user.id,
@@ -175,6 +196,14 @@ async def upsert_customer(
         name=normalized_name,
         phone=customer_data.phone,
         memo=customer_data.memo,
+        customer_kind=customer_data.customer_kind,
+        representative_name=customer_data.representative_name,
+        representative_phone=customer_data.representative_phone,
+        business_number=customer_data.business_number,
+        contact_name=customer_data.contact_name,
+        contact_phone=customer_data.contact_phone,
+        license_type=customer_data.license_type,
+        is_women_owned=customer_data.is_women_owned,
         actor_id=current_user.id,
     )
     await db.commit()
@@ -297,7 +326,19 @@ async def update_customer(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="발주처명을 입력해 주세요.",
         )
-    next_phone = update_data.get("phone", customer.phone)
+    next_phone = resolve_customer_phone(
+        phone=update_data.get("phone") if "phone" in update_data else None,
+        representative_phone=update_data.get(
+            "representative_phone", customer.representative_phone
+        ),
+        contact_phone=update_data.get("contact_phone", customer.contact_phone),
+    )
+    if next_phone is None:
+        next_phone = resolve_customer_phone(
+            phone=customer.phone,
+            representative_phone=customer.representative_phone,
+            contact_phone=customer.contact_phone,
+        )
 
     duplicate = await find_customer_master_by_identity(
         db=db,
@@ -315,8 +356,28 @@ async def update_customer(
     customer.name = next_name
     customer.phone = next_phone
     customer.normalized_phone = normalize_phone(next_phone)
+    if "customer_kind" in update_data and update_data["customer_kind"] is not None:
+        customer.customer_kind = update_data["customer_kind"]
+    if "representative_name" in update_data:
+        customer.representative_name = normalize_optional_text(
+            update_data["representative_name"]
+        )
+    if "representative_phone" in update_data:
+        customer.representative_phone = normalize_optional_text(
+            update_data["representative_phone"]
+        )
+    if "business_number" in update_data:
+        customer.business_number = normalize_optional_text(update_data["business_number"])
+    if "contact_name" in update_data:
+        customer.contact_name = normalize_optional_text(update_data["contact_name"])
+    if "contact_phone" in update_data:
+        customer.contact_phone = normalize_optional_text(update_data["contact_phone"])
+    if "license_type" in update_data:
+        customer.license_type = normalize_optional_text(update_data["license_type"])
+    if "is_women_owned" in update_data and update_data["is_women_owned"] is not None:
+        customer.is_women_owned = update_data["is_women_owned"]
     if "memo" in update_data:
-        customer.memo = update_data["memo"]
+        customer.memo = normalize_optional_text(update_data["memo"])
     if "is_active" in update_data and update_data["is_active"] is not None:
         customer.is_active = update_data["is_active"]
     customer.updated_at = datetime.utcnow()

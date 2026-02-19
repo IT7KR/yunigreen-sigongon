@@ -2,6 +2,7 @@
 from app.models.base import BaseModel, TimestampMixin, TenantMixin, require_same_org
 from app.models.user import Organization, User, UserRole
 from app.models.customer import (
+    CustomerKind,
     CustomerMaster,
     CustomerMasterCreate,
     CustomerMasterRead,
@@ -119,6 +120,7 @@ __all__ = [
     "User",
     "UserRole",
     # Customer Master
+    "CustomerKind",
     "CustomerMaster",
     "CustomerMasterCreate",
     "CustomerMasterRead",
