@@ -268,14 +268,14 @@ export default function ContractsPage({
     }
   }
 
-  function handleDownloadPDF(contractId: string) {
+  function handleDownloadPDF(contract: ContractDetail) {
     if (USE_MOCKS) {
       const downloadUrl = buildSampleFileDownloadUrl(
         PROJECT_MOCK_EXPORT_SAMPLE_FILES.contractPdf,
       );
       const anchor = document.createElement("a");
       anchor.href = downloadUrl;
-      anchor.download = `계약서_${contractId}.pdf`;
+      anchor.download = `계약서_${contract.id}.pdf`;
       anchor.target = "_blank";
       anchor.rel = "noopener noreferrer";
       document.body.append(anchor);
@@ -283,7 +283,13 @@ export default function ContractsPage({
       anchor.remove();
       return;
     }
-    window.open(`/api/v1/contracts/${contractId}/pdf`, "_blank");
+
+    if (contract.contract_kind === "public_platform" && contract.source_document_path) {
+      window.open(`/api/v1/contracts/${contract.id}/source`, "_blank");
+      return;
+    }
+
+    window.open(`/api/v1/contracts/${contract.id}/pdf`, "_blank");
   }
 
   async function handleDownloadExcel() {
@@ -458,10 +464,10 @@ export default function ContractsPage({
                           <Button
                             size="sm"
                             variant="secondary"
-                            onClick={() => handleDownloadPDF(contract.id)}
+                            onClick={() => handleDownloadPDF(contract)}
                           >
                             <Download className="h-4 w-4" />
-                            PDF
+                            {contract.contract_kind === "public_platform" ? "원본" : "PDF"}
                           </Button>
                         </div>
                       </td>
