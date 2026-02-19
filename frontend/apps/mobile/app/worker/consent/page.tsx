@@ -117,7 +117,7 @@ function WorkerConsentContent() {
         </div>
       </header>
 
-      <main className="flex-1 p-4 pb-32">
+      <main className="flex-1 p-4 pb-nav-safe">
         <div className="mx-auto max-w-md space-y-4">
           {/* All Consent Checkbox */}
           <div className="rounded-lg border-2 border-brand-point-500 bg-white p-4">
@@ -237,7 +237,7 @@ function WorkerConsentContent() {
       </main>
 
       {/* Sticky Bottom Button */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4 pb-safe">
         <div className="mx-auto max-w-md">
           <Button
             fullWidth

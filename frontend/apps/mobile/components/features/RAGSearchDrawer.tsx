@@ -37,6 +37,43 @@ export function RAGSearchDrawer({
   const [error, setError] = useState<string | null>(null);
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [isActive, setIsActive] = useState(isOpen);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      requestAnimationFrame(() => {
+        setIsActive(true);
+      });
+      return;
+    }
+
+    setIsActive(false);
+    const timer = setTimeout(() => {
+      setShouldRender(false);
+    }, 240);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!shouldRender) return;
+
+    const originalOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [shouldRender, onClose]);
 
   // Debounce search query
   useEffect(() => {
@@ -99,18 +136,26 @@ export function RAGSearchDrawer({
     [onAddItem, onClose]
   );
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   return (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black bg-opacity-50"
+        className={cn(
+          "fixed inset-0 z-40 bg-black/50 transition-opacity duration-200",
+          isActive ? "opacity-100" : "opacity-0"
+        )}
         onClick={onClose}
       />
 
       {/* Drawer */}
-      <div className="fixed inset-x-0 bottom-0 top-0 z-50 flex flex-col bg-white">
+      <div
+        className={cn(
+          "fixed inset-x-0 bottom-0 top-0 z-50 flex flex-col bg-white transition-transform duration-200 ease-out",
+          isActive ? "translate-y-0" : "translate-y-full"
+        )}
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 p-4">
           <div className="flex items-center gap-2">
@@ -134,7 +179,7 @@ export function RAGSearchDrawer({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="예: 우레탄 방수, 실리콘 코킹..."
-              className="h-12 w-full rounded-lg border border-slate-300 pl-10 pr-3 text-base focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              className="h-11 w-full rounded-lg border border-slate-300 pl-10 pr-3 text-base focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
               autoFocus
             />
           </div>

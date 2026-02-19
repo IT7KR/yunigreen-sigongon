@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Card, CardContent, Button, Input } from "@sigongon/ui";
+import { Card, CardContent, Button, Input, Textarea } from "@sigongon/ui";
 import { useCreateProject } from "@/hooks";
 
 export default function NewProjectPage() {
@@ -112,15 +112,12 @@ export default function NewProjectPage() {
 
         <Card>
           <CardContent className="p-4">
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              메모 (선택)
-            </label>
-            <textarea
+            <Textarea
+              label="메모 (선택)"
               value={formData.notes}
               onChange={(e) => handleChange("notes", e.target.value)}
               placeholder="프로젝트에 대한 메모를 남겨주세요"
               rows={3}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             />
           </CardContent>
         </Card>

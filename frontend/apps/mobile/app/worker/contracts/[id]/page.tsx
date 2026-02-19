@@ -2,7 +2,7 @@
 
 import { Suspense, use, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Badge, Button, Modal, PrimitiveInput, SignaturePad } from "@sigongon/ui";
+import { Badge, Button, LoadingOverlay, Modal, PrimitiveInput, SignaturePad } from "@sigongon/ui";
 import { ArrowLeft, CheckCircle, PenTool } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -94,7 +94,7 @@ function WorkerContractContent({
         </div>
       </header>
 
-      <main className="flex-1 p-4 pb-24">
+      <main className="flex-1 p-4 pb-nav-safe">
         <div className="rounded-lg bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
             <h2 className="text-lg font-bold">일용직 근로계약서</h2>
@@ -107,7 +107,7 @@ function WorkerContractContent({
 
           <div className="space-y-4 text-sm text-slate-600">
             {isLoading ? (
-              <div className="text-sm text-slate-400">불러오는 중...</div>
+              <LoadingOverlay variant="inline" text="근로계약서를 불러오는 중..." />
             ) : contract ? (
               <div className="grid grid-cols-2 gap-4 rounded-lg bg-slate-50 p-4">
                 <div>
@@ -166,7 +166,7 @@ function WorkerContractContent({
         </div>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4 pb-safe">
         <p className="mb-2 text-center text-xs text-slate-500">
           서명은 이미지로 저장되고 시간이 기록됩니다.
         </p>

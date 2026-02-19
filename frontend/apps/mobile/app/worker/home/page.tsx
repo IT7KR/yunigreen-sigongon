@@ -225,8 +225,8 @@ export default function WorkerHomePage() {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
-                          <CreditCard className="h-5 w-5 text-blue-600" />
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary-100">
+                          <CreditCard className="h-5 w-5 text-brand-primary-600" />
                         </div>
                         <div>
                           <p className="font-medium text-slate-900">

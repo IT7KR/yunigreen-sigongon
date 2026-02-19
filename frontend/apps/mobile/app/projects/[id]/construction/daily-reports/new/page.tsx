@@ -3,7 +3,7 @@
 import { use, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Button, PrimitiveButton, PrimitiveInput } from "@sigongon/ui";
+import { Button, PrimitiveButton, PrimitiveInput, Textarea } from "@sigongon/ui";
 import { Loader2, Camera, X, CheckCircle, LocateFixed } from "lucide-react";
 import { api } from "@/lib/api";
 import { VoiceInput } from "@/components/features/VoiceInput";
@@ -214,11 +214,12 @@ export default function NewDailyReportPage({
                 placeholder="음성으로 입력"
               />
             </div>
-            <textarea
+            <Textarea
               ref={workDescriptionRef}
               name="work_description"
-              className="h-32 w-full rounded-lg border border-slate-300 p-3 text-base"
+              className="h-32 text-base"
               placeholder="오늘 진행한 작업을 상세히 기록해주세요."
+              rows={5}
               required
             />
           </div>
@@ -227,10 +228,11 @@ export default function NewDailyReportPage({
             <label className="mb-2 block text-sm font-medium text-slate-900">
               익일 작업예정
             </label>
-            <textarea
+            <Textarea
               name="tomorrow_plan"
-              className="h-24 w-full rounded-lg border border-slate-300 p-3 text-base"
+              className="h-24 text-base"
               placeholder="내일 진행할 작업을 입력해주세요."
+              rows={4}
             />
           </div>
 

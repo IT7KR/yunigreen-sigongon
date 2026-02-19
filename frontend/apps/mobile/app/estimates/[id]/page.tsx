@@ -17,7 +17,7 @@ import {
   FileSignature,
 } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveButton, formatCurrency, toast } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, LoadingOverlay, PrimitiveButton, formatCurrency, toast, useConfirmDialog } from "@sigongon/ui";
 import {
   useEstimate,
   useIssueEstimate,
@@ -85,6 +85,7 @@ export default function EstimateDetailPage({
         | undefined
     )?.project_id || "";
   const createContract = useCreateContract(projectIdForEstimate);
+  const { confirm } = useConfirmDialog();
 
   const [editingLine, setEditingLine] = useState<EditingLine | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -130,7 +131,13 @@ export default function EstimateDetailPage({
   };
 
   const handleDeleteLine = async (lineId: string) => {
-    if (!confirm("이 항목을 삭제할까요?")) return;
+    const confirmed = await confirm({
+      title: "이 항목을 삭제할까요?",
+      description: "삭제 후에는 복구할 수 없습니다.",
+      confirmLabel: "삭제",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     await deleteLine.mutateAsync(lineId);
   };
 
@@ -156,7 +163,12 @@ export default function EstimateDetailPage({
   };
 
   const handleIssue = async () => {
-    if (!confirm("견적서를 발행할까요?\n발행 후에는 수정할 수 없어요.")) return;
+    const confirmed = await confirm({
+      title: "견적서를 발행할까요?",
+      description: "발행 후에는 수정할 수 없습니다.",
+      confirmLabel: "발행",
+    });
+    if (!confirmed) return;
 
     await issueEstimate.mutateAsync();
   };
@@ -216,9 +228,7 @@ export default function EstimateDetailPage({
   if (isLoading) {
     return (
       <MobileLayout title="견적서" showBack>
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-point-500 border-t-transparent" />
-        </div>
+        <LoadingOverlay variant="inline" text="견적서를 불러오는 중..." />
       </MobileLayout>
     );
   }
@@ -247,7 +257,7 @@ export default function EstimateDetailPage({
         <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
       }
     >
-      <div className="space-y-4 p-4 pb-32">
+      <div className="space-y-4 p-4 pb-nav-safe">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -485,7 +495,7 @@ export default function EstimateDetailPage({
         </Card>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-white p-4 safe-area-bottom">
+      <div className="fixed bottom-0 left-0 right-0 border-t bg-white p-4 pb-safe">
         {isDraft ? (
           <div className="flex gap-2">
             <Button

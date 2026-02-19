@@ -64,10 +64,22 @@ body {
   a {
     -webkit-tap-highlight-color: transparent;
   }
+
+  button,
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* Safe area for mobile */
 .pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.safe-area-bottom {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 

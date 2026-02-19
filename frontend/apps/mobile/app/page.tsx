@@ -45,8 +45,8 @@ export default function HomePage() {
           <Link href="/projects">
             <InteractiveCard className="h-full hover:border-brand-primary-200">
               <CardContent className="flex flex-col items-center justify-center gap-2 p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                  <Camera className="h-6 w-6 text-blue-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary-100">
+                  <Camera className="h-6 w-6 text-brand-primary-600" />
                 </div>
                 <span className="font-medium text-slate-900">현장방문</span>
               </CardContent>
@@ -86,7 +86,7 @@ export default function HomePage() {
                 <div>
                   <MotionNumber
                     value={0}
-                    className="text-2xl font-bold text-blue-600"
+                    className="text-2xl font-bold text-brand-primary-600"
                   />
                   <p className="mt-1 text-xs text-slate-500">AI 진단</p>
                 </div>

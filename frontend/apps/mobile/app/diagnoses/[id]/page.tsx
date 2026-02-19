@@ -22,8 +22,10 @@ import {
   CardHeader,
   CardTitle,
   Button,
+  Textarea,
   PrimitiveButton,
   Badge,
+  LoadingOverlay,
   toast,
 } from "@sigongon/ui";
 import { useDiagnosis } from "@/hooks";
@@ -133,12 +135,7 @@ export default function DiagnosisDetailPage({
   if (isLoading) {
     return (
       <MobileLayout title="AI 진단 결과" showBack>
-        <div className="flex h-64 items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <Sparkles className="h-8 w-8 animate-pulse text-brand-point-500" />
-            <p className="text-sm text-slate-500">진단 결과를 불러오는 중...</p>
-          </div>
-        </div>
+        <LoadingOverlay variant="inline" text="진단 결과를 불러오는 중..." />
       </MobileLayout>
     );
   }
@@ -174,7 +171,7 @@ export default function DiagnosisDetailPage({
         </Badge>
       }
     >
-      <div className="space-y-4 p-4">
+      <div className="space-y-4 p-4 pb-nav-safe">
         {isProcessing && (
           <Card className="border-blue-200 bg-blue-50">
             <CardContent className="flex items-center gap-3 p-4">
@@ -214,12 +211,11 @@ export default function DiagnosisDetailPage({
                 <CardTitle className="text-base">현장 소견 (수기)</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 pt-0">
-                <textarea
+                <Textarea
                   value={fieldOpinion}
                   onChange={(event) => setFieldOpinion(event.target.value)}
                   rows={4}
                   placeholder="현장 확인 결과를 수기로 보완해 주세요."
-                  className="w-full rounded-lg border border-slate-300 p-3 text-base text-slate-700 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 />
                 <Button
                   variant="secondary"
@@ -322,7 +318,7 @@ export default function DiagnosisDetailPage({
               </p>
             )}
 
-            <div className="fixed bottom-0 left-0 right-0 border-t bg-white p-4 safe-area-bottom">
+            <div className="fixed bottom-0 left-0 right-0 border-t bg-white p-4 pb-safe">
               <Button
                 fullWidth
                 disabled={selectedMaterials.size === 0 || isCreatingEstimate}
