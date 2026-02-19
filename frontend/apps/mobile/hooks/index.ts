@@ -12,6 +12,7 @@ import type {
   VisitType,
   PhotoType,
   ContractTemplateType,
+  MaterialOrderStatus,
 } from "@sigongon/types";
 
 export { useAuth, useRequireAuth } from "@/lib/auth";
@@ -285,6 +286,60 @@ export function useContract(contractId: string) {
     queryKey: ["contract", contractId],
     queryFn: () => api.getContract(contractId),
     enabled: !!contractId,
+  });
+}
+
+export function useMaterialOrders(projectId: string) {
+  return useQuery({
+    queryKey: ["material-orders", projectId],
+    queryFn: () => api.getMaterialOrders(projectId),
+    enabled: !!projectId,
+  });
+}
+
+export function useMaterialOrdersMobile(projectId: string) {
+  return useQuery({
+    queryKey: ["material-orders-mobile", projectId],
+    queryFn: () => api.getMaterialOrdersMobile(projectId),
+    enabled: !!projectId,
+  });
+}
+
+export function useMaterialOrder(orderId: string) {
+  return useQuery({
+    queryKey: ["material-order", orderId],
+    queryFn: () => api.getMaterialOrder(orderId),
+    enabled: !!orderId,
+  });
+}
+
+export function useUpdateMaterialOrderStatus(projectId: string, orderId?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: {
+      orderId: string;
+      status: MaterialOrderStatus;
+      reason?: string;
+      invoice_number?: string;
+      invoice_amount?: number;
+      invoice_file_url?: string;
+    }) =>
+      api.updateMaterialOrderStatus(payload.orderId, {
+        status: payload.status,
+        reason: payload.reason,
+        invoice_number: payload.invoice_number,
+        invoice_amount: payload.invoice_amount,
+        invoice_file_url: payload.invoice_file_url,
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["material-orders", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["material-orders-mobile", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["material-order", variables.orderId] });
+      if (orderId) {
+        queryClient.invalidateQueries({ queryKey: ["material-order", orderId] });
+      }
+    },
   });
 }
 

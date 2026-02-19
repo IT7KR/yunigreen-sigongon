@@ -17,6 +17,7 @@ import {
   ClipboardList,
   FileCheck,
   CheckCircle2,
+  Package,
 } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
 import {
@@ -140,6 +141,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     | "photo"
     | "diagnosis"
     | "estimate"
+    | "orders"
     | "reports"
     | "daily"
     | "closeout"
@@ -151,6 +153,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "visit",
         "photo",
         "diagnosis",
+        "orders",
         "reports",
         "daily",
         "closeout",
@@ -161,6 +164,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "photo",
         "diagnosis",
         "estimate",
+        "orders",
         "reports",
         "daily",
         "closeout",
@@ -177,6 +181,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "photo",
         "diagnosis",
         "estimate",
+        "orders",
         "reports",
         "daily",
         "closeout",
@@ -187,6 +192,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "diagnosis",
         "visit",
         "estimate",
+        "orders",
         "photo",
         "reports",
         "daily",
@@ -198,6 +204,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "estimate",
         "diagnosis",
         "visit",
+        "orders",
         "photo",
         "reports",
         "daily",
@@ -207,6 +214,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     if (!hasContract)
       return filterByRole([
         "estimate",
+        "orders",
         "reports",
         "daily",
         "visit",
@@ -221,6 +229,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "daily",
         "photo",
         "estimate",
+        "orders",
         "visit",
         "diagnosis",
         "closeout",
@@ -232,6 +241,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "reports",
         "photo",
         "estimate",
+        "orders",
         "visit",
         "diagnosis",
         "closeout",
@@ -243,6 +253,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "album",
         "reports",
         "daily",
+        "orders",
         "estimate",
         "visit",
         "diagnosis",
@@ -253,6 +264,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
       "photo",
       "diagnosis",
       "estimate",
+      "orders",
       "reports",
       "daily",
       "closeout",
@@ -305,6 +317,14 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
       >
         <FileText className="h-5 w-5" />
         <span className="text-xs">견적서</span>
+      </Button>
+    ),
+    orders: (
+      <Button key="orders" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
+        <Link href={`/projects/${id}/orders`}>
+          <Package className="h-5 w-5" />
+          <span className="text-xs">자재발주</span>
+        </Link>
       </Button>
     ),
     reports: (
