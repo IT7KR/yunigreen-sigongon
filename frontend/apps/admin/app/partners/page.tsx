@@ -62,10 +62,8 @@ const EMPTY_FORM: PartnerForm = {
 };
 
 const normalizePartner = (partner: any): Partner => {
-  const representativeName =
-    partner.representative_name || partner.owner || "";
-  const businessNumber =
-    partner.business_number || partner.biz_no || "";
+  const representativeName = partner.representative_name || partner.owner || "";
+  const businessNumber = partner.business_number || partner.biz_no || "";
   const licenseType = partner.license_type || partner.license || "";
   const legacyWomenOwned =
     typeof partner.is_female_owned === "boolean"
@@ -106,14 +104,16 @@ export default function PartnersPage() {
   const formatPhone = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
     if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    if (cleaned.length <= 7)
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
   };
 
   const formatBizNo = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
     if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 5) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    if (cleaned.length <= 5)
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 5)}-${cleaned.slice(5, 10)}`;
   };
 
@@ -343,14 +343,22 @@ export default function PartnersPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-6 text-center text-sm text-slate-400">
+                    <td
+                      colSpan={8}
+                      className="px-6 py-6 text-center text-sm text-slate-400"
+                    >
                       불러오는 중...
                     </td>
                   </tr>
                 ) : filteredPartners.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-6 text-center text-sm text-slate-400">
-                      {searchTerm ? "검색 결과가 없습니다." : "등록된 협력사가 없습니다."}
+                    <td
+                      colSpan={8}
+                      className="px-6 py-6 text-center text-sm text-slate-400"
+                    >
+                      {searchTerm
+                        ? "검색 결과가 없습니다."
+                        : "등록된 협력사가 없습니다."}
                     </td>
                   </tr>
                 ) : (
@@ -359,7 +367,9 @@ export default function PartnersPage() {
                       key={partner.id}
                       className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
                     >
-                      <td className="px-6 py-4 font-medium text-slate-900">{partner.name}</td>
+                      <td className="px-6 py-4 font-medium text-slate-900">
+                        {partner.name}
+                      </td>
                       <td className="px-6 py-4 text-slate-500">
                         <p>{partner.representative_name}</p>
                         <p className="text-xs text-slate-400">
@@ -368,10 +378,16 @@ export default function PartnersPage() {
                       </td>
                       <td className="px-6 py-4 text-slate-500">
                         <p>{partner.contact_name || "-"}</p>
-                        <p className="text-xs text-slate-400">{partner.contact_phone || "-"}</p>
+                        <p className="text-xs text-slate-400">
+                          {partner.contact_phone || "-"}
+                        </p>
                       </td>
-                      <td className="px-6 py-4 text-slate-500">{partner.business_number}</td>
-                      <td className="px-6 py-4 text-slate-500">{partner.license_type || "-"}</td>
+                      <td className="px-6 py-4 text-slate-500">
+                        {partner.business_number}
+                      </td>
+                      <td className="px-6 py-4 text-slate-500">
+                        {partner.license_type || "-"}
+                      </td>
                       <td className="px-6 py-4">
                         {partner.is_women_owned && (
                           <span className="inline-flex items-center rounded-full bg-pink-100 px-2.5 py-0.5 text-xs font-medium text-pink-800">
@@ -380,12 +396,20 @@ export default function PartnersPage() {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant={partner.status === "active" ? "success" : "default"}>
+                        <Badge
+                          variant={
+                            partner.status === "active" ? "success" : "default"
+                          }
+                        >
                           {partner.status === "active" ? "정상" : "정지"}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Button size="sm" variant="ghost" onClick={() => openEditModal(partner)}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEditModal(partner)}
+                        >
                           <Pencil className="h-3.5 w-3.5" />
                           수정
                         </Button>
@@ -410,7 +434,9 @@ export default function PartnersPage() {
               <Check className="h-6 w-6 text-green-600" />
             </div>
             <p className="text-sm text-slate-600">
-              {editingPartner ? "협력사 정보가 수정되었습니다" : "협력사가 등록되었습니다"}
+              {editingPartner
+                ? "협력사 정보가 수정되었습니다"
+                : "협력사가 등록되었습니다"}
             </p>
           </div>
         ) : (
@@ -420,17 +446,22 @@ export default function PartnersPage() {
                 label="업체명"
                 placeholder="(주)가나건설"
                 value={formData.name}
-                onChange={(event) => setFormData({ ...formData, name: event.target.value })}
+                onChange={(event) =>
+                  setFormData({ ...formData, name: event.target.value })
+                }
                 error={formErrors.name}
                 required
               />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                 <Input
                   label="대표자명"
                   placeholder="홍길동"
                   value={formData.representative_name}
                   onChange={(event) =>
-                    setFormData({ ...formData, representative_name: event.target.value })
+                    setFormData({
+                      ...formData,
+                      representative_name: event.target.value,
+                    })
                   }
                   error={formErrors.representative_name}
                   required
@@ -448,27 +479,41 @@ export default function PartnersPage() {
                   error={formErrors.representative_phone}
                   required
                 />
-              </div>
-              <Input
-                label="사업자번호"
-                placeholder="123-45-67890"
-                value={formData.business_number}
-                onChange={(event) =>
-                  setFormData({
-                    ...formData,
-                    business_number: formatBizNo(event.target.value),
-                  })
-                }
-                error={formErrors.business_number}
-                required
-              />
-              <div className="grid grid-cols-2 gap-3">
+
+                <Input
+                  label="사업자번호"
+                  placeholder="123-45-67890"
+                  value={formData.business_number}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      business_number: formatBizNo(event.target.value),
+                    })
+                  }
+                  error={formErrors.business_number}
+                  required
+                />
+                <Input
+                  label="면허"
+                  placeholder="건축공사업"
+                  value={formData.license_type}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      license_type: event.target.value,
+                    })
+                  }
+                />
+
                 <Input
                   label="실무자명"
                   placeholder="김대리"
                   value={formData.contact_name}
                   onChange={(event) =>
-                    setFormData({ ...formData, contact_name: event.target.value })
+                    setFormData({
+                      ...formData,
+                      contact_name: event.target.value,
+                    })
                   }
                 />
                 <Input
@@ -483,14 +528,7 @@ export default function PartnersPage() {
                   }
                 />
               </div>
-              <Input
-                label="면허"
-                placeholder="건축공사업"
-                value={formData.license_type}
-                onChange={(event) =>
-                  setFormData({ ...formData, license_type: event.target.value })
-                }
-              />
+
               <label
                 htmlFor="is_women_owned"
                 className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 transition-colors hover:bg-slate-50"
@@ -500,21 +538,34 @@ export default function PartnersPage() {
                   id="is_women_owned"
                   checked={formData.is_women_owned}
                   onChange={(event) =>
-                    setFormData({ ...formData, is_women_owned: event.target.checked })
+                    setFormData({
+                      ...formData,
+                      is_women_owned: event.target.checked,
+                    })
                   }
                   className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
                 />
                 <div>
-                  <span className="text-sm font-medium text-slate-700">여성기업</span>
-                  <span className="ml-2 text-xs text-slate-400">해당 시 체크</span>
+                  <span className="text-sm font-medium text-slate-700">
+                    여성기업
+                  </span>
+                  <span className="ml-2 text-xs text-slate-400">
+                    해당 시 체크
+                  </span>
                 </div>
               </label>
             </div>
 
-            {formErrors.submit && <p className="text-sm text-red-600">{formErrors.submit}</p>}
+            {formErrors.submit && (
+              <p className="text-sm text-red-600">{formErrors.submit}</p>
+            )}
 
             <div className="flex gap-2 pt-1">
-              <Button onClick={handleSubmit} disabled={isSaving} className="flex-1">
+              <Button
+                onClick={handleSubmit}
+                disabled={isSaving}
+                className="flex-1"
+              >
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -539,7 +590,9 @@ export default function PartnersPage() {
 
             {editingPartner && (
               <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">관리</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  관리
+                </p>
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"

@@ -67,7 +67,8 @@ const EMPTY_FORM: CustomerForm = {
 };
 
 const normalizeCustomer = (customer: any): Customer => {
-  const representativeName = customer.representative_name || customer.name || "";
+  const representativeName =
+    customer.representative_name || customer.name || "";
   const representativePhone =
     customer.representative_phone || customer.phone || "";
   const contactPhone = customer.contact_phone || "";
@@ -79,7 +80,8 @@ const normalizeCustomer = (customer: any): Customer => {
   return {
     id: String(customer.id),
     name: customer.name || "",
-    customer_kind: customer.customer_kind === "individual" ? "individual" : "company",
+    customer_kind:
+      customer.customer_kind === "individual" ? "individual" : "company",
     representative_name: representativeName,
     representative_phone: representativePhone,
     business_number: customer.business_number || "",
@@ -112,14 +114,16 @@ export default function CustomersPage() {
   const formatPhone = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
     if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    if (cleaned.length <= 7)
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
   };
 
   const formatBizNo = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
     if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 5) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    if (cleaned.length <= 5)
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 5)}-${cleaned.slice(5, 10)}`;
   };
 
@@ -206,15 +210,24 @@ export default function CustomersPage() {
     if (!formData.name.trim()) {
       errors.name = "발주처명은 필수입니다";
     }
-    if (formData.customer_kind === "company" && !formData.representative_name.trim()) {
+    if (
+      formData.customer_kind === "company" &&
+      !formData.representative_name.trim()
+    ) {
       errors.representative_name = "대표자명을 입력해 주세요";
     }
-    if (formData.customer_kind === "company" && !formData.representative_phone.trim()) {
+    if (
+      formData.customer_kind === "company" &&
+      !formData.representative_phone.trim()
+    ) {
       errors.representative_phone = "대표자 연락처를 입력해 주세요";
     }
 
     const bizNoRegex = /^\d{3}-\d{2}-\d{5}$/;
-    if (formData.business_number && !bizNoRegex.test(formData.business_number)) {
+    if (
+      formData.business_number &&
+      !bizNoRegex.test(formData.business_number)
+    ) {
       errors.business_number = "사업자번호 형식은 XXX-XX-XXXXX 입니다";
     }
 
@@ -336,14 +349,22 @@ export default function CustomersPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-6 text-center text-sm text-slate-400">
+                    <td
+                      colSpan={9}
+                      className="px-6 py-6 text-center text-sm text-slate-400"
+                    >
                       불러오는 중...
                     </td>
                   </tr>
                 ) : filteredCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-6 text-center text-sm text-slate-400">
-                      {searchTerm ? "검색 결과가 없습니다." : "등록된 발주처가 없습니다."}
+                    <td
+                      colSpan={9}
+                      className="px-6 py-6 text-center text-sm text-slate-400"
+                    >
+                      {searchTerm
+                        ? "검색 결과가 없습니다."
+                        : "등록된 발주처가 없습니다."}
                     </td>
                   </tr>
                 ) : (
@@ -352,9 +373,13 @@ export default function CustomersPage() {
                       key={customer.id}
                       className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
                     >
-                      <td className="px-6 py-4 font-medium text-slate-900">{customer.name}</td>
+                      <td className="px-6 py-4 font-medium text-slate-900">
+                        {customer.name}
+                      </td>
                       <td className="px-6 py-4 text-slate-500">
-                        {customer.customer_kind === "individual" ? "개인" : "기업"}
+                        {customer.customer_kind === "individual"
+                          ? "개인"
+                          : "기업"}
                       </td>
                       <td className="px-6 py-4 text-slate-500">
                         <p>{customer.representative_name || "-"}</p>
@@ -364,10 +389,16 @@ export default function CustomersPage() {
                       </td>
                       <td className="px-6 py-4 text-slate-500">
                         <p>{customer.contact_name || "-"}</p>
-                        <p className="text-xs text-slate-400">{customer.contact_phone || "-"}</p>
+                        <p className="text-xs text-slate-400">
+                          {customer.contact_phone || "-"}
+                        </p>
                       </td>
-                      <td className="px-6 py-4 text-slate-500">{customer.business_number || "-"}</td>
-                      <td className="px-6 py-4 text-slate-500">{customer.license_type || "-"}</td>
+                      <td className="px-6 py-4 text-slate-500">
+                        {customer.business_number || "-"}
+                      </td>
+                      <td className="px-6 py-4 text-slate-500">
+                        {customer.license_type || "-"}
+                      </td>
                       <td className="px-6 py-4">
                         {customer.is_women_owned && (
                           <span className="inline-flex items-center rounded-full bg-pink-100 px-2.5 py-0.5 text-xs font-medium text-pink-800">
@@ -376,12 +407,18 @@ export default function CustomersPage() {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant={customer.is_active ? "success" : "default"}>
+                        <Badge
+                          variant={customer.is_active ? "success" : "default"}
+                        >
                           {customer.is_active ? "활성" : "비활성"}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Button size="sm" variant="ghost" onClick={() => openEditModal(customer)}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEditModal(customer)}
+                        >
                           <Pencil className="h-3.5 w-3.5" />
                           수정
                         </Button>
@@ -406,37 +443,41 @@ export default function CustomersPage() {
               <Check className="h-6 w-6 text-green-600" />
             </div>
             <p className="text-sm text-slate-600">
-              {editingCustomer ? "발주처 정보가 수정되었습니다" : "발주처가 등록되었습니다"}
+              {editingCustomer
+                ? "발주처 정보가 수정되었습니다"
+                : "발주처가 등록되었습니다"}
             </p>
           </div>
         ) : (
           <div className="space-y-5">
             <div className="space-y-4">
-              <Select
-                label="구분"
-                value={formData.customer_kind}
-                onChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    customer_kind: value === "individual" ? "individual" : "company",
-                  })
-                }
-                options={[
-                  { value: "company", label: "기업" },
-                  { value: "individual", label: "개인" },
-                ]}
-              />
-              <Input
-                label="발주처명"
-                placeholder="예: 유니그린개발 또는 홍길동"
-                value={formData.name}
-                onChange={(event) =>
-                  setFormData({ ...formData, name: event.target.value })
-                }
-                error={formErrors.name}
-                required
-              />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                <Select
+                  label="구분"
+                  value={formData.customer_kind}
+                  onChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      customer_kind:
+                        value === "individual" ? "individual" : "company",
+                    })
+                  }
+                  options={[
+                    { value: "company", label: "기업" },
+                    { value: "individual", label: "개인" },
+                  ]}
+                />
+                <Input
+                  label="발주처명"
+                  placeholder="예: 유니그린개발 또는 홍길동"
+                  value={formData.name}
+                  onChange={(event) =>
+                    setFormData({ ...formData, name: event.target.value })
+                  }
+                  error={formErrors.name}
+                  required
+                />
+
                 <Input
                   label="대표자명"
                   placeholder="홍길동"
@@ -461,26 +502,40 @@ export default function CustomersPage() {
                   }
                   error={formErrors.representative_phone}
                 />
-              </div>
-              <Input
-                label="사업자번호 (선택)"
-                placeholder="123-45-67890"
-                value={formData.business_number}
-                onChange={(event) =>
-                  setFormData({
-                    ...formData,
-                    business_number: formatBizNo(event.target.value),
-                  })
-                }
-                error={formErrors.business_number}
-              />
-              <div className="grid grid-cols-2 gap-3">
+
+                <Input
+                  label="사업자번호 (선택)"
+                  placeholder="123-45-67890"
+                  value={formData.business_number}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      business_number: formatBizNo(event.target.value),
+                    })
+                  }
+                  error={formErrors.business_number}
+                />
+                <Input
+                  label="면허"
+                  placeholder="예: 건축공사업"
+                  value={formData.license_type}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      license_type: event.target.value,
+                    })
+                  }
+                />
+
                 <Input
                   label="실무자명"
                   placeholder="김대리"
                   value={formData.contact_name}
                   onChange={(event) =>
-                    setFormData({ ...formData, contact_name: event.target.value })
+                    setFormData({
+                      ...formData,
+                      contact_name: event.target.value,
+                    })
                   }
                 />
                 <Input
@@ -495,14 +550,7 @@ export default function CustomersPage() {
                   }
                 />
               </div>
-              <Input
-                label="면허"
-                placeholder="예: 건축공사업"
-                value={formData.license_type}
-                onChange={(event) =>
-                  setFormData({ ...formData, license_type: event.target.value })
-                }
-              />
+
               <label
                 htmlFor="customer_is_women_owned"
                 className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 transition-colors hover:bg-slate-50"
@@ -520,16 +568,26 @@ export default function CustomersPage() {
                   className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
                 />
                 <div>
-                  <span className="text-sm font-medium text-slate-700">여성기업</span>
-                  <span className="ml-2 text-xs text-slate-400">해당 시 체크</span>
+                  <span className="text-sm font-medium text-slate-700">
+                    여성기업
+                  </span>
+                  <span className="ml-2 text-xs text-slate-400">
+                    해당 시 체크
+                  </span>
                 </div>
               </label>
             </div>
 
-            {formErrors.submit && <p className="text-sm text-red-600">{formErrors.submit}</p>}
+            {formErrors.submit && (
+              <p className="text-sm text-red-600">{formErrors.submit}</p>
+            )}
 
             <div className="flex gap-2 pt-1">
-              <Button onClick={handleSubmit} disabled={isSaving} className="flex-1">
+              <Button
+                onClick={handleSubmit}
+                disabled={isSaving}
+                className="flex-1"
+              >
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -554,7 +612,9 @@ export default function CustomersPage() {
 
             {editingCustomer && (
               <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">관리</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  관리
+                </p>
                 <Button
                   variant="secondary"
                   size="sm"
