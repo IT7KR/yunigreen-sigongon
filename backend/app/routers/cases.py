@@ -13,6 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from pydantic import BaseModel, Field as PydanticField
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -104,8 +105,13 @@ class AdminDocumentResponse(BaseModel):
     file_url: str
     version_hash: str
     status: DocumentStatus
+    is_enabled: bool
     uploaded_at: datetime
     upload_url: str
+
+
+class AdminDocumentUpdateRequest(BaseModel):
+    is_enabled: bool
 
 
 class DocumentStatusResponse(BaseModel):
@@ -115,6 +121,20 @@ class DocumentStatusResponse(BaseModel):
     last_error: Optional[str] = None
     trace_chunk_count: int = 0
     cost_item_count: int = 0
+
+
+class EstimationGovernanceWarningResponse(BaseModel):
+    code: str
+    message: str
+    severity: str = "warning"
+
+
+class EstimationGovernanceOverviewResponse(BaseModel):
+    active_season: Optional[SeasonResponse] = None
+    enabled_categories: list[SeasonCategoryResponse] = PydanticField(default_factory=list)
+    enabled_documents: list[AdminDocumentResponse] = PydanticField(default_factory=list)
+    effective_cost_item_count: int = 0
+    health_warnings: list[EstimationGovernanceWarningResponse] = PydanticField(default_factory=list)
 
 
 class CaseCreateRequest(BaseModel):
@@ -279,6 +299,7 @@ def _build_admin_document_response(
         file_url=document.file_url,
         version_hash=document.version_hash,
         status=document.status,
+        is_enabled=document.is_enabled,
         uploaded_at=document.uploaded_at,
         upload_url=f"/api/v1/admin/documents/{document.id}/upload",
     )
@@ -752,6 +773,7 @@ async def list_admin_documents(
     season_id: Optional[int] = Query(default=None),
     category_id: Optional[int] = Query(default=None),
     purpose: Optional[SeasonCategoryPurpose] = Query(default=None),
+    is_enabled: Optional[bool] = Query(default=None),
 ):
     _ensure_admin(current_user)
 
@@ -775,6 +797,8 @@ async def list_admin_documents(
         query = query.where(SeasonDocument.season_id == season_id)
     if selected_category is not None:
         query = query.where(SeasonDocument.category == selected_category.name)
+    if is_enabled is not None:
+        query = query.where(SeasonDocument.is_enabled == is_enabled)
 
     result = await db.execute(query)
     docs = list(result.scalars().all())
@@ -826,6 +850,7 @@ async def create_admin_document(
         file_url=f"pricebooks/{payload.season_id}/{payload.file_name}",
         version_hash=version_hash,
         status=DocumentStatus.QUEUED,
+        is_enabled=True,
     )
     db.add(document)
     await db.commit()
@@ -842,8 +867,164 @@ async def create_admin_document(
             file_url=document.file_url,
             version_hash=document.version_hash,
             status=document.status,
+            is_enabled=document.is_enabled,
             uploaded_at=document.uploaded_at,
             upload_url=f"/api/v1/admin/documents/{document.id}/upload",
+        )
+    )
+
+
+@router.patch("/admin/documents/{document_id}", response_model=APIResponse[AdminDocumentResponse])
+async def update_admin_document(
+    document_id: int,
+    payload: AdminDocumentUpdateRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _ensure_admin(current_user)
+
+    doc_result = await db.execute(select(SeasonDocument).where(SeasonDocument.id == document_id))
+    document = doc_result.scalar_one_or_none()
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없어요")
+
+    document.is_enabled = payload.is_enabled
+    await db.commit()
+    await db.refresh(document)
+
+    _, category_by_pair = await _load_category_maps(db, {document.season_id})
+    return APIResponse.ok(_build_admin_document_response(document, category_by_pair))
+
+
+@router.get(
+    "/admin/estimation-governance/overview",
+    response_model=APIResponse[EstimationGovernanceOverviewResponse],
+)
+async def get_estimation_governance_overview(
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _ensure_admin(current_user)
+
+    warnings: list[EstimationGovernanceWarningResponse] = []
+    active_result = await db.execute(
+        select(Season)
+        .where(Season.is_active == True)  # noqa: E712
+        .order_by(Season.created_at.desc())
+    )
+    active_season = active_result.scalars().first()
+    if not active_season:
+        warnings.append(
+            EstimationGovernanceWarningResponse(
+                code="NO_ACTIVE_SEASON",
+                message="활성 시즌이 없어요. 시즌을 활성화해 주세요.",
+                severity="error",
+            )
+        )
+        return APIResponse.ok(
+            EstimationGovernanceOverviewResponse(
+                active_season=None,
+                enabled_categories=[],
+                enabled_documents=[],
+                effective_cost_item_count=0,
+                health_warnings=warnings,
+            )
+        )
+
+    await _ensure_default_estimation_category(db, active_season.id)
+    category_result = await db.execute(
+        select(SeasonCategory)
+        .where(
+            SeasonCategory.season_id == active_season.id,
+            SeasonCategory.purpose == SeasonCategoryPurpose.ESTIMATION,
+            SeasonCategory.is_enabled == True,  # noqa: E712
+        )
+        .order_by(SeasonCategory.sort_order.asc(), SeasonCategory.created_at.asc())
+    )
+    enabled_categories = list(category_result.scalars().all())
+    if not enabled_categories:
+        warnings.append(
+            EstimationGovernanceWarningResponse(
+                code="NO_ENABLED_CATEGORY",
+                message="활성화된 적산 카테고리가 없어요.",
+            )
+        )
+
+    category_names = {category.name for category in enabled_categories}
+    enabled_documents: list[SeasonDocument] = []
+    if category_names:
+        document_result = await db.execute(
+            select(SeasonDocument)
+            .where(
+                SeasonDocument.season_id == active_season.id,
+                SeasonDocument.category.in_(list(category_names)),
+                SeasonDocument.is_enabled == True,  # noqa: E712
+            )
+            .order_by(SeasonDocument.uploaded_at.desc())
+        )
+        enabled_documents = list(document_result.scalars().all())
+
+    if not enabled_documents:
+        warnings.append(
+            EstimationGovernanceWarningResponse(
+                code="NO_ENABLED_DOCUMENT",
+                message="활성화된 적산 문서가 없어요.",
+            )
+        )
+
+    effective_doc_ids = [doc.id for doc in enabled_documents if doc.status == DocumentStatus.DONE]
+    if not effective_doc_ids:
+        warnings.append(
+            EstimationGovernanceWarningResponse(
+                code="NO_DONE_ENABLED_DOCUMENT",
+                message="인덱싱 완료된 활성 문서가 없어요.",
+            )
+        )
+
+    effective_cost_item_count = 0
+    if effective_doc_ids:
+        cost_count_result = await db.execute(
+            select(func.count(CostItem.id)).where(
+                CostItem.season_id == active_season.id,
+                CostItem.source_doc_id.in_(effective_doc_ids),
+            )
+        )
+        effective_cost_item_count = int(cost_count_result.scalar() or 0)
+        if effective_cost_item_count == 0:
+            warnings.append(
+                EstimationGovernanceWarningResponse(
+                    code="NO_COST_ITEMS",
+                    message="활성 문서에서 추출된 적산 항목이 없어요.",
+                )
+            )
+
+    _, category_by_pair = await _load_category_maps(db, {active_season.id})
+    return APIResponse.ok(
+        EstimationGovernanceOverviewResponse(
+            active_season=SeasonResponse(
+                id=active_season.id,
+                name=active_season.name,
+                is_active=active_season.is_active,
+                created_at=active_season.created_at,
+            ),
+            enabled_categories=[
+                SeasonCategoryResponse(
+                    id=row.id,
+                    season_id=row.season_id,
+                    name=row.name,
+                    purpose=row.purpose,
+                    is_enabled=row.is_enabled,
+                    sort_order=row.sort_order,
+                    created_at=row.created_at,
+                )
+                for row in enabled_categories
+            ],
+            enabled_documents=[
+                _build_admin_document_response(document, category_by_pair)
+                for document in enabled_documents
+            ],
+            effective_cost_item_count=effective_cost_item_count,
+            health_warnings=warnings,
         )
     )
 
@@ -1200,6 +1381,7 @@ async def create_case_estimate(case_id: int, db: DBSession, current_user: Curren
         select(SeasonDocument).where(
             SeasonDocument.season_id == case.season_id,
             SeasonDocument.status == DocumentStatus.DONE,
+            SeasonDocument.is_enabled == True,  # noqa: E712
             SeasonDocument.category.in_(list(estimation_category_names)),
         )
     )

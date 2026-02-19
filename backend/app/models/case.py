@@ -93,6 +93,7 @@ class SeasonDocumentBase(SQLModel):
     file_url: str = Field(max_length=500)
     version_hash: str = Field(max_length=128, index=True)
     status: DocumentStatus = Field(default=DocumentStatus.QUEUED, index=True)
+    is_enabled: bool = Field(default=True, index=True)
 
 
 class SeasonDocument(SeasonDocumentBase, table=True):
