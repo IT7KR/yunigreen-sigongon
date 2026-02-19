@@ -1065,6 +1065,24 @@ async def create_invitation(
     db.add(invitation)
     await db.flush()
 
+    # 초대 알림톡 발송
+    try:
+        from app.services.sms import get_sms_service
+        sms_service = get_sms_service()
+        invite_url = f"/accept-invite/{token}"
+        await sms_service.send_alimtalk(
+            phone=payload.phone,
+            template_code="USER_INVITE",
+            variables={
+                "name": payload.name or "고객",
+                "invite_url": invite_url,
+            },
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"초대 알림톡 발송 실패 (무시): {e}")
+    # 알림톡 실패해도 초대 생성은 성공으로 처리
+
     return APIResponse.ok(
         {
             "id": str(invitation.id),
@@ -1136,6 +1154,24 @@ async def resend_invitation(
     invitation.token = secrets.token_urlsafe(24)
     invitation.expires_at = datetime.utcnow() + timedelta(days=7)
     invitation.status = InvitationStatus.PENDING
+
+    # 재초대 알림톡 발송
+    try:
+        from app.services.sms import get_sms_service
+        sms_service = get_sms_service()
+        invite_url = f"/accept-invite/{invitation.token}"
+        await sms_service.send_alimtalk(
+            phone=invitation.phone,
+            template_code="USER_INVITE",
+            variables={
+                "name": invitation.name or "고객",
+                "invite_url": invite_url,
+            },
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"재초대 알림톡 발송 실패 (무시): {e}")
+    # 알림톡 실패해도 재초대 처리는 성공으로 처리
 
     return APIResponse.ok(
         {
