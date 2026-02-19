@@ -87,6 +87,16 @@ export default function ProjectDetailLayout({
 
   // Desktop: All in one line (scrollable if needed)
 
+  const isTabMatch = (tab: ProjectTab) => {
+    if (tab.exact) return pathname === tab.href;
+    return pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+  };
+
+  const activeTabHref =
+    tabs
+      .filter(isTabMatch)
+      .sort((a, b) => b.href.length - a.href.length)[0]?.href ?? null;
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Close menu on navigation
@@ -166,9 +176,7 @@ export default function ProjectDetailLayout({
               aria-label="Tabs"
             >
               {tabs.map((tab) => {
-                const isActive = tab.exact
-                  ? pathname === tab.href
-                  : pathname.startsWith(tab.href);
+                const isActive = tab.href === activeTabHref;
                 return (
                   <Link
                     key={tab.name}
@@ -191,9 +199,7 @@ export default function ProjectDetailLayout({
           <div className="flex flex-col md:hidden">
             <div className="flex items-center justify-between border-b border-slate-200">
               {mobilePrimaryTabs.map((tab) => {
-                const isActive = tab.exact
-                  ? pathname === tab.href
-                  : pathname.startsWith(tab.href);
+                const isActive = tab.href === activeTabHref;
                 return (
                   <Link
                     key={tab.name}
@@ -253,9 +259,7 @@ export default function ProjectDetailLayout({
                         </h3>
                         <div className="grid grid-cols-2 gap-3">
                           {categoryTabs.map((tab) => {
-                            const isActive = tab.exact
-                              ? pathname === tab.href
-                              : pathname.startsWith(tab.href);
+                            const isActive = tab.href === activeTabHref;
                             return (
                               <Link
                                 key={tab.name}
