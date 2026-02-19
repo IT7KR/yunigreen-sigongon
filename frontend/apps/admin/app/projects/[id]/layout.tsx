@@ -50,6 +50,7 @@ export default function ProjectDetailLayout({
       href: `/projects/${id}/construction/daily-reports`,
       category: "field",
     },
+    { name: "보고서", href: `/projects/${id}/reports`, category: "field" },
     {
       name: "시공현황",
       href: `/projects/${id}/construction`,

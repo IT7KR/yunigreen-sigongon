@@ -7,6 +7,7 @@ import type {
   ProjectStatus,
   EstimateStatus,
   ContractStatus,
+  ReportStatus,
 } from "@sigongon/types";
 
 interface ProjectWorkflowTimelineProps {
@@ -17,6 +18,8 @@ interface ProjectWorkflowTimelineProps {
   estimateStatus?: EstimateStatus;
   hasContract: boolean;
   contractStatus?: ContractStatus;
+  startReportStatus?: ReportStatus;
+  startReportCount: number;
   projectStatus: ProjectStatus;
 }
 
@@ -37,6 +40,8 @@ export function ProjectWorkflowTimeline({
   estimateStatus,
   hasContract,
   contractStatus,
+  startReportStatus,
+  startReportCount,
   projectStatus,
 }: ProjectWorkflowTimelineProps) {
   const STATUS_LABELS: Record<WorkflowStage["status"], string> = {
@@ -98,19 +103,31 @@ export function ProjectWorkflowTimeline({
     return "pending";
   };
 
-  const getConstructionStatus = (): WorkflowStage["status"] => {
-    if (
-      projectStatus === "in_progress" ||
-      projectStatus === "completed" ||
-      projectStatus === "warranty"
-    ) {
-      if (projectStatus === "in_progress") return "in_progress";
-      return "completed";
-    }
+  const getStartReportStageStatus = (): WorkflowStage["status"] => {
+    if (startReportStatus === "approved") return "completed";
+    if (startReportStatus === "draft" || startReportStatus === "rejected")
+      return "in_progress";
+    if (startReportStatus === "submitted") return "pending";
     if (
       hasContract &&
       (contractStatus === "signed" || contractStatus === "active")
     ) {
+      return "pending";
+    }
+    return "not_started";
+  };
+
+  const getConstructionStatus = (): WorkflowStage["status"] => {
+    if (
+      projectStatus === "in_progress" ||
+      projectStatus === "completed" ||
+      projectStatus === "warranty" ||
+      projectStatus === "closed"
+    ) {
+      if (projectStatus === "in_progress") return "in_progress";
+      return "completed";
+    }
+    if (getStartReportStageStatus() === "completed") {
       return "pending";
     }
     return "not_started";
@@ -160,10 +177,18 @@ export function ProjectWorkflowTimeline({
       status: getContractStatus(),
     },
     {
+      id: "start_report",
+      label: "착공계",
+      href: `/projects/${projectId}/reports`,
+      description: "착공계를 작성/제출하고 승인 상태를 관리합니다.",
+      count: startReportCount,
+      status: getStartReportStageStatus(),
+    },
+    {
       id: "construction",
       label: "시공",
       href: `/projects/${projectId}/construction`,
-      description: "착공/일일보고/노무를 관리하며 진행률을 업데이트합니다.",
+      description: "착공계 승인 이후 작업일지/노무를 관리하며 진행률을 업데이트합니다.",
       status: getConstructionStatus(),
     },
     {

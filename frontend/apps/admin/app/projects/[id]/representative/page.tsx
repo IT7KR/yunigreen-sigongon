@@ -296,7 +296,7 @@ export default function ProjectRepresentativePage({
                   </Button>
                 )}
                 <Button variant="secondary" asChild>
-                  <Link href={`/projects/${id}/reports/start`}>
+                  <Link href={`/projects/${id}/reports`}>
                     <Calendar className="h-4 w-4" />
                     착공계 작성으로 이동
                   </Link>

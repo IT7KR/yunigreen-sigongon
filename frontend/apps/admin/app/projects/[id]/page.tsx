@@ -9,6 +9,7 @@ import {
   ChevronUp,
   ClipboardCheck,
   ClipboardList,
+  FileCheck2,
   FileText,
   Hammer,
   HardHat,
@@ -30,7 +31,7 @@ import {
 } from "@sigongon/ui";
 import type { ProjectDetail, ProjectStatus } from "@sigongon/types";
 import { PROJECT_CATEGORIES } from "@sigongon/types";
-import { useProject } from "@/hooks";
+import { useConstructionReports, useProject } from "@/hooks";
 import { ProjectWorkflowTimeline } from "@/components/ProjectWorkflowTimeline";
 import {
   getRepresentativeAssignmentByProjectId,
@@ -93,6 +94,11 @@ function buildOverviewActions(
       icon: <ClipboardCheck className="h-5 w-5" />,
     },
     {
+      label: "보고서",
+      href: `/projects/${projectId}/reports`,
+      icon: <FileCheck2 className="h-5 w-5" />,
+    },
+    {
       label: "작업일지",
       href: `/projects/${projectId}/construction/daily-reports/new`,
       icon: <ClipboardList className="h-5 w-5" />,
@@ -110,7 +116,7 @@ function buildOverviewActions(
   ];
 
   // Determine Primary Action based on status
-  let primaryIndex = 5; // Default: 시공현황
+  let primaryIndex = 6; // Default: 시공현황
 
   if (visitCount === 0)
     primaryIndex = 0; // 현장방문
@@ -121,11 +127,11 @@ function buildOverviewActions(
   else if (!hasContract)
     primaryIndex = 3; // 계약관리
   else if (projectStatus === "contracted")
-    primaryIndex = 4; // 작업일지 (착공 후)
+    primaryIndex = 4; // 보고서(착공계)
   else if (projectStatus === "in_progress")
-    primaryIndex = 4; // 작업일지
+    primaryIndex = 5; // 작업일지
   else if (["completed", "warranty", "closed"].includes(projectStatus))
-    primaryIndex = 6; // 준공정산
+    primaryIndex = 7; // 준공정산
 
   // Set primary flag
   actions[primaryIndex].primary = true;
@@ -140,6 +146,7 @@ export default function ProjectDetailPage({
 }) {
   const { id } = use(params);
   const { data: response, isLoading, isError, refetch } = useProject(id);
+  const { data: reportsResponse } = useConstructionReports(id);
   const project = response?.success ? (response.data as ProjectDetail) : null;
 
   const [representativeInfo, setRepresentativeInfo] =
@@ -212,6 +219,13 @@ export default function ProjectDetailPage({
     (a, b) => b.version - a.version,
   )[0];
   const latestContract = [...(project.contracts || [])][0];
+  const reports =
+    reportsResponse?.success && reportsResponse.data ? reportsResponse.data : [];
+  const startReports = reports.filter((report) => report.report_type === "start");
+  const latestStartReport = [...startReports].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  )[0];
 
   const primaryAction = actions.find((a) => a.primary) || actions[0];
   const quickActions = actions.filter((a) => a !== primaryAction).slice(0, 5); // Limit quick actions
@@ -345,6 +359,8 @@ export default function ProjectDetailPage({
               estimateStatus={latestEstimate?.status}
               hasContract={(project.contracts?.length ?? 0) > 0}
               contractStatus={latestContract?.status}
+              startReportStatus={latestStartReport?.status}
+              startReportCount={startReports.length}
               projectStatus={project.status}
             />
           </div>
