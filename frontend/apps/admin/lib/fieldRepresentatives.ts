@@ -1,157 +1,95 @@
-export interface RepresentativeDocumentMeta {
-  fileName: string;
-  uploadedAt: string;
-}
+import { api } from "@/lib/api";
+import type { FieldRepresentativeRead } from "@sigongon/api";
 
-export interface FieldRepresentative {
-  id: string;
-  name: string;
-  phone: string;
-  grade?: string;
-  notes?: string;
-  booklet?: RepresentativeDocumentMeta;
-  careerCertificate?: RepresentativeDocumentMeta;
-  employmentCertificate?: RepresentativeDocumentMeta;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ProjectRepresentativeAssignment {
+// Keep type aliases for backward compatibility
+export type FieldRepresentative = FieldRepresentativeRead;
+export type ProjectRepresentativeAssignment = {
   projectId: string;
-  representativeId: string;
+  representativeId: number;
   effectiveDate: string;
   assignedAt: string;
+};
+
+// ─── Async API-based functions ────────────────────────────
+
+export async function getFieldRepresentatives(): Promise<FieldRepresentative[]> {
+  const response = await api.listFieldRepresentatives();
+  return response.success && response.data ? response.data : [];
 }
 
-const REPRESENTATIVE_STORAGE_KEY = "sigongon_field_representatives_v1";
-const ASSIGNMENT_STORAGE_KEY = "sigongon_project_representatives_v1";
-
-function canUseStorage() {
-  return typeof window !== "undefined" && !!window.localStorage;
-}
-
-function readStorage<T>(key: string, fallback: T): T {
-  if (!canUseStorage()) return fallback;
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeStorage<T>(key: string, value: T) {
-  if (!canUseStorage()) return;
-  window.localStorage.setItem(key, JSON.stringify(value));
-}
-
-export function getFieldRepresentatives(): FieldRepresentative[] {
-  return readStorage<FieldRepresentative[]>(REPRESENTATIVE_STORAGE_KEY, []);
-}
-
-export function saveFieldRepresentatives(items: FieldRepresentative[]) {
-  writeStorage(REPRESENTATIVE_STORAGE_KEY, items);
-}
-
-export function upsertFieldRepresentative(
-  payload: Omit<FieldRepresentative, "id" | "createdAt" | "updatedAt"> & {
-    id?: string;
+export async function upsertFieldRepresentative(
+  payload: {
+    id?: number;
+    name: string;
+    phone: string;
+    grade?: string;
+    notes?: string;
+    booklet_filename?: string;
+    career_cert_filename?: string;
+    career_cert_uploaded_at?: string;
+    employment_cert_filename?: string;
   },
-) {
-  const nowIso = new Date().toISOString();
-  const items = getFieldRepresentatives();
-  const existing = payload.id ? items.find((item) => item.id === payload.id) : null;
+): Promise<number> {
+  const createData = {
+    name: payload.name,
+    phone: payload.phone,
+    grade: payload.grade,
+    notes: payload.notes,
+    booklet_filename: payload.booklet_filename,
+    career_cert_filename: payload.career_cert_filename,
+    career_cert_uploaded_at: payload.career_cert_uploaded_at,
+    employment_cert_filename: payload.employment_cert_filename,
+  };
 
-  if (existing) {
-    const nextItems = items.map((item) =>
-      item.id === payload.id
-        ? {
-            ...item,
-            ...payload,
-            updatedAt: nowIso,
-          }
-        : item,
-    );
-    saveFieldRepresentatives(nextItems);
-    return payload.id;
+  if (payload.id) {
+    const response = await api.updateFieldRepresentative(payload.id, createData);
+    if (!response.success || !response.data) throw new Error("수정 실패");
+    return response.data.id;
+  } else {
+    const response = await api.createFieldRepresentative(createData);
+    if (!response.success || !response.data) throw new Error("생성 실패");
+    return response.data.id;
   }
-
-  const id = `rep_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-  const nextItems = [
-    {
-      ...payload,
-      id,
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    },
-    ...items,
-  ];
-  saveFieldRepresentatives(nextItems);
-  return id;
 }
 
-export function deleteFieldRepresentative(representativeId: string) {
-  const items = getFieldRepresentatives().filter((item) => item.id !== representativeId);
-  saveFieldRepresentatives(items);
-
-  const assignments = getRepresentativeAssignments().filter(
-    (assignment) => assignment.representativeId !== representativeId,
-  );
-  saveRepresentativeAssignments(assignments);
+export async function deleteFieldRepresentative(
+  representativeId: number,
+): Promise<void> {
+  await api.deleteFieldRepresentative(representativeId);
 }
 
-export function getRepresentativeAssignments(): ProjectRepresentativeAssignment[] {
-  return readStorage<ProjectRepresentativeAssignment[]>(ASSIGNMENT_STORAGE_KEY, []);
-}
-
-export function saveRepresentativeAssignments(
-  assignments: ProjectRepresentativeAssignment[],
-) {
-  writeStorage(ASSIGNMENT_STORAGE_KEY, assignments);
-}
-
-export function assignRepresentativeToProject(
+export async function getRepresentativeAssignmentByProjectId(
   projectId: string,
-  representativeId: string,
+): Promise<{ representativeId: number; effectiveDate: string } | null> {
+  const response = await api.getProjectRepresentative(projectId);
+  if (!response.success || !response.data) return null;
+  return {
+    representativeId: response.data.representative_id,
+    effectiveDate: response.data.effective_date,
+  };
+}
+
+export async function assignRepresentativeToProject(
+  projectId: string,
+  representativeId: number,
   effectiveDate: string,
-) {
-  const assignments = getRepresentativeAssignments();
-  const nextAssignments = [
-    ...assignments.filter((assignment) => assignment.projectId !== projectId),
-    {
-      projectId,
-      representativeId,
-      effectiveDate,
-      assignedAt: new Date().toISOString(),
-    },
-  ];
-  saveRepresentativeAssignments(nextAssignments);
+): Promise<void> {
+  await api.assignProjectRepresentative(projectId, {
+    representative_id: representativeId,
+    effective_date: effectiveDate,
+  });
 }
 
-export function getAssignmentByProjectId(projectId: string) {
-  return getRepresentativeAssignments().find(
-    (assignment) => assignment.projectId === projectId,
-  );
+export async function getRepresentativeById(
+  representativeId: number,
+): Promise<FieldRepresentative | null> {
+  const all = await getFieldRepresentatives();
+  return all.find((r) => r.id === representativeId) ?? null;
 }
 
-export function getRepresentativeById(representativeId: string) {
-  return getFieldRepresentatives().find((item) => item.id === representativeId);
-}
-
+// Legacy compatibility function - delegates to backend calculation
 export function getCareerCertificateRemainingDays(
   representative: FieldRepresentative,
-) {
-  const uploadedAt = representative.careerCertificate?.uploadedAt;
-  if (!uploadedAt) return null;
-
-  const uploadedDate = new Date(uploadedAt);
-  if (Number.isNaN(uploadedDate.getTime())) return null;
-
-  const expiryDate = new Date(uploadedDate);
-  expiryDate.setDate(expiryDate.getDate() + 90);
-
-  const now = new Date();
-  const diffMs = expiryDate.getTime() - now.getTime();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+): number | null {
+  return representative.career_cert_days_remaining ?? null;
 }

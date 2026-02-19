@@ -8,7 +8,7 @@ import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveInput } from
 import { ConstructionReportForm } from "@/components/ConstructionReportForm";
 import { api } from "@/lib/api";
 import {
-  getAssignmentByProjectId,
+  getRepresentativeAssignmentByProjectId,
   getRepresentativeById,
 } from "@/lib/fieldRepresentatives";
 import { getSamplePathForDocument } from "@/lib/sampleFiles";
@@ -52,21 +52,24 @@ export default function StartReportPage({
   }, [reportId]);
 
   useEffect(() => {
-    const assignment = getAssignmentByProjectId(id);
-    if (!assignment) {
-      setAssignedRepresentative(null);
-      return;
+    async function loadRepresentative() {
+      const assignment = await getRepresentativeAssignmentByProjectId(id);
+      if (!assignment) {
+        setAssignedRepresentative(null);
+        return;
+      }
+      const representative = await getRepresentativeById(assignment.representativeId);
+      if (!representative) {
+        setAssignedRepresentative(null);
+        return;
+      }
+      setAssignedRepresentative({
+        name: representative.name,
+        phone: representative.phone,
+        effectiveDate: assignment.effectiveDate,
+      });
     }
-    const representative = getRepresentativeById(assignment.representativeId);
-    if (!representative) {
-      setAssignedRepresentative(null);
-      return;
-    }
-    setAssignedRepresentative({
-      name: representative.name,
-      phone: representative.phone,
-      effectiveDate: assignment.effectiveDate,
-    });
+    loadRepresentative();
   }, [id]);
 
   function syncRepresentativeDocument() {

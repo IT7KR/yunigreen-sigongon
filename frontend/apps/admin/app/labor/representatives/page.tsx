@@ -1,24 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Modal, PrimitiveInput, PrimitiveSelect, toast } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Plus, Edit2, Trash2, UserCheck, Calendar, FileText } from "lucide-react";
+import { Plus, Edit2, Trash2, UserCheck, Calendar, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { ProjectListItem } from "@sigongon/types";
+import type { FieldRepresentative } from "@/lib/fieldRepresentatives";
 import {
-  FieldRepresentative,
   assignRepresentativeToProject,
   deleteFieldRepresentative,
-  getAssignmentByProjectId,
   getCareerCertificateRemainingDays,
   getFieldRepresentatives,
-  getRepresentativeAssignments,
   upsertFieldRepresentative,
 } from "@/lib/fieldRepresentatives";
 
 interface RepresentativeFormState {
-  id?: string;
+  id?: number;
   name: string;
   phone: string;
   grade: string;
@@ -48,6 +46,8 @@ function formatPhone(value: string): string {
 export default function LaborRepresentativesPage() {
   const [representatives, setRepresentatives] = useState<FieldRepresentative[]>([]);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formState, setFormState] = useState<RepresentativeFormState>(EMPTY_FORM);
 
@@ -56,12 +56,24 @@ export default function LaborRepresentativesPage() {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().slice(0, 10));
 
-  const assignments = useMemo(() => getRepresentativeAssignments(), [representatives]);
+  const refreshRepresentatives = useCallback(async () => {
+    try {
+      const reps = await getFieldRepresentatives();
+      setRepresentatives(reps);
+    } catch (error) {
+      console.error(error);
+      toast.error("현장대리인 목록을 불러오지 못했어요.");
+    }
+  }, []);
 
   useEffect(() => {
-    setRepresentatives(getFieldRepresentatives());
-    void loadProjects();
-  }, []);
+    async function init() {
+      setLoading(true);
+      await Promise.all([refreshRepresentatives(), loadProjects()]);
+      setLoading(false);
+    }
+    init();
+  }, [refreshRepresentatives]);
 
   async function loadProjects() {
     try {
@@ -73,10 +85,6 @@ export default function LaborRepresentativesPage() {
       console.error(error);
       toast.error("프로젝트 목록을 불러오지 못했어요.");
     }
-  }
-
-  function refreshRepresentatives() {
-    setRepresentatives(getFieldRepresentatives());
   }
 
   function openCreateModal() {
@@ -91,14 +99,14 @@ export default function LaborRepresentativesPage() {
       phone: item.phone,
       grade: item.grade || "",
       notes: item.notes || "",
-      bookletFileName: item.booklet?.fileName || "",
-      careerFileName: item.careerCertificate?.fileName || "",
-      employmentFileName: item.employmentCertificate?.fileName || "",
+      bookletFileName: item.booklet_filename || "",
+      careerFileName: item.career_cert_filename || "",
+      employmentFileName: item.employment_cert_filename || "",
     });
     setIsFormOpen(true);
   }
 
-  function handleSaveRepresentative() {
+  async function handleSaveRepresentative() {
     if (!formState.name.trim()) {
       toast.error("이름을 입력해 주세요.");
       return;
@@ -108,34 +116,42 @@ export default function LaborRepresentativesPage() {
       return;
     }
 
-    const nowIso = new Date().toISOString();
-    upsertFieldRepresentative({
-      id: formState.id,
-      name: formState.name.trim(),
-      phone: formState.phone,
-      grade: formState.grade.trim() || undefined,
-      notes: formState.notes.trim() || undefined,
-      booklet: formState.bookletFileName
-        ? { fileName: formState.bookletFileName, uploadedAt: nowIso }
-        : undefined,
-      careerCertificate: formState.careerFileName
-        ? { fileName: formState.careerFileName, uploadedAt: nowIso }
-        : undefined,
-      employmentCertificate: formState.employmentFileName
-        ? { fileName: formState.employmentFileName, uploadedAt: nowIso }
-        : undefined,
-    });
+    setSaving(true);
+    try {
+      const nowIso = new Date().toISOString();
+      await upsertFieldRepresentative({
+        id: formState.id,
+        name: formState.name.trim(),
+        phone: formState.phone,
+        grade: formState.grade.trim() || undefined,
+        notes: formState.notes.trim() || undefined,
+        booklet_filename: formState.bookletFileName || undefined,
+        career_cert_filename: formState.careerFileName || undefined,
+        career_cert_uploaded_at: formState.careerFileName ? nowIso : undefined,
+        employment_cert_filename: formState.employmentFileName || undefined,
+      });
 
-    refreshRepresentatives();
-    setIsFormOpen(false);
-    toast.success("현장대리인 정보를 저장했어요.");
+      await refreshRepresentatives();
+      setIsFormOpen(false);
+      toast.success("현장대리인 정보를 저장했어요.");
+    } catch (error) {
+      console.error(error);
+      toast.error("저장에 실패했어요.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function handleDeleteRepresentative(item: FieldRepresentative) {
+  async function handleDeleteRepresentative(item: FieldRepresentative) {
     if (!confirm(`${item.name}님을 삭제할까요?`)) return;
-    deleteFieldRepresentative(item.id);
-    refreshRepresentatives();
-    toast.success("현장대리인을 삭제했어요.");
+    try {
+      await deleteFieldRepresentative(item.id);
+      await refreshRepresentatives();
+      toast.success("현장대리인을 삭제했어요.");
+    } catch (error) {
+      console.error(error);
+      toast.error("삭제에 실패했어요.");
+    }
   }
 
   function openAssignModal(item: FieldRepresentative) {
@@ -145,35 +161,42 @@ export default function LaborRepresentativesPage() {
     setIsAssignOpen(true);
   }
 
-  function handleAssignRepresentative() {
+  async function handleAssignRepresentative() {
     if (!assignRepresentative) return;
     if (!selectedProjectId) {
       toast.error("배정할 프로젝트를 선택해 주세요.");
       return;
     }
 
-    assignRepresentativeToProject(
-      selectedProjectId,
-      assignRepresentative.id,
-      effectiveDate,
-    );
-    refreshRepresentatives();
-    setIsAssignOpen(false);
-    toast.success("프로젝트에 현장대리인을 배정했어요.");
+    setSaving(true);
+    try {
+      await assignRepresentativeToProject(
+        selectedProjectId,
+        assignRepresentative.id,
+        effectiveDate,
+      );
+      await refreshRepresentatives();
+      setIsAssignOpen(false);
+      toast.success("프로젝트에 현장대리인을 배정했어요.");
+    } catch (error) {
+      console.error(error);
+      toast.error("배정에 실패했어요.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function getAssignedProjectsCount(representativeId: string) {
-    return assignments.filter((item) => item.representativeId === representativeId).length;
+  function getAssignedProjectsCount(rep: FieldRepresentative) {
+    return rep.assigned_project_ids?.length ?? 0;
   }
 
-  function getAssignmentLabels(representativeId: string) {
-    return assignments
-      .filter((item) => item.representativeId === representativeId)
-      .map((item) => {
-        const projectName =
-          projects.find((project) => project.id === item.projectId)?.name || item.projectId;
-        return `${projectName} (${item.effectiveDate})`;
-      });
+  function getAssignmentLabels(rep: FieldRepresentative) {
+    if (!rep.assigned_project_ids?.length) return [];
+    return rep.assigned_project_ids.map((pid) => {
+      const projectName =
+        projects.find((project) => String(project.id) === String(pid))?.name || `#${pid}`;
+      return projectName;
+    });
   }
 
   function getCareerBadge(item: FieldRepresentative) {
@@ -188,6 +211,16 @@ export default function LaborRepresentativesPage() {
       return <Badge variant="warning">{remainingDays}일 남음</Badge>;
     }
     return <Badge variant="success">{remainingDays}일 남음</Badge>;
+  }
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
@@ -240,16 +273,16 @@ export default function LaborRepresentativesPage() {
                         </td>
                         <td className="py-3 text-slate-700">{item.phone}</td>
                         <td className="py-3">
-                          {item.booklet ? (
-                            <Badge variant="success">{item.booklet.fileName}</Badge>
+                          {item.booklet_filename ? (
+                            <Badge variant="success">{item.booklet_filename}</Badge>
                           ) : (
                             <Badge variant="default">미등록</Badge>
                           )}
                         </td>
                         <td className="py-3">{getCareerBadge(item)}</td>
                         <td className="py-3">
-                          {item.employmentCertificate ? (
-                            <Badge variant="success">{item.employmentCertificate.fileName}</Badge>
+                          {item.employment_cert_filename ? (
+                            <Badge variant="success">{item.employment_cert_filename}</Badge>
                           ) : (
                             <Badge variant="default">미등록</Badge>
                           )}
@@ -257,9 +290,9 @@ export default function LaborRepresentativesPage() {
                         <td className="py-3">
                           <div className="space-y-1">
                             <p className="text-sm font-medium text-slate-700">
-                              {getAssignedProjectsCount(item.id)}건 배정
+                              {getAssignedProjectsCount(item)}건 배정
                             </p>
-                            {getAssignmentLabels(item.id).slice(0, 2).map((label) => (
+                            {getAssignmentLabels(item).slice(0, 2).map((label) => (
                               <p key={label} className="text-xs text-slate-500">
                                 {label}
                               </p>
@@ -360,7 +393,9 @@ export default function LaborRepresentativesPage() {
             <Button variant="secondary" onClick={() => setIsFormOpen(false)}>
               취소
             </Button>
-            <Button onClick={handleSaveRepresentative}>저장</Button>
+            <Button onClick={handleSaveRepresentative} disabled={saving}>
+              {saving ? "저장 중..." : "저장"}
+            </Button>
           </div>
         </div>
       </Modal>
@@ -386,21 +421,11 @@ export default function LaborRepresentativesPage() {
               className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             >
               <option value="">프로젝트 선택</option>
-              {projects.map((project) => {
-                const currentAssignment = getAssignmentByProjectId(project.id);
-                const assignedName = currentAssignment
-                  ? representatives.find(
-                      (item) => item.id === currentAssignment.representativeId,
-                    )?.name
-                  : null;
-                return (
-                  <option key={project.id} value={project.id}>
-                    {assignedName
-                      ? `${project.name} (현재: ${assignedName})`
-                      : project.name}
-                  </option>
-                );
-              })}
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
             </PrimitiveSelect>
           </div>
 
@@ -424,9 +449,9 @@ export default function LaborRepresentativesPage() {
             <Button variant="secondary" onClick={() => setIsAssignOpen(false)}>
               취소
             </Button>
-            <Button onClick={handleAssignRepresentative}>
+            <Button onClick={handleAssignRepresentative} disabled={saving}>
               <Calendar className="h-4 w-4" />
-              배정 저장
+              {saving ? "배정 중..." : "배정 저장"}
             </Button>
           </div>
         </div>

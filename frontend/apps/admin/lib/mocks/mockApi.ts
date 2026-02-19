@@ -143,6 +143,32 @@ const SAMPLE_ESTIMATE_LINES = [
   { description: "비계 설치/해체", spec: "강관비계", unit: "식", quantity: "1", unit_price: "1500000" },
 ];
 
+// ─── 현장대리인 Mock Types ─────────────────────────────────
+interface MockFieldRepresentative {
+  id: number;
+  organization_id: number;
+  name: string;
+  phone: string;
+  grade?: string;
+  notes?: string;
+  booklet_filename?: string;
+  career_cert_filename?: string;
+  career_cert_uploaded_at?: string;
+  employment_cert_filename?: string;
+  created_at: string;
+  updated_at: string;
+  career_cert_days_remaining?: number;
+  assigned_project_ids: number[];
+}
+
+interface MockRepresentativeAssignment {
+  id: number;
+  project_id: number;
+  representative_id: number;
+  effective_date: string;
+  assigned_at: string;
+}
+
 export class MockAPIClient {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
@@ -310,6 +336,11 @@ export class MockAPIClient {
   private caseImagesByCaseId: Record<number, DiagnosisCaseImage[]> = {};
   private visionByCaseId: Record<number, VisionResultDetail> = {};
   private estimateByCaseId: Record<number, DiagnosisCaseEstimate> = {};
+  private fieldRepresentatives: MockFieldRepresentative[] = [];
+  private fieldRepNextId = 1;
+  private repAssignments: MockRepresentativeAssignment[] = [];
+  private repAssignNextId = 1;
+
   private seeded = false;
 
   private ensureUtilities(projectId: string) {
@@ -5035,6 +5066,152 @@ export class MockAPIClient {
     return new Blob([payload], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
+  }
+
+  // ============================================
+  // 현장대리인 (Field Representatives)
+  // ============================================
+
+  async listFieldRepresentatives() {
+    return delay(ok(this.fieldRepresentatives));
+  }
+
+  async createFieldRepresentative(data: {
+    name: string;
+    phone: string;
+    grade?: string;
+    notes?: string;
+    booklet_filename?: string;
+    career_cert_filename?: string;
+    career_cert_uploaded_at?: string;
+    employment_cert_filename?: string;
+  }) {
+    const now = nowIso();
+    const rep: MockFieldRepresentative = {
+      id: this.fieldRepNextId++,
+      organization_id: 1,
+      name: data.name,
+      phone: data.phone,
+      grade: data.grade,
+      notes: data.notes,
+      booklet_filename: data.booklet_filename,
+      career_cert_filename: data.career_cert_filename,
+      career_cert_uploaded_at: data.career_cert_uploaded_at,
+      employment_cert_filename: data.employment_cert_filename,
+      created_at: now,
+      updated_at: now,
+      career_cert_days_remaining: data.career_cert_uploaded_at
+        ? this.calcCareerDaysRemaining(data.career_cert_uploaded_at)
+        : undefined,
+      assigned_project_ids: [],
+    };
+    this.fieldRepresentatives.unshift(rep);
+    return delay(ok(rep));
+  }
+
+  async updateFieldRepresentative(
+    repId: number,
+    data: {
+      name: string;
+      phone: string;
+      grade?: string;
+      notes?: string;
+      booklet_filename?: string;
+      career_cert_filename?: string;
+      career_cert_uploaded_at?: string;
+      employment_cert_filename?: string;
+    },
+  ) {
+    const idx = this.fieldRepresentatives.findIndex((r) => r.id === repId);
+    if (idx === -1)
+      return delay(
+        fail<MockFieldRepresentative>("NOT_FOUND", "현장대리인을 찾을 수 없어요."),
+      );
+
+    const existing = this.fieldRepresentatives[idx];
+    const updated: MockFieldRepresentative = {
+      ...existing,
+      ...data,
+      updated_at: nowIso(),
+      career_cert_days_remaining: data.career_cert_uploaded_at
+        ? this.calcCareerDaysRemaining(data.career_cert_uploaded_at)
+        : undefined,
+    };
+    this.fieldRepresentatives[idx] = updated;
+    return delay(ok(updated));
+  }
+
+  async deleteFieldRepresentative(repId: number) {
+    this.fieldRepresentatives = this.fieldRepresentatives.filter(
+      (r) => r.id !== repId,
+    );
+    this.repAssignments = this.repAssignments.filter(
+      (a) => a.representative_id !== repId,
+    );
+    return delay(ok({ deleted: true, id: repId }));
+  }
+
+  async getProjectRepresentative(projectId: string) {
+    const projectIdNum = Number(projectId);
+    const assignment = this.repAssignments.find(
+      (a) => a.project_id === projectIdNum || String(a.project_id) === projectId,
+    );
+    if (!assignment)
+      return delay(
+        fail<MockRepresentativeAssignment>("NOT_FOUND", "배정된 현장대리인이 없습니다."),
+      );
+    return delay(ok(assignment));
+  }
+
+  async assignProjectRepresentative(
+    projectId: string,
+    data: { representative_id: number; effective_date: string },
+  ) {
+    const projectIdNum = Number(projectId) || 0;
+    // Remove any existing assignment for this project
+    this.repAssignments = this.repAssignments.filter(
+      (a) => a.project_id !== projectIdNum && String(a.project_id) !== projectId,
+    );
+
+    const assignment: MockRepresentativeAssignment = {
+      id: this.repAssignNextId++,
+      project_id: projectIdNum,
+      representative_id: data.representative_id,
+      effective_date: data.effective_date,
+      assigned_at: nowIso(),
+    };
+    this.repAssignments.push(assignment);
+
+    // Update the representative's assigned_project_ids
+    this.refreshRepAssignedProjects();
+
+    return delay(ok(assignment));
+  }
+
+  async removeProjectRepresentative(projectId: string) {
+    const projectIdNum = Number(projectId) || 0;
+    this.repAssignments = this.repAssignments.filter(
+      (a) => a.project_id !== projectIdNum && String(a.project_id) !== projectId,
+    );
+    this.refreshRepAssignedProjects();
+    return delay(ok({ deleted: true, project_id: projectIdNum }));
+  }
+
+  private calcCareerDaysRemaining(uploadedAt: string): number {
+    const uploaded = new Date(uploadedAt);
+    if (Number.isNaN(uploaded.getTime())) return 0;
+    const expiry = new Date(uploaded);
+    expiry.setDate(expiry.getDate() + 90);
+    const diffMs = expiry.getTime() - Date.now();
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  }
+
+  private refreshRepAssignedProjects() {
+    for (const rep of this.fieldRepresentatives) {
+      rep.assigned_project_ids = this.repAssignments
+        .filter((a) => a.representative_id === rep.id)
+        .map((a) => a.project_id);
+    }
   }
 
   // Helper: get rates for a specific year (fallback to latest)

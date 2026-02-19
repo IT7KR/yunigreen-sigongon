@@ -19,7 +19,7 @@ import type { ProjectStatus, VisitType, EstimateStatus, ContractStatus } from "@
 import { api } from "@/lib/api";
 import { ProjectWorkflowTimeline } from "@/components/ProjectWorkflowTimeline";
 import {
-  getAssignmentByProjectId,
+  getRepresentativeAssignmentByProjectId,
   getRepresentativeById,
 } from "@/lib/fieldRepresentatives";
 
@@ -72,21 +72,24 @@ export default function ProjectDetailPage({
   }, [id]);
 
   useEffect(() => {
-    const assignment = getAssignmentByProjectId(id);
-    if (!assignment) {
-      setRepresentativeInfo(null);
-      return;
+    async function loadRepresentative() {
+      const assignment = await getRepresentativeAssignmentByProjectId(id);
+      if (!assignment) {
+        setRepresentativeInfo(null);
+        return;
+      }
+      const representative = await getRepresentativeById(assignment.representativeId);
+      if (!representative) {
+        setRepresentativeInfo(null);
+        return;
+      }
+      setRepresentativeInfo({
+        name: representative.name,
+        phone: representative.phone,
+        effectiveDate: assignment.effectiveDate,
+      });
     }
-    const representative = getRepresentativeById(assignment.representativeId);
-    if (!representative) {
-      setRepresentativeInfo(null);
-      return;
-    }
-    setRepresentativeInfo({
-      name: representative.name,
-      phone: representative.phone,
-      effectiveDate: assignment.effectiveDate,
-    });
+    loadRepresentative();
   }, [id]);
 
   async function loadProject() {
