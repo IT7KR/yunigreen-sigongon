@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import hashlib
 import random
 import secrets
 import tempfile
@@ -26,6 +27,7 @@ from app.core.database import get_async_db
 from app.core.exceptions import NotFoundException
 from app.core.permissions import (
     ROLE_COMPANY_ADMIN,
+    ROLE_SITE_MANAGER,
     ROLE_SUPER_ADMIN,
     ROLE_WORKER,
     ensure_can_create_invitation,
@@ -63,6 +65,7 @@ from app.models.operations import (
     WorkRecord,
     WorkerAccessRequest,
     WorkerDocument,
+    WorkerDocumentModerationLog,
 )
 from app.models.project import Project, ProjectStatus, SiteVisit
 from app.models.user import Organization, User, UserRole
@@ -95,6 +98,26 @@ _DAILY_REPORT_TEMPLATE_CANDIDATES: tuple[Path, ...] = (
     _SAMPLE_ROOT / "7. 공사일지" / "공사일지_토큰템플릿.hwpx",
 )
 
+_WORKER_DOCUMENT_TYPE_ID_CARD = "id_card"
+_WORKER_DOCUMENT_TYPE_SAFETY_CERT = "safety_cert"
+_WORKER_DOCUMENT_ALLOWED_TYPES = {
+    _WORKER_DOCUMENT_TYPE_ID_CARD,
+    _WORKER_DOCUMENT_TYPE_SAFETY_CERT,
+}
+_WORKER_DOCUMENT_ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf"}
+_WORKER_DOCUMENT_ALLOWED_MIME_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "application/pdf",
+}
+_WORKER_DOCUMENT_LABELS = {
+    _WORKER_DOCUMENT_TYPE_ID_CARD: "신분증",
+    _WORKER_DOCUMENT_TYPE_SAFETY_CERT: "안전교육 이수증",
+}
+_WORKER_DOCUMENT_REVIEW_STATUSES = {"pending_review", "approved", "rejected", "quarantined"}
+_WORKER_DOCUMENT_REVIEW_ACTIONS = {"approve", "reject", "quarantine", "request_reupload"}
+_WORKER_DOCUMENT_CONTROL_ACTIONS = {"block", "unblock"}
+
 
 def _role_value(user: User) -> str:
     role = user.role
@@ -116,6 +139,207 @@ def _require_non_super_admin_for_labor_actions(user: User) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="회원기업 노무관리에서만 가능한 작업이에요.",
         )
+
+
+def _require_worker_document_upload_role(user: User) -> None:
+    role = _role_value(user)
+    if role not in {ROLE_COMPANY_ADMIN, ROLE_SITE_MANAGER, ROLE_SUPER_ADMIN}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="근로자 서류 업로드 권한이 없어요.",
+        )
+
+
+def _require_worker_document_review_role(user: User) -> None:
+    role = _role_value(user)
+    if role not in {ROLE_COMPANY_ADMIN, ROLE_SUPER_ADMIN}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="근로자 서류 검토/통제 권한이 없어요.",
+        )
+
+
+def _normalize_worker_document_type(raw: Optional[str]) -> str:
+    value = (raw or "").strip().lower()
+    if value in _WORKER_DOCUMENT_ALLOWED_TYPES:
+        return value
+    if value == "doc_1":
+        return _WORKER_DOCUMENT_TYPE_ID_CARD
+    if value == "doc_2":
+        return _WORKER_DOCUMENT_TYPE_SAFETY_CERT
+    return value or "unknown"
+
+
+def _require_valid_worker_document_type(document_type: str) -> str:
+    normalized = _normalize_worker_document_type(document_type)
+    if normalized not in _WORKER_DOCUMENT_ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="지원하지 않는 근로자 서류 유형이에요.",
+        )
+    return normalized
+
+
+def _worker_document_label(document_type: str) -> str:
+    return _WORKER_DOCUMENT_LABELS.get(document_type, document_type)
+
+
+async def _get_daily_worker_for_document_ops(
+    db: AsyncSession,
+    worker_id: int,
+    current_user: User,
+) -> DailyWorker:
+    query = select(DailyWorker).where(DailyWorker.id == worker_id)
+    if current_user.organization_id is not None:
+        query = query.where(DailyWorker.organization_id == current_user.organization_id)
+
+    worker = (await db.execute(query)).scalar_one_or_none()
+    if not worker:
+        raise NotFoundException("daily_worker", worker_id)
+    return worker
+
+
+def _validate_worker_document_file(file: UploadFile) -> tuple[str, str]:
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in _WORKER_DOCUMENT_ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="PDF 또는 JPG/PNG 파일만 업로드할 수 있어요.",
+        )
+
+    mime_type = (file.content_type or "").lower()
+    if mime_type and mime_type not in _WORKER_DOCUMENT_ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="지원하지 않는 파일 형식이에요.",
+        )
+
+    if not storage_service.validate_file_size(file):
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"파일은 {settings.max_upload_size_mb}MB 이하로 올려주세요.",
+        )
+
+    return ext, mime_type
+
+
+def _detect_worker_document_anomaly_flags(
+    *,
+    content: bytes,
+    ext: str,
+    mime_type: str,
+    duplicate_hash_exists: bool,
+) -> list[str]:
+    flags: list[str] = []
+    if len(content) < 512:
+        flags.append("small_file")
+
+    if ext == ".pdf" and not content.startswith(b"%PDF"):
+        flags.append("pdf_signature_mismatch")
+    if ext in {".jpg", ".jpeg"} and not content.startswith(b"\xff\xd8\xff"):
+        flags.append("jpeg_signature_mismatch")
+    if ext == ".png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
+        flags.append("png_signature_mismatch")
+
+    if duplicate_hash_exists:
+        flags.append("duplicate_hash")
+
+    if mime_type == "application/pdf" and ext != ".pdf":
+        flags.append("mime_extension_mismatch")
+    if mime_type.startswith("image/") and ext == ".pdf":
+        flags.append("mime_extension_mismatch")
+
+    return flags
+
+
+def _serialize_worker_document(document: WorkerDocument) -> dict:
+    document_type = _normalize_worker_document_type(
+        getattr(document, "document_type", None) or document.document_id
+    )
+    review_status = (document.review_status or "").strip().lower()
+    if review_status not in _WORKER_DOCUMENT_REVIEW_STATUSES:
+        review_status = "pending_review"
+
+    return {
+        "id": str(document.id),
+        "worker_id": str(document.worker_id),
+        "organization_id": str(document.organization_id) if document.organization_id is not None else None,
+        "document_id": document.document_id,
+        "document_type": document_type,
+        "document_name": _worker_document_label(document_type),
+        "name": document.name,
+        "status": document.status,
+        "storage_path": document.storage_path,
+        "original_filename": document.original_filename,
+        "mime_type": document.mime_type,
+        "file_size_bytes": int(document.file_size_bytes or 0),
+        "file_hash_sha256": document.file_hash_sha256,
+        "review_status": review_status,
+        "review_reason": document.review_reason,
+        "reviewed_by_user_id": str(document.reviewed_by_user_id) if document.reviewed_by_user_id else None,
+        "reviewed_at": _to_iso(document.reviewed_at),
+        "anomaly_flags": list(document.anomaly_flags or []),
+        "uploaded_at": _to_iso(document.uploaded_at),
+    }
+
+
+async def _sync_daily_worker_document_flags(
+    db: AsyncSession,
+    worker: DailyWorker,
+) -> None:
+    docs = (
+        await db.execute(
+            select(WorkerDocument).where(WorkerDocument.worker_id == worker.id)
+        )
+    ).scalars().all()
+
+    has_id_card = any(
+        _normalize_worker_document_type(doc.document_type or doc.document_id) == _WORKER_DOCUMENT_TYPE_ID_CARD
+        and doc.review_status == "approved"
+        and bool(doc.storage_path)
+        for doc in docs
+    )
+    has_safety_cert = any(
+        _normalize_worker_document_type(doc.document_type or doc.document_id) == _WORKER_DOCUMENT_TYPE_SAFETY_CERT
+        and doc.review_status == "approved"
+        and bool(doc.storage_path)
+        for doc in docs
+    )
+
+    worker.has_id_card = has_id_card
+    worker.has_safety_cert = has_safety_cert
+    if not (has_id_card and has_safety_cert):
+        if worker.registration_status == "registered":
+            worker.registration_status = "pending_docs"
+    elif worker.registration_status in {"pending_docs", "invited"}:
+        worker.registration_status = "registered"
+    worker.updated_at = datetime.utcnow()
+    await db.flush()
+
+
+async def _write_worker_document_moderation_log(
+    db: AsyncSession,
+    *,
+    organization_id: int,
+    worker_id: int,
+    actor_user_id: int,
+    action: str,
+    reason: Optional[str] = None,
+    worker_document_id: Optional[int] = None,
+    payload: Optional[dict] = None,
+) -> None:
+    db.add(
+        WorkerDocumentModerationLog(
+            organization_id=organization_id,
+            worker_id=worker_id,
+            worker_document_id=worker_document_id,
+            actor_user_id=actor_user_id,
+            action=action,
+            reason=reason,
+            payload_json=payload or {},
+        )
+    )
+    await db.flush()
 
 
 async def _get_project_for_user(
@@ -472,16 +696,18 @@ async def _seed_worker_documents(db: AsyncSession, worker_user_id: int) -> list[
         return docs
 
     defaults = [
-        ("doc_1", "신분증"),
-        ("doc_2", "안전교육 이수증"),
+        ("doc_1", _WORKER_DOCUMENT_TYPE_ID_CARD, "신분증"),
+        ("doc_2", _WORKER_DOCUMENT_TYPE_SAFETY_CERT, "안전교육 이수증"),
     ]
-    for doc_id, name in defaults:
+    for doc_id, document_type, name in defaults:
         db.add(
             WorkerDocument(
                 worker_id=worker_user_id,
                 document_id=doc_id,
+                document_type=document_type,
                 name=name,
                 status="pending",
+                review_status="pending_review",
             )
         )
     await db.flush()
@@ -2130,9 +2356,11 @@ async def get_labor_overview(
                 "id": str(worker.id),
                 "name": worker.name,
                 "role": worker.job_type,
-                "status": "active",
+                "status": "inactive" if worker.is_blocked_for_labor else "active",
                 "contract_status": "signed" if worker.registration_status == "registered" else "pending",
                 "last_work_date": today.isoformat(),
+                "is_blocked_for_labor": worker.is_blocked_for_labor,
+                "block_reason": worker.block_reason,
             }
         )
 
@@ -2208,9 +2436,11 @@ async def get_admin_labor_overview(
             "role": worker.job_type,
             "organization_id": str(worker.organization_id),
             "organization_name": org.name if org else "미지정",
-            "status": "active",
+            "status": "inactive" if worker.is_blocked_for_labor else "active",
             "contract_status": "signed" if worker.registration_status == "registered" else "pending",
             "last_work_date": today,
+            "is_blocked_for_labor": worker.is_blocked_for_labor,
+            "block_reason": worker.block_reason,
         }
         for worker, org in workers_joined
     ]
@@ -2287,8 +2517,8 @@ class DailyWorkerUpsertRequest(BaseModel):
     bank_name: str = ""
     phone: str = ""
     is_foreign: bool = False
-    has_id_card: bool = False
-    has_safety_cert: bool = False
+    has_id_card: Optional[bool] = None
+    has_safety_cert: Optional[bool] = None
     organization_id: Optional[str] = None
 
 
@@ -2328,6 +2558,10 @@ async def list_daily_workers(
             "invite_token": w.invite_token,
             "has_id_card": w.has_id_card,
             "has_safety_cert": w.has_safety_cert,
+            "is_blocked_for_labor": w.is_blocked_for_labor,
+            "block_reason": w.block_reason,
+            "blocked_by_user_id": str(w.blocked_by_user_id) if w.blocked_by_user_id else None,
+            "blocked_at": _to_iso(w.blocked_at),
         }
         for w in workers
     ])
@@ -2370,8 +2604,8 @@ async def create_daily_worker(
         bank_name=payload.bank_name,
         phone=payload.phone,
         is_foreign=payload.is_foreign,
-        has_id_card=payload.has_id_card,
-        has_safety_cert=payload.has_safety_cert,
+        has_id_card=bool(payload.has_id_card),
+        has_safety_cert=bool(payload.has_safety_cert),
     )
     db.add(worker)
     await db.flush()
@@ -2413,8 +2647,10 @@ async def update_daily_worker(
     worker.bank_name = payload.bank_name
     worker.phone = payload.phone
     worker.is_foreign = payload.is_foreign
-    worker.has_id_card = payload.has_id_card
-    worker.has_safety_cert = payload.has_safety_cert
+    if payload.has_id_card is not None:
+        worker.has_id_card = payload.has_id_card
+    if payload.has_safety_cert is not None:
+        worker.has_safety_cert = payload.has_safety_cert
     worker.updated_at = datetime.utcnow()
 
     return APIResponse.ok({"id": str(worker.id)})
@@ -2437,6 +2673,462 @@ async def delete_daily_worker(
 
     await db.delete(worker)
     return APIResponse.ok({"id": str(worker.id)})
+
+
+class WorkerDocumentReviewRequest(BaseModel):
+    action: str
+    reason: Optional[str] = None
+
+
+class DailyWorkerControlRequest(BaseModel):
+    action: str
+    reason: Optional[str] = None
+
+
+@router.get("/labor/daily-workers/{worker_id}/documents", response_model=APIResponse[list[dict]])
+async def get_daily_worker_documents(
+    worker_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _require_worker_document_upload_role(current_user)
+    worker = await _get_daily_worker_for_document_ops(db, worker_id, current_user)
+
+    docs = (
+        await db.execute(
+            select(WorkerDocument).where(WorkerDocument.worker_id == worker.id)
+        )
+    ).scalars().all()
+
+    by_type: dict[str, WorkerDocument] = {}
+    for doc in docs:
+        doc_type = _normalize_worker_document_type(doc.document_type or doc.document_id)
+        if doc_type not in _WORKER_DOCUMENT_ALLOWED_TYPES:
+            continue
+
+        existing = by_type.get(doc_type)
+        if not existing:
+            by_type[doc_type] = doc
+            continue
+
+        existing_uploaded_at = existing.uploaded_at or datetime.min
+        current_uploaded_at = doc.uploaded_at or datetime.min
+        if current_uploaded_at >= existing_uploaded_at:
+            by_type[doc_type] = doc
+
+    payload: list[dict] = []
+    for doc_type in sorted(_WORKER_DOCUMENT_ALLOWED_TYPES):
+        doc = by_type.get(doc_type)
+        if doc:
+            payload.append(_serialize_worker_document(doc))
+            continue
+        payload.append(
+            {
+                "id": None,
+                "worker_id": str(worker.id),
+                "organization_id": str(worker.organization_id),
+                "document_id": doc_type,
+                "document_type": doc_type,
+                "document_name": _worker_document_label(doc_type),
+                "name": _worker_document_label(doc_type),
+                "status": "pending",
+                "storage_path": None,
+                "original_filename": None,
+                "mime_type": None,
+                "file_size_bytes": 0,
+                "file_hash_sha256": None,
+                "review_status": "pending_review",
+                "review_reason": None,
+                "reviewed_by_user_id": None,
+                "reviewed_at": None,
+                "anomaly_flags": [],
+                "uploaded_at": None,
+            }
+        )
+
+    return APIResponse.ok(payload)
+
+
+@router.post("/labor/daily-workers/{worker_id}/documents/{document_type}", response_model=APIResponse[dict])
+async def upload_daily_worker_document(
+    worker_id: int,
+    document_type: str,
+    db: DBSession,
+    current_user: CurrentUser,
+    file: UploadFile = File(...),
+):
+    _require_worker_document_upload_role(current_user)
+    normalized_doc_type = _require_valid_worker_document_type(document_type)
+    worker = await _get_daily_worker_for_document_ops(db, worker_id, current_user)
+    ext, mime_type = _validate_worker_document_file(file)
+
+    content = await file.read()
+    await file.seek(0)
+    if len(content) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="빈 파일은 업로드할 수 없어요.",
+        )
+
+    file_hash = hashlib.sha256(content).hexdigest()
+    duplicate_hash_exists = (
+        await db.execute(
+            select(WorkerDocument.id)
+            .where(WorkerDocument.file_hash_sha256 == file_hash)
+            .where(WorkerDocument.worker_id != worker.id)
+            .limit(1)
+        )
+    ).scalar_one_or_none() is not None
+    anomaly_flags = _detect_worker_document_anomaly_flags(
+        content=content,
+        ext=ext,
+        mime_type=mime_type,
+        duplicate_hash_exists=duplicate_hash_exists,
+    )
+
+    storage_path = await storage_service.save_bytes(
+        data=content,
+        category="worker-documents",
+        subfolder=f"org-{worker.organization_id}/workers/{worker.id}",
+        filename=f"{normalized_doc_type}_{int(datetime.utcnow().timestamp())}{ext}",
+    )
+
+    worker_docs = (
+        await db.execute(
+            select(WorkerDocument).where(WorkerDocument.worker_id == worker.id)
+        )
+    ).scalars().all()
+    target: Optional[WorkerDocument] = None
+    for candidate in worker_docs:
+        candidate_type = _normalize_worker_document_type(
+            candidate.document_type or candidate.document_id
+        )
+        if candidate_type == normalized_doc_type:
+            target = candidate
+            break
+
+    original_filename = file.filename or f"{normalized_doc_type}{ext}"
+    now_utc = datetime.utcnow()
+    if target is None:
+        target = WorkerDocument(
+            worker_id=worker.id,
+            organization_id=worker.organization_id,
+            document_id=normalized_doc_type,
+            document_type=normalized_doc_type,
+            name=_worker_document_label(normalized_doc_type),
+            status="submitted",
+            storage_path=storage_path,
+            original_filename=original_filename,
+            mime_type=mime_type or None,
+            file_size_bytes=len(content),
+            file_hash_sha256=file_hash,
+            review_status="pending_review",
+            review_reason=None,
+            reviewed_by_user_id=None,
+            reviewed_at=None,
+            anomaly_flags=anomaly_flags,
+            uploaded_at=now_utc,
+        )
+        db.add(target)
+        await db.flush()
+    else:
+        target.organization_id = worker.organization_id
+        target.document_type = normalized_doc_type
+        target.status = "submitted"
+        target.storage_path = storage_path
+        target.original_filename = original_filename
+        target.mime_type = mime_type or None
+        target.file_size_bytes = len(content)
+        target.file_hash_sha256 = file_hash
+        target.review_status = "pending_review"
+        target.review_reason = None
+        target.reviewed_by_user_id = None
+        target.reviewed_at = None
+        target.anomaly_flags = anomaly_flags
+        target.uploaded_at = now_utc
+        await db.flush()
+
+    await _sync_daily_worker_document_flags(db, worker)
+    await _write_worker_document_moderation_log(
+        db,
+        organization_id=worker.organization_id,
+        worker_id=worker.id,
+        worker_document_id=target.id,
+        actor_user_id=current_user.id,
+        action="upload",
+        reason=None,
+        payload={
+            "document_type": normalized_doc_type,
+            "storage_path": storage_path,
+            "anomaly_flags": anomaly_flags,
+        },
+    )
+    await _log_activity(
+        db,
+        current_user.id,
+        "worker_document_upload",
+        f"근로자 서류 업로드: worker_id={worker.id}, type={normalized_doc_type}",
+    )
+
+    return APIResponse.ok(
+        {
+            "worker_id": str(worker.id),
+            "document": _serialize_worker_document(target),
+            "requires_review": True,
+        }
+    )
+
+
+@router.get("/labor/worker-documents/review-queue", response_model=APIResponse[list[dict]])
+async def get_worker_document_review_queue(
+    db: DBSession,
+    current_user: CurrentUser,
+    review_status: Optional[str] = Query(default="pending_review"),
+):
+    _require_worker_document_review_role(current_user)
+
+    normalized_review_status = (review_status or "pending_review").strip().lower()
+    if normalized_review_status != "all" and normalized_review_status not in _WORKER_DOCUMENT_REVIEW_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="지원하지 않는 검토 상태 필터예요.",
+        )
+
+    query = (
+        select(WorkerDocument, DailyWorker)
+        .join(DailyWorker, DailyWorker.id == WorkerDocument.worker_id)
+        .where(WorkerDocument.document_type.in_(tuple(sorted(_WORKER_DOCUMENT_ALLOWED_TYPES))))
+    )
+    if current_user.organization_id is not None:
+        query = query.where(DailyWorker.organization_id == current_user.organization_id)
+    if normalized_review_status != "all":
+        query = query.where(WorkerDocument.review_status == normalized_review_status)
+
+    rows = (
+        await db.execute(
+            query.order_by(WorkerDocument.uploaded_at.desc(), WorkerDocument.id.desc()).limit(300)
+        )
+    ).all()
+
+    payload: list[dict] = []
+    for document, worker in rows:
+        serialized = _serialize_worker_document(document)
+        serialized.update(
+            {
+                "worker_name": worker.name,
+                "worker_job_type": worker.job_type,
+                "worker_registration_status": worker.registration_status,
+                "worker_is_blocked_for_labor": worker.is_blocked_for_labor,
+                "worker_block_reason": worker.block_reason,
+            }
+        )
+        payload.append(serialized)
+
+    return APIResponse.ok(payload)
+
+
+@router.post("/labor/worker-documents/{worker_document_id}/review", response_model=APIResponse[dict])
+async def review_worker_document(
+    worker_document_id: int,
+    payload: WorkerDocumentReviewRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _require_worker_document_review_role(current_user)
+
+    action = (payload.action or "").strip().lower()
+    if action not in _WORKER_DOCUMENT_REVIEW_ACTIONS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="지원하지 않는 검토 액션이에요.",
+        )
+
+    reason = (payload.reason or "").strip() or None
+    if action in {"reject", "quarantine", "request_reupload"} and not reason:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="반려/격리/재업로드 요청 시 사유를 입력해주세요.",
+        )
+
+    document = (
+        await db.execute(select(WorkerDocument).where(WorkerDocument.id == worker_document_id))
+    ).scalar_one_or_none()
+    if not document:
+        raise NotFoundException("worker_document", worker_document_id)
+
+    normalized_doc_type = _normalize_worker_document_type(
+        document.document_type or document.document_id
+    )
+    if normalized_doc_type not in _WORKER_DOCUMENT_ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="검토 가능한 근로자 서류가 아니에요.",
+        )
+
+    worker = (
+        await db.execute(select(DailyWorker).where(DailyWorker.id == document.worker_id))
+    ).scalar_one_or_none()
+    if not worker:
+        raise NotFoundException("daily_worker", document.worker_id)
+    if current_user.organization_id is not None and worker.organization_id != current_user.organization_id:
+        raise NotFoundException("worker_document", worker_document_id)
+
+    if document.organization_id is None:
+        document.organization_id = worker.organization_id
+
+    status_by_action = {
+        "approve": "approved",
+        "reject": "rejected",
+        "quarantine": "quarantined",
+        "request_reupload": "rejected",
+    }
+    document.review_status = status_by_action[action]
+    document.review_reason = reason
+    document.reviewed_by_user_id = current_user.id
+    document.reviewed_at = datetime.utcnow()
+    if action == "approve":
+        document.status = "submitted"
+    elif action == "quarantine":
+        document.status = "blocked"
+    else:
+        document.status = "rejected"
+
+    await _sync_daily_worker_document_flags(db, worker)
+    await _write_worker_document_moderation_log(
+        db,
+        organization_id=worker.organization_id,
+        worker_id=worker.id,
+        worker_document_id=document.id,
+        actor_user_id=current_user.id,
+        action=action,
+        reason=reason,
+        payload={
+            "review_status": document.review_status,
+            "document_type": normalized_doc_type,
+        },
+    )
+    await _log_activity(
+        db,
+        current_user.id,
+        "worker_document_review",
+        f"근로자 서류 검토: worker_id={worker.id}, action={action}",
+    )
+
+    return APIResponse.ok(
+        {
+            "worker_id": str(worker.id),
+            "document": _serialize_worker_document(document),
+        }
+    )
+
+
+@router.patch("/labor/daily-workers/{worker_id}/control", response_model=APIResponse[dict])
+async def control_daily_worker(
+    worker_id: int,
+    payload: DailyWorkerControlRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _require_worker_document_review_role(current_user)
+
+    action = (payload.action or "").strip().lower()
+    if action not in _WORKER_DOCUMENT_CONTROL_ACTIONS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="지원하지 않는 근로자 통제 액션이에요.",
+        )
+
+    reason = (payload.reason or "").strip() or None
+    if action == "block" and not reason:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="차단 사유를 입력해주세요.",
+        )
+
+    worker = await _get_daily_worker_for_document_ops(db, worker_id, current_user)
+    now_utc = datetime.utcnow()
+    if action == "block":
+        worker.is_blocked_for_labor = True
+        worker.block_reason = reason
+        worker.blocked_by_user_id = current_user.id
+        worker.blocked_at = now_utc
+    else:
+        worker.is_blocked_for_labor = False
+        worker.block_reason = None
+        worker.blocked_by_user_id = None
+        worker.blocked_at = None
+    worker.updated_at = now_utc
+
+    await _write_worker_document_moderation_log(
+        db,
+        organization_id=worker.organization_id,
+        worker_id=worker.id,
+        worker_document_id=None,
+        actor_user_id=current_user.id,
+        action=f"worker_{action}",
+        reason=reason,
+        payload={
+            "is_blocked_for_labor": worker.is_blocked_for_labor,
+        },
+    )
+    await _log_activity(
+        db,
+        current_user.id,
+        "worker_labor_control",
+        f"근로자 노무 통제: worker_id={worker.id}, action={action}",
+    )
+
+    return APIResponse.ok(
+        {
+            "id": str(worker.id),
+            "is_blocked_for_labor": worker.is_blocked_for_labor,
+            "block_reason": worker.block_reason,
+            "blocked_by_user_id": str(worker.blocked_by_user_id) if worker.blocked_by_user_id else None,
+            "blocked_at": _to_iso(worker.blocked_at),
+        }
+    )
+
+
+@router.get("/labor/worker-documents/{worker_document_id}/download")
+async def download_worker_document(
+    worker_document_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _require_worker_document_upload_role(current_user)
+
+    document = (
+        await db.execute(select(WorkerDocument).where(WorkerDocument.id == worker_document_id))
+    ).scalar_one_or_none()
+    if not document:
+        raise NotFoundException("worker_document", worker_document_id)
+
+    worker = (
+        await db.execute(select(DailyWorker).where(DailyWorker.id == document.worker_id))
+    ).scalar_one_or_none()
+    if not worker:
+        raise NotFoundException("daily_worker", document.worker_id)
+    if current_user.organization_id is not None and worker.organization_id != current_user.organization_id:
+        raise NotFoundException("worker_document", worker_document_id)
+
+    if not document.storage_path:
+        raise HTTPException(status_code=404, detail="업로드된 파일이 없어요.")
+
+    absolute_path = storage_service.get_absolute_path(document.storage_path)
+    if not absolute_path.exists():
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없어요.")
+
+    content = absolute_path.read_bytes()
+    filename = document.original_filename or absolute_path.name
+    encoded_filename = quote(filename, safe="")
+
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type=document.mime_type or "application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
+        },
+    )
 
 
 class WorkRecordInput(BaseModel):
@@ -2518,6 +3210,8 @@ async def upsert_work_records(
                 missing_requirements.append("id_card")
             if not worker.has_safety_cert:
                 missing_requirements.append("safety_cert")
+            if worker.is_blocked_for_labor:
+                missing_requirements.append("labor_blocked")
             has_consent = await _has_consent_record_for_worker(db, worker)
             if not has_consent:
                 missing_requirements.append("consent_record")
@@ -2528,6 +3222,7 @@ async def upsert_work_records(
                         "worker_id": str(worker.id),
                         "worker_name": worker.name,
                         "missing_requirements": missing_requirements,
+                        "block_reason": worker.block_reason,
                     }
                 )
 
@@ -3792,6 +4487,8 @@ async def upload_worker_document(
     file: UploadFile = File(...),
 ):
     worker_user_id = await _require_worker_self(db, current_user, worker_id)
+    normalized_doc_type = _normalize_worker_document_type(doc_id)
+    ext, mime_type = _validate_worker_document_file(file)
 
     docs = await _seed_worker_documents(db, worker_user_id)
     target = next((d for d in docs if d.document_id == doc_id), None)
@@ -3799,24 +4496,41 @@ async def upload_worker_document(
         target = WorkerDocument(
             worker_id=worker_user_id,
             document_id=doc_id,
+            document_type=normalized_doc_type,
             name=doc_id,
             status="pending",
+            review_status="pending_review",
         )
         db.add(target)
         await db.flush()
 
     content = await file.read()
     await file.seek(0)
-    ext = (file.filename or "file").split(".")[-1]
+    if len(content) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="빈 파일은 업로드할 수 없어요.",
+        )
+    file_hash = hashlib.sha256(content).hexdigest()
     storage_path = await storage_service.save_bytes(
         data=content,
         category="contracts",
         subfolder=f"workers/{worker_user_id}",
-        filename=f"{doc_id}_{int(datetime.utcnow().timestamp())}.{ext}",
+        filename=f"{doc_id}_{int(datetime.utcnow().timestamp())}{ext}",
     )
 
+    target.document_type = normalized_doc_type
     target.storage_path = storage_path
     target.status = "submitted"
+    target.original_filename = file.filename or f"{doc_id}{ext}"
+    target.mime_type = mime_type or None
+    target.file_size_bytes = len(content)
+    target.file_hash_sha256 = file_hash
+    target.review_status = "pending_review"
+    target.review_reason = None
+    target.reviewed_by_user_id = None
+    target.reviewed_at = None
+    target.anomaly_flags = []
     target.uploaded_at = datetime.utcnow()
 
     return APIResponse.ok(
