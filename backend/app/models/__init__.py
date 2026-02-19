@@ -94,6 +94,12 @@ from app.models.field_representative import (
     AssignmentCreate,
     AssignmentRead,
 )
+from app.models.consent import (
+    ConsentRecord,
+    ConsentRecordCreate,
+    ConsentRecordRead,
+    BulkConsentRequest,
+)
 
 __all__ = [
     # Base
@@ -234,4 +240,9 @@ __all__ = [
     "FieldRepresentativeRead",
     "AssignmentCreate",
     "AssignmentRead",
+    # Consent
+    "ConsentRecord",
+    "ConsentRecordCreate",
+    "ConsentRecordRead",
+    "BulkConsentRequest",
 ]
