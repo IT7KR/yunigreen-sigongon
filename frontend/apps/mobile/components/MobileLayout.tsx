@@ -1,22 +1,95 @@
 "use client";
 
-import { type ReactNode } from "react";
+import {
+  createContext,
+  isValidElement,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { usePathname } from "next/navigation";
 import { Bell, CreditCard, FileText, Home, FolderKanban, Plus, User } from "lucide-react";
 import {
   AppLink,
   cn,
+  ContentTransitionBoundary,
   useAppNavigation,
-  useNavigationProgress,
 } from "@sigongon/ui";
 import { OfflineBanner } from "./camera/OfflineBanner";
 import { useAuth } from "@/lib/auth";
+import { MobileContentLoadingOverlay } from "./MobileContentLoadingOverlay";
 
 interface MobileLayoutProps {
   children: ReactNode;
   title?: string;
   showBack?: boolean;
   rightAction?: ReactNode;
+}
+
+interface MobileShellContextValue {
+  setOptions: (id: number, options: Omit<MobileLayoutProps, "children">) => void;
+  clearOptions: (id: number) => void;
+}
+
+const MobileShellContext = createContext<MobileShellContextValue | null>(null);
+let mobileLayoutInstanceId = 1;
+
+function shouldUpdateRightAction(
+  prevAction: ReactNode | undefined,
+  nextAction: ReactNode | undefined,
+): boolean {
+  if (!prevAction && !nextAction) {
+    return false;
+  }
+
+  if (!prevAction || !nextAction) {
+    return true;
+  }
+
+  if (!isValidElement(prevAction) || !isValidElement(nextAction)) {
+    return !Object.is(prevAction, nextAction);
+  }
+
+  if (prevAction.type !== nextAction.type || prevAction.key !== nextAction.key) {
+    return true;
+  }
+
+  const prevProps = prevAction.props as Record<string, unknown>;
+  const nextProps = nextAction.props as Record<string, unknown>;
+  const keys = new Set([
+    ...Object.keys(prevProps),
+    ...Object.keys(nextProps),
+  ]);
+
+  for (const key of keys) {
+    if (key === "children") {
+      continue;
+    }
+
+    const prevValue = prevProps[key];
+    const nextValue = nextProps[key];
+
+    if (typeof prevValue === "function" || typeof nextValue === "function") {
+      continue;
+    }
+
+    if (
+      (typeof prevValue === "object" && prevValue !== null) ||
+      (typeof nextValue === "object" && nextValue !== null)
+    ) {
+      continue;
+    }
+
+    if (!Object.is(prevValue, nextValue)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 const managerNavItems = [
@@ -35,7 +108,7 @@ const workerNavItems = [
   { href: "/worker/profile", icon: User, label: "내 정보" },
 ];
 
-export function MobileLayout({
+function MobileLayoutFrame({
   children,
   title,
   showBack,
@@ -44,7 +117,6 @@ export function MobileLayout({
   const pathname = usePathname();
   const navigation = useAppNavigation();
   const { user } = useAuth();
-  const { isNavigating } = useNavigationProgress();
   const navItems = user?.role === "worker" ? workerNavItems : managerNavItems;
 
   const handleBack = () => {
@@ -56,10 +128,7 @@ export function MobileLayout({
   };
 
   return (
-    <div
-      className="flex min-h-screen flex-col bg-slate-50 transition-opacity duration-150 data-[navigating=true]:opacity-[0.99]"
-      data-navigating={isNavigating ? "true" : "false"}
-    >
+    <div className="flex min-h-screen flex-col bg-slate-50">
       {/* Skip navigation */}
       <a
         href="#main-content"
@@ -102,7 +171,11 @@ export function MobileLayout({
 
       <OfflineBanner />
 
-      <main id="main-content" className="flex-1 pb-nav-safe">{children}</main>
+      <main id="main-content" className="flex-1 pb-nav-safe">
+        <ContentTransitionBoundary loadingOverlay={<MobileContentLoadingOverlay />}>
+          {children}
+        </ContentTransitionBoundary>
+      </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white pb-safe">
         <div className="flex h-16 items-center justify-around">
@@ -136,5 +209,118 @@ export function MobileLayout({
         </div>
       </nav>
     </div>
+  );
+}
+
+export function MobileLayout({
+  children,
+  title,
+  showBack,
+  rightAction,
+}: MobileLayoutProps) {
+  const shellContext = useContext(MobileShellContext);
+  const layoutIdRef = useRef<number>(0);
+
+  if (layoutIdRef.current === 0) {
+    layoutIdRef.current = mobileLayoutInstanceId++;
+  }
+
+  useLayoutEffect(() => {
+    if (!shellContext) {
+      return;
+    }
+
+    shellContext.setOptions(layoutIdRef.current, {
+      title,
+      showBack,
+      rightAction,
+    });
+
+    return () => {
+      shellContext.clearOptions(layoutIdRef.current);
+    };
+  }, [rightAction, shellContext, showBack, title]);
+
+  if (shellContext) {
+    return <>{children}</>;
+  }
+
+  return (
+    <MobileLayoutFrame title={title} showBack={showBack} rightAction={rightAction}>
+      {children}
+    </MobileLayoutFrame>
+  );
+}
+
+export function MobileAppShell({ children }: { children: ReactNode }) {
+  const [activeOptions, setActiveOptions] = useState<{
+    id: number;
+    options: Omit<MobileLayoutProps, "children">;
+  } | null>(null);
+
+  const setOptions = useCallback(
+    (id: number, options: Omit<MobileLayoutProps, "children">) => {
+      setActiveOptions((current) => {
+        if (!current || current.id !== id) {
+          return { id, options };
+        }
+
+        if (
+          current.options.title !== options.title ||
+          current.options.showBack !== options.showBack
+        ) {
+          return { id, options };
+        }
+
+        if (
+          shouldUpdateRightAction(
+            current.options.rightAction,
+            options.rightAction,
+          )
+        ) {
+          return {
+            id,
+            options: {
+              ...current.options,
+              rightAction: options.rightAction,
+            },
+          };
+        }
+
+        return current;
+      });
+    },
+    [],
+  );
+
+  const clearOptions = useCallback((id: number) => {
+    setActiveOptions((current) => {
+      if (!current || current.id !== id) {
+        return current;
+      }
+      return null;
+    });
+  }, []);
+
+  const shellValue = useMemo(
+    () => ({
+      setOptions,
+      clearOptions,
+    }),
+    [clearOptions, setOptions],
+  );
+
+  const options = activeOptions?.options;
+
+  return (
+    <MobileShellContext.Provider value={shellValue}>
+      <MobileLayoutFrame
+        title={options?.title}
+        showBack={options?.showBack}
+        rightAction={options?.rightAction}
+      >
+        {children}
+      </MobileLayoutFrame>
+    </MobileShellContext.Provider>
   );
 }
