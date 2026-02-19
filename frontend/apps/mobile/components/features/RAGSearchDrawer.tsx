@@ -119,7 +119,7 @@ export function RAGSearchDrawer({
           </div>
           <PrimitiveButton
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
+            className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-slate-100"
           >
             <X className="h-5 w-5 text-slate-500" />
           </PrimitiveButton>

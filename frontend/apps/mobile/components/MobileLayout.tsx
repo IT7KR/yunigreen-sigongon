@@ -52,6 +52,13 @@ export function MobileLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
+      {/* Skip navigation */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-point-500 focus:px-4 focus:py-2 focus:text-white"
+      >
+        본문으로 건너뛰기
+      </a>
       {title && (
         <header className="sticky top-0 z-40 border-b border-slate-200 bg-white px-4 py-3">
           <div className="flex items-center justify-between">
@@ -87,9 +94,9 @@ export function MobileLayout({
 
       <OfflineBanner />
 
-      <main className="flex-1 pb-20">{children}</main>
+      <main id="main-content" className="flex-1 pb-nav-safe">{children}</main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white pb-safe">
         <div className="flex h-16 items-center justify-around">
           {navItems.map((item) => {
             const isActive =
