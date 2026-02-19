@@ -4583,6 +4583,40 @@ export class MockAPIClient {
     return delay(ok(workers));
   }
 
+  async getLaborCodebook() {
+    return delay(
+      ok({
+        version: "2026.02.19",
+        nationality_codes: {
+          "100": "한국",
+          "156": "중국",
+          "392": "일본",
+          "410": "대한민국(재외동포)",
+          "458": "말레이시아",
+          "608": "필리핀",
+          "626": "동티모르",
+          "704": "베트남",
+          "764": "태국",
+          "860": "우즈베키스탄",
+        },
+        visa_status_codes: {
+          "E-9": "비전문취업",
+          "H-2": "방문취업",
+          "F-4": "재외동포",
+          "F-5": "영주",
+          "F-6": "결혼이민",
+        },
+        job_type_codes: {
+          "013": "건설·채국·제조·생산 관리자",
+          "701": "건설구조 기능원",
+          "704": "건설·채국 기계 운전원",
+          "705": "기타 건설 기능원(채굴포함)",
+          "706": "건설·채국 단순 종사자",
+        },
+      }),
+    );
+  }
+
   async createDailyWorker(data: Omit<DailyWorker, "id">) {
     const id = randomId("dw");
     const worker: DailyWorker = { id, ...data };
@@ -4613,6 +4647,28 @@ export class MockAPIClient {
   }
 
   async upsertWorkRecords(records: Array<Omit<DailyWorkRecord, "id"> & { id?: string }>) {
+    const workers = mockDb.get("dailyWorkers");
+    const blockedWorkers = [...new Set(records.map((r) => r.worker_id))]
+      .map((workerId) => workers.find((worker) => worker.id === workerId))
+      .filter((worker): worker is DailyWorker => !!worker)
+      .filter(
+        (worker) =>
+          !worker.has_id_card ||
+          !worker.has_safety_cert ||
+          worker.registration_status === "pending_consent" ||
+          worker.registration_status === "pending_docs",
+      );
+
+    if (blockedWorkers.length > 0) {
+      const blockedNames = blockedWorkers.map((worker) => worker.name).join(", ");
+      return delay(
+        fail(
+          "LABOR_DEPLOYMENT_GATE",
+          `필수서류/동의 미완료로 저장할 수 없어요: ${blockedNames}`,
+        ),
+      );
+    }
+
     const existing = mockDb.get("dailyWorkRecords");
     const existingMap = new Map(existing.map((r) => [r.id, r]));
 
