@@ -9,11 +9,14 @@ from decimal import Decimal
 import pytest
 from httpx import AsyncClient
 from openpyxl import load_workbook
+from sqlmodel import select
 
 from app.core.database import get_async_db
+from app.core.security import create_access_token
 from app.core.security import get_current_user
 from app.main import app
-from app.models.operations import DailyWorker, InsuranceRate, WorkRecord
+from app.models.consent import ConsentRecord
+from app.models.operations import ActivityLog, DailyWorker, InsuranceRate, WorkRecord
 from app.models.project import Project
 from app.models.user import Organization, User, UserRole
 
@@ -55,7 +58,14 @@ async def labor_api_context(test_db):
     app.dependency_overrides.pop(get_async_db, None)
 
 
-async def _seed_project_and_worker(context, *, job_type_code: str = "706"):
+async def _seed_project_and_worker(
+    context,
+    *,
+    job_type_code: str = "706",
+    has_id_card: bool = True,
+    has_safety_cert: bool = True,
+    invite_token: str | None = None,
+):
     db = context["db"]
     org = context["org"]
     user = context["user"]
@@ -84,6 +94,9 @@ async def _seed_project_and_worker(context, *, job_type_code: str = "706"):
         daily_rate=Decimal("200000"),
         phone="010-1234-5678",
         is_foreign=False,
+        has_id_card=has_id_card,
+        has_safety_cert=has_safety_cert,
+        invite_token=invite_token,
     )
     db.add(worker)
     await db.flush()
@@ -269,3 +282,141 @@ async def test_admin_rates_returns_effective_version_by_as_of(async_client: Asyn
     response_2026 = await async_client.get("/api/v1/admin/rates", params={"as_of": "2026-02-01"})
     assert response_2026.status_code == 200
     assert response_2026.json()["data"]["active_rate"]["effective_year"] == 2026
+
+
+@pytest.mark.asyncio
+async def test_labor_codebook_api_returns_expected_keys(async_client: AsyncClient, labor_api_context):
+    response = await async_client.get("/api/v1/labor/codebook")
+    assert response.status_code == 200
+
+    payload = response.json()["data"]
+    assert payload["version"]
+    assert "706" in payload["job_type_codes"]
+    assert "100" in payload["nationality_codes"]
+    assert "E-9" in payload["visa_status_codes"]
+
+
+@pytest.mark.asyncio
+async def test_work_record_batch_is_blocked_when_required_documents_missing(async_client: AsyncClient, labor_api_context):
+    project, worker = await _seed_project_and_worker(
+        labor_api_context,
+        has_id_card=False,
+        has_safety_cert=False,
+    )
+
+    response = await async_client.post(
+        "/api/v1/labor/work-records/batch",
+        json={
+            "records": [
+                {
+                    "worker_id": str(worker.id),
+                    "project_id": str(project.id),
+                    "work_date": "2026-01-20",
+                    "man_days": "1.0",
+                }
+            ]
+        },
+    )
+    assert response.status_code == 422
+
+    detail = response.json()["detail"]
+    assert detail["blocked_workers"][0]["worker_name"] == "홍길동"
+    assert "id_card" in detail["blocked_workers"][0]["missing_requirements"]
+    assert "safety_cert" in detail["blocked_workers"][0]["missing_requirements"]
+    assert "consent_record" in detail["blocked_workers"][0]["missing_requirements"]
+
+
+@pytest.mark.asyncio
+async def test_work_record_batch_succeeds_when_gate_requirements_are_met(async_client: AsyncClient, labor_api_context):
+    db = labor_api_context["db"]
+    org = labor_api_context["org"]
+    project, worker = await _seed_project_and_worker(
+        labor_api_context,
+        has_id_card=True,
+        has_safety_cert=True,
+        invite_token="invite-token-ok",
+    )
+
+    db.add(
+        ConsentRecord(
+            invite_token="invite-token-ok",
+            consent_type="privacy_collection",
+            consented=True,
+            organization_id=org.id,
+        )
+    )
+    await db.commit()
+
+    response = await async_client.post(
+        "/api/v1/labor/work-records/batch",
+        json={
+            "records": [
+                {
+                    "worker_id": str(worker.id),
+                    "project_id": str(project.id),
+                    "work_date": "2026-01-20",
+                    "man_days": "1.0",
+                }
+            ]
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["updated_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_consent_and_notification_domains_write_activity_logs(async_client: AsyncClient, labor_api_context):
+    db = labor_api_context["db"]
+    user = labor_api_context["user"]
+    org = labor_api_context["org"]
+
+    role_value = user.role.value if hasattr(user.role, "value") else str(user.role)
+    token = create_access_token(
+        subject=str(user.id),
+        role=role_value,
+        org_id=str(org.id),
+    )
+
+    consent_response = await async_client.post(
+        "/api/v1/consent/records",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "records": [
+                {
+                    "consent_type": "privacy_collection",
+                    "consented": True,
+                    "consent_version": "v1.0",
+                }
+            ]
+        },
+    )
+    assert consent_response.status_code == 201
+
+    invitation_response = await async_client.post(
+        "/api/v1/invitations",
+        json={"phone": "010-9999-1111", "name": "초대대상", "role": "site_manager"},
+    )
+    assert invitation_response.status_code == 201
+
+    notification_response = await async_client.post(
+        "/api/v1/notifications/alimtalk",
+        json={
+            "phone": "010-9999-1111",
+            "template_code": "USER_INVITE",
+            "variables": {"name": "초대대상", "invite_url": "/accept-invite/mock"},
+        },
+    )
+    assert notification_response.status_code == 200
+
+    logs = (
+        await db.execute(
+            select(ActivityLog)
+            .where(ActivityLog.user_id == user.id)
+            .order_by(ActivityLog.created_at.asc())
+        )
+    ).scalars().all()
+    actions = [log.action for log in logs]
+
+    assert "consent_recorded" in actions
+    assert "invitation_create" in actions
+    assert "notification_send_success" in actions

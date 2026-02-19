@@ -1,8 +1,11 @@
 """Pytest 설정 및 공통 fixture."""
+import os
 import pytest
 from typing import AsyncGenerator
 
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 from app.main import app
@@ -10,7 +13,13 @@ from app.core.database import get_async_db
 from app.models.base import SQLModel
 
 
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+@compiles(ARRAY, "sqlite")
+def _compile_postgres_array_for_sqlite(_type, _compiler, **_kwargs):
+    # Test DB uses sqlite in-memory. Store postgres ARRAY columns as TEXT for schema creation.
+    return "TEXT"
+
+
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
 @pytest.fixture(scope="session")
