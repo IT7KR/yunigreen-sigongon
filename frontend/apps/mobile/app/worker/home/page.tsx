@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { Bell, CreditCard, FileText } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
 import {
+  AppLink,
   Card,
   CardContent,
   InteractiveCard,
-  PageTransition,
 } from "@sigongon/ui";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
@@ -83,8 +82,7 @@ export default function WorkerHomePage() {
 
   return (
     <MobileLayout>
-      <PageTransition>
-        <div className="space-y-6 p-4">
+      <div className="space-y-6 p-4">
           {/* 환영 메시지 */}
           <div className="pt-4">
             <h1 className="text-2xl font-bold text-slate-900">
@@ -137,12 +135,12 @@ export default function WorkerHomePage() {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">최근 근로계약서</h2>
-              <Link
+              <AppLink
                 href={`/worker/contracts?workerId=${user?.id ?? ""}`}
                 className="text-sm text-brand-point-600"
               >
                 전체보기
-              </Link>
+              </AppLink>
             </div>
             {isLoading ? (
               <Card>
@@ -154,7 +152,7 @@ export default function WorkerHomePage() {
                 </CardContent>
               </Card>
             ) : latestContract ? (
-              <Link
+              <AppLink
                 href={`/worker/contracts/${latestContract.id}?workerId=${user?.id ?? ""}`}
               >
                 <InteractiveCard className="hover:border-brand-point-200">
@@ -187,7 +185,7 @@ export default function WorkerHomePage() {
                     </div>
                   </CardContent>
                 </InteractiveCard>
-              </Link>
+              </AppLink>
             ) : (
               <Card>
                 <CardContent className="p-4 text-center text-sm text-slate-400">
@@ -201,12 +199,12 @@ export default function WorkerHomePage() {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">최근 지급명세서</h2>
-              <Link
+              <AppLink
                 href={`/worker/paystubs?workerId=${user?.id ?? ""}`}
                 className="text-sm text-brand-point-600"
               >
                 전체보기
-              </Link>
+              </AppLink>
             </div>
             {isLoading ? (
               <Card>
@@ -218,7 +216,7 @@ export default function WorkerHomePage() {
                 </CardContent>
               </Card>
             ) : latestPaystub ? (
-              <Link
+              <AppLink
                 href={`/worker/paystubs/${latestPaystub.id}?workerId=${user?.id ?? ""}`}
               >
                 <InteractiveCard className="hover:border-brand-primary-200">
@@ -252,7 +250,7 @@ export default function WorkerHomePage() {
                     </div>
                   </CardContent>
                 </InteractiveCard>
-              </Link>
+              </AppLink>
             ) : (
               <Card>
                 <CardContent className="p-4 text-center text-sm text-slate-400">
@@ -267,16 +265,16 @@ export default function WorkerHomePage() {
             <div>
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="font-semibold text-slate-900">읽지 않은 알림</h2>
-                <Link href="/notifications" className="text-sm text-brand-point-600">
+                <AppLink href="/notifications" className="text-sm text-brand-point-600">
                   전체보기
-                </Link>
+                </AppLink>
               </div>
               <div className="space-y-2">
                 {notifications
                   .filter((n) => !n.read)
                   .slice(0, 2)
                   .map((notification) => (
-                    <Link key={notification.id} href="/notifications">
+                    <AppLink key={notification.id} href="/notifications">
                       <InteractiveCard>
                         <CardContent className="flex items-start gap-3 p-3">
                           <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-point-100">
@@ -292,13 +290,12 @@ export default function WorkerHomePage() {
                           </div>
                         </CardContent>
                       </InteractiveCard>
-                    </Link>
+                    </AppLink>
                   ))}
               </div>
             </div>
           )}
-        </div>
-      </PageTransition>
+      </div>
     </MobileLayout>
   );
 }

@@ -1,14 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FolderKanban, Camera } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
-import { Card, CardContent, MotionNumber, Skeleton, EmptyState, InteractiveCard, PageTransition, StaggerGrid } from "@sigongon/ui";
+import { AppLink, Card, CardContent, MotionNumber, Skeleton, EmptyState, InteractiveCard, StaggerGrid, useAppNavigation } from "@sigongon/ui";
 import { useProjects } from "@/hooks";
 
 export default function HomePage() {
-  const router = useRouter();
+  const navigation = useAppNavigation();
   const { data, isLoading } = useProjects({ per_page: 5 });
 
   const recentProjects = data?.data || [];
@@ -21,8 +19,7 @@ export default function HomePage() {
 
   return (
     <MobileLayout>
-      <PageTransition>
-        <div className="space-y-6 p-4">
+      <div className="space-y-6 p-4">
         {/* 환영 메시지 */}
         <div className="pt-4">
           <h1 className="text-2xl font-bold text-slate-900">안녕하세요!</h1>
@@ -31,7 +28,7 @@ export default function HomePage() {
 
         {/* 빠른 액션 */}
         <div className="grid grid-cols-2 gap-3">
-          <Link href="/projects/new">
+          <AppLink href="/projects/new">
             <InteractiveCard className="h-full hover:border-brand-point-200">
               <CardContent className="flex flex-col items-center justify-center gap-2 p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-point-100">
@@ -40,9 +37,9 @@ export default function HomePage() {
                 <span className="font-medium text-slate-900">새 프로젝트</span>
               </CardContent>
             </InteractiveCard>
-          </Link>
+          </AppLink>
 
-          <Link href="/projects">
+          <AppLink href="/projects">
             <InteractiveCard className="h-full hover:border-brand-primary-200">
               <CardContent className="flex flex-col items-center justify-center gap-2 p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary-100">
@@ -51,7 +48,7 @@ export default function HomePage() {
                 <span className="font-medium text-slate-900">현장방문</span>
               </CardContent>
             </InteractiveCard>
-          </Link>
+          </AppLink>
         </div>
 
         {/* 오늘의 요약 */}
@@ -99,9 +96,9 @@ export default function HomePage() {
         <div>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold text-slate-900">최근 프로젝트</h2>
-            <Link href="/projects" className="text-sm text-brand-point-600">
+            <AppLink href="/projects" className="text-sm text-brand-point-600">
               전체보기
-            </Link>
+            </AppLink>
           </div>
 
           {recentProjects.length > 0 ? (
@@ -110,7 +107,7 @@ export default function HomePage() {
               className="space-y-2"
               keyExtractor={(project) => project.id}
               renderItem={(project) => (
-                <Link key={project.id} href={`/projects/${project.id}`}>
+                <AppLink key={project.id} href={`/projects/${project.id}`}>
                   <InteractiveCard className="hover:border-brand-point-200">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
@@ -128,7 +125,7 @@ export default function HomePage() {
                       </div>
                     </CardContent>
                   </InteractiveCard>
-                </Link>
+                </AppLink>
               )}
             />
           ) : (
@@ -140,7 +137,7 @@ export default function HomePage() {
                   description="새 프로젝트를 만들어 시작하세요"
                   action={{
                     label: "새 프로젝트 만들기",
-                    onClick: () => router.push("/projects/new"),
+                    onClick: () => navigation.push("/projects/new"),
                   }}
                   size="sm"
                 />
@@ -148,8 +145,7 @@ export default function HomePage() {
             </Card>
           )}
         </div>
-        </div>
-      </PageTransition>
+      </div>
     </MobileLayout>
   );
 }
