@@ -12,7 +12,6 @@ from sqlmodel import select
 from app.core.database import get_async_db
 from app.core.security import get_current_user
 from app.core.exceptions import (
-    NotFoundException, 
     EstimateLockedException,
     NoPricebookActiveException,
 )
@@ -34,6 +33,7 @@ from app.models.estimate import (
 )
 from app.schemas.response import APIResponse, PaginatedResponse
 from app.services.pdf_generator import generate_estimate_pdf
+from app.services.referential_integrity import ensure_exists, ensure_exists_in_org
 
 router = APIRouter()
 
@@ -66,14 +66,7 @@ async def list_estimates(
     
     프로젝트의 모든 견적서를 조회해요.
     """
-    # 프로젝트 권한 확인
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("project", project_id)
+    await ensure_exists_in_org(db, Project, project_id, current_user, "project")
     
     # 견적서 목록 조회
     result = await db.execute(
@@ -102,16 +95,7 @@ async def create_estimate(
     AI 진단 결과를 바탕으로 견적서를 만들어요.
     단가는 프로젝트에 연결된 단가표 버전을 사용해요.
     """
-    # 프로젝트 확인
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("project", project_id)
+    project = await ensure_exists_in_org(db, Project, project_id, current_user, "project")
     
     if not project.pricebook_revision_id:
         raise NoPricebookActiveException()
@@ -138,51 +122,51 @@ async def create_estimate(
     
     # AI 진단 결과에서 자재 추천 가져오기
     if estimate_data.diagnosis_id:
-        diagnosis_result = await db.execute(
-            select(AIDiagnosis).where(AIDiagnosis.id == estimate_data.diagnosis_id)
+        diagnosis = await ensure_exists(
+            db,
+            AIDiagnosis,
+            estimate_data.diagnosis_id,
+            "diagnosis",
         )
-        diagnosis = diagnosis_result.scalar_one_or_none()
-        
-        if diagnosis:
-            await db.refresh(diagnosis, ["suggestions"])
-            
-            for idx, suggestion in enumerate(diagnosis.suggestions or []):
-                # 확인된 것만 포함 옵션
-                if estimate_data.include_confirmed_only and not suggestion.is_confirmed:
-                    continue
-                
-                # 카탈로그 품목 가격 조회
-                unit_price = Decimal("0")
-                if suggestion.matched_catalog_item_id:
-                    price_result = await db.execute(
-                        select(CatalogItemPrice)
-                        .where(
-                            CatalogItemPrice.catalog_item_id == suggestion.matched_catalog_item_id,
-                            CatalogItemPrice.pricebook_revision_id == project.pricebook_revision_id,
-                        )
+        await db.refresh(diagnosis, ["suggestions"])
+
+        for idx, suggestion in enumerate(diagnosis.suggestions or []):
+            # 확인된 것만 포함 옵션
+            if estimate_data.include_confirmed_only and not suggestion.is_confirmed:
+                continue
+
+            # 카탈로그 품목 가격 조회
+            unit_price = Decimal("0")
+            if suggestion.matched_catalog_item_id:
+                price_result = await db.execute(
+                    select(CatalogItemPrice)
+                    .where(
+                        CatalogItemPrice.catalog_item_id == suggestion.matched_catalog_item_id,
+                        CatalogItemPrice.pricebook_revision_id == project.pricebook_revision_id,
                     )
-                    price = price_result.scalar_one_or_none()
-                    if price:
-                        unit_price = price.unit_price
-                
-                quantity = suggestion.suggested_quantity or Decimal("1")
-                amount = quantity * unit_price
-                
-                line = EstimateLine(
-                    estimate_id=estimate.id,
-                    sort_order=idx + 1,
-                    description=suggestion.suggested_name,
-                    specification=suggestion.suggested_spec or "",
-                    unit=suggestion.suggested_unit or "EA",
-                    quantity=quantity,
-                    unit_price_snapshot=unit_price,
-                    amount=amount,
-                    catalog_item_id=suggestion.matched_catalog_item_id,
-                    source=LineSource.AI,
-                    ai_suggestion_id=suggestion.id,
                 )
-                db.add(line)
-                lines.append(line)
+                price = price_result.scalar_one_or_none()
+                if price:
+                    unit_price = price.unit_price
+
+            quantity = suggestion.suggested_quantity or Decimal("1")
+            amount = quantity * unit_price
+
+            line = EstimateLine(
+                estimate_id=estimate.id,
+                sort_order=idx + 1,
+                description=suggestion.suggested_name,
+                specification=suggestion.suggested_spec or "",
+                unit=suggestion.suggested_unit or "EA",
+                quantity=quantity,
+                unit_price_snapshot=unit_price,
+                amount=amount,
+                catalog_item_id=suggestion.matched_catalog_item_id,
+                source=LineSource.AI,
+                ai_suggestion_id=suggestion.id,
+            )
+            db.add(line)
+            lines.append(line)
     
     # 합계 계산
     subtotal = sum(line.amount for line in lines)
@@ -227,22 +211,8 @@ async def get_estimate(
     
     견적서 상세 정보와 모든 항목을 조회해요.
     """
-    result = await db.execute(
-        select(Estimate).where(Estimate.id == estimate_id)
-    )
-    estimate = result.scalar_one_or_none()
-    
-    if not estimate:
-        raise NotFoundException("estimate", estimate_id)
-    
-    # 프로젝트 권한 확인
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == estimate.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("estimate", estimate_id)
+    estimate = await ensure_exists(db, Estimate, estimate_id, "estimate")
+    await ensure_exists_in_org(db, Project, estimate.project_id, current_user, "project")
     
     # 항목 로드
     await db.refresh(estimate, ["lines"])
@@ -461,22 +431,8 @@ async def export_estimate(
     current_user: CurrentUser,
     format: str = Query(default="pdf", pattern="^(xlsx|pdf)$"),
 ):
-    result = await db.execute(
-        select(Estimate).where(Estimate.id == estimate_id)
-    )
-    estimate = result.scalar_one_or_none()
-    
-    if not estimate:
-        raise NotFoundException("estimate", estimate_id)
-    
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == estimate.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-    if not project:
-        raise NotFoundException("estimate", estimate_id)
+    estimate = await ensure_exists(db, Estimate, estimate_id, "estimate")
+    project = await ensure_exists_in_org(db, Project, estimate.project_id, current_user, "project")
     
     await db.refresh(estimate, ["lines"])
     
@@ -548,22 +504,8 @@ async def _get_editable_estimate(
     db: AsyncSession,
 ) -> Estimate:
     """수정 가능한 견적서 조회."""
-    result = await db.execute(
-        select(Estimate).where(Estimate.id == estimate_id)
-    )
-    estimate = result.scalar_one_or_none()
-    
-    if not estimate:
-        raise NotFoundException("estimate", estimate_id)
-    
-    # 권한 확인
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == estimate.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("estimate", estimate_id)
+    estimate = await ensure_exists(db, Estimate, estimate_id, "estimate")
+    await ensure_exists_in_org(db, Project, estimate.project_id, current_user, "project")
     
     # 발행 상태 확인
     if estimate.status != EstimateStatus.DRAFT:

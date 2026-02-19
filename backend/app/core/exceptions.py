@@ -36,6 +36,7 @@ class NotFoundException(SigongOnException):
         "photo": "사진을 찾을 수 없어요",
         "pricebook": "적산 자료를 찾을 수 없어요",
         "catalog_item": "품목을 찾을 수 없어요",
+        "customer_master": "발주처 정보를 찾을 수 없어요",
     }
     
     def __init__(self, resource: str, resource_id: Any):

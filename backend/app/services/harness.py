@@ -265,6 +265,8 @@ class HarnessService:
         return [
             self._check_router_async_only(),
             self._check_no_sync_session_usage(),
+            self._check_no_foreign_key_constraints(),
+            self._check_reference_id_indexes(),
             self._check_frontend_layer_boundaries(),
             self._check_engineering_docs_scaffold(),
         ]
@@ -357,6 +359,86 @@ class HarnessService:
             harness_type=HarnessType.CODE,
             status=HarnessCheckStatus.PASS,
             details="sync SQLAlchemy Session 사용 흔적이 없어요.",
+        )
+
+    def _check_no_foreign_key_constraints(self) -> HarnessCheckResult:
+        violations: list[str] = []
+        fk_patterns = [
+            re.compile(r"foreign_key\s*="),
+            re.compile(r"\bForeignKey\s*\("),
+            re.compile(r"\bREFERENCES\b", re.IGNORECASE),
+        ]
+
+        # Models must never declare FK constraints.
+        for file_path in sorted((self.backend_root / "app" / "models").glob("*.py")):
+            text = file_path.read_text(encoding="utf-8")
+            if any(pattern.search(text) for pattern in fk_patterns):
+                violations.append(str(file_path))
+
+        # Legacy migrations keep historical FK records; only block new revisions.
+        legacy_migrations = {
+            "001_initial_schema.py",
+            "002_add_as_request.py",
+        }
+        migration_root = self.backend_root / "alembic" / "versions"
+        if migration_root.exists():
+            for file_path in sorted(migration_root.glob("*.py")):
+                if file_path.name in legacy_migrations:
+                    continue
+                text = file_path.read_text(encoding="utf-8")
+                if any(pattern.search(text) for pattern in fk_patterns):
+                    violations.append(str(file_path))
+
+        if violations:
+            return HarnessCheckResult(
+                name="no_db_foreign_keys",
+                harness_type=HarnessType.CODE,
+                status=HarnessCheckStatus.FAIL,
+                details="DB FK 사용이 감지됐어요. 앱 레벨 정합성 정책을 따라야 해요.",
+                evidence=violations[:50],
+            )
+        return HarnessCheckResult(
+            name="no_db_foreign_keys",
+            harness_type=HarnessType.CODE,
+            status=HarnessCheckStatus.PASS,
+            details="모델/신규 마이그레이션에서 DB FK 사용이 감지되지 않았어요.",
+        )
+
+    def _check_reference_id_indexes(self) -> HarnessCheckResult:
+        violations: list[str] = []
+        field_pattern = re.compile(
+            r"(?P<name>\w+_id)\s*:\s*[^=]+=\s*Field\((?P<args>.*?)\)",
+            re.DOTALL,
+        )
+
+        for file_path in sorted((self.backend_root / "app" / "models").glob("*.py")):
+            text = file_path.read_text(encoding="utf-8")
+            for match in field_pattern.finditer(text):
+                field_name = match.group("name")
+                args = match.group("args")
+                if "sa_type=BigInteger" not in args and "Column(BigInteger" not in args:
+                    continue
+                if "primary_key=True" in args:
+                    continue
+                if "index=True" in args:
+                    continue
+                if "unique=True" in args:
+                    continue
+                violations.append(f"{file_path}:{field_name}")
+
+        if violations:
+            return HarnessCheckResult(
+                name="reference_id_indexes",
+                harness_type=HarnessType.CODE,
+                status=HarnessCheckStatus.FAIL,
+                details="일부 참조 컬럼(`*_id`)에 인덱스가 누락됐어요.",
+                evidence=violations[:100],
+            )
+        return HarnessCheckResult(
+            name="reference_id_indexes",
+            harness_type=HarnessType.CODE,
+            status=HarnessCheckStatus.PASS,
+            details="모든 참조 컬럼(`*_id`)에 인덱스가 설정되어 있어요.",
         )
 
     def _check_frontend_layer_boundaries(self) -> HarnessCheckResult:

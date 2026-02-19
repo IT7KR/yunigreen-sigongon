@@ -11,7 +11,6 @@ from app.core.config import settings
 from app.core.database import get_async_db
 from app.core.security import get_current_user
 from app.core.exceptions import (
-    NotFoundException, 
     FileTooLargeException, 
     InvalidFileTypeException,
 )
@@ -27,6 +26,7 @@ from app.models.project import (
     VisitType,
 )
 from app.schemas.response import APIResponse
+from app.services.referential_integrity import ensure_exists, ensure_exists_in_org
 from app.services.storage import storage_service
 
 router = APIRouter()
@@ -64,16 +64,7 @@ async def create_site_visit(
     
     프로젝트에 현장 방문 기록을 추가해요.
     """
-    # 프로젝트 확인
-    result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("project", project_id)
+    await ensure_exists_in_org(db, Project, project_id, current_user, "project")
     
     # 현장 방문 생성
     site_visit = SiteVisit(
@@ -115,16 +106,7 @@ async def list_site_visits(
     
     프로젝트의 모든 현장 방문 기록을 조회해요.
     """
-    # 프로젝트 확인
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("project", project_id)
+    await ensure_exists_in_org(db, Project, project_id, current_user, "project")
     
     # 방문 기록 조회
     result = await db.execute(
@@ -168,22 +150,8 @@ async def get_site_visit(
     
     현장 방문 기록의 상세 정보를 확인해요.
     """
-    result = await db.execute(
-        select(SiteVisit).where(SiteVisit.id == visit_id)
-    )
-    visit = result.scalar_one_or_none()
-    
-    if not visit:
-        raise NotFoundException("site_visit", visit_id)
-    
-    # 프로젝트 권한 확인
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == visit.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("site_visit", visit_id)
+    visit = await ensure_exists(db, SiteVisit, visit_id, "site_visit")
+    await ensure_exists_in_org(db, Project, visit.project_id, current_user, "project")
     
     await db.refresh(visit, ["photos"])
     
@@ -221,23 +189,8 @@ async def upload_photo(
     
     현장 방문에 사진을 올려요. JPEG, PNG, WebP 형식만 가능해요.
     """
-    # 현장 방문 확인
-    result = await db.execute(
-        select(SiteVisit).where(SiteVisit.id == visit_id)
-    )
-    visit = result.scalar_one_or_none()
-    
-    if not visit:
-        raise NotFoundException("site_visit", visit_id)
-    
-    # 프로젝트 권한 확인
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == visit.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("site_visit", visit_id)
+    visit = await ensure_exists(db, SiteVisit, visit_id, "site_visit")
+    await ensure_exists_in_org(db, Project, visit.project_id, current_user, "project")
     
     if not storage_service.validate_image(file):
         raise InvalidFileTypeException(["JPEG", "PNG", "WebP"])
@@ -286,23 +239,8 @@ async def list_photos(
     
     현장 방문에 올린 사진 목록을 조회해요.
     """
-    # 현장 방문 확인
-    result = await db.execute(
-        select(SiteVisit).where(SiteVisit.id == visit_id)
-    )
-    visit = result.scalar_one_or_none()
-    
-    if not visit:
-        raise NotFoundException("site_visit", visit_id)
-    
-    # 프로젝트 권한 확인
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == visit.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("site_visit", visit_id)
+    visit = await ensure_exists(db, SiteVisit, visit_id, "site_visit")
+    await ensure_exists_in_org(db, Project, visit.project_id, current_user, "project")
     
     # 사진 조회
     photos_result = await db.execute(
@@ -328,30 +266,9 @@ async def delete_photo(
     
     올린 사진을 삭제해요.
     """
-    result = await db.execute(
-        select(Photo).where(Photo.id == photo_id)
-    )
-    photo = result.scalar_one_or_none()
-    
-    if not photo:
-        raise NotFoundException("photo", photo_id)
-    
-    # 현장 방문 -> 프로젝트 권한 확인
-    visit_result = await db.execute(
-        select(SiteVisit).where(SiteVisit.id == photo.site_visit_id)
-    )
-    visit = visit_result.scalar_one_or_none()
-    
-    if not visit:
-        raise NotFoundException("photo", photo_id)
-    
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == visit.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("photo", photo_id)
+    photo = await ensure_exists(db, Photo, photo_id, "photo")
+    visit = await ensure_exists(db, SiteVisit, photo.site_visit_id, "site_visit")
+    await ensure_exists_in_org(db, Project, visit.project_id, current_user, "project")
     
     # 실제 파일 삭제
     if photo.storage_path:
