@@ -9,6 +9,22 @@
 - 버전 관리형 단가표 (연 2회 업데이트 대응)
 - 완전한 감사 추적 (audit trail)
 - RAG를 위한 벡터 임베딩 지원
+- DB FK 미사용 + 애플리케이션 레벨 참조 정합성 보장
+
+### 1.1 참조 정합성 원칙 (FK 미사용)
+
+- DB는 Foreign Key 제약을 두지 않습니다.
+- 참조 정합성은 서비스 레이어에서 검증합니다.
+  - 참조 대상 존재 여부
+  - 테넌트(organization) 경계
+  - 상태 전이/업무 규칙
+- 삭제 시점에는 서비스 레이어에서 자식 존재를 확인하고, 차단 또는 명시적 앱 캐스케이드를 적용합니다.
+
+### 1.2 인덱스 원칙
+
+- 참조 컬럼(`*_id`)은 단일 인덱스를 기본으로 생성합니다.
+- 목록/검색 API에서 함께 사용되는 필터·정렬 조합은 복합 인덱스로 보강합니다.
+- 인덱스 설계는 실제 쿼리 패턴(`WHERE`, `ORDER BY`) 기반으로 유지·보정합니다.
 
 ---
 
@@ -72,7 +88,7 @@ CREATE TABLE organization (
 -- 사용자
 CREATE TABLE "user" (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organization(id),
+    organization_id UUID NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     name VARCHAR(100) NOT NULL,
@@ -94,7 +110,7 @@ CREATE INDEX idx_user_email ON "user"(email);
 -- 프로젝트: 단일 공사 건
 CREATE TABLE project (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organization(id),
+    organization_id UUID NOT NULL,
     
     -- 기본 정보
     name VARCHAR(255) NOT NULL,
@@ -116,7 +132,7 @@ CREATE TABLE project (
         )),
     
     -- 단가표 버전 고정 (견적 정확성 핵심!)
-    pricebook_revision_id UUID REFERENCES pricebook_revision(id),
+    pricebook_revision_id UUID,
     
     -- 일자
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -127,7 +143,7 @@ CREATE TABLE project (
     warranty_expires_at TIMESTAMP,  -- 하자보증 만료일 (준공일 + 3년)
     
     -- 감사 정보
-    created_by UUID REFERENCES "user"(id),
+    created_by UUID,
     notes TEXT
 );
 
@@ -141,8 +157,8 @@ CREATE INDEX idx_project_status ON project(status);
 -- 현장방문: 기술자의 단일 현장 방문 기록
 CREATE TABLE site_visit (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-    technician_id UUID NOT NULL REFERENCES "user"(id),
+    project_id UUID NOT NULL,
+    technician_id UUID NOT NULL,
     
     visit_type VARCHAR(20) NOT NULL CHECK (visit_type IN (
         'initial',      -- 초기 조사
@@ -160,7 +176,7 @@ CREATE INDEX idx_site_visit_project ON site_visit(project_id);
 -- 사진: 현장방문 시 촬영한 이미지
 CREATE TABLE photo (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    site_visit_id UUID NOT NULL REFERENCES site_visit(id) ON DELETE CASCADE,
+    site_visit_id UUID NOT NULL,
     
     -- 파일 저장 정보
     storage_path VARCHAR(500) NOT NULL,  -- 예: /uploads/projects/{project_id}/{filename}
@@ -194,7 +210,7 @@ CREATE INDEX idx_photo_site_visit ON photo(site_visit_id);
 -- AI 진단: Gemini 분석 결과
 CREATE TABLE ai_diagnosis (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    site_visit_id UUID NOT NULL REFERENCES site_visit(id) ON DELETE CASCADE,
+    site_visit_id UUID NOT NULL,
     
     -- AI 모델 정보
     model_name VARCHAR(50) NOT NULL,  -- 예: 'gemini-3.0-flash'
@@ -226,7 +242,7 @@ CREATE INDEX idx_ai_diagnosis_site_visit ON ai_diagnosis(site_visit_id);
 -- AI 자재 추천: AI가 추천한 자재 목록
 CREATE TABLE ai_material_suggestion (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ai_diagnosis_id UUID NOT NULL REFERENCES ai_diagnosis(id) ON DELETE CASCADE,
+    ai_diagnosis_id UUID NOT NULL,
     
     -- AI의 원본 추천
     suggested_name VARCHAR(255) NOT NULL,  -- AI가 제안한 자재명
@@ -235,7 +251,7 @@ CREATE TABLE ai_material_suggestion (
     suggested_quantity DECIMAL(10, 2),     -- AI가 제안한 수량
     
     -- 우리 카탈로그와 매칭
-    matched_catalog_item_id UUID REFERENCES catalog_item(id),
+    matched_catalog_item_id UUID,
     match_confidence DECIMAL(3, 2),  -- 매칭 신뢰도 0.00 - 1.00
     match_method VARCHAR(20) CHECK (match_method IN (
         'exact',      -- 정확 일치
@@ -246,7 +262,7 @@ CREATE TABLE ai_material_suggestion (
     
     -- 검토용
     is_confirmed BOOLEAN DEFAULT FALSE,    -- 사용자 확인 여부
-    confirmed_by UUID REFERENCES "user"(id),
+    confirmed_by UUID,
     confirmed_at TIMESTAMP,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -274,7 +290,7 @@ CREATE TABLE pricebook (
 -- 단가표 버전: 특정 시점의 버전 (예: 2025년 하반기)
 CREATE TABLE pricebook_revision (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    pricebook_id UUID NOT NULL REFERENCES pricebook(id),
+    pricebook_id UUID NOT NULL,
     
     -- 버전 정보
     version_label VARCHAR(50) NOT NULL,  -- 예: '2025-H2', '2026-H1'
@@ -293,7 +309,7 @@ CREATE TABLE pricebook_revision (
     source_files JSONB,  -- [{ filename, storage_path, uploaded_at }]
     
     -- 메타데이터
-    created_by UUID REFERENCES "user"(id),
+    created_by UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     activated_at TIMESTAMP,   -- 활성화 시점
     deprecated_at TIMESTAMP,  -- 폐기 시점
@@ -343,8 +359,8 @@ CREATE INDEX idx_catalog_item_name ON catalog_item(name_ko);
 -- 카탈로그 항목 단가: 특정 버전에서의 특정 항목 가격
 CREATE TABLE catalog_item_price (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    pricebook_revision_id UUID NOT NULL REFERENCES pricebook_revision(id),
-    catalog_item_id UUID NOT NULL REFERENCES catalog_item(id),
+    pricebook_revision_id UUID NOT NULL,
+    catalog_item_id UUID NOT NULL,
     
     -- 가격
     unit_price DECIMAL(15, 2) NOT NULL,  -- 단가
@@ -369,7 +385,7 @@ CREATE INDEX idx_catalog_price_revision ON catalog_item_price(pricebook_revision
 -- 별칭은 AI 추천을 카탈로그 항목에 매핑하는 데 도움
 CREATE TABLE catalog_item_alias (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    catalog_item_id UUID NOT NULL REFERENCES catalog_item(id) ON DELETE CASCADE,
+    catalog_item_id UUID NOT NULL,
     
     alias_text VARCHAR(255) NOT NULL,      -- 별칭 텍스트
     normalized_text VARCHAR(255),          -- 정규화 (소문자, 트림)
@@ -397,13 +413,13 @@ CREATE INDEX idx_catalog_alias_text ON catalog_item_alias(normalized_text);
 -- 견적서: 프로젝트의 비용 견적
 CREATE TABLE estimate (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID NOT NULL REFERENCES project(id),
+    project_id UUID NOT NULL,
     
     -- 버전 관리 (프로젝트당 복수 견적 가능)
     version INTEGER NOT NULL DEFAULT 1,
     
     -- 단가표 참조 (핵심!)
-    pricebook_revision_id UUID NOT NULL REFERENCES pricebook_revision(id),
+    pricebook_revision_id UUID NOT NULL,
     
     -- 상태
     status VARCHAR(20) NOT NULL DEFAULT 'draft' 
@@ -426,8 +442,8 @@ CREATE TABLE estimate (
     issued_at TIMESTAMP,  -- 발행 시점
     
     -- 감사 정보
-    created_by UUID REFERENCES "user"(id),
-    issued_by UUID REFERENCES "user"(id),
+    created_by UUID,
+    issued_by UUID,
     
     notes TEXT,
     
@@ -444,13 +460,13 @@ CREATE INDEX idx_estimate_status ON estimate(status);
 -- 견적서 항목: 견적서의 개별 라인 아이템
 CREATE TABLE estimate_line (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    estimate_id UUID NOT NULL REFERENCES estimate(id) ON DELETE CASCADE,
+    estimate_id UUID NOT NULL,
     
     -- 항목 순서
     sort_order INTEGER NOT NULL DEFAULT 0,
     
     -- 항목 참조 (커스텀 항목은 nullable)
-    catalog_item_id UUID REFERENCES catalog_item(id),
+    catalog_item_id UUID,
     
     -- 항목 상세 (사용자 편집 가능)
     description VARCHAR(500) NOT NULL,  -- 품명
@@ -468,12 +484,12 @@ CREATE TABLE estimate_line (
         'manual',   -- 수동 입력
         'template'  -- 템플릿
     )),
-    ai_suggestion_id UUID REFERENCES ai_material_suggestion(id),
+    ai_suggestion_id UUID,
     
     -- 감사 정보
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_edited_by UUID REFERENCES "user"(id)
+    last_edited_by UUID
 );
 
 CREATE INDEX idx_estimate_line_estimate ON estimate_line(estimate_id);
@@ -485,8 +501,8 @@ CREATE INDEX idx_estimate_line_estimate ON estimate_line(estimate_id);
 -- 계약: 견적서 기반 법적 계약
 CREATE TABLE contract (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID NOT NULL REFERENCES project(id),
-    estimate_id UUID NOT NULL REFERENCES estimate(id),
+    project_id UUID NOT NULL,
+    estimate_id UUID NOT NULL,
     
     -- 계약 상세
     contract_number VARCHAR(50) UNIQUE,  -- 계약 번호
@@ -533,7 +549,7 @@ CREATE INDEX idx_contract_status ON contract(status);
 -- 일용직 계약
 CREATE TABLE labor_contract (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID NOT NULL REFERENCES project(id),
+    project_id UUID NOT NULL,
     
     -- 근로자 정보
     worker_name VARCHAR(100) NOT NULL,
@@ -560,7 +576,7 @@ CREATE TABLE labor_contract (
     signed_at TIMESTAMP,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID REFERENCES "user"(id)
+    created_by UUID
 );
 
 CREATE INDEX idx_labor_contract_project ON labor_contract(project_id);
@@ -578,7 +594,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- 문서 청크: RAG용 텍스트 청크
 CREATE TABLE document_chunk (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    pricebook_revision_id UUID REFERENCES pricebook_revision(id),
+    pricebook_revision_id UUID,
     
     -- 출처
     source_file VARCHAR(255),
@@ -611,7 +627,7 @@ CREATE TABLE audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- 누가
-    user_id UUID REFERENCES "user"(id),
+    user_id UUID,
     
     -- 무엇을
     table_name VARCHAR(100) NOT NULL,
@@ -637,24 +653,47 @@ CREATE INDEX idx_audit_log_time ON audit_log(created_at);
 
 ---
 
-## 9. 마이그레이션 전략
+## 9. 참조 정합성 및 인덱스 운영 정책
 
-### 9.1 초기 설정
+### 9.1 쓰기 경로 검증 규칙
+
+- Create/Update:
+  - 참조 대상 존재 확인
+  - 동일 organization 소속 여부 확인
+  - 상태 전이 가능 여부 확인
+- Delete:
+  - 자식 레코드 존재 시 차단 또는 명시적 앱 캐스케이드
+  - 감사 로그 기록
+
+### 9.2 권장 복합 인덱스 예시
+
+- `project (organization_id, status, created_at)`
+- `site_visit (project_id, visited_at)`
+- `photo (site_visit_id, created_at)`
+- `estimate (project_id, version)`
+- `estimate_line (estimate_id, sort_order)`
+
+---
+
+## 10. 마이그레이션 전략
+
+### 10.1 초기 설정
 ```bash
 # Alembic으로 마이그레이션 실행
 alembic upgrade head
 ```
 
-### 9.2 시드 데이터
+### 10.2 시드 데이터
 - 기본 조직 생성
 - 관리자 사용자 생성
 - PDF에서 초기 단가표 가져오기
 
 ---
 
-## 10. 버전 이력
+## 11. 버전 이력
 
 | 버전 | 날짜 | 변경 내용 |
 |-----|------|----------|
 | 0.1.0 | 2026-01-04 | 최초 스키마 설계 |
 | 0.2.0 | 2026-01-04 | 한글화 및 주석 보강 |
+| 0.3.0 | 2026-02-19 | DB FK 미사용 정책 및 앱 레벨 정합성/인덱스 운영 원칙 추가 |

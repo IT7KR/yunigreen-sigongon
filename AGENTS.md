@@ -28,12 +28,15 @@
 - AI 응답은 반드시 JSON 스키마로 강제 (`response_mime_type: "application/json"`)
 - AI 분석 실패 시 3단계 폴백: Gemini 3.0 → Gemini 2.0 → 수동 입력
 - 프롬프트는 버전 관리 (`backend/app/prompts/`)
+- 참조 정합성은 서비스 레이어에서 검증 (존재성, 조직 경계, 상태 전이)
+- 참조 컬럼(`*_id`)에는 인덱스를 반드시 추가
 
 ### Don'ts
 
 - AI로 수학 계산 수행 금지 (단가, 합계, 세금 등)
 - 동기(sync) DB 호출 사용 금지
 - 하드코딩된 단가 사용 금지 (항상 pricebook_revision 참조)
+- DB Foreign Key(FK) 제약 추가 금지
 
 ## 프로젝트 구조
 

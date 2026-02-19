@@ -65,6 +65,17 @@ Authorization: Bearer <access_token>
 GET /tasks/{task_id}/status
 ```
 
+### 1.6 참조 정합성 에러 규약
+
+DB FK 제약 대신 애플리케이션 레벨에서 정합성을 검증합니다.
+
+- 참조 대상 없음: `404 NOT_FOUND`
+  - 예: 존재하지 않는 `project_id`, `estimate_id`, `photo_id` 참조
+- 조직 경계 위반: `403 FORBIDDEN`
+  - 예: 타 조직 리소스를 연결/조회/수정 시도
+- 상태 전이/업무 규칙 충돌: `409 CONFLICT` 또는 도메인 전용 코드
+  - 예: 발행 완료 견적 수정, 이미 종료된 리소스 상태 변경
+
 ---
 
 ## 2. 인증 API
