@@ -269,6 +269,7 @@ export default function ProjectDetailPage({
         <CollapsibleCard
           title="기본 및 고객 정보"
           icon={<User className="h-5 w-5 text-slate-400" />}
+          summary={project.client_name ? `${project.client_name}` : undefined}
         >
           <div className="grid gap-6 py-2 sm:grid-cols-2">
             <div className="space-y-3">
@@ -292,6 +293,7 @@ export default function ProjectDetailPage({
         <CollapsibleCard
           title="현장대리인"
           icon={<HardHat className="h-5 w-5 text-slate-400" />}
+          summary={representativeInfo ? `${representativeInfo.name}` : "미배정"}
         >
           <div className="py-2">
             {representativeLoading ? (
@@ -319,6 +321,7 @@ export default function ProjectDetailPage({
         <CollapsibleCard
           title="진행 타임라인"
           icon={<CalendarDays className="h-5 w-5 text-slate-400" />}
+          summary={`현재: ${PROJECT_PHASE_LABELS[project.status]}`}
         >
           <div className="py-2">
             <ProjectWorkflowTimeline
@@ -343,11 +346,13 @@ function CollapsibleCard({
   icon,
   children,
   defaultOpen = false,
+  summary,
 }: {
   title: string;
   icon: ReactNode;
   children: ReactNode;
   defaultOpen?: boolean;
+  summary?: string;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
@@ -358,7 +363,12 @@ function CollapsibleCard({
       >
         <div className="flex items-center gap-2 font-semibold text-slate-900">
           {icon}
-          {title}
+          <span>{title}</span>
+          {summary && !isOpen && (
+            <span className="ml-2 text-sm font-normal text-slate-500">
+              ({summary})
+            </span>
+          )}
         </div>
         {isOpen ? (
           <ChevronUp className="h-4 w-4 text-slate-400" />
