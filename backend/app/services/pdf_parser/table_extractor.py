@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 from decimal import Decimal
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 try:
     import tabula
@@ -11,6 +12,10 @@ try:
     TABULA_AVAILABLE = True
 except ImportError:
     TABULA_AVAILABLE = False
+    pd = None  # type: ignore[assignment]
+
+if TYPE_CHECKING:
+    import pandas as pd  # noqa: F401
 
 
 @dataclass
@@ -45,7 +50,7 @@ class TableExtractor:
         if not self.pdf_path.exists():
             raise FileNotFoundError(f"PDF 파일을 찾을 수 없습니다: {pdf_path}")
     
-    def extract_all_tables(self) -> list[pd.DataFrame]:
+    def extract_all_tables(self) -> list["pd.DataFrame"]:
         """PDF의 모든 표 추출."""
         tables = tabula.read_pdf(
             str(self.pdf_path),
@@ -103,7 +108,7 @@ class TableExtractor:
         
         return items
     
-    def _normalize_table(self, table: pd.DataFrame) -> Optional[pd.DataFrame]:
+    def _normalize_table(self, table: Any) -> Optional[Any]:
         """표 정규화 - 헤더 찾기 및 컬럼명 매핑."""
         header_row_idx = None
         

@@ -1,9 +1,7 @@
 """단가표 DB 로더."""
 import uuid
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
-from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -14,11 +12,12 @@ from app.models.pricebook import (
     PricebookRevision,
     CatalogItem,
     CatalogItemPrice,
+    ItemType,
 )
 from app.models.rag import DocumentChunk
 
 from .table_extractor import TableExtractor, PriceItem
-from .text_extractor import TextExtractor, TextChunk
+from .text_extractor import TextExtractor
 
 
 class PricebookLoader:
@@ -80,7 +79,7 @@ class PricebookLoader:
                 id=generate_snowflake_id(),
                 name=name,
                 description=f"{name} 단가표",
-                is_active=True,
+                source_type="government",
             )
             self.db.add(pricebook)
             await self.db.flush()
@@ -95,13 +94,17 @@ class PricebookLoader:
         effective_until: Optional[datetime],
         source_files: list[str],
     ) -> PricebookRevision:
+        source_file_rows = [
+            {"path": path, "uploaded_at": datetime.utcnow().isoformat()}
+            for path in source_files
+        ]
         revision = PricebookRevision(
             id=generate_snowflake_id(),
             pricebook_id=pricebook_id,
             version_label=revision_code,
             effective_from=effective_from.date() if isinstance(effective_from, datetime) else effective_from,
             effective_to=effective_until.date() if effective_until and isinstance(effective_until, datetime) else effective_until,
-            source_files=source_files,
+            source_files=source_file_rows,
         )
         self.db.add(revision)
         await self.db.flush()
@@ -129,6 +132,8 @@ class PricebookLoader:
                 catalog_item_id=catalog_item.id,
                 pricebook_revision_id=revision_id,
                 unit_price=item.unit_price,
+                source_pdf_page=item.source_page,
+                source_row_text=f"{item.item_name} / {item.specification or '-'} / {item.unit}",
             )
             self.db.add(price)
             count += 1
@@ -142,23 +147,37 @@ class PricebookLoader:
             select(CatalogItem).where(
                 CatalogItem.name_ko == item.item_name,
                 CatalogItem.specification == item.specification,
+                CatalogItem.base_unit == item.unit,
             )
         )
         catalog_item = result.scalar_one_or_none()
         
         if catalog_item is None:
+            category_path = " > ".join(
+                part for part in [item.chapter, item.section] if part
+            )
             catalog_item = CatalogItem(
                 id=generate_snowflake_id(),
-                code=self._generate_item_code(item),
+                item_code=self._generate_item_code(item),
+                item_type=self._map_item_type(item.category),
                 name_ko=item.item_name,
                 specification=item.specification,
-                unit=item.unit,
-                category=item.category,
+                base_unit=item.unit,
+                category_path=category_path or item.category,
+                material_family=item.category,
+                is_active=True,
             )
             self.db.add(catalog_item)
             await self.db.flush()
         
         return catalog_item
+
+    def _map_item_type(self, category: str) -> ItemType:
+        if category == "labor":
+            return ItemType.LABOR
+        if category == "equipment":
+            return ItemType.EQUIPMENT
+        return ItemType.MATERIAL
     
     def _generate_item_code(self, item: PriceItem) -> str:
         """항목 코드 생성."""
@@ -194,10 +213,30 @@ class PricebookLoader:
                 source_page=chunk.page_number,
                 chapter=chunk.chapter,
                 section=chunk.section,
-                category=chunk.chunk_type,
+                category=f"{self._infer_doc_category(pdf_path)}:{chunk.chunk_type}",
             )
             self.db.add(doc_chunk)
             count += 1
         
         await self.db.flush()
         return count
+
+    def _infer_doc_category(self, pdf_path: str) -> str:
+        filename = pdf_path.lower()
+        if "공통" in filename:
+            return "common"
+        if "토목" in filename:
+            return "civil"
+        if "건축" in filename:
+            return "architecture"
+        if "기계화" in filename:
+            return "mechanized"
+        if "기계설비" in filename:
+            return "mechanical"
+        if "전기" in filename:
+            return "electrical"
+        if "경비분석" in filename:
+            return "cost_analysis"
+        if "관리자료" in filename:
+            return "management"
+        return "unknown"
