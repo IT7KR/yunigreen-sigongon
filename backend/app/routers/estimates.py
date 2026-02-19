@@ -1,7 +1,7 @@
 import io
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Optional
+from typing import Any, Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -32,6 +32,7 @@ from app.models.estimate import (
     LineSource,
 )
 from app.schemas.response import APIResponse, PaginatedResponse
+from app.schemas.vision import extract_vision_payload
 from app.services.pdf_generator import generate_estimate_pdf
 from app.services.referential_integrity import ensure_exists, ensure_exists_in_org
 
@@ -46,6 +47,9 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 class EstimateWithLines(EstimateRead):
     """견적서 + 항목 목록."""
     lines: list[EstimateLineRead] = []
+    range_total_min: Optional[Decimal] = None
+    range_total_max: Optional[Decimal] = None
+    range_unconfirmed_lines: int = 0
 
 
 class IssueResponse(EstimateRead):
@@ -118,7 +122,10 @@ async def create_estimate(
     db.add(estimate)
     await db.flush()  # ID 생성
     
-    lines = []
+    lines: list[EstimateLine] = []
+    range_total_min = Decimal("0")
+    range_total_max = Decimal("0")
+    range_unconfirmed_lines = 0
     
     # AI 진단 결과에서 자재 추천 가져오기
     if estimate_data.diagnosis_id:
@@ -130,43 +137,58 @@ async def create_estimate(
         )
         await db.refresh(diagnosis, ["suggestions"])
 
-        for idx, suggestion in enumerate(diagnosis.suggestions or []):
-            # 확인된 것만 포함 옵션
-            if estimate_data.include_confirmed_only and not suggestion.is_confirmed:
-                continue
+        mapped_lines, mapping_meta = await _build_lines_from_price_mappings(
+            db=db,
+            diagnosis=diagnosis,
+            estimate_id=estimate.id,
+            revision_id=project.pricebook_revision_id,
+        )
+        lines.extend(mapped_lines)
+        range_total_min += mapping_meta["range_total_min"]
+        range_total_max += mapping_meta["range_total_max"]
+        range_unconfirmed_lines += mapping_meta["unconfirmed_lines"]
 
-            # 카탈로그 품목 가격 조회
-            unit_price = Decimal("0")
-            if suggestion.matched_catalog_item_id:
-                price_result = await db.execute(
-                    select(CatalogItemPrice)
-                    .where(
-                        CatalogItemPrice.catalog_item_id == suggestion.matched_catalog_item_id,
-                        CatalogItemPrice.pricebook_revision_id == project.pricebook_revision_id,
+        # Backward compatibility: if structured mappings are absent, use legacy material suggestions.
+        if not lines:
+            for idx, suggestion in enumerate(diagnosis.suggestions or []):
+                # 확인된 것만 포함 옵션
+                if estimate_data.include_confirmed_only and not suggestion.is_confirmed:
+                    continue
+
+                # 카탈로그 품목 가격 조회
+                unit_price = Decimal("0")
+                if suggestion.matched_catalog_item_id:
+                    price_result = await db.execute(
+                        select(CatalogItemPrice)
+                        .where(
+                            CatalogItemPrice.catalog_item_id == suggestion.matched_catalog_item_id,
+                            CatalogItemPrice.pricebook_revision_id == project.pricebook_revision_id,
+                        )
                     )
+                    price = price_result.scalar_one_or_none()
+                    if price:
+                        unit_price = price.unit_price
+
+                quantity = suggestion.suggested_quantity or Decimal("1")
+                amount = quantity * unit_price
+
+                line = EstimateLine(
+                    estimate_id=estimate.id,
+                    sort_order=idx + 1,
+                    description=suggestion.suggested_name,
+                    specification=suggestion.suggested_spec or "",
+                    unit=suggestion.suggested_unit or "EA",
+                    quantity=quantity,
+                    unit_price_snapshot=unit_price,
+                    amount=amount,
+                    catalog_item_id=suggestion.matched_catalog_item_id,
+                    source=LineSource.AI,
+                    ai_suggestion_id=suggestion.id,
                 )
-                price = price_result.scalar_one_or_none()
-                if price:
-                    unit_price = price.unit_price
-
-            quantity = suggestion.suggested_quantity or Decimal("1")
-            amount = quantity * unit_price
-
-            line = EstimateLine(
-                estimate_id=estimate.id,
-                sort_order=idx + 1,
-                description=suggestion.suggested_name,
-                specification=suggestion.suggested_spec or "",
-                unit=suggestion.suggested_unit or "EA",
-                quantity=quantity,
-                unit_price_snapshot=unit_price,
-                amount=amount,
-                catalog_item_id=suggestion.matched_catalog_item_id,
-                source=LineSource.AI,
-                ai_suggestion_id=suggestion.id,
-            )
-            db.add(line)
-            lines.append(line)
+                db.add(line)
+                lines.append(line)
+                range_total_min += amount
+                range_total_max += amount
     
     # 합계 계산
     subtotal = sum(line.amount for line in lines)
@@ -176,6 +198,15 @@ async def create_estimate(
     estimate.subtotal = subtotal
     estimate.vat_amount = vat_amount
     estimate.total_amount = total_amount
+    if range_total_max > range_total_min or range_unconfirmed_lines > 0:
+        range_note = (
+            f"[자동산출] 범위합계 {range_total_min:,.0f}원 ~ {range_total_max:,.0f}원, "
+            f"미확정 항목 {range_unconfirmed_lines}건"
+        )
+        estimate.notes = (
+            f"{estimate.notes}\n{range_note}".strip()
+            if estimate.notes else range_note
+        )
     
     await db.commit()
     await db.refresh(estimate)
@@ -194,6 +225,9 @@ async def create_estimate(
             created_at=estimate.created_at,
             issued_at=estimate.issued_at,
             lines=[EstimateLineRead.model_validate(l) for l in lines],
+            range_total_min=range_total_min,
+            range_total_max=range_total_max,
+            range_unconfirmed_lines=range_unconfirmed_lines,
         )
     )
 
@@ -497,6 +531,127 @@ async def export_estimate_pdf_alias(
 
 
 # === Helper Functions ===
+
+async def _build_lines_from_price_mappings(
+    db: AsyncSession,
+    diagnosis: AIDiagnosis,
+    estimate_id: int,
+    revision_id: int,
+) -> tuple[list[EstimateLine], dict[str, Any]]:
+    raw_payload = diagnosis.raw_response_json if isinstance(diagnosis.raw_response_json, dict) else {}
+    vision = extract_vision_payload(raw_payload)
+    if not vision:
+        return [], {
+            "range_total_min": Decimal("0"),
+            "range_total_max": Decimal("0"),
+            "unconfirmed_lines": 0,
+        }
+
+    mappings = raw_payload.get("price_mappings", {})
+    mapping_rows = mappings.get("mappings", []) if isinstance(mappings, dict) else []
+    mapping_by_work_id: dict[str, dict[str, Any]] = {}
+    for row in mapping_rows:
+        if not isinstance(row, dict):
+            continue
+        work_id = row.get("work_id")
+        if isinstance(work_id, str):
+            mapping_by_work_id[work_id] = row
+
+    lines: list[EstimateLine] = []
+    range_total_min = Decimal("0")
+    range_total_max = Decimal("0")
+    unconfirmed_lines = 0
+    sort_order = 1
+
+    for work_item in vision.work_items:
+        work_id = work_item.work_id or ""
+        mapping_row = mapping_by_work_id.get(work_id)
+        selected = mapping_row.get("selected") if isinstance(mapping_row, dict) else None
+        if not isinstance(selected, dict):
+            unconfirmed_lines += 1
+            continue
+
+        selected_price_id = selected.get("catalog_item_price_id")
+        if not selected_price_id:
+            unconfirmed_lines += 1
+            continue
+
+        try:
+            selected_price_id_int = int(selected_price_id)
+        except (TypeError, ValueError):
+            unconfirmed_lines += 1
+            continue
+
+        price_result = await db.execute(
+            select(CatalogItemPrice, CatalogItem)
+            .join(CatalogItem, CatalogItem.id == CatalogItemPrice.catalog_item_id)
+            .where(
+                CatalogItemPrice.id == selected_price_id_int,
+                CatalogItemPrice.pricebook_revision_id == revision_id,
+            )
+        )
+        joined = price_result.first()
+        if not joined:
+            unconfirmed_lines += 1
+            continue
+        price_row, catalog_item = joined
+
+        quantity_value: Decimal
+        quantity_min: Decimal
+        quantity_max: Decimal
+        if work_item.quantity.value is not None:
+            quantity_value = Decimal(str(work_item.quantity.value))
+            quantity_min = quantity_value
+            quantity_max = quantity_value
+        elif work_item.quantity.range is not None:
+            quantity_min = Decimal(str(work_item.quantity.range.min))
+            quantity_max = Decimal(str(work_item.quantity.range.max))
+            quantity_value = quantity_min
+        else:
+            quantity_value = Decimal("0")
+            quantity_min = Decimal("0")
+            quantity_max = Decimal("0")
+            unconfirmed_lines += 1
+
+        unit_price = price_row.unit_price
+        amount = quantity_value * unit_price
+        range_total_min += quantity_min * unit_price
+        range_total_max += quantity_max * unit_price
+
+        source_ref = selected.get("source_ref", {}) if isinstance(selected, dict) else {}
+        source_page = source_ref.get("source_page") if isinstance(source_ref, dict) else None
+        specification_parts = [
+            catalog_item.specification or "",
+            work_item.scope_location or "",
+        ]
+        if source_page:
+            specification_parts.append(f"근거 p.{source_page}")
+        if quantity_max > quantity_min:
+            specification_parts.append(f"수량범위 {quantity_min}~{quantity_max}")
+        specification = " | ".join(part for part in specification_parts if part)
+
+        line = EstimateLine(
+            estimate_id=estimate_id,
+            sort_order=sort_order,
+            description=work_item.task or catalog_item.name_ko,
+            specification=specification,
+            unit=selected.get("unit") or catalog_item.base_unit,
+            quantity=quantity_value,
+            unit_price_snapshot=unit_price,
+            amount=amount,
+            catalog_item_id=catalog_item.id,
+            source=LineSource.AI,
+            ai_suggestion_id=None,
+        )
+        db.add(line)
+        lines.append(line)
+        sort_order += 1
+
+    return lines, {
+        "range_total_min": range_total_min,
+        "range_total_max": range_total_max,
+        "unconfirmed_lines": unconfirmed_lines,
+    }
 
 async def _get_editable_estimate(
     estimate_id: int,
