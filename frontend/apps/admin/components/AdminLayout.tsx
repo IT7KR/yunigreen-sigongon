@@ -23,7 +23,6 @@ import {
   UserPlus,
   ChevronDown,
   ChevronRight,
-  Sparkles,
 } from "lucide-react";
 import { Button, PrimitiveButton, cn } from "@sigongon/ui";
 import { useAuth } from "@/lib/auth";
@@ -46,9 +45,13 @@ const navItems = [
       { href: "/labor", label: "대시보드", icon: BarChart3 },
       { href: "/labor/payroll", label: "급여/근무 관리", icon: Calculator },
       { href: "/labor/workers", label: "근로자 주소록", icon: UserCheck },
-      { href: "/labor/representatives", label: "현장대리인 관리", icon: FileText },
       { href: "/labor/settings", label: "보험요율 설정", icon: Settings },
     ],
+  },
+  {
+    href: "/organization/field-representatives",
+    icon: FileText,
+    label: "현장대리인 명단",
   },
   {
     href: "/users",
@@ -70,8 +73,7 @@ const saNavItems = [
   { href: "/sa", icon: BarChart3, label: "플랫폼 현황", exact: true },
   { href: "/sa/tenants", icon: Building2, label: "고객사 관리" },
   { href: "/sa/users", icon: Users, label: "전체 사용자" },
-  { href: "/sa/seasons", icon: Sparkles, label: "시즌 관리" },
-  { href: "/sa/pricebooks", icon: FileSpreadsheet, label: "적산 자료" },
+  { href: "/sa/estimation-governance", icon: FileSpreadsheet, label: "적산 운영" },
   { href: "/sa/labor", icon: HardHat, label: "노무 관리" },
 ];
 

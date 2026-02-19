@@ -59,7 +59,7 @@ export default function PricebookUploadPage() {
       if (response.success) {
         toast.success("업로드를 시작했어요.");
         setTimeout(() => {
-          router.push("/sa/pricebooks");
+          router.push("/sa/estimation-governance");
         }, 500);
       } else {
         toast.error("업로드에 실패했어요. 다시 시도해 주세요.");

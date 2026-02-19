@@ -74,8 +74,8 @@ export default function CasesPage() {
               ) : (
                 <Badge variant="warning">없음</Badge>
               )}
-              <Link className="ml-2 text-sm text-brand-point-600 hover:underline" href="/sa/seasons">
-                시즌 관리
+              <Link className="ml-2 text-sm text-brand-point-600 hover:underline" href="/sa/estimation-governance">
+                적산 운영
               </Link>
             </div>
           </CardContent>
