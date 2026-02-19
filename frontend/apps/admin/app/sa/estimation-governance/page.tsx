@@ -18,7 +18,6 @@ import {
 } from "@sigongon/ui";
 import type {
   EstimationGovernanceOverview,
-  SeasonCategoryPurpose,
   SeasonCategoryInfo,
   SeasonDocumentInfo,
   SeasonDocumentStatus,
@@ -40,8 +39,7 @@ const DONE_DOCUMENT_LABEL = "인덱싱 완료 문서";
 const STEPS = [
   { id: 1, label: "요약" },
   { id: 2, label: "시즌" },
-  { id: 3, label: "카테고리" },
-  { id: 4, label: "적산 문서" },
+  { id: 3, label: "적산 문서" },
 ] as const;
 
 type StepId = (typeof STEPS)[number]["id"];
@@ -49,13 +47,15 @@ type StepId = (typeof STEPS)[number]["id"];
 const STEP_DESCRIPTIONS: Record<StepId, string> = {
   1: "현재 반영 상태를 확인하고 문제를 먼저 파악합니다.",
   2: "견적에 반영할 시즌을 선택하거나 신규 시즌을 생성합니다.",
-  3: "시즌 내 문서 묶음(카테고리)의 사용 여부를 확정합니다.",
-  4: "PDF 문서를 첨부하고 인덱싱 상태를 관리합니다.",
+  3: "PDF 문서를 첨부하고 인덱싱 상태를 관리합니다.",
 };
 
 const DOC_STATUS_CONFIG: Record<
   SeasonDocumentStatus,
-  { label: string; variant: "default" | "success" | "warning" | "error" | "info" }
+  {
+    label: string;
+    variant: "default" | "success" | "warning" | "error" | "info";
+  }
 > = {
   queued: { label: "대기", variant: "default" },
   running: { label: "인덱싱 중", variant: "info" },
@@ -63,36 +63,8 @@ const DOC_STATUS_CONFIG: Record<
   failed: { label: "실패", variant: "error" },
 };
 
-const PURPOSE_LABELS: Record<SeasonCategoryPurpose, string> = {
-  estimation: "견적 반영용",
-  labor_rule: "노무 규정용",
-  legal: "법규 검토용",
-  safety: "안전 관리용",
-};
-
-const PURPOSE_DESCRIPTIONS: Record<SeasonCategoryPurpose, string> = {
-  estimation: "활성화된 문서만 견적 산출에 반영됩니다.",
-  labor_rule: "노무 관련 기준·규정 확인에 사용됩니다.",
-  legal: "법적 기준 및 계약 검토에 사용됩니다.",
-  safety: "안전 기준 및 점검 항목 확인에 사용됩니다.",
-};
-
-function getPurposeLabel(purpose: SeasonCategoryPurpose): string {
-  return PURPOSE_LABELS[purpose] || "기타";
-}
-
-function getPurposeDescription(purpose: SeasonCategoryPurpose): string {
-  return PURPOSE_DESCRIPTIONS[purpose] || "운영 정책에 따라 사용됩니다.";
-}
-
 type PendingAction =
   | { type: "activate-season"; season: SeasonInfo }
-  | {
-      type: "toggle-category";
-      category: SeasonCategoryInfo;
-      nextEnabled: boolean;
-      enabledCategoryCount: number;
-    }
   | {
       type: "toggle-document";
       document: SeasonDocumentInfo;
@@ -109,34 +81,25 @@ function resolvePendingActionConfig(pendingAction: PendingAction) {
     return {
       title: `${pendingAction.season.name} 시즌을 활성화할까요?`,
       description:
-        "활성 시즌 전환 즉시 견적 반영 세트가 바뀌어요. 전환 후에는 해당 시즌의 활성 카테고리 + 인덱싱 완료된 활성 문서만 견적에 사용됩니다.",
+        "활성 시즌 전환 즉시 견적 반영 세트가 바뀌어요. 전환 후에는 해당 시즌의 활성 문서 분류 + 인덱싱 완료된 활성 문서만 견적에 사용됩니다.",
       confirmLabel: "시즌 활성화",
       variant: "default" as const,
     };
   }
 
-  if (pendingAction.type === "toggle-category") {
-    const isDisabling = !pendingAction.nextEnabled;
-    const isLastEnabled = isDisabling && pendingAction.enabledCategoryCount <= 1;
-    return {
-      title: `카테고리를 ${pendingAction.nextEnabled ? "활성화" : "비활성화"}할까요?`,
-      description: isLastEnabled
-        ? "마지막 활성 카테고리를 비활성화하면 견적 반영 세트가 비어 견적 생성이 중단돼요."
-        : "카테고리 상태 변경은 즉시 견적 반영 세트에 적용돼요.",
-      confirmLabel: pendingAction.nextEnabled ? "활성화" : "비활성화",
-      variant: isDisabling ? ("destructive" as const) : ("default" as const),
-    };
-  }
-
   const isDisabling = !pendingAction.nextEnabled;
-  const isLastEnabledDocument = isDisabling && pendingAction.enabledDocumentCount <= 1;
-  const isLastDoneDocument = isDisabling && pendingAction.doneEnabledDocumentCount <= 1;
+  const isLastEnabledDocument =
+    isDisabling && pendingAction.enabledDocumentCount <= 1;
+  const isLastDoneDocument =
+    isDisabling && pendingAction.doneEnabledDocumentCount <= 1;
   let description = "문서 상태 변경은 즉시 견적 반영 세트에 적용돼요.";
 
   if (isLastEnabledDocument) {
-    description = "마지막 활성 문서를 비활성화하면 견적 반영 세트가 비어져 견적 생성이 중단돼요.";
+    description =
+      "마지막 활성 문서를 비활성화하면 견적 반영 세트가 비어져 견적 생성이 중단돼요.";
   } else if (isLastDoneDocument) {
-    description = "인덱싱 완료된 활성 문서가 없어져 견적 생성이 중단될 수 있어요.";
+    description =
+      "인덱싱 완료된 활성 문서가 없어져 견적 생성이 중단될 수 있어요.";
   }
 
   return {
@@ -154,17 +117,20 @@ function deriveTitleFromFileName(fileName: string): string {
 
 export default function SAEstimationGovernancePage() {
   const [seasons, setSeasons] = useState<SeasonInfo[]>([]);
-  const [overview, setOverview] = useState<EstimationGovernanceOverview | null>(null);
+  const [overview, setOverview] = useState<EstimationGovernanceOverview | null>(
+    null,
+  );
   const [categories, setCategories] = useState<SeasonCategoryInfo[]>([]);
   const [documents, setDocuments] = useState<SeasonDocumentInfo[]>([]);
 
   const [activeStep, setActiveStep] = useState<StepId>(1);
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
   const [newSeasonName, setNewSeasonName] = useState("");
   const [docTitle, setDocTitle] = useState("");
-  const [selectedDocumentFile, setSelectedDocumentFile] = useState<File | null>(null);
+  const [selectedDocumentFile, setSelectedDocumentFile] = useState<File | null>(
+    null,
+  );
   const [fileUploadResetKey, setFileUploadResetKey] = useState(0);
 
   const [isBootLoading, setIsBootLoading] = useState(true);
@@ -190,16 +156,21 @@ export default function SAEstimationGovernancePage() {
     return new Map(seasons.map((season) => [season.id, season.name]));
   }, [seasons]);
 
-  const enabledCategoryCount = categories.filter((category) => category.is_enabled).length;
-  const enabledDocumentCount = documents.filter((document) => document.is_enabled).length;
+  const enabledCategoryCount = categories.filter(
+    (category) => category.is_enabled,
+  ).length;
+  const enabledDocumentCount = documents.filter(
+    (document) => document.is_enabled,
+  ).length;
   const doneEnabledDocumentCount = documents.filter(
     (document) => document.is_enabled && document.status === "done",
   ).length;
 
-  const selectedSeason = seasons.find((season) => season.id === selectedSeasonId) || null;
-  const overviewDoneEnabledDocuments = (overview?.enabled_documents || []).filter(
-    (document) => document.status === "done",
-  );
+  const selectedSeason =
+    seasons.find((season) => season.id === selectedSeasonId) || null;
+  const overviewDoneEnabledDocuments = (
+    overview?.enabled_documents || []
+  ).filter((document) => document.status === "done");
   const hasActiveSeason = Boolean(overview?.active_season);
   const isEstimateReady =
     hasActiveSeason &&
@@ -232,8 +203,10 @@ export default function SAEstimationGovernancePage() {
         api.getEstimationGovernanceOverview(),
       ]);
 
-      const nextSeasons = seasonRes.success && seasonRes.data ? seasonRes.data : [];
-      const nextOverview = overviewRes.success && overviewRes.data ? overviewRes.data : null;
+      const nextSeasons =
+        seasonRes.success && seasonRes.data ? seasonRes.data : [];
+      const nextOverview =
+        overviewRes.success && overviewRes.data ? overviewRes.data : null;
       setSeasons(nextSeasons);
       setOverview(nextOverview);
 
@@ -246,7 +219,6 @@ export default function SAEstimationGovernancePage() {
 
       if (resolvedSeasonId === null) {
         setSelectedSeasonId(null);
-        setSelectedCategoryId(null);
         setCategories([]);
         setDocuments([]);
         return;
@@ -276,22 +248,17 @@ export default function SAEstimationGovernancePage() {
         }),
       ]);
 
-      const nextCategories = categoryRes.success && categoryRes.data ? categoryRes.data : [];
-      const nextDocuments = documentRes.success && documentRes.data ? documentRes.data : [];
+      const nextCategories =
+        categoryRes.success && categoryRes.data ? categoryRes.data : [];
+      const nextDocuments =
+        documentRes.success && documentRes.data ? documentRes.data : [];
       setCategories(nextCategories);
       setDocuments(nextDocuments);
-      setSelectedCategoryId((prev) => {
-        if (prev && nextCategories.some((category) => category.id === prev)) {
-          return prev;
-        }
-        return nextCategories[0]?.id ?? null;
-      });
     } catch (err) {
       console.error("시즌 상세 데이터를 불러오지 못했습니다:", err);
       toast.error("선택한 시즌의 상세 데이터를 불러오지 못했어요.");
       setCategories([]);
       setDocuments([]);
-      setSelectedCategoryId(null);
     } finally {
       setIsScopedLoading(false);
     }
@@ -335,15 +302,6 @@ export default function SAEstimationGovernancePage() {
     setPendingAction({ type: "activate-season", season });
   }
 
-  function openToggleCategoryDialog(category: SeasonCategoryInfo) {
-    setPendingAction({
-      type: "toggle-category",
-      category,
-      nextEnabled: !category.is_enabled,
-      enabledCategoryCount,
-    });
-  }
-
   function openToggleDocumentDialog(document: SeasonDocumentInfo) {
     setPendingAction({
       type: "toggle-document",
@@ -367,10 +325,6 @@ export default function SAEstimationGovernancePage() {
       toast.error("시즌을 선택해 주세요.");
       return;
     }
-    if (!selectedCategoryId) {
-      toast.error("카테고리를 선택해 주세요.");
-      return;
-    }
     if (!selectedDocumentFile) {
       toast.error("업로드할 PDF 파일을 선택해 주세요.");
       return;
@@ -380,8 +334,8 @@ export default function SAEstimationGovernancePage() {
     try {
       const uploadRes = await api.uploadAdminDocumentFile({
         season_id: selectedSeasonId,
-        category_id: selectedCategoryId,
-        title: docTitle.trim() || deriveTitleFromFileName(selectedDocumentFile.name),
+        title:
+          docTitle.trim() || deriveTitleFromFileName(selectedDocumentFile.name),
         file: selectedDocumentFile,
       });
 
@@ -424,25 +378,17 @@ export default function SAEstimationGovernancePage() {
         }
         toast.success("시즌을 활성화했어요.");
         await refreshContext(pendingAction.season.id);
-      } else if (pendingAction.type === "toggle-category") {
-        const response = await api.updateAdminSeasonCategory(
-          pendingAction.category.id,
-          { is_enabled: pendingAction.nextEnabled },
-        );
-        if (!response.success) {
-          toast.error(response.error?.message || "카테고리 상태 변경에 실패했어요.");
-          return;
-        }
-        toast.success(
-          `카테고리를 ${pendingAction.nextEnabled ? "활성화" : "비활성화"}했어요.`,
-        );
-        await refreshContext(selectedSeasonId);
       } else {
-        const response = await api.updateAdminDocument(pendingAction.document.id, {
-          is_enabled: pendingAction.nextEnabled,
-        });
+        const response = await api.updateAdminDocument(
+          pendingAction.document.id,
+          {
+            is_enabled: pendingAction.nextEnabled,
+          },
+        );
         if (!response.success) {
-          toast.error(response.error?.message || "문서 상태 변경에 실패했어요.");
+          toast.error(
+            response.error?.message || "문서 상태 변경에 실패했어요.",
+          );
           return;
         }
         toast.success(
@@ -488,7 +434,9 @@ export default function SAEstimationGovernancePage() {
           </p>
           <p
             className={
-              isEstimateReady ? "mt-1 text-xs text-green-800" : "mt-1 text-xs text-amber-900"
+              isEstimateReady
+                ? "mt-1 text-xs text-green-800"
+                : "mt-1 text-xs text-amber-900"
             }
           >
             {readinessReason}
@@ -496,12 +444,14 @@ export default function SAEstimationGovernancePage() {
         </div>
         <div className="rounded-lg border border-slate-200 p-3">
           <p className="text-xs text-slate-500">선택된 시즌</p>
-          <p className="mt-1 font-medium text-slate-900">{selectedSeason?.name || "없음"}</p>
+          <p className="mt-1 font-medium text-slate-900">
+            {selectedSeason?.name || "없음"}
+          </p>
         </div>
         <div className="rounded-lg border border-slate-200 p-3">
           <div className="flex items-center gap-2 text-slate-900">
             <Layers className="h-4 w-4 text-slate-500" />
-            <span>활성 카테고리 {enabledCategoryCount}개</span>
+            <span>활성 문서 분류 {enabledCategoryCount}개</span>
           </div>
           <div className="mt-1 flex items-center gap-2 text-slate-900">
             <FileSpreadsheet className="h-4 w-4 text-slate-500" />
@@ -509,7 +459,9 @@ export default function SAEstimationGovernancePage() {
           </div>
           <div className="mt-1 flex items-center gap-2 text-slate-900">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <span>{DONE_DOCUMENT_LABEL} {doneEnabledDocumentCount}개</span>
+            <span>
+              {DONE_DOCUMENT_LABEL} {doneEnabledDocumentCount}개
+            </span>
           </div>
         </div>
       </CardContent>
@@ -523,7 +475,8 @@ export default function SAEstimationGovernancePage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">적산 운영</h1>
             <p className="mt-1 text-sm text-slate-600">
-              활성 시즌 + 활성 카테고리 + 인덱싱 완료된 활성 문서 조합이 현재 견적 반영 세트입니다.
+              활성 시즌 + 활성 문서 분류 + 인덱싱 완료된 활성 문서 조합이 현재
+              견적 반영 세트입니다.
             </p>
           </div>
           <Button
@@ -554,22 +507,35 @@ export default function SAEstimationGovernancePage() {
               >
                 {isEstimateReady ? "견적 반영 가능" : "견적 반영 점검 필요"}
               </p>
-              <p className={isEstimateReady ? "text-xs text-green-800" : "text-xs text-amber-900"}>
+              <p
+                className={
+                  isEstimateReady
+                    ? "text-xs text-green-800"
+                    : "text-xs text-amber-900"
+                }
+              >
                 {readinessReason}
               </p>
             </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <p className="text-xs text-slate-500">활성 시즌</p>
-                <p className="text-sm font-semibold text-slate-900">{overview?.active_season?.name || "없음"}</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {overview?.active_season?.name || "없음"}
+                </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <p className="text-xs text-slate-500">반영 문서(인덱싱 완료)</p>
-                <p className="text-sm font-semibold text-slate-900">{overviewDoneEnabledDocuments.length.toLocaleString()}개</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {overviewDoneEnabledDocuments.length.toLocaleString()}개
+                </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <p className="text-xs text-slate-500">반영 적산 항목</p>
-                <p className="text-sm font-semibold text-slate-900">{(overview?.effective_cost_item_count || 0).toLocaleString()}개</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {(overview?.effective_cost_item_count || 0).toLocaleString()}
+                  개
+                </p>
               </div>
             </div>
           </CardContent>
@@ -581,8 +547,12 @@ export default function SAEstimationGovernancePage() {
               <div className="flex items-start gap-2">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-amber-900">운영 경고 {overview.health_warnings.length}건</p>
-                  <p className="text-xs text-amber-900">{overview.health_warnings[0].message}</p>
+                  <p className="text-sm font-medium text-amber-900">
+                    운영 경고 {overview.health_warnings.length}건
+                  </p>
+                  <p className="text-xs text-amber-900">
+                    {overview.health_warnings[0].message}
+                  </p>
                 </div>
                 {overview.health_warnings.length > 1 && (
                   <Button
@@ -597,7 +567,9 @@ export default function SAEstimationGovernancePage() {
               {isWarningsExpanded && overview.health_warnings.length > 1 && (
                 <div className="space-y-1 pl-6">
                   {overview.health_warnings.slice(1).map((warning) => (
-                    <p key={warning.code} className="text-xs text-amber-900">• {warning.message}</p>
+                    <p key={warning.code} className="text-xs text-amber-900">
+                      • {warning.message}
+                    </p>
                   ))}
                 </div>
               )}
@@ -625,7 +597,9 @@ export default function SAEstimationGovernancePage() {
                         <Button
                           key={step.id}
                           size="sm"
-                          variant={activeStep === step.id ? "primary" : "outline"}
+                          variant={
+                            activeStep === step.id ? "primary" : "outline"
+                          }
                           onClick={() => moveStep(step.id)}
                           className="min-h-12 min-w-[7rem]"
                         >
@@ -635,7 +609,7 @@ export default function SAEstimationGovernancePage() {
                     </div>
                   </div>
                   <p className="mt-3 text-xs text-slate-500">
-                    현재 단계 {activeStep}/4 · {STEP_DESCRIPTIONS[activeStep]}
+                    현재 단계 {activeStep}/3 · {STEP_DESCRIPTIONS[activeStep]}
                   </p>
                 </CardContent>
               </Card>
@@ -649,17 +623,24 @@ export default function SAEstimationGovernancePage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-slate-700">
-                      현재 반영 규칙은 <strong>활성 시즌 + 활성 카테고리 + 인덱싱 완료된 활성 문서</strong> 입니다.
+                      현재 반영 규칙은{" "}
+                      <strong>
+                        활성 시즌 + 활성 문서 분류 + 인덱싱 완료된 활성 문서
+                      </strong>{" "}
+                      입니다.
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <div className="rounded-lg border border-slate-200 p-3">
                         <p className="text-xs text-slate-500">선택된 시즌</p>
-                        <p className="mt-1 text-sm font-medium text-slate-900">{selectedSeason?.name || "없음"}</p>
+                        <p className="mt-1 text-sm font-medium text-slate-900">
+                          {selectedSeason?.name || "없음"}
+                        </p>
                       </div>
                       <div className="rounded-lg border border-slate-200 p-3">
-                        <p className="text-xs text-slate-500">활성 카테고리/인덱싱 완료 문서</p>
+                        <p className="text-xs text-slate-500">활성 문서 분류/인덱싱 완료 문서</p>
                         <p className="mt-1 text-sm font-medium text-slate-900">
-                          {enabledCategoryCount}개 / {doneEnabledDocumentCount}개
+                          {enabledCategoryCount}개 / {doneEnabledDocumentCount}
+                          개
                         </p>
                       </div>
                     </div>
@@ -668,7 +649,7 @@ export default function SAEstimationGovernancePage() {
                         시즌 설정으로 이동
                         <ChevronRight className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" onClick={() => moveStep(4)}>
+                      <Button variant="outline" onClick={() => moveStep(3)}>
                         문서 첨부로 이동
                       </Button>
                     </div>
@@ -682,7 +663,7 @@ export default function SAEstimationGovernancePage() {
                     <CardTitle>시즌</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                       <Input
                         id="new-season-name"
                         name="newSeasonName"
@@ -690,7 +671,9 @@ export default function SAEstimationGovernancePage() {
                         label="새 시즌명"
                         placeholder="예: 2026H2"
                         value={newSeasonName}
-                        onChange={(event) => setNewSeasonName(event.target.value)}
+                        onChange={(event) =>
+                          setNewSeasonName(event.target.value)
+                        }
                       />
                       <Button
                         onClick={() => void handleCreateSeason()}
@@ -704,20 +687,35 @@ export default function SAEstimationGovernancePage() {
 
                     <div className="space-y-2">
                       {seasons.length === 0 ? (
-                        <p className="text-sm text-slate-500">등록된 시즌이 없어요.</p>
+                        <p className="text-sm text-slate-500">
+                          등록된 시즌이 없어요.
+                        </p>
                       ) : (
                         seasons.map((season) => (
-                          <div key={season.id} className="rounded-lg border border-slate-200 p-3">
+                          <div
+                            key={season.id}
+                            className="rounded-lg border border-slate-200 p-3"
+                          >
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <button
                                 type="button"
-                                onClick={() => void handleSelectSeason(season.id)}
+                                onClick={() =>
+                                  void handleSelectSeason(season.id)
+                                }
                                 className="text-left"
                               >
-                                <p className="text-sm font-medium text-slate-900">{season.name}</p>
-                                <p className="text-xs text-slate-500">생성: {formatDate(season.created_at)}</p>
+                                <p className="text-sm font-medium text-slate-900">
+                                  {season.name}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  생성: {formatDate(season.created_at)}
+                                </p>
                               </button>
-                              <Badge variant={season.is_active ? "success" : "default"}>
+                              <Badge
+                                variant={
+                                  season.is_active ? "success" : "default"
+                                }
+                              >
                                 {season.is_active ? "활성" : "비활성"}
                               </Badge>
                             </div>
@@ -738,7 +736,7 @@ export default function SAEstimationGovernancePage() {
 
                     <div className="flex justify-end">
                       <Button variant="outline" onClick={() => moveStep(3)}>
-                        다음: 카테고리
+                        다음: 적산 문서
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -749,26 +747,22 @@ export default function SAEstimationGovernancePage() {
               {activeStep === 3 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>카테고리</CardTitle>
+                    <CardTitle>적산 문서 (파일 첨부 기반)</CardTitle>
                   </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-sm font-medium text-slate-900">카테고리란?</p>
-                    <p className="mt-1 text-sm text-slate-700">
-                      카테고리는 적산 문서를 업무 용도별로 묶는 단위입니다. 현재 견적 계산에는{" "}
-                      <strong>{getPurposeLabel(ESTIMATION_PURPOSE)}</strong> 카테고리의 활성 문서만 사용됩니다.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="category-season-select" className="text-xs text-slate-500">
-                      대상 시즌
-                    </label>
-                    <select
-                      id="category-season-select"
-                      name="categorySeason"
-                      className="h-12 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
-                      value={selectedSeasonId ?? ""}
-                      onChange={(event) => {
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="document-season-select"
+                        className="text-xs text-slate-500"
+                      >
+                        대상 시즌
+                      </label>
+                      <select
+                        id="document-season-select"
+                        name="documentSeason"
+                        className="h-12 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+                        value={selectedSeasonId ?? ""}
+                        onChange={(event) => {
                           const value = Number(event.target.value);
                           if (!value) return;
                           void handleSelectSeason(value);
@@ -782,102 +776,10 @@ export default function SAEstimationGovernancePage() {
                       </select>
                     </div>
 
-                    {isScopedLoading ? (
-                      <p className="text-sm text-slate-500">불러오는 중...</p>
-                    ) : categories.length === 0 ? (
-                      <p className="text-sm text-slate-500">카테고리가 없어요.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {categories.map((category) => (
-                          <div key={category.id} className="rounded-lg border border-slate-200 p-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div>
-                                <p className="text-sm font-medium text-slate-900">{category.name}</p>
-                                <p className="text-xs text-slate-500">
-                                  용도: {getPurposeLabel(category.purpose)}
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                  {getPurposeDescription(category.purpose)}
-                                </p>
-                              </div>
-                              <Badge variant={category.is_enabled ? "success" : "default"}>
-                                {category.is_enabled ? "활성" : "비활성"}
-                              </Badge>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant={category.is_enabled ? "outline" : "secondary"}
-                              className="mt-2"
-                              onClick={() => openToggleCategoryDialog(category)}
-                            >
-                              {category.is_enabled ? "비활성화" : "활성화"}
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex justify-end">
-                      <Button variant="outline" onClick={() => moveStep(4)}>
-                        다음: 적산 문서
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {activeStep === 4 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>적산 문서 (파일 첨부 기반)</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label htmlFor="document-season-select" className="text-xs text-slate-500">
-                          대상 시즌
-                        </label>
-                        <select
-                          id="document-season-select"
-                          name="documentSeason"
-                          className="h-12 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
-                          value={selectedSeasonId ?? ""}
-                          onChange={(event) => {
-                            const value = Number(event.target.value);
-                            if (!value) return;
-                            void handleSelectSeason(value);
-                          }}
-                        >
-                          {seasons.map((season) => (
-                            <option key={season.id} value={season.id}>
-                              {season.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="document-category-select" className="text-xs text-slate-500">
-                          카테고리
-                        </label>
-                        <select
-                          id="document-category-select"
-                          name="documentCategory"
-                          className="h-12 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
-                          value={selectedCategoryId ?? ""}
-                          onChange={(event) => {
-                            const value = Number(event.target.value);
-                            setSelectedCategoryId(value || null);
-                          }}
-                        >
-                          <option value="">카테고리 선택</option>
-                          {categories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs text-slate-700">
+                        문서는 선택한 시즌의 기본 문서 분류에 자동 등록됩니다.
+                      </p>
                     </div>
 
                     <div className="rounded-lg border border-slate-200 p-3">
@@ -905,7 +807,7 @@ export default function SAEstimationGovernancePage() {
                     <Button
                       onClick={() => void handleUploadDocument()}
                       loading={isCreatingDocument}
-                      disabled={!selectedSeasonId || !selectedCategoryId || !selectedDocumentFile}
+                      disabled={!selectedSeasonId || !selectedDocumentFile}
                       className="min-h-12 w-full"
                     >
                       문서 첨부 + 인덱싱 시작
@@ -915,31 +817,52 @@ export default function SAEstimationGovernancePage() {
                       {isScopedLoading ? (
                         <p className="text-sm text-slate-500">불러오는 중...</p>
                       ) : documents.length === 0 ? (
-                        <p className="text-sm text-slate-500">등록된 문서가 없어요.</p>
+                        <p className="text-sm text-slate-500">
+                          등록된 문서가 없어요.
+                        </p>
                       ) : (
                         documents.map((document) => {
-                          const statusConfig = DOC_STATUS_CONFIG[document.status];
+                          const statusConfig =
+                            DOC_STATUS_CONFIG[document.status];
                           return (
-                            <div key={document.id} className="rounded-lg border border-slate-200 p-3">
+                            <div
+                              key={document.id}
+                              className="rounded-lg border border-slate-200 p-3"
+                            >
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <div>
-                                  <p className="text-sm font-medium text-slate-900">{document.title}</p>
+                                  <p className="text-sm font-medium text-slate-900">
+                                    {document.title}
+                                  </p>
                                   <p className="text-xs text-slate-500">
-                                    {seasonNameMap.get(document.season_id) || document.season_id} · {document.category}
+                                    {seasonNameMap.get(document.season_id) ||
+                                      document.season_id}
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-                                  <Badge variant={document.is_enabled ? "success" : "default"}>
+                                  <Badge variant={statusConfig.variant}>
+                                    {statusConfig.label}
+                                  </Badge>
+                                  <Badge
+                                    variant={
+                                      document.is_enabled
+                                        ? "success"
+                                        : "default"
+                                    }
+                                  >
                                     {document.is_enabled ? "반영" : "미반영"}
                                   </Badge>
                                 </div>
                               </div>
                               <Button
                                 size="sm"
-                                variant={document.is_enabled ? "outline" : "secondary"}
+                                variant={
+                                  document.is_enabled ? "outline" : "secondary"
+                                }
                                 className="mt-2"
-                                onClick={() => openToggleDocumentDialog(document)}
+                                onClick={() =>
+                                  openToggleDocumentDialog(document)
+                                }
                               >
                                 {document.is_enabled ? "비활성화" : "활성화"}
                               </Button>
