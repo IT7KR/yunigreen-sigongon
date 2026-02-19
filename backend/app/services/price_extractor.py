@@ -9,8 +9,9 @@ import re
 import json
 from decimal import Decimal
 from datetime import datetime
-from typing import Optional
-from dataclasses import dataclass
+from enum import Enum
+from typing import Optional, List
+from dataclasses import dataclass, field
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -324,3 +325,183 @@ class PriceExtractor:
             ))
         
         return results
+
+
+# ============================================================
+# 유효성 검증 리포트
+# ============================================================
+
+class ValidationSeverity(str, Enum):
+    OK = "ok"
+    WARNING = "warning"
+    ERROR = "error"
+
+
+@dataclass
+class ValidationIssue:
+    item_index: int
+    item_name: str
+    field: str
+    severity: ValidationSeverity
+    message: str
+    value: Optional[str] = None
+
+
+@dataclass
+class ValidationReport:
+    total_items: int
+    valid_count: int
+    warning_count: int
+    error_count: int
+    issues: List[ValidationIssue] = field(default_factory=list)
+
+    @property
+    def is_valid(self) -> bool:
+        return self.error_count == 0
+
+
+def generate_validation_report(items: list) -> ValidationReport:
+    """파싱된 적산 항목(PriceStaging 레코드)의 유효성 검증 리포트 생성.
+
+    items: PriceStaging 인스턴스 리스트
+    """
+    issues: List[ValidationIssue] = []
+    valid_count = 0
+
+    for i, item in enumerate(items):
+        item_issues: List[ValidationIssue] = []
+
+        # PriceStaging 인스턴스 필드 읽기
+        name = getattr(item, "item_name", None) or f"항목 {i + 1}"
+        unit_price = getattr(item, "unit_price_extracted", None)
+        unit = getattr(item, "unit", None)
+        is_grounded = getattr(item, "is_grounded", None)
+        anomaly_flags = getattr(item, "anomaly_flags", None) or []
+        confidence_score = getattr(item, "confidence_score", None)
+
+        # 품명 검사
+        if not name or str(name).strip() == "":
+            item_issues.append(
+                ValidationIssue(
+                    item_index=i,
+                    item_name=f"항목 {i + 1}",
+                    field="item_name",
+                    severity=ValidationSeverity.ERROR,
+                    message="품명이 없습니다",
+                )
+            )
+
+        # 단가 검사
+        if unit_price is None:
+            item_issues.append(
+                ValidationIssue(
+                    item_index=i,
+                    item_name=name,
+                    field="unit_price_extracted",
+                    severity=ValidationSeverity.WARNING,
+                    message="단가가 없습니다",
+                )
+            )
+        else:
+            try:
+                price_float = float(unit_price)
+                if price_float < 0:
+                    item_issues.append(
+                        ValidationIssue(
+                            item_index=i,
+                            item_name=name,
+                            field="unit_price_extracted",
+                            severity=ValidationSeverity.ERROR,
+                            message="단가가 음수입니다",
+                            value=str(unit_price),
+                        )
+                    )
+                elif price_float < 100:
+                    item_issues.append(
+                        ValidationIssue(
+                            item_index=i,
+                            item_name=name,
+                            field="unit_price_extracted",
+                            severity=ValidationSeverity.WARNING,
+                            message="단가가 비정상적으로 낮습니다 (100원 미만)",
+                            value=str(unit_price),
+                        )
+                    )
+                elif price_float > 10_000_000:
+                    item_issues.append(
+                        ValidationIssue(
+                            item_index=i,
+                            item_name=name,
+                            field="unit_price_extracted",
+                            severity=ValidationSeverity.WARNING,
+                            message="단가가 비정상적으로 높습니다 (1천만원 초과)",
+                            value=str(unit_price),
+                        )
+                    )
+            except (TypeError, ValueError):
+                item_issues.append(
+                    ValidationIssue(
+                        item_index=i,
+                        item_name=name,
+                        field="unit_price_extracted",
+                        severity=ValidationSeverity.ERROR,
+                        message="단가를 숫자로 파싱할 수 없습니다",
+                        value=str(unit_price),
+                    )
+                )
+
+        # 단위 검사
+        if not unit or str(unit).strip() == "":
+            item_issues.append(
+                ValidationIssue(
+                    item_index=i,
+                    item_name=name,
+                    field="unit",
+                    severity=ValidationSeverity.WARNING,
+                    message="단위가 없습니다",
+                )
+            )
+
+        # Grounding 실패 검사
+        if is_grounded is False:
+            item_issues.append(
+                ValidationIssue(
+                    item_index=i,
+                    item_name=name,
+                    field="is_grounded",
+                    severity=ValidationSeverity.WARNING,
+                    message="원본 문서에서 단가를 확인하지 못했습니다 (Grounding 실패)",
+                )
+            )
+
+        # 이상치 플래그 검사
+        critical_anomalies = {"grounding_failed", "price_too_low", "price_too_high"}
+        if anomaly_flags:
+            for flag in anomaly_flags:
+                sev = ValidationSeverity.ERROR if flag in critical_anomalies else ValidationSeverity.WARNING
+                item_issues.append(
+                    ValidationIssue(
+                        item_index=i,
+                        item_name=name,
+                        field="anomaly_flags",
+                        severity=sev,
+                        message=f"이상치 감지: {flag}",
+                        value=flag,
+                    )
+                )
+
+        issues.extend(item_issues)
+        has_error = any(iss.severity == ValidationSeverity.ERROR for iss in item_issues)
+        if not has_error:
+            valid_count += 1
+
+    warning_count = sum(1 for iss in issues if iss.severity == ValidationSeverity.WARNING)
+    error_count = sum(1 for iss in issues if iss.severity == ValidationSeverity.ERROR)
+
+    return ValidationReport(
+        total_items=len(items),
+        valid_count=valid_count,
+        warning_count=warning_count,
+        error_count=error_count,
+        issues=issues,
+    )

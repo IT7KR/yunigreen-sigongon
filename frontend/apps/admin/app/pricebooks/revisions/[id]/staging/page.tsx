@@ -1,14 +1,64 @@
 "use client";
 
+import { useState } from "react";
 import { Button, Card, Badge } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Upload, FileText, CheckCircle, AlertTriangle } from "lucide-react";
+import {
+  Upload,
+  FileText,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  ShieldCheck,
+} from "lucide-react";
+import { api } from "@/lib/api";
+
+type ValidationIssue = {
+  item_index: number;
+  item_name: string;
+  field: string;
+  severity: "ok" | "warning" | "error";
+  message: string;
+  value?: string | null;
+};
+
+type ValidationReport = {
+  total_items: number;
+  valid_count: number;
+  warning_count: number;
+  error_count: number;
+  is_valid: boolean;
+  issues: ValidationIssue[];
+};
 
 export default function PricebookStagingPage({
   params,
 }: {
   params: { id: string };
 }) {
+  const [validating, setValidating] = useState(false);
+  const [report, setReport] = useState<ValidationReport | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [showIssues, setShowIssues] = useState(false);
+
+  async function handleValidate() {
+    setValidating(true);
+    setValidationError(null);
+    try {
+      const result = await api.validatePricebookRevision(params.id);
+      if (result.success && result.data) {
+        setReport(result.data);
+        setShowIssues(true);
+      } else {
+        setValidationError("검증 결과를 가져오지 못했습니다.");
+      }
+    } catch {
+      setValidationError("검증 중 오류가 발생했습니다.");
+    } finally {
+      setValidating(false);
+    }
+  }
+
   return (
     <AdminLayout>
       <div className="mb-6">
@@ -91,6 +141,138 @@ export default function PricebookStagingPage({
           </div>
         </Card>
       </div>
+
+      {/* Validation Section */}
+      <Card className="mt-6 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-slate-600" />
+            <h2 className="text-lg font-semibold text-slate-900">파싱 검증</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            {report && (
+              <button
+                onClick={() => setShowIssues((v) => !v)}
+                className="text-sm text-brand-point-600 hover:underline"
+              >
+                {showIssues ? "이슈 숨기기" : "이슈 보기"}
+              </button>
+            )}
+            <Button
+              variant="secondary"
+              onClick={handleValidate}
+              disabled={validating}
+            >
+              {validating ? "검증 중..." : "검증 실행"}
+            </Button>
+          </div>
+        </div>
+
+        <p className="mt-1 text-sm text-slate-500">
+          추출된 가격 항목의 품명·단가·단위·Grounding 여부를 검사합니다.
+        </p>
+
+        {validationError && (
+          <div className="mt-4 flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-700">
+            <XCircle className="h-4 w-4 shrink-0" />
+            {validationError}
+          </div>
+        )}
+
+        {report && (
+          <div className="mt-4">
+            {/* Summary badges */}
+            <div className="flex flex-wrap gap-3 mb-4">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
+                <CheckCircle className="h-4 w-4" />
+                정상 {report.valid_count}개
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
+                <AlertTriangle className="h-4 w-4" />
+                경고 {report.warning_count}개
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-800">
+                <XCircle className="h-4 w-4" />
+                오류 {report.error_count}개
+              </span>
+              <span className="ml-auto text-sm text-slate-500 self-center">
+                전체 {report.total_items}개
+              </span>
+            </div>
+
+            {/* Overall status */}
+            {report.is_valid ? (
+              <div className="flex items-center gap-2 rounded-md bg-green-50 p-3 text-sm text-green-800 mb-4">
+                <CheckCircle className="h-4 w-4 shrink-0" />
+                <span className="font-medium">검증 통과</span> — 오류 항목이 없습니다.
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-700 mb-4">
+                <XCircle className="h-4 w-4 shrink-0" />
+                <span className="font-medium">검증 실패</span> — 오류 항목을 수정한 후 정식 반영하세요.
+              </div>
+            )}
+
+            {/* Issues list */}
+            {showIssues && report.issues.length > 0 && (
+              <div className="rounded-lg border border-slate-200 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left font-medium text-slate-600 w-8">#</th>
+                      <th className="px-4 py-2 text-left font-medium text-slate-600">품명</th>
+                      <th className="px-4 py-2 text-left font-medium text-slate-600">필드</th>
+                      <th className="px-4 py-2 text-left font-medium text-slate-600">심각도</th>
+                      <th className="px-4 py-2 text-left font-medium text-slate-600">메시지</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {report.issues.map((issue, idx) => (
+                      <tr
+                        key={idx}
+                        className={
+                          issue.severity === "error"
+                            ? "bg-red-50"
+                            : issue.severity === "warning"
+                              ? "bg-amber-50"
+                              : "bg-white"
+                        }
+                      >
+                        <td className="px-4 py-2 text-slate-500">{issue.item_index + 1}</td>
+                        <td className="px-4 py-2 font-medium text-slate-800">{issue.item_name}</td>
+                        <td className="px-4 py-2 text-slate-500 font-mono text-xs">{issue.field}</td>
+                        <td className="px-4 py-2">
+                          {issue.severity === "error" ? (
+                            <span className="inline-flex items-center gap-1 text-red-700">
+                              <XCircle className="h-3.5 w-3.5" />
+                              오류
+                            </span>
+                          ) : issue.severity === "warning" ? (
+                            <span className="inline-flex items-center gap-1 text-amber-700">
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                              경고
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-green-700">
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              정상
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-slate-700">{issue.message}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {showIssues && report.issues.length === 0 && (
+              <p className="text-sm text-slate-500 text-center py-4">이슈가 없습니다.</p>
+            )}
+          </div>
+        )}
+      </Card>
     </AdminLayout>
   );
 }

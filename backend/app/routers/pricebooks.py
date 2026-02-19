@@ -40,7 +40,7 @@ from app.models.price_staging import (
     ConfidenceLevel,
 )
 from app.schemas.response import APIResponse, PaginatedResponse
-from app.services.price_extractor import PriceExtractor
+from app.services.price_extractor import PriceExtractor, generate_validation_report
 
 router = APIRouter()
 
@@ -663,6 +663,59 @@ async def auto_approve_staging(
     return APIResponse.ok({
         "approved_count": approved_count,
         "message": f"{approved_count}개 항목을 자동 승인했어요.",
+    })
+
+
+@router.get(
+    "/revisions/{revision_id}/validate",
+    response_model=APIResponse[dict],
+)
+async def validate_revision(
+    revision_id: int,
+    db: DBSession,
+    admin: AdminUser,
+):
+    """적산 개정안 파싱 결과 검증 리포트 반환.
+
+    Staging 항목들의 품명·단가·단위·Grounding 여부 등을 검사하고
+    경고/오류 목록을 반환해요.
+    """
+    # 버전 존재 확인
+    rev_result = await db.execute(
+        select(PricebookRevision).where(PricebookRevision.id == revision_id)
+    )
+    revision = rev_result.scalar_one_or_none()
+
+    if not revision:
+        raise NotFoundException("pricebook", revision_id)
+
+    # 해당 버전의 모든 staging 항목 조회
+    staging_result = await db.execute(
+        select(PriceStaging)
+        .where(PriceStaging.pricebook_revision_id == revision_id)
+        .order_by(PriceStaging.item_name.asc())
+    )
+    items = staging_result.scalars().all()
+
+    report = generate_validation_report(items)
+
+    return APIResponse.ok({
+        "total_items": report.total_items,
+        "valid_count": report.valid_count,
+        "warning_count": report.warning_count,
+        "error_count": report.error_count,
+        "is_valid": report.is_valid,
+        "issues": [
+            {
+                "item_index": issue.item_index,
+                "item_name": issue.item_name,
+                "field": issue.field,
+                "severity": issue.severity.value,
+                "message": issue.message,
+                "value": issue.value,
+            }
+            for issue in report.issues
+        ],
     })
 
 
