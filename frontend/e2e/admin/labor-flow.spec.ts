@@ -6,16 +6,16 @@ test.describe("노무 관련 흐름", () => {
     await loginAsCeo(page);
   });
 
-  test.describe("근로자 주소록", () => {
-    test("근로자 주소록 페이지가 올바르게 로딩된다", async ({ page }) => {
+  test.describe("근로자 관리", () => {
+    test("근로자 관리 페이지가 올바르게 로딩된다", async ({ page }) => {
       await page.goto("/labor/workers");
 
       await expect(
-        page.getByRole("heading", { name: /근로자 주소록/ }),
+        page.getByRole("heading", { name: /근로자 관리/ }),
       ).toBeVisible({ timeout: 5000 });
     });
 
-    test("근로자 주소록에 근로자 등록 버튼이 존재한다", async ({ page }) => {
+    test("근로자 관리에 근로자 등록 버튼이 존재한다", async ({ page }) => {
       await page.goto("/labor/workers");
 
       await expect(
@@ -23,7 +23,7 @@ test.describe("노무 관련 흐름", () => {
       ).toBeVisible({ timeout: 5000 });
     });
 
-    test("근로자 주소록에 검색 필드가 존재한다", async ({ page }) => {
+    test("근로자 관리에 검색 필드가 존재한다", async ({ page }) => {
       await page.goto("/labor/workers");
 
       await expect(
