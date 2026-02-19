@@ -1,10 +1,14 @@
 "use client";
 
 import { type ReactNode } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Bell, CreditCard, FileText, Home, FolderKanban, Plus, User } from "lucide-react";
-import { cn } from "@sigongon/ui";
+import {
+  AppLink,
+  cn,
+  useAppNavigation,
+  useNavigationProgress,
+} from "@sigongon/ui";
 import { OfflineBanner } from "./camera/OfflineBanner";
 import { useAuth } from "@/lib/auth";
 
@@ -38,20 +42,24 @@ export function MobileLayout({
   rightAction,
 }: MobileLayoutProps) {
   const pathname = usePathname();
-  const router = useRouter();
+  const navigation = useAppNavigation();
   const { user } = useAuth();
+  const { isNavigating } = useNavigationProgress();
   const navItems = user?.role === "worker" ? workerNavItems : managerNavItems;
 
   const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
+      navigation.back();
       return;
     }
-    router.push("/");
+    navigation.push("/");
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
+    <div
+      className="flex min-h-screen flex-col bg-slate-50 transition-opacity duration-150 data-[navigating=true]:opacity-[0.99]"
+      data-navigating={isNavigating ? "true" : "false"}
+    >
       {/* Skip navigation */}
       <a
         href="#main-content"
@@ -104,19 +112,25 @@ export function MobileLayout({
               pathname.startsWith(`${item.href}/`);
 
             return (
-              <Link
+              <AppLink
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-4 py-2",
+                  "relative flex flex-col items-center gap-1 px-4 py-2 transition-transform duration-150 active:scale-95",
                   isActive
                     ? "text-brand-point-600"
                     : "text-slate-500 hover:text-slate-700",
                 )}
               >
+                <span
+                  className={cn(
+                    "absolute -top-px h-0.5 w-8 rounded-full bg-brand-point-500 transition-opacity duration-150",
+                    isActive ? "opacity-100" : "opacity-0",
+                  )}
+                />
                 <item.icon className="h-6 w-6" />
                 <span className="text-xs font-medium">{item.label}</span>
-              </Link>
+              </AppLink>
             );
           })}
         </div>
