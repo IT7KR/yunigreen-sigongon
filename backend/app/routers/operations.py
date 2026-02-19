@@ -1,13 +1,19 @@
 """Auxiliary operations router for frontend API parity."""
 from __future__ import annotations
 
+import io
 import random
 import secrets
 from datetime import date, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from typing import Annotated, Optional
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font
+from openpyxl.utils import get_column_letter
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -312,13 +318,24 @@ def _calc_worker_deductions(
     total_labor_cost: int,
     rates: InsuranceRate,
 ) -> dict[str, int]:
-    base = max(0, Decimal(total_labor_cost) - rates.income_deduction)
-    income_tax = int((base * rates.simplified_tax_rate).quantize(Decimal("1")))
-    resident_tax = int((Decimal(income_tax) * rates.local_tax_rate).quantize(Decimal("1")))
-    health = int((Decimal(total_labor_cost) * rates.health_insurance_rate).quantize(Decimal("1")))
-    care = int((Decimal(health) * rates.longterm_care_rate).quantize(Decimal("1")))
-    pension = int((Decimal(total_labor_cost) * rates.national_pension_rate).quantize(Decimal("1")))
-    employment = int((Decimal(total_labor_cost) * rates.employment_insurance_rate).quantize(Decimal("1")))
+    gross = Decimal(total_labor_cost)
+
+    def _round_down(value: Decimal) -> int:
+        return int(value.quantize(Decimal("1"), rounding=ROUND_DOWN))
+
+    taxable_base = max(Decimal("0"), gross - rates.income_deduction)
+    income_tax = _round_down(taxable_base * rates.simplified_tax_rate)
+    resident_tax = _round_down(Decimal(income_tax) * rates.local_tax_rate)
+    health = _round_down(gross * rates.health_insurance_rate)
+    care = _round_down(Decimal(health) * rates.longterm_care_rate)
+
+    if gross < rates.pension_lower_limit:
+        pension_base = Decimal("0")
+    else:
+        pension_base = min(gross, rates.pension_upper_limit)
+    pension = _round_down(pension_base * rates.national_pension_rate)
+
+    employment = _round_down(gross * rates.employment_insurance_rate)
     total_deductions = income_tax + resident_tax + health + care + pension + employment
     net_pay = max(0, total_labor_cost - total_deductions)
     return {
@@ -348,7 +365,47 @@ async def _get_or_create_insurance_rate(
     if rate:
         return rate
 
-    rate = InsuranceRate(organization_id=organization_id, effective_year=year)
+    previous_rate = (
+        await db.execute(
+            select(InsuranceRate)
+            .where(
+                InsuranceRate.organization_id == organization_id,
+                InsuranceRate.effective_year < year,
+            )
+            .order_by(InsuranceRate.effective_year.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    if not previous_rate:
+        previous_rate = (
+            await db.execute(
+                select(InsuranceRate)
+                .where(InsuranceRate.organization_id == organization_id)
+                .order_by(InsuranceRate.effective_year.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+
+    if previous_rate:
+        rate = InsuranceRate(
+            organization_id=organization_id,
+            effective_year=year,
+            income_deduction=previous_rate.income_deduction,
+            simplified_tax_rate=previous_rate.simplified_tax_rate,
+            local_tax_rate=previous_rate.local_tax_rate,
+            employment_insurance_rate=previous_rate.employment_insurance_rate,
+            health_insurance_rate=previous_rate.health_insurance_rate,
+            longterm_care_rate=previous_rate.longterm_care_rate,
+            national_pension_rate=previous_rate.national_pension_rate,
+            pension_upper_limit=previous_rate.pension_upper_limit,
+            pension_lower_limit=previous_rate.pension_lower_limit,
+            health_premium_upper=previous_rate.health_premium_upper,
+            health_premium_lower=previous_rate.health_premium_lower,
+        )
+    else:
+        rate = InsuranceRate(organization_id=organization_id, effective_year=year)
+
     db.add(rate)
     await db.flush()
     return rate
@@ -1821,11 +1878,123 @@ async def delete_work_record(
     return APIResponse.ok({"id": str(work_record_id)})
 
 
-def _build_work_days(records: list[WorkRecord]) -> dict[int, float]:
+_REPORT_TOTAL_KEYS = (
+    "total_labor_cost",
+    "total_income_tax",
+    "total_resident_tax",
+    "total_health_insurance",
+    "total_longterm_care",
+    "total_national_pension",
+    "total_employment_insurance",
+    "total_deductions",
+    "total_net_pay",
+)
+
+
+def _empty_report_totals() -> dict[str, int]:
+    return {key: 0 for key in _REPORT_TOTAL_KEYS}
+
+
+def _month_bounds(year: int, month: int) -> tuple[date, date]:
+    if month < 1 or month > 12:
+        raise HTTPException(status_code=422, detail="month는 1~12 범위여야 해요")
+    month_start = date(year, month, 1)
+    month_end = date(year + (month // 12), (month % 12) + 1, 1)
+    return month_start, month_end
+
+
+def _parse_month_param(month: str) -> tuple[int, int]:
+    try:
+        year_str, month_str = month.split("-", 1)
+        year = int(year_str)
+        month_int = int(month_str)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="month는 YYYY-MM 형식이어야 해요") from exc
+    _month_bounds(year, month_int)
+    return year, month_int
+
+
+def _mask_worker_identifier(worker: DailyWorker) -> str:
+    birth_digits = "".join(ch for ch in worker.birth_date if ch.isdigit())[:6]
+    if len(birth_digits) < 6:
+        birth_digits = "000000"
+    gender_digit = str(worker.gender or 1)[0]
+    return f"{birth_digits}-{gender_digit}******"
+
+
+def _build_work_days(records: list[WorkRecord], cap_per_day: Optional[float] = None) -> dict[int, float]:
     out: dict[int, float] = {}
     for row in records:
-        out[row.work_date.day] = float(row.man_days)
-    return out
+        day = row.work_date.day
+        current = out.get(day, 0.0)
+        updated = current + float(row.man_days)
+        if cap_per_day is not None:
+            updated = min(updated, cap_per_day)
+        out[day] = round(updated, 2)
+    return dict(sorted(out.items(), key=lambda item: item[0]))
+
+
+def _build_worker_entry(
+    worker: DailyWorker,
+    work_days: dict[int, float],
+    rates: InsuranceRate,
+    year: int,
+    month: int,
+) -> Optional[dict]:
+    total_man_days = sum(v for v in work_days.values() if v > 0)
+    if total_man_days <= 0:
+        return None
+
+    total_days = len([v for v in work_days.values() if v > 0])
+    labor_cost = int((Decimal(worker.daily_rate) * Decimal(str(total_man_days))).quantize(Decimal("1"), rounding=ROUND_DOWN))
+    deductions = _calc_worker_deductions(labor_cost, rates)
+
+    last_work_day = 0
+    for day in range(31, 0, -1):
+        if (work_days.get(day) or 0) > 0:
+            last_work_day = day
+            break
+
+    month_str = f"{year}{month:02d}"
+    nts_last_work_date = f"{month_str}{last_work_day:02d}" if last_work_day > 0 else ""
+
+    return {
+        "worker_id": str(worker.id),
+        "worker_name": worker.name,
+        "job_type": worker.job_type,
+        "job_type_code": worker.job_type_code or "",
+        "team": worker.team,
+        "ssn_masked": _mask_worker_identifier(worker),
+        "ssn_full": "",
+        "daily_rate": int(worker.daily_rate),
+        "is_foreign": worker.is_foreign,
+        "nationality_code": worker.nationality_code or "",
+        "visa_status": worker.visa_status or "",
+        "english_name": worker.english_name or "",
+        "phone": worker.phone or "",
+        "insurance_type": "5",
+        "work_days": work_days,
+        "total_days": total_days,
+        "total_man_days": float(total_man_days),
+        "total_labor_cost": labor_cost,
+        "nontaxable_income": 0,
+        "nts_pay_month": month_str,
+        "nts_work_month": month_str,
+        "nts_last_work_date": nts_last_work_date,
+        **deductions,
+    }
+
+
+def _apply_entry_to_totals(entry: dict, totals: dict[str, int]) -> None:
+    totals["total_labor_cost"] += int(entry["total_labor_cost"])
+    totals["total_income_tax"] += int(entry["income_tax"])
+    totals["total_resident_tax"] += int(entry["resident_tax"])
+    totals["total_health_insurance"] += int(entry["health_insurance"])
+    totals["total_longterm_care"] += int(entry["longterm_care"])
+    totals["total_national_pension"] += int(entry["national_pension"])
+    totals["total_employment_insurance"] += int(entry["employment_insurance"])
+    totals["total_deductions"] += int(entry["total_deductions"])
+    totals["total_net_pay"] += int(entry["net_pay"])
 
 
 async def _build_site_report(
@@ -1835,81 +2004,63 @@ async def _build_site_report(
     year: int,
     month: int,
 ) -> dict:
-    project = (await db.execute(select(Project).where(Project.id == project_id))).scalar_one_or_none()
+    project = (
+        await db.execute(
+            select(Project)
+            .where(Project.id == project_id)
+            .where(Project.organization_id == organization_id)
+        )
+    ).scalar_one_or_none()
     if not project:
         raise NotFoundException("project", project_id)
 
-    month_start = date(year, month, 1)
-    month_end = date(year + (month // 12), (month % 12) + 1, 1)
+    month_start, month_end = _month_bounds(year, month)
 
-    workers = (await db.execute(
-        select(DailyWorker)
-        .where(DailyWorker.organization_id == organization_id)
-        .order_by(DailyWorker.name.asc())
-    )).scalars().all()
-
-    work_rows = (await db.execute(
-        select(WorkRecord)
-        .where(WorkRecord.project_id == project_id)
-        .where(WorkRecord.work_date >= month_start)
-        .where(WorkRecord.work_date < month_end)
-    )).scalars().all()
+    work_rows = (
+        await db.execute(
+            select(WorkRecord)
+            .where(WorkRecord.project_id == project_id)
+            .where(WorkRecord.work_date >= month_start)
+            .where(WorkRecord.work_date < month_end)
+        )
+    ).scalars().all()
 
     by_worker: dict[int, list[WorkRecord]] = {}
     for row in work_rows:
         by_worker.setdefault(row.worker_id, []).append(row)
 
+    worker_ids = list(by_worker.keys())
+    workers_by_id: dict[int, DailyWorker] = {}
+    if worker_ids:
+        worker_rows = (
+            await db.execute(
+                select(DailyWorker)
+                .where(DailyWorker.organization_id == organization_id)
+                .where(DailyWorker.id.in_(worker_ids))
+            )
+        ).scalars().all()
+        workers_by_id = {worker.id: worker for worker in worker_rows}
+
     rates = await _get_or_create_insurance_rate(db, organization_id, year)
+    totals = _empty_report_totals()
+    entries: list[dict] = []
 
-    entries = []
-    totals = {
-        "total_labor_cost": 0,
-        "total_income_tax": 0,
-        "total_resident_tax": 0,
-        "total_health_insurance": 0,
-        "total_longterm_care": 0,
-        "total_national_pension": 0,
-        "total_employment_insurance": 0,
-        "total_deductions": 0,
-        "total_net_pay": 0,
-    }
-
-    for worker in workers:
-        worker_records = by_worker.get(worker.id, [])
-        work_days = _build_work_days(worker_records)
-        total_man_days = sum(work_days.values())
-        total_days = len([v for v in work_days.values() if v > 0])
-        labor_cost = int((Decimal(worker.daily_rate) * Decimal(str(total_man_days))))
-
-        deductions = _calc_worker_deductions(labor_cost, rates)
-
-        entry = {
-            "worker_id": str(worker.id),
-            "worker_name": worker.name,
-            "job_type": worker.job_type,
-            "team": worker.team,
-            "ssn_masked": f"{worker.birth_date}-{worker.gender}******",
-            "daily_rate": int(worker.daily_rate),
-            "work_days": work_days,
-            "total_days": total_days,
-            "total_man_days": float(total_man_days),
-            "total_labor_cost": labor_cost,
-            **deductions,
-        }
+    sorted_worker_ids = sorted(
+        by_worker.keys(),
+        key=lambda worker_id: workers_by_id.get(worker_id).name if workers_by_id.get(worker_id) else "",
+    )
+    for worker_id in sorted_worker_ids:
+        worker = workers_by_id.get(worker_id)
+        if not worker:
+            continue
+        work_days = _build_work_days(by_worker[worker_id])
+        entry = _build_worker_entry(worker, work_days, rates, year, month)
+        if not entry:
+            continue
         entries.append(entry)
-
-        totals["total_labor_cost"] += labor_cost
-        totals["total_income_tax"] += deductions["income_tax"]
-        totals["total_resident_tax"] += deductions["resident_tax"]
-        totals["total_health_insurance"] += deductions["health_insurance"]
-        totals["total_longterm_care"] += deductions["longterm_care"]
-        totals["total_national_pension"] += deductions["national_pension"]
-        totals["total_employment_insurance"] += deductions["employment_insurance"]
-        totals["total_deductions"] += deductions["total_deductions"]
-        totals["total_net_pay"] += deductions["net_pay"]
+        _apply_entry_to_totals(entry, totals)
 
     org = (await db.execute(select(Organization).where(Organization.id == organization_id))).scalar_one_or_none()
-
     return {
         "project_id": str(project.id),
         "project_name": project.name,
@@ -1919,6 +2070,382 @@ async def _build_site_report(
         "entries": entries,
         "totals": totals,
     }
+
+
+async def _build_monthly_consolidated_report(
+    db: AsyncSession,
+    organization_id: int,
+    year: int,
+    month: int,
+) -> dict:
+    month_start, month_end = _month_bounds(year, month)
+
+    project_rows = (
+        await db.execute(
+            select(Project)
+            .where(Project.organization_id == organization_id)
+            .order_by(Project.name.asc())
+        )
+    ).scalars().all()
+
+    work_rows = (
+        await db.execute(
+            select(WorkRecord)
+            .join(Project, WorkRecord.project_id == Project.id)
+            .where(Project.organization_id == organization_id)
+            .where(WorkRecord.work_date >= month_start)
+            .where(WorkRecord.work_date < month_end)
+        )
+    ).scalars().all()
+
+    by_worker: dict[int, list[WorkRecord]] = {}
+    included_project_ids: set[int] = set()
+    for row in work_rows:
+        by_worker.setdefault(row.worker_id, []).append(row)
+        included_project_ids.add(row.project_id)
+
+    worker_ids = list(by_worker.keys())
+    workers_by_id: dict[int, DailyWorker] = {}
+    if worker_ids:
+        worker_rows = (
+            await db.execute(
+                select(DailyWorker)
+                .where(DailyWorker.organization_id == organization_id)
+                .where(DailyWorker.id.in_(worker_ids))
+            )
+        ).scalars().all()
+        workers_by_id = {worker.id: worker for worker in worker_rows}
+
+    rates = await _get_or_create_insurance_rate(db, organization_id, year)
+    totals = _empty_report_totals()
+    entries: list[dict] = []
+
+    sorted_worker_ids = sorted(
+        by_worker.keys(),
+        key=lambda worker_id: workers_by_id.get(worker_id).name if workers_by_id.get(worker_id) else "",
+    )
+    for worker_id in sorted_worker_ids:
+        worker = workers_by_id.get(worker_id)
+        if not worker:
+            continue
+        # Consolidated monthly report merges duplicate working days across sites.
+        work_days = _build_work_days(by_worker[worker_id], cap_per_day=1.0)
+        entry = _build_worker_entry(worker, work_days, rates, year, month)
+        if not entry:
+            continue
+        entries.append(entry)
+        _apply_entry_to_totals(entry, totals)
+
+    org = (await db.execute(select(Organization).where(Organization.id == organization_id))).scalar_one_or_none()
+    included_projects = [p for p in project_rows if p.id in included_project_ids]
+    return {
+        "year": year,
+        "month": month,
+        "organization_name": org.name if org else "",
+        "projects": [{"id": str(p.id), "name": p.name} for p in included_projects],
+        "entries": entries,
+        "totals": totals,
+    }
+
+
+def _serialize_insurance_rate(rate: InsuranceRate) -> dict:
+    return {
+        "id": str(rate.id),
+        "effective_year": rate.effective_year,
+        "effective_from": f"{rate.effective_year}-01-01",
+        "income_deduction": float(rate.income_deduction),
+        "simplified_tax_rate": float(rate.simplified_tax_rate),
+        "local_tax_rate": float(rate.local_tax_rate),
+        "employment_insurance_rate": float(rate.employment_insurance_rate),
+        "health_insurance_rate": float(rate.health_insurance_rate),
+        "longterm_care_rate": float(rate.longterm_care_rate),
+        "national_pension_rate": float(rate.national_pension_rate),
+        "pension_upper_limit": float(rate.pension_upper_limit),
+        "pension_lower_limit": float(rate.pension_lower_limit),
+        "health_premium_upper": float(rate.health_premium_upper),
+        "health_premium_lower": float(rate.health_premium_lower),
+    }
+
+
+def _sanitize_filename(value: str) -> str:
+    stripped = value.strip()
+    if not stripped:
+        return "report"
+    return "".join("_" if ch in '\\/:*?"<>|' else ch for ch in stripped)
+
+
+def _xlsx_response(xlsx_bytes: bytes, filename: str) -> StreamingResponse:
+    encoded_filename = quote(filename)
+    return StreamingResponse(
+        io.BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
+        },
+    )
+
+
+def _apply_header_style(cell) -> None:
+    cell.font = Font(bold=True)
+    cell.alignment = Alignment(horizontal="center", vertical="center")
+
+
+def _build_payroll_workbook(report: dict, title: str, include_project_list: bool = False) -> bytes:
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "명세서"
+
+    headers = [
+        "No.",
+        "성명",
+        "직종",
+        "주민번호",
+        "단가",
+        *[str(day) for day in range(1, 32)],
+        "출력일수",
+        "공수",
+        "노무비",
+        "갑근세",
+        "주민세",
+        "건강보험",
+        "요양보험",
+        "국민연금",
+        "고용보험",
+        "공제계",
+        "차감지급액",
+    ]
+
+    worksheet.cell(row=1, column=1, value=title)
+    worksheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
+    worksheet.cell(row=1, column=1).font = Font(size=14, bold=True)
+    worksheet.cell(row=1, column=1).alignment = Alignment(horizontal="center", vertical="center")
+
+    info_row = 3
+    worksheet.cell(info_row, 1, "회사명")
+    worksheet.cell(info_row, 2, report.get("organization_name", ""))
+    if report.get("project_name"):
+        info_row += 1
+        worksheet.cell(info_row, 1, "현장명")
+        worksheet.cell(info_row, 2, report.get("project_name", ""))
+    info_row += 1
+    worksheet.cell(info_row, 1, "기준월")
+    worksheet.cell(info_row, 2, f"{report['year']}년 {report['month']}월")
+    if include_project_list:
+        project_names = ", ".join(project["name"] for project in report.get("projects", []))
+        info_row += 1
+        worksheet.cell(info_row, 1, "포함 현장")
+        worksheet.cell(info_row, 2, project_names)
+
+    header_row_index = info_row + 2
+    worksheet.append([])
+    worksheet.append(headers)
+    for column_index in range(1, len(headers) + 1):
+        _apply_header_style(worksheet.cell(row=header_row_index, column=column_index))
+
+    start_data_row = header_row_index + 1
+    entries = report.get("entries", [])
+    for index, entry in enumerate(entries, start=1):
+        row_data: list[object] = [
+            index,
+            entry["worker_name"],
+            entry["job_type"],
+            entry["ssn_masked"],
+            entry["daily_rate"],
+        ]
+        for day in range(1, 32):
+            man_days = entry["work_days"].get(day, 0)
+            row_data.append(man_days if man_days > 0 else "")
+        row_data.extend(
+            [
+                entry["total_days"],
+                entry["total_man_days"],
+                entry["total_labor_cost"],
+                entry["income_tax"],
+                entry["resident_tax"],
+                entry["health_insurance"],
+                entry["longterm_care"],
+                entry["national_pension"],
+                entry["employment_insurance"],
+                entry["total_deductions"],
+                entry["net_pay"],
+            ]
+        )
+        worksheet.append(row_data)
+
+    totals = report.get("totals", _empty_report_totals())
+    totals_row = [
+        "",
+        "합계",
+        "",
+        "",
+        "",
+        *([""] * 31),
+        "",
+        "",
+        totals["total_labor_cost"],
+        totals["total_income_tax"],
+        totals["total_resident_tax"],
+        totals["total_health_insurance"],
+        totals["total_longterm_care"],
+        totals["total_national_pension"],
+        totals["total_employment_insurance"],
+        totals["total_deductions"],
+        totals["total_net_pay"],
+    ]
+    worksheet.append(totals_row)
+    totals_row_index = start_data_row + len(entries)
+    for column_index in range(1, len(headers) + 1):
+        _apply_header_style(worksheet.cell(row=totals_row_index, column=column_index))
+
+    number_columns = [5, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
+    for row in range(start_data_row, totals_row_index + 1):
+        for col in number_columns:
+            worksheet.cell(row=row, column=col).number_format = "#,##0.##"
+
+    widths = {
+        1: 6,
+        2: 12,
+        3: 12,
+        4: 15,
+        5: 10,
+    }
+    for col in range(6, 37):
+        widths[col] = 4
+    for col in range(37, 48):
+        widths[col] = 11
+    for col, width in widths.items():
+        worksheet.column_dimensions[get_column_letter(col)].width = width
+
+    output = io.BytesIO()
+    workbook.save(output)
+    return output.getvalue()
+
+
+def _split_phone_number(phone: str) -> tuple[str, str, str]:
+    digits = "".join(ch for ch in (phone or "") if ch.isdigit())
+    if not digits:
+        return "", "", ""
+    if digits.startswith("02"):
+        return "02", digits[2:6], digits[6:10]
+    if len(digits) >= 11:
+        return digits[:3], digits[3:7], digits[7:11]
+    if len(digits) >= 10:
+        return digits[:3], digits[3:6], digits[6:10]
+    return digits[:3], digits[3:6], digits[6:]
+
+
+def _validate_welfare_required_codes(entries: list[dict]) -> list[dict]:
+    missing: list[dict] = []
+    for entry in entries:
+        missing_fields: list[str] = []
+        if not entry.get("job_type_code"):
+            missing_fields.append("job_type_code")
+        if entry.get("is_foreign"):
+            if not entry.get("nationality_code"):
+                missing_fields.append("nationality_code")
+            if not entry.get("visa_status"):
+                missing_fields.append("visa_status")
+        if missing_fields:
+            missing.append(
+                {
+                    "worker_id": entry["worker_id"],
+                    "worker_name": entry["worker_name"],
+                    "missing_fields": missing_fields,
+                }
+            )
+    return missing
+
+
+def _build_welfare_form_workbook(report: dict, template_version: str = "v1") -> bytes:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "★근로내역"
+
+    headers = [
+        "보험구분",
+        "성명",
+        "주민(외국인)등록번호",
+        "국적코드",
+        "체류자격코드",
+        "전화(지역번호)",
+        "전화(국번)",
+        "전화(뒷번호)",
+        "직종코드",
+        *[f"{day}일" for day in range(1, 32)],
+        "근로일수",
+        "일평균근로시간",
+        "보수지급기초일수",
+        "보수총액(과세소득)",
+        "임금총액",
+        "이직사유코드",
+        "보험료부과구분부호",
+        "보험료부과구분사유",
+        "국세청일용근로소득신고여부",
+        "지급월",
+        "총지급액(과세소득)",
+        "비과세소득",
+        "소득세",
+        "지방소득세",
+    ]
+    sheet.append(headers)
+    for column_index in range(1, len(headers) + 1):
+        _apply_header_style(sheet.cell(row=1, column=column_index))
+
+    pay_month = f"{report['year']}{report['month']:02d}"
+    for entry in report.get("entries", []):
+        area, mid, last = _split_phone_number(entry.get("phone", ""))
+        nationality_code = entry.get("nationality_code") if entry.get("is_foreign") else "100"
+        visa_status = entry.get("visa_status") if entry.get("is_foreign") else ""
+
+        row_data: list[object] = [
+            entry.get("insurance_type", "5"),
+            entry["worker_name"],
+            "",  # 주민등록번호는 수기 입력
+            nationality_code or "",
+            visa_status or "",
+            area,
+            mid,
+            last,
+            entry.get("job_type_code", ""),
+        ]
+
+        for day in range(1, 32):
+            man_days = entry["work_days"].get(day, 0)
+            row_data.append(man_days if man_days > 0 else 0)
+
+        row_data.extend(
+            [
+                entry["total_days"],
+                8,
+                entry["total_days"],
+                entry["total_labor_cost"],
+                entry["total_labor_cost"],
+                "",
+                "",
+                "",
+                "Y" if entry["income_tax"] > 0 else "",
+                entry.get("nts_pay_month", pay_month),
+                entry["total_labor_cost"],
+                entry.get("nontaxable_income", 0),
+                entry["income_tax"],
+                entry["resident_tax"],
+            ]
+        )
+        sheet.append(row_data)
+
+    for col in range(44, 55):
+        for row in range(2, sheet.max_row + 1):
+            sheet.cell(row=row, column=col).number_format = "#,##0"
+
+    guide = workbook.create_sheet("작성안내")
+    guide.append(["항목", "안내"])
+    guide.append(["template_version", template_version])
+    guide.append(["주민등록번호", "수기 입력 항목입니다."])
+    guide.append(["주의", "직종/국적/체류자격 코드 누락 시 다운로드가 차단됩니다."])
+
+    output = io.BytesIO()
+    workbook.save(output)
+    return output.getvalue()
 
 
 @router.get("/labor/reports/site", response_model=APIResponse[dict])
@@ -1945,41 +2472,79 @@ async def generate_consolidated_report(
     month: int,
 ):
     org_id = _require_org_id(current_user)
+    report = await _build_monthly_consolidated_report(db, org_id, year, month)
+    return APIResponse.ok(report)
 
-    project_rows = (await db.execute(select(Project).where(Project.organization_id == org_id))).scalars().all()
-    project_ids = [p.id for p in project_rows]
 
-    entries: list[dict] = []
-    totals = {
-        "total_labor_cost": 0,
-        "total_income_tax": 0,
-        "total_resident_tax": 0,
-        "total_health_insurance": 0,
-        "total_longterm_care": 0,
-        "total_national_pension": 0,
-        "total_employment_insurance": 0,
-        "total_deductions": 0,
-        "total_net_pay": 0,
-    }
+@router.get("/reports/site-daily-labor")
+async def download_site_daily_labor_report(
+    db: DBSession,
+    current_user: CurrentUser,
+    project_id: str,
+    month: str,
+):
+    org_id = _require_org_id(current_user)
+    year, month_int = _parse_month_param(month)
+    project_int = _to_int(project_id)
+    await _get_project_for_user(db, project_int, current_user)
 
-    for project in project_rows:
-        site_report = await _build_site_report(db, org_id, project.id, year, month)
-        entries.extend(site_report["entries"])
-        for key in totals:
-            totals[key] += site_report["totals"][key]
-
-    org = (await db.execute(select(Organization).where(Organization.id == org_id))).scalar_one_or_none()
-
-    return APIResponse.ok(
-        {
-            "year": year,
-            "month": month,
-            "organization_name": org.name if org else "",
-            "projects": [{"id": str(p.id), "name": p.name} for p in project_rows],
-            "entries": entries,
-            "totals": totals,
-        }
+    report = await _build_site_report(db, org_id, project_int, year, month_int)
+    xlsx_bytes = _build_payroll_workbook(
+        report=report,
+        title="현장별 일용신고명세서",
     )
+    filename = f"{_sanitize_filename(report['project_name'])} 현장별 일용신고명세서({month_int}월).xlsx"
+    return _xlsx_response(xlsx_bytes, filename)
+
+
+@router.get("/reports/monthly-daily-labor")
+async def download_monthly_daily_labor_report(
+    db: DBSession,
+    current_user: CurrentUser,
+    month: str,
+):
+    org_id = _require_org_id(current_user)
+    year, month_int = _parse_month_param(month)
+    report = await _build_monthly_consolidated_report(db, org_id, year, month_int)
+    xlsx_bytes = _build_payroll_workbook(
+        report=report,
+        title="월별 일용노무비 지급명세서",
+        include_project_list=True,
+    )
+    filename = f"{_sanitize_filename(report['organization_name'])} {year}년 {month_int}월 일용근로자 사용 명단.xlsx"
+    return _xlsx_response(xlsx_bytes, filename)
+
+
+@router.get("/reports/welfare-form")
+async def download_welfare_form(
+    db: DBSession,
+    current_user: CurrentUser,
+    project_id: str,
+    month: str,
+    template_version: str = Query(default="v1"),
+):
+    org_id = _require_org_id(current_user)
+    year, month_int = _parse_month_param(month)
+    project_int = _to_int(project_id)
+    await _get_project_for_user(db, project_int, current_user)
+
+    report = await _build_site_report(db, org_id, project_int, year, month_int)
+    missing_codes = _validate_welfare_required_codes(report["entries"])
+    if missing_codes:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "근로복지공단 코드 매핑 누락으로 파일을 생성할 수 없어요.",
+                "missing": missing_codes,
+            },
+        )
+
+    xlsx_bytes = _build_welfare_form_workbook(report, template_version=template_version)
+    filename = (
+        f"{_sanitize_filename(report['project_name'])} "
+        f"근로복지공단 신고 양식({year}년 {month_int}월).xlsx"
+    )
+    return _xlsx_response(xlsx_bytes, filename)
 
 
 class InsuranceRateUpsertRequest(BaseModel):
@@ -1997,6 +2562,22 @@ class InsuranceRateUpsertRequest(BaseModel):
     health_premium_lower: Decimal
 
 
+class AdminRateUpdateRequest(BaseModel):
+    income_deduction: Decimal
+    simplified_tax_rate: Decimal
+    local_tax_rate: Decimal
+    employment_insurance_rate: Decimal
+    health_insurance_rate: Decimal
+    longterm_care_rate: Decimal
+    national_pension_rate: Decimal
+    pension_upper_limit: Decimal
+    pension_lower_limit: Decimal
+    health_premium_upper: Decimal
+    health_premium_lower: Decimal
+    effective_year: Optional[int] = None
+    effective_from: Optional[date] = None
+
+
 @router.get("/labor/insurance-rates", response_model=APIResponse[list[dict]])
 async def get_insurance_rates(
     db: DBSession,
@@ -2011,25 +2592,7 @@ async def get_insurance_rates(
 
     query = query.order_by(InsuranceRate.effective_year.desc())
     rows = (await db.execute(query)).scalars().all()
-
-    return APIResponse.ok([
-        {
-            "id": str(r.id),
-            "effective_year": r.effective_year,
-            "income_deduction": float(r.income_deduction),
-            "simplified_tax_rate": float(r.simplified_tax_rate),
-            "local_tax_rate": float(r.local_tax_rate),
-            "employment_insurance_rate": float(r.employment_insurance_rate),
-            "health_insurance_rate": float(r.health_insurance_rate),
-            "longterm_care_rate": float(r.longterm_care_rate),
-            "national_pension_rate": float(r.national_pension_rate),
-            "pension_upper_limit": float(r.pension_upper_limit),
-            "pension_lower_limit": float(r.pension_lower_limit),
-            "health_premium_upper": float(r.health_premium_upper),
-            "health_premium_lower": float(r.health_premium_lower),
-        }
-        for r in rows
-    ])
+    return APIResponse.ok([_serialize_insurance_rate(row) for row in rows])
 
 
 @router.post("/labor/insurance-rates", response_model=APIResponse[dict])
@@ -2039,6 +2602,16 @@ async def create_insurance_rate(
     current_user: CurrentUser,
 ):
     org_id = _require_org_id(current_user)
+
+    existing = (
+        await db.execute(
+            select(InsuranceRate)
+            .where(InsuranceRate.organization_id == org_id)
+            .where(InsuranceRate.effective_year == payload.effective_year)
+        )
+    ).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=409, detail="해당 연도의 요율이 이미 등록되어 있어요")
 
     rate = InsuranceRate(
         organization_id=org_id,
@@ -2070,13 +2643,26 @@ async def update_insurance_rate(
 ):
     org_id = _require_org_id(current_user)
 
-    rate = (await db.execute(
-        select(InsuranceRate)
-        .where(InsuranceRate.id == rate_id)
-        .where(InsuranceRate.organization_id == org_id)
-    )).scalar_one_or_none()
+    rate = (
+        await db.execute(
+            select(InsuranceRate)
+            .where(InsuranceRate.id == rate_id)
+            .where(InsuranceRate.organization_id == org_id)
+        )
+    ).scalar_one_or_none()
     if not rate:
         raise NotFoundException("insurance_rate", rate_id)
+
+    duplicate_year = (
+        await db.execute(
+            select(InsuranceRate)
+            .where(InsuranceRate.organization_id == org_id)
+            .where(InsuranceRate.effective_year == payload.effective_year)
+            .where(InsuranceRate.id != rate.id)
+        )
+    ).scalar_one_or_none()
+    if duplicate_year:
+        raise HTTPException(status_code=409, detail="같은 적용연도 요율이 이미 존재해요")
 
     rate.effective_year = payload.effective_year
     rate.income_deduction = payload.income_deduction
@@ -2093,6 +2679,105 @@ async def update_insurance_rate(
     rate.updated_at = datetime.utcnow()
 
     return APIResponse.ok({"id": str(rate.id)})
+
+
+@router.get("/admin/rates", response_model=APIResponse[dict])
+async def get_admin_rates(
+    db: DBSession,
+    current_user: CurrentUser,
+    as_of: Optional[date] = Query(default=None),
+):
+    org_id = _require_org_id(current_user)
+    as_of_date = as_of or date.today()
+
+    rows = (
+        await db.execute(
+            select(InsuranceRate)
+            .where(InsuranceRate.organization_id == org_id)
+            .order_by(InsuranceRate.effective_year.desc())
+        )
+    ).scalars().all()
+
+    active_rate = next((row for row in rows if row.effective_year <= as_of_date.year), None)
+    if active_rate is None and rows:
+        active_rate = rows[0]
+
+    return APIResponse.ok(
+        {
+            "as_of": as_of_date.isoformat(),
+            "active_rate": _serialize_insurance_rate(active_rate) if active_rate else None,
+            "versions": [_serialize_insurance_rate(row) for row in rows],
+        }
+    )
+
+
+@router.put("/admin/rates/{rate_version_id}", response_model=APIResponse[dict])
+async def update_admin_rate(
+    rate_version_id: int,
+    payload: AdminRateUpdateRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    org_id = _require_org_id(current_user)
+
+    rate = (
+        await db.execute(
+            select(InsuranceRate)
+            .where(InsuranceRate.id == rate_version_id)
+            .where(InsuranceRate.organization_id == org_id)
+        )
+    ).scalar_one_or_none()
+    if not rate:
+        raise NotFoundException("insurance_rate", rate_version_id)
+
+    if payload.effective_from and payload.effective_year and payload.effective_from.year != payload.effective_year:
+        raise HTTPException(status_code=400, detail="effective_from과 effective_year가 일치해야 해요")
+
+    next_effective_year = (
+        payload.effective_year
+        if payload.effective_year is not None
+        else payload.effective_from.year if payload.effective_from else rate.effective_year
+    )
+
+    duplicate_year = (
+        await db.execute(
+            select(InsuranceRate)
+            .where(InsuranceRate.organization_id == org_id)
+            .where(InsuranceRate.effective_year == next_effective_year)
+            .where(InsuranceRate.id != rate.id)
+        )
+    ).scalar_one_or_none()
+    if duplicate_year:
+        raise HTTPException(status_code=409, detail="같은 적용연도 요율이 이미 존재해요")
+
+    rate.effective_year = next_effective_year
+    rate.income_deduction = payload.income_deduction
+    rate.simplified_tax_rate = payload.simplified_tax_rate
+    rate.local_tax_rate = payload.local_tax_rate
+    rate.employment_insurance_rate = payload.employment_insurance_rate
+    rate.health_insurance_rate = payload.health_insurance_rate
+    rate.longterm_care_rate = payload.longterm_care_rate
+    rate.national_pension_rate = payload.national_pension_rate
+    rate.pension_upper_limit = payload.pension_upper_limit
+    rate.pension_lower_limit = payload.pension_lower_limit
+    rate.health_premium_upper = payload.health_premium_upper
+    rate.health_premium_lower = payload.health_premium_lower
+    rate.updated_at = datetime.utcnow()
+
+    await _log_activity(
+        db=db,
+        user_id=current_user.id,
+        action="settings_change",
+        description=f"보험요율 버전({rate.id}) 수정",
+    )
+
+    return APIResponse.ok(
+        {
+            "id": str(rate.id),
+            "effective_year": rate.effective_year,
+            "effective_from": f"{rate.effective_year}-01-01",
+        }
+    )
 
 
 # ----------------------------
