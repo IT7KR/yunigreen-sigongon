@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   CardContent,
+  FileUpload,
   Input,
   Modal,
   PrimitiveInput,
@@ -50,9 +51,38 @@ type CustomerForm = {
   business_number: string;
   contact_name: string;
   contact_phone: string;
-  license_type: string;
+  licenses: LicenseFormItem[];
   is_women_owned: boolean;
 };
+
+type LicenseFileState = {
+  id: string;
+  original_filename: string;
+  deleted?: boolean;
+};
+
+type LicenseFormItem = {
+  local_id: string;
+  id?: string;
+  license_name: string;
+  license_number: string;
+  issuer: string;
+  expires_on: string;
+  is_primary: boolean;
+  new_files: File[];
+  existing_files: LicenseFileState[];
+};
+
+const createLicenseDraft = (): LicenseFormItem => ({
+  local_id: Math.random().toString(36).slice(2, 10),
+  license_name: "",
+  license_number: "",
+  issuer: "",
+  expires_on: "",
+  is_primary: false,
+  new_files: [],
+  existing_files: [],
+});
 
 const EMPTY_FORM: CustomerForm = {
   name: "",
@@ -62,7 +92,7 @@ const EMPTY_FORM: CustomerForm = {
   business_number: "",
   contact_name: "",
   contact_phone: "",
-  license_type: "",
+  licenses: [],
   is_women_owned: false,
 };
 
@@ -127,6 +157,146 @@ export default function CustomersPage() {
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 5)}-${cleaned.slice(5, 10)}`;
   };
 
+  const updateLicenseItem = (
+    localId: string,
+    updater: (item: LicenseFormItem) => LicenseFormItem,
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      licenses: prev.licenses.map((item) =>
+        item.local_id === localId ? updater(item) : item,
+      ),
+    }));
+  };
+
+  const loadCustomerLicenses = async (customer: Customer) => {
+    try {
+      const response = await api.getLicenses({
+        owner_type: "customer",
+        owner_id: customer.id,
+      });
+      if (response.success && response.data && response.data.length > 0) {
+        return response.data.map((record, index) => ({
+          local_id: Math.random().toString(36).slice(2, 10),
+          id: String(record.id),
+          license_name: record.license_name || "",
+          license_number: record.license_number || "",
+          issuer: record.issuer || "",
+          expires_on: record.expires_on || "",
+          is_primary: record.is_primary || index === 0,
+          new_files: [],
+          existing_files: (record.files || []).map((file) => ({
+            id: String(file.id),
+            original_filename: file.original_filename || "첨부파일",
+          })),
+        }));
+      }
+    } catch (error) {
+      console.error("고객사 면허 목록 조회 실패:", error);
+    }
+
+    if (customer.license_type) {
+      return [
+        {
+          ...createLicenseDraft(),
+          license_name: customer.license_type,
+          is_primary: true,
+        },
+      ];
+    }
+    return [];
+  };
+
+  const syncCustomerLicenses = async (
+    customerId: string,
+    licenseDrafts: LicenseFormItem[],
+  ) => {
+    const normalized = licenseDrafts
+      .map((item) => ({
+        ...item,
+        license_name: item.license_name.trim(),
+        license_number: item.license_number.trim(),
+        issuer: item.issuer.trim(),
+      }))
+      .filter(
+        (item) =>
+          item.license_name ||
+          item.new_files.length > 0 ||
+          item.existing_files.some((file) => !file.deleted),
+      );
+
+    const existingResponse = await api.getLicenses({
+      owner_type: "customer",
+      owner_id: customerId,
+    });
+    if (!existingResponse.success) {
+      throw new Error("면허 목록 조회 실패");
+    }
+    const existingRecords = existingResponse.data || [];
+    const existingById = new Map(existingRecords.map((item) => [String(item.id), item]));
+
+    const primaryIndex = normalized.findIndex((item) => item.is_primary);
+    normalized.forEach((item, index) => {
+      item.is_primary = primaryIndex >= 0 ? index === primaryIndex : index === 0;
+    });
+
+    for (const item of normalized) {
+      if (!item.license_name) continue;
+
+      const payload = {
+        license_name: item.license_name,
+        license_number: item.license_number || undefined,
+        issuer: item.issuer || undefined,
+        expires_on: item.expires_on || undefined,
+        status: "active" as const,
+        is_primary: item.is_primary,
+      };
+
+      let recordId = item.id;
+      if (recordId) {
+        const response = await api.updateLicense(recordId, payload);
+        if (!response.success) {
+          throw new Error("면허 수정 실패");
+        }
+        existingById.delete(recordId);
+      } else {
+        const response = await api.createLicense({
+          owner_type: "customer",
+          owner_id: customerId,
+          ...payload,
+        });
+        if (!response.success || !response.data) {
+          throw new Error("면허 등록 실패");
+        }
+        recordId = String(response.data.id);
+      }
+
+      if (!recordId) continue;
+
+      for (const file of item.existing_files) {
+        if (!file.deleted) continue;
+        const deleteResponse = await api.deleteLicenseFile(recordId, file.id);
+        if (!deleteResponse.success) {
+          throw new Error("면허 첨부 삭제 실패");
+        }
+      }
+
+      for (const file of item.new_files) {
+        const uploadResponse = await api.uploadLicenseFile(recordId, file);
+        if (!uploadResponse.success) {
+          throw new Error("면허 첨부 업로드 실패");
+        }
+      }
+    }
+
+    for (const staleRecord of existingById.values()) {
+      const deleteResponse = await api.deleteLicense(String(staleRecord.id));
+      if (!deleteResponse.success) {
+        throw new Error("기존 면허 삭제 실패");
+      }
+    }
+  };
+
   const fetchCustomers = async () => {
     setIsLoading(true);
     try {
@@ -173,13 +343,14 @@ export default function CustomersPage() {
 
   const openCreateModal = () => {
     setEditingCustomer(null);
-    setFormData(EMPTY_FORM);
+    setFormData({ ...EMPTY_FORM, licenses: [] });
     setFormErrors({});
     setSaveSuccess(false);
     setShowModal(true);
   };
 
-  const openEditModal = (customer: Customer) => {
+  const openEditModal = async (customer: Customer) => {
+    const licenses = await loadCustomerLicenses(customer);
     setEditingCustomer(customer);
     setFormData({
       name: customer.name,
@@ -189,7 +360,7 @@ export default function CustomersPage() {
       business_number: customer.business_number,
       contact_name: customer.contact_name,
       contact_phone: customer.contact_phone,
-      license_type: customer.license_type,
+      licenses,
       is_women_owned: customer.is_women_owned,
     });
     setFormErrors({});
@@ -230,6 +401,16 @@ export default function CustomersPage() {
     ) {
       errors.business_number = "사업자번호 형식은 XXX-XX-XXXXX 입니다";
     }
+    if (
+      formData.licenses.some(
+        (item) =>
+          !item.license_name.trim() &&
+          (item.new_files.length > 0 ||
+            item.existing_files.some((file) => !file.deleted)),
+      )
+    ) {
+      errors.licenses = "첨부파일이 있는 면허는 면허명을 입력해 주세요";
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -246,7 +427,11 @@ export default function CustomersPage() {
       business_number: formData.business_number.trim() || undefined,
       contact_name: formData.contact_name.trim() || undefined,
       contact_phone: formData.contact_phone.trim() || undefined,
-      license_type: formData.license_type.trim() || undefined,
+      license_type:
+        formData.licenses.find((item) => item.is_primary && item.license_name.trim())
+          ?.license_name.trim() ||
+        formData.licenses.find((item) => item.license_name.trim())?.license_name.trim() ||
+        undefined,
       is_women_owned: formData.is_women_owned,
       phone:
         formData.representative_phone.trim() ||
@@ -257,18 +442,25 @@ export default function CustomersPage() {
     try {
       setIsSaving(true);
       setFormErrors({});
+      let targetCustomerId = editingCustomer?.id || "";
       if (editingCustomer) {
         const response = await api.updateCustomer(editingCustomer.id, payload);
-        if (!response.success) {
+        if (!response.success || !response.data) {
           setFormErrors({ submit: "수정에 실패했습니다" });
           return;
         }
+        targetCustomerId = String(response.data.id || editingCustomer.id);
       } else {
         const response = await api.createCustomer(payload);
-        if (!response.success) {
+        if (!response.success || !response.data) {
           setFormErrors({ submit: "등록에 실패했습니다" });
           return;
         }
+        targetCustomerId = String(response.data.id);
+      }
+
+      if (targetCustomerId) {
+        await syncCustomerLicenses(targetCustomerId, formData.licenses);
       }
 
       setSaveSuccess(true);
@@ -515,17 +707,6 @@ export default function CustomersPage() {
                   }
                   error={formErrors.business_number}
                 />
-                <Input
-                  label="면허"
-                  placeholder="예: 건축공사업"
-                  value={formData.license_type}
-                  onChange={(event) =>
-                    setFormData({
-                      ...formData,
-                      license_type: event.target.value,
-                    })
-                  }
-                />
 
                 <Input
                   label="실무자명"
@@ -549,6 +730,180 @@ export default function CustomersPage() {
                     })
                   }
                 />
+              </div>
+
+              <div className="space-y-3 rounded-lg border border-slate-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">면허 정보 (선택)</p>
+                    <p className="text-xs text-slate-500">면허명과 증빙파일을 함께 관리합니다.</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        licenses: [...prev.licenses, createLicenseDraft()],
+                      }))
+                    }
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    면허 추가
+                  </Button>
+                </div>
+
+                {formData.licenses.length === 0 ? (
+                  <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                    등록된 면허가 없습니다.
+                  </p>
+                ) : (
+                  formData.licenses.map((license, index) => (
+                    <div
+                      key={license.local_id}
+                      className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-slate-600">
+                          면허 {index + 1}
+                          {license.is_primary ? " (대표)" : ""}
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              licenses: prev.licenses.filter(
+                                (item) => item.local_id !== license.local_id,
+                              ),
+                            }))
+                          }
+                        >
+                          제거
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input
+                          label="면허명"
+                          placeholder="예: 건축공사업"
+                          value={license.license_name}
+                          onChange={(event) =>
+                            updateLicenseItem(license.local_id, (item) => ({
+                              ...item,
+                              license_name: event.target.value,
+                            }))
+                          }
+                        />
+                        <Input
+                          label="면허번호"
+                          placeholder="예: 제2026-12345호"
+                          value={license.license_number}
+                          onChange={(event) =>
+                            updateLicenseItem(license.local_id, (item) => ({
+                              ...item,
+                              license_number: event.target.value,
+                            }))
+                          }
+                        />
+                        <Input
+                          label="발급기관"
+                          placeholder="예: 국토교통부"
+                          value={license.issuer}
+                          onChange={(event) =>
+                            updateLicenseItem(license.local_id, (item) => ({
+                              ...item,
+                              issuer: event.target.value,
+                            }))
+                          }
+                        />
+                        <Input
+                          type="date"
+                          label="유효기간"
+                          value={license.expires_on}
+                          onChange={(event) =>
+                            updateLicenseItem(license.local_id, (item) => ({
+                              ...item,
+                              expires_on: event.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+
+                      <div className="rounded-md border border-slate-200 bg-white p-3">
+                        <FileUpload
+                          accept=".pdf,.jpg,.jpeg,.png,.webp"
+                          maxSize={10 * 1024 * 1024}
+                          multiple
+                          onFiles={(files) =>
+                            updateLicenseItem(license.local_id, (item) => ({
+                              ...item,
+                              new_files: files,
+                            }))
+                          }
+                        />
+                      </div>
+
+                      {license.existing_files.some((file) => !file.deleted) && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-slate-600">기존 첨부</p>
+                          {license.existing_files.map((file) =>
+                            file.deleted ? null : (
+                              <div
+                                key={file.id}
+                                className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2"
+                              >
+                                <p className="truncate text-xs text-slate-600">
+                                  {file.original_filename}
+                                </p>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    updateLicenseItem(license.local_id, (item) => ({
+                                      ...item,
+                                      existing_files: item.existing_files.map((existing) =>
+                                        existing.id === file.id
+                                          ? { ...existing, deleted: true }
+                                          : existing,
+                                      ),
+                                    }))
+                                  }
+                                >
+                                  삭제
+                                </Button>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      )}
+
+                      <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                        <PrimitiveInput
+                          type="checkbox"
+                          checked={license.is_primary}
+                          onChange={(event) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              licenses: prev.licenses.map((item) => ({
+                                ...item,
+                                is_primary:
+                                  item.local_id === license.local_id
+                                    ? event.target.checked
+                                    : false,
+                              })),
+                            }))
+                          }
+                        />
+                        대표 면허로 지정
+                      </label>
+                    </div>
+                  ))
+                )}
+                {formErrors.licenses && (
+                  <p className="text-xs text-red-600">{formErrors.licenses}</p>
+                )}
               </div>
 
               <label
