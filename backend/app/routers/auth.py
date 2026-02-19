@@ -365,6 +365,33 @@ async def check_business_number(business_number: str, db: DBSession):
     return APIResponse.ok({"available": existing is None})
 
 
+class BusinessVerifyRequest(BaseModel):
+    """사업자 상태 조회 요청."""
+    business_number: str
+
+
+@router.post("/verify-business-status")
+async def verify_business_status(
+    request: BusinessVerifyRequest,
+    db: DBSession,
+):
+    """사업자 상태 조회 - 국세청 API 연동 (신규 회원가입 시 사업자 상태 확인)."""
+    if not request.business_number:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="사업자번호를 입력해주세요")
+
+    from app.services.business_verification import get_business_verification_service
+    svc = get_business_verification_service()
+    result = await svc.verify(request.business_number)
+
+    return APIResponse.ok({
+        "business_number": result.business_number,
+        "status": result.status.value,
+        "status_code": result.status_code,
+        "tax_type": result.tax_type,
+        "is_active": result.status_code == "01",
+    })
+
+
 @router.post("/register", response_model=APIResponse[LoginResponse])
 async def register(request: RegisterRequest, db: DBSession):
     """회원가입."""
