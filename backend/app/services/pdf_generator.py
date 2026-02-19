@@ -331,8 +331,129 @@ def generate_contract_pdf(
         ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
     ]))
     elements.append(parties_table)
-    
+
     doc.build(elements)
-    
+
     buffer.seek(0)
+    return buffer.getvalue()
+
+
+def generate_diagnosis_pdf(
+    diagnosis_id: int,
+    project_name: str,
+    site_address: str,
+    diagnosed_at: datetime,
+    leak_opinion_text: str,
+    field_opinion_text: Optional[str] = None,
+    material_suggestions: Optional[list] = None,
+) -> bytes:
+    """AI 소견서 PDF 생성."""
+    buffer = io.BytesIO()
+    styles = _get_styles()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=20 * mm,
+        leftMargin=20 * mm,
+        topMargin=20 * mm,
+        bottomMargin=20 * mm,
+    )
+
+    story = []
+
+    # Title
+    story.append(Paragraph("AI 누수 진단 소견서", styles["KoreanTitle"]))
+    story.append(Spacer(1, 5 * mm))
+
+    # Header info table
+    header_data = [
+        ["현장명", project_name],
+        ["현장주소", site_address],
+        ["진단일시", diagnosed_at.strftime("%Y년 %m월 %d일 %H:%M")],
+        ["소견서 번호", f"DIAG-{diagnosis_id}"],
+    ]
+    header_table = Table(header_data, colWidths=[35 * mm, 135 * mm])
+    header_table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("FONTNAME", (0, 0), (0, -1), FONT_NAME_BOLD),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F3F4F6")),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("PADDING", (0, 0), (-1, -1), 5),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 8 * mm))
+
+    # AI Analysis Section
+    story.append(Paragraph("■ AI 진단 결과", styles["KoreanNormal"]))
+    story.append(Spacer(1, 3 * mm))
+
+    normal_style = ParagraphStyle(
+        name="KoreanBodyText",
+        fontName=FONT_NAME,
+        fontSize=10,
+        leading=16,
+        spaceAfter=6,
+    )
+
+    if leak_opinion_text:
+        for line in leak_opinion_text.split("\n"):
+            if line.strip():
+                story.append(Paragraph(line, normal_style))
+
+    story.append(Spacer(1, 5 * mm))
+
+    # Field opinion section
+    if field_opinion_text:
+        story.append(Paragraph("■ 현장 의견", normal_style))
+        story.append(Spacer(1, 3 * mm))
+        for line in field_opinion_text.split("\n"):
+            if line.strip():
+                story.append(Paragraph(line, normal_style))
+        story.append(Spacer(1, 5 * mm))
+
+    # Material suggestions
+    if material_suggestions:
+        story.append(Paragraph("■ 제안 자재", normal_style))
+        story.append(Spacer(1, 3 * mm))
+        mat_data = [["품명", "규격", "수량", "단위"]]
+        for mat in material_suggestions[:10]:
+            mat_data.append([
+                str(mat.get("item_name", "")),
+                str(mat.get("spec", "")),
+                str(mat.get("quantity", "")),
+                str(mat.get("unit", "")),
+            ])
+        mat_table = Table(mat_data, colWidths=[70 * mm, 50 * mm, 25 * mm, 25 * mm])
+        mat_table.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E5E7EB")),
+            ("FONTNAME", (0, 0), (-1, 0), FONT_NAME_BOLD),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("PADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.append(mat_table)
+        story.append(Spacer(1, 5 * mm))
+
+    # Footer
+    story.append(Spacer(1, 10 * mm))
+    footer_style = ParagraphStyle(
+        name="Footer",
+        fontName=FONT_NAME,
+        fontSize=8,
+        textColor=colors.grey,
+        alignment=1,
+    )
+    story.append(Paragraph(
+        "본 소견서는 AI 분석을 기반으로 생성되었습니다. 최종 판단은 전문가 확인이 필요합니다.",
+        footer_style,
+    ))
+    story.append(Paragraph(
+        f"생성일시: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC | 시공ON AI 진단 시스템",
+        footer_style,
+    ))
+
+    doc.build(story)
     return buffer.getvalue()
