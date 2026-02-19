@@ -92,12 +92,14 @@ test.describe("권한 및 접근 제어", () => {
       await expect(page).not.toHaveURL(/\/login/);
     });
 
-    test("SA 계정으로 노무 관리 페이지에 접근 가능하다", async ({ page }) => {
+    test("SA 계정으로 회원기업 노무 페이지 접근 시 SA 노무 모니터링으로 리다이렉트된다", async ({
+      page,
+    }) => {
       await page.goto("/labor/workers");
 
-      await expect(page).not.toHaveURL(/\/login/);
+      await expect(page).toHaveURL(/\/sa\/labor/, { timeout: 5000 });
       await expect(
-        page.getByRole("heading", { name: /근로자 주소록/ }),
+        page.getByRole("heading", { name: /노무 모니터링/ }),
       ).toBeVisible({ timeout: 5000 });
     });
 

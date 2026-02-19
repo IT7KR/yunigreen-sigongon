@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { loginAsSuperAdmin } from "../helpers/auth";
+import { loginAsCeo } from "../helpers/auth";
 
 test.describe("노무 관련 흐름", () => {
   test.beforeEach(async ({ page }) => {
-    await loginAsSuperAdmin(page);
+    await loginAsCeo(page);
   });
 
   test.describe("근로자 주소록", () => {
