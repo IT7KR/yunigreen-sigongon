@@ -51,16 +51,15 @@ const navItems = [
     icon: HardHat,
     label: "노무관리",
     children: [
-      { href: "/labor", label: "대시보드", icon: BarChart3 },
+      { href: "/labor/workers", label: "근로자 관리", icon: UserCheck },
       { href: "/labor/payroll", label: "급여/근무 관리", icon: Calculator },
-      { href: "/labor/workers", label: "근로자 주소록", icon: UserCheck },
       { href: "/labor/settings", label: "보험요율 설정", icon: Settings },
     ],
   },
   {
     href: "/organization/field-representatives",
     icon: FileText,
-    label: "현장대리인 명단",
+    label: "현장대리인",
   },
   {
     href: "/users",

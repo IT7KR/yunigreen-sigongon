@@ -13,6 +13,22 @@ interface ModusignModalProps {
   onSuccess?: () => void;
 }
 
+interface ModusignRequestData {
+  id?: string;
+  contract_id?: string;
+  status: string;
+  signer_name?: string | null;
+  signer_email?: string | null;
+  signer_phone?: string | null;
+  sent_at?: string | null;
+  signed_at?: string | null;
+  expired_at?: string | null;
+  document_url?: string;
+  sign_url?: string;
+  message?: string;
+  created_at?: string;
+}
+
 const modusignStatusConfig: Record<ModusignStatus, { label: string; icon: any; color: string }> = {
   pending: { label: "대기중", icon: Clock, color: "text-slate-500" },
   sent: { label: "발송됨", icon: Send, color: "text-blue-500" },
@@ -28,7 +44,7 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
   const [signerPhone, setSignerPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modusignRequest, setModusignRequest] = useState<any>(null);
+  const [modusignRequest, setModusignRequest] = useState<ModusignRequestData | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const { confirm } = useConfirmDialog();
 
@@ -43,7 +59,9 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
       setCheckingStatus(true);
       const response = await api.getModusignStatus(contractId);
       if (response.success && response.data) {
-        setModusignRequest(response.data);
+        const next = response.data as ModusignRequestData;
+        // API returns "pending" when no sent request exists yet.
+        setModusignRequest(next.status === "pending" ? null : next);
       }
     } catch (err) {
       // No existing request, that's fine
@@ -132,6 +150,26 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
     onClose();
   }
 
+  function formatDateTime(value?: string | null) {
+    if (!value) {
+      return "-";
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "-";
+    }
+
+    return date.toLocaleString("ko-KR");
+  }
+
+  function getStatusConfig(status: string) {
+    if (status in modusignStatusConfig) {
+      return modusignStatusConfig[status as ModusignStatus];
+    }
+    return modusignStatusConfig.pending;
+  }
+
   if (checkingStatus) {
     return (
       <Modal
@@ -163,23 +201,23 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
               <div className="space-y-3 flex-1">
                 <div className="flex items-center gap-2">
                   {(() => {
-                    const StatusIcon = modusignStatusConfig[modusignRequest.status as ModusignStatus].icon;
-                    const iconColor = modusignStatusConfig[modusignRequest.status as ModusignStatus].color;
-                    return <StatusIcon className={`h-5 w-5 ${iconColor}`} />;
+                    const statusConfig = getStatusConfig(modusignRequest.status);
+                    const StatusIcon = statusConfig.icon;
+                    return <StatusIcon className={`h-5 w-5 ${statusConfig.color}`} />;
                   })()}
                   <span className="font-medium text-slate-900">
-                    {modusignStatusConfig[modusignRequest.status as ModusignStatus].label}
+                    {getStatusConfig(modusignRequest.status).label}
                   </span>
                 </div>
 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-500">서명자</span>
-                    <span className="font-medium text-slate-900">{modusignRequest.signer_name}</span>
+                    <span className="font-medium text-slate-900">{modusignRequest.signer_name || "-"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">이메일</span>
-                    <span className="text-slate-900">{modusignRequest.signer_email}</span>
+                    <span className="text-slate-900">{modusignRequest.signer_email || "-"}</span>
                   </div>
                   {modusignRequest.signer_phone && (
                     <div className="flex justify-between">
@@ -190,14 +228,14 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
                   <div className="flex justify-between">
                     <span className="text-slate-500">발송일시</span>
                     <span className="text-slate-900">
-                      {new Date(modusignRequest.sent_at).toLocaleString("ko-KR")}
+                      {formatDateTime(modusignRequest.sent_at)}
                     </span>
                   </div>
                   {modusignRequest.signed_at && (
                     <div className="flex justify-between">
                       <span className="text-slate-500">서명일시</span>
                       <span className="text-green-600 font-medium">
-                        {new Date(modusignRequest.signed_at).toLocaleString("ko-KR")}
+                        {formatDateTime(modusignRequest.signed_at)}
                       </span>
                     </div>
                   )}
@@ -205,7 +243,7 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
                     <div className="flex justify-between">
                       <span className="text-slate-500">만료일시</span>
                       <span className="text-slate-900">
-                        {new Date(modusignRequest.expired_at).toLocaleString("ko-KR")}
+                        {formatDateTime(modusignRequest.expired_at)}
                       </span>
                     </div>
                   )}
