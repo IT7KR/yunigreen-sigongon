@@ -233,6 +233,10 @@ class DailyWorker(SQLModel, table=True):
     invite_token: Optional[str] = Field(default=None, max_length=120)
     has_id_card: bool = Field(default=False)
     has_safety_cert: bool = Field(default=False)
+    is_blocked_for_labor: bool = Field(default=False, index=True)
+    block_reason: Optional[str] = Field(default=None, max_length=500)
+    blocked_by_user_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
+    blocked_at: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -332,11 +336,36 @@ class WorkerDocument(SQLModel, table=True):
 
     id: int = Field(default_factory=generate_snowflake_id, sa_column=Column(BigInteger, primary_key=True))
     worker_id: int = Field(sa_column=Column(BigInteger, nullable=False, index=True))
+    organization_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
     document_id: str = Field(max_length=60, index=True)
+    document_type: str = Field(default="unknown", max_length=30, index=True)
     name: str = Field(max_length=100)
     status: str = Field(default="pending", max_length=30)
     storage_path: Optional[str] = Field(default=None, max_length=500)
+    original_filename: Optional[str] = Field(default=None, max_length=255)
+    mime_type: Optional[str] = Field(default=None, max_length=100)
+    file_size_bytes: int = Field(default=0)
+    file_hash_sha256: Optional[str] = Field(default=None, max_length=64, index=True)
+    review_status: str = Field(default="pending_review", max_length=30, index=True)
+    review_reason: Optional[str] = Field(default=None, max_length=500)
+    reviewed_by_user_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
+    reviewed_at: Optional[datetime] = Field(default=None)
+    anomaly_flags: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
     uploaded_at: Optional[datetime] = Field(default=None)
+
+
+class WorkerDocumentModerationLog(SQLModel, table=True):
+    __tablename__ = "worker_document_moderation_log"
+
+    id: int = Field(default_factory=generate_snowflake_id, sa_column=Column(BigInteger, primary_key=True))
+    organization_id: int = Field(sa_column=Column(BigInteger, nullable=False, index=True))
+    worker_id: int = Field(sa_column=Column(BigInteger, nullable=False, index=True))
+    worker_document_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
+    actor_user_id: int = Field(sa_column=Column(BigInteger, nullable=False, index=True))
+    action: str = Field(max_length=40, index=True)
+    reason: Optional[str] = Field(default=None, max_length=500)
+    payload_json: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class AppNotification(SQLModel, table=True):
