@@ -26,6 +26,14 @@ export function useProject(id: string) {
   });
 }
 
+export function useConstructionReports(projectId: string) {
+  return useQuery({
+    queryKey: ["construction-reports", projectId],
+    queryFn: () => api.getConstructionReports(projectId),
+    enabled: !!projectId,
+  });
+}
+
 export function useDashboardStats() {
   const projectStats = useQuery({
     queryKey: ["dashboard-project-stats"],
