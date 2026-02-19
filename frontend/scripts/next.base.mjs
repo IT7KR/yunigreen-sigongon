@@ -3,6 +3,7 @@ const nextBaseConfig = {
     ignoreBuildErrors: false,
   },
   turbopack: {},
+  output: "standalone",
 };
 
 export default nextBaseConfig;
