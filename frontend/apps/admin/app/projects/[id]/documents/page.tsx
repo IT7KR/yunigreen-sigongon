@@ -164,7 +164,9 @@ const MOCK_DOCUMENT_PHASES: ProjectDocumentPhaseGroup[] = [
   makePhaseGroup("commencement", [
     doc("m1", "commencement", "착공공문", "hwp", "template", true, "not_started"),
     doc("m2", "commencement", "착공신고서", "hwp", "template", true, "not_started"),
-    doc("m3", "commencement", "현장대리인 서류", "hwp", "upload", true, "not_started"),
+    doc("m3-1", "commencement", "현장대리인 기술수첩 사본", "pdf", "upload", true, "not_started"),
+    doc("m3-2", "commencement", "현장대리인 경력증명서", "pdf", "upload", true, "not_started"),
+    doc("m3-3", "commencement", "현장대리인 재직증명서", "pdf", "upload", true, "not_started"),
     doc("m4", "commencement", "계약내역서", "xlsx", "auto", true, "generated"),
     doc("m5", "commencement", "노무비 서류", "hwp", "template", false, "not_started", {
       is_conditional: true,
@@ -241,6 +243,23 @@ async function hydrateRepresentativeDocumentState(
   phases: ProjectDocumentPhaseGroup[],
 ) {
   try {
+    const reportsResponse = await api.getConstructionReports(projectId);
+    const reports = reportsResponse.success && Array.isArray(reportsResponse.data)
+      ? reportsResponse.data
+      : [];
+    const latestStartReport = reports
+      .filter((report) => report.report_type === "start")
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))[0];
+    if (latestStartReport) {
+      const detailResponse = await api.getConstructionReport(String(latestStartReport.id));
+      if (
+        detailResponse.success &&
+        detailResponse.data?.auto_link_representative_docs === false
+      ) {
+        return phases;
+      }
+    }
+
     const assignmentResponse = await api.getProjectRepresentative(projectId);
     const assignment = assignmentResponse.success ? assignmentResponse.data : null;
     if (!assignment) {
@@ -260,16 +279,15 @@ async function hydrateRepresentativeDocumentState(
       return phases;
     }
 
-    const linkedFilePath =
-      representative.career_cert_filename ||
-      representative.employment_cert_filename ||
-      representative.booklet_filename;
-    if (!linkedFilePath) {
+    const representativeDocMap = new Map([
+      ["m3-1", representative.booklet_filename],
+      ["m3-2", representative.career_cert_filename],
+      ["m3-3", representative.employment_cert_filename],
+    ]);
+    const hasLinkedDocument = Array.from(representativeDocMap.values()).some(Boolean);
+    if (!hasLinkedDocument) {
       return phases;
     }
-    const resolvedPath = linkedFilePath.includes("/")
-      ? linkedFilePath
-      : getSamplePathForDocument("m3") ?? linkedFilePath;
 
     return phases.map((group) => {
       if (group.phase !== "commencement") {
@@ -277,16 +295,24 @@ async function hydrateRepresentativeDocumentState(
       }
 
       const nextDocuments = group.documents.map((docItem) => {
-        if (docItem.id !== "m3") {
+        const linkedFilePath = representativeDocMap.get(docItem.id);
+        if (!linkedFilePath) {
           return docItem;
         }
+        const resolvedPath = linkedFilePath.includes("/")
+          ? linkedFilePath
+          : getSamplePathForDocument(docItem.id) ??
+            getSamplePathForDocument("m3") ??
+            linkedFilePath;
+        const generatedAt = docItem.id === "m3-2"
+          ? representative.career_cert_uploaded_at || docItem.generated_at
+          : docItem.generated_at;
         return {
           ...docItem,
           status: "uploaded" as const,
           file_path: resolvedPath,
           file_size: docItem.file_size ?? 102400,
-          generated_at:
-            representative.career_cert_uploaded_at || docItem.generated_at,
+          generated_at: generatedAt,
         };
       });
 

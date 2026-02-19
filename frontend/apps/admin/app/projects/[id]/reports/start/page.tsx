@@ -78,6 +78,9 @@ export default function StartReportPage({
       const response = await api.getConstructionReport(reportId);
       if (response.success && response.data) {
         setReportData(response.data);
+        if (typeof response.data.auto_link_representative_docs === "boolean") {
+          setAutoLinkRepresentativeDocs(response.data.auto_link_representative_docs);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -87,9 +90,15 @@ export default function StartReportPage({
   }
 
   function buildPayloadWithRepresentative(data: any): any {
-    if (!autoLinkRepresentativeDocs || !assignedRepresentative) return data;
+    if (!autoLinkRepresentativeDocs || !assignedRepresentative) {
+      return {
+        ...data,
+        auto_link_representative_docs: autoLinkRepresentativeDocs,
+      };
+    }
     return {
       ...data,
+      auto_link_representative_docs: autoLinkRepresentativeDocs,
       ...(data.supervisor_name ? {} : { supervisor_name: assignedRepresentative.name }),
       ...(data.supervisor_phone ? {} : { supervisor_phone: assignedRepresentative.phone }),
     };

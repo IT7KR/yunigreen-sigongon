@@ -14,9 +14,9 @@ interface NewSiteVisitPageProps {
 }
 
 const visitTypes: { value: VisitType; label: string }[] = [
-  { value: "initial", label: "최초방문" },
-  { value: "progress", label: "중간점검" },
-  { value: "completion", label: "준공검사" },
+  { value: "initial", label: "최초 방문" },
+  { value: "progress", label: "진행 점검" },
+  { value: "completion", label: "준공 확인" },
 ];
 
 const photoTypes: { value: PhotoType; label: string }[] = [
@@ -42,6 +42,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
   const [visitedAt, setVisitedAt] = useState(
     new Date().toISOString().slice(0, 16),
   );
+  const [estimatedAreaM2, setEstimatedAreaM2] = useState("");
   const [notes, setNotes] = useState("");
   const [photos, setPhotos] = useState<PendingPhoto[]>([]);
   const [currentPhotoType, setCurrentPhotoType] = useState<PhotoType>("before");
@@ -98,6 +99,7 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
       const result = await createVisit.mutateAsync({
         visit_type: visitType,
         visited_at: new Date(visitedAt).toISOString(),
+        estimated_area_m2: estimatedAreaM2.trim() || undefined,
         notes: notes || undefined,
       });
 
@@ -179,6 +181,23 @@ export default function NewSiteVisitPage({ params }: NewSiteVisitPageProps) {
               onChange={(e) => setVisitedAt(e.target.value)}
               required
             />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <Input
+              type="number"
+              label="면적 산출 (㎡)"
+              value={estimatedAreaM2}
+              onChange={(e) => setEstimatedAreaM2(e.target.value)}
+              step="0.01"
+              min="0"
+              placeholder="예: 85.5"
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              견적 산출 근거로 사용하는 대략 면적입니다.
+            </p>
           </CardContent>
         </Card>
 

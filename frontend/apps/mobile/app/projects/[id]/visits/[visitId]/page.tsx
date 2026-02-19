@@ -14,9 +14,9 @@ interface SiteVisitDetailPageProps {
 }
 
 const visitTypeLabel: Record<VisitType, string> = {
-  initial: "최초방문",
-  progress: "중간점검",
-  completion: "준공검사",
+  initial: "최초 방문",
+  progress: "진행 점검",
+  completion: "준공 확인",
 };
 
 const photoTypeLabel: Record<PhotoType, string> = {
@@ -112,6 +112,14 @@ export default function SiteVisitDetailPage({ params }: SiteVisitDetailPageProps
               <Calendar className="h-4 w-4 text-slate-400" />
               <span>{formatDate(visit.visited_at)}</span>
             </div>
+            {visit.estimated_area_m2 && (
+              <p className="text-sm text-slate-600">
+                면적 산출:{" "}
+                <span className="font-semibold text-slate-900">
+                  {visit.estimated_area_m2}㎡
+                </span>
+              </p>
+            )}
             {visit.notes ? (
               <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
                 {visit.notes}
@@ -206,4 +214,3 @@ export default function SiteVisitDetailPage({ params }: SiteVisitDetailPageProps
     </MobileLayout>
   );
 }
-

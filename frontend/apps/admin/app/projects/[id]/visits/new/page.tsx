@@ -41,6 +41,7 @@ export default function NewVisitPage({
   const [visitedAt, setVisitedAt] = useState(
     new Date().toISOString().slice(0, 16),
   );
+  const [estimatedAreaM2, setEstimatedAreaM2] = useState("");
   const [notes, setNotes] = useState("");
   const [photos, setPhotos] = useState<PendingPhoto[]>([]);
   const [currentPhotoType, setCurrentPhotoType] = useState<PhotoType>("before");
@@ -95,6 +96,7 @@ export default function NewVisitPage({
       const created = await api.createSiteVisit(projectId, {
         visit_type: visitType,
         visited_at: new Date(visitedAt).toISOString(),
+        estimated_area_m2: estimatedAreaM2.trim() || undefined,
         notes: notes.trim() || undefined,
       });
 
@@ -176,6 +178,24 @@ export default function NewVisitPage({
               onChange={(event) => setVisitedAt(event.target.value)}
               className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
             />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              면적 산출 (㎡)
+            </label>
+            <PrimitiveInput
+              type="number"
+              step="0.01"
+              min="0"
+              value={estimatedAreaM2}
+              onChange={(event) => setEstimatedAreaM2(event.target.value)}
+              placeholder="예: 85.5"
+              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              견적 산출 근거로 쓰이는 대략 면적을 입력해 주세요.
+            </p>
           </div>
 
           <Textarea

@@ -137,6 +137,14 @@ export default function VisitDetailPage({ params }: VisitDetailPageProps) {
                 <Calendar className="h-4 w-4 text-slate-400" />
                 <span>{formatDate(visit.visited_at)}</span>
               </div>
+              {visit.estimated_area_m2 && (
+                <div className="text-sm text-slate-600">
+                  면적 산출:{" "}
+                  <span className="font-medium text-slate-900">
+                    {visit.estimated_area_m2}㎡
+                  </span>
+                </div>
+              )}
             </div>
             <Button
               onClick={handleRequestDiagnosis}
