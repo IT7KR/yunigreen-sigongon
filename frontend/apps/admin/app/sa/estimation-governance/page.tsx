@@ -18,6 +18,7 @@ import {
 } from "@sigongon/ui";
 import type {
   EstimationGovernanceOverview,
+  SeasonCategoryPurpose,
   SeasonCategoryInfo,
   SeasonDocumentInfo,
   SeasonDocumentStatus,
@@ -34,6 +35,7 @@ import {
 } from "lucide-react";
 
 const ESTIMATION_PURPOSE = "estimation" as const;
+const DONE_DOCUMENT_LABEL = "인덱싱 완료 문서";
 
 const STEPS = [
   { id: 1, label: "요약" },
@@ -47,7 +49,7 @@ type StepId = (typeof STEPS)[number]["id"];
 const STEP_DESCRIPTIONS: Record<StepId, string> = {
   1: "현재 반영 상태를 확인하고 문제를 먼저 파악합니다.",
   2: "견적에 반영할 시즌을 선택하거나 신규 시즌을 생성합니다.",
-  3: "시즌 내 카테고리의 사용 여부를 확정합니다.",
+  3: "시즌 내 문서 묶음(카테고리)의 사용 여부를 확정합니다.",
   4: "PDF 문서를 첨부하고 인덱싱 상태를 관리합니다.",
 };
 
@@ -56,10 +58,32 @@ const DOC_STATUS_CONFIG: Record<
   { label: string; variant: "default" | "success" | "warning" | "error" | "info" }
 > = {
   queued: { label: "대기", variant: "default" },
-  running: { label: "인덱싱중", variant: "info" },
-  done: { label: "준비완료", variant: "success" },
+  running: { label: "인덱싱 중", variant: "info" },
+  done: { label: "인덱싱 완료", variant: "success" },
   failed: { label: "실패", variant: "error" },
 };
+
+const PURPOSE_LABELS: Record<SeasonCategoryPurpose, string> = {
+  estimation: "견적 반영용",
+  labor_rule: "노무 규정용",
+  legal: "법규 검토용",
+  safety: "안전 관리용",
+};
+
+const PURPOSE_DESCRIPTIONS: Record<SeasonCategoryPurpose, string> = {
+  estimation: "활성화된 문서만 견적 산출에 반영됩니다.",
+  labor_rule: "노무 관련 기준·규정 확인에 사용됩니다.",
+  legal: "법적 기준 및 계약 검토에 사용됩니다.",
+  safety: "안전 기준 및 점검 항목 확인에 사용됩니다.",
+};
+
+function getPurposeLabel(purpose: SeasonCategoryPurpose): string {
+  return PURPOSE_LABELS[purpose] || "기타";
+}
+
+function getPurposeDescription(purpose: SeasonCategoryPurpose): string {
+  return PURPOSE_DESCRIPTIONS[purpose] || "운영 정책에 따라 사용됩니다.";
+}
 
 type PendingAction =
   | { type: "activate-season"; season: SeasonInfo }
@@ -85,7 +109,7 @@ function resolvePendingActionConfig(pendingAction: PendingAction) {
     return {
       title: `${pendingAction.season.name} 시즌을 활성화할까요?`,
       description:
-        "활성 시즌 전환 즉시 견적 반영 세트가 바뀌어요. 전환 후에는 해당 시즌의 활성 카테고리 + 활성 문서(done)만 견적에 사용됩니다.",
+        "활성 시즌 전환 즉시 견적 반영 세트가 바뀌어요. 전환 후에는 해당 시즌의 활성 카테고리 + 인덱싱 완료된 활성 문서만 견적에 사용됩니다.",
       confirmLabel: "시즌 활성화",
       variant: "default" as const,
     };
@@ -485,7 +509,7 @@ export default function SAEstimationGovernancePage() {
           </div>
           <div className="mt-1 flex items-center gap-2 text-slate-900">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <span>done 문서 {doneEnabledDocumentCount}개</span>
+            <span>{DONE_DOCUMENT_LABEL} {doneEnabledDocumentCount}개</span>
           </div>
         </div>
       </CardContent>
@@ -499,7 +523,7 @@ export default function SAEstimationGovernancePage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">적산 운영</h1>
             <p className="mt-1 text-sm text-slate-600">
-              활성 시즌 + 활성 카테고리 + 활성 문서(done) 조합이 현재 견적 반영 세트입니다.
+              활성 시즌 + 활성 카테고리 + 인덱싱 완료된 활성 문서 조합이 현재 견적 반영 세트입니다.
             </p>
           </div>
           <Button
@@ -540,7 +564,7 @@ export default function SAEstimationGovernancePage() {
                 <p className="text-sm font-semibold text-slate-900">{overview?.active_season?.name || "없음"}</p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                <p className="text-xs text-slate-500">반영 문서(done)</p>
+                <p className="text-xs text-slate-500">반영 문서(인덱싱 완료)</p>
                 <p className="text-sm font-semibold text-slate-900">{overviewDoneEnabledDocuments.length.toLocaleString()}개</p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
@@ -625,7 +649,7 @@ export default function SAEstimationGovernancePage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-slate-700">
-                      현재 반영 규칙은 <strong>활성 시즌 + 활성 카테고리 + 활성 문서(done)</strong> 입니다.
+                      현재 반영 규칙은 <strong>활성 시즌 + 활성 카테고리 + 인덱싱 완료된 활성 문서</strong> 입니다.
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <div className="rounded-lg border border-slate-200 p-3">
@@ -633,9 +657,9 @@ export default function SAEstimationGovernancePage() {
                         <p className="mt-1 text-sm font-medium text-slate-900">{selectedSeason?.name || "없음"}</p>
                       </div>
                       <div className="rounded-lg border border-slate-200 p-3">
-                        <p className="text-xs text-slate-500">활성 카테고리/문서</p>
+                        <p className="text-xs text-slate-500">활성 카테고리/인덱싱 완료 문서</p>
                         <p className="mt-1 text-sm font-medium text-slate-900">
-                          {enabledCategoryCount}개 / {doneEnabledDocumentCount}개(done)
+                          {enabledCategoryCount}개 / {doneEnabledDocumentCount}개
                         </p>
                       </div>
                     </div>
@@ -728,6 +752,13 @@ export default function SAEstimationGovernancePage() {
                     <CardTitle>카테고리</CardTitle>
                   </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-sm font-medium text-slate-900">카테고리란?</p>
+                    <p className="mt-1 text-sm text-slate-700">
+                      카테고리는 적산 문서를 업무 용도별로 묶는 단위입니다. 현재 견적 계산에는{" "}
+                      <strong>{getPurposeLabel(ESTIMATION_PURPOSE)}</strong> 카테고리의 활성 문서만 사용됩니다.
+                    </p>
+                  </div>
                   <div className="space-y-2">
                     <label htmlFor="category-season-select" className="text-xs text-slate-500">
                       대상 시즌
@@ -762,7 +793,12 @@ export default function SAEstimationGovernancePage() {
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div>
                                 <p className="text-sm font-medium text-slate-900">{category.name}</p>
-                                <p className="text-xs text-slate-500">용도: {category.purpose}</p>
+                                <p className="text-xs text-slate-500">
+                                  용도: {getPurposeLabel(category.purpose)}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {getPurposeDescription(category.purpose)}
+                                </p>
                               </div>
                               <Badge variant={category.is_enabled ? "success" : "default"}>
                                 {category.is_enabled ? "활성" : "비활성"}
