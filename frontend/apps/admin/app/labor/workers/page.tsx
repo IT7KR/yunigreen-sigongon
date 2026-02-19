@@ -8,18 +8,17 @@ import {
   Trash2,
   Save,
   X,
-  User,
-  Phone,
-  MapPin,
-  CreditCard,
-  Building2,
-  Globe,
+  Download,
+  FileSpreadsheet,
   Loader2,
+  MessageSquare,
+  Copy,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Modal, PrimitiveInput, PrimitiveSelect, toast } from "@sigongon/ui";
+import { Badge, Button, Card, CardContent, Input, Modal, PrimitiveInput, PrimitiveSelect, toast } from "@sigongon/ui";
 import { api } from "@/lib/api";
-import type { DailyWorker } from "@sigongon/types";
+import type { DailyWorker, ProjectListItem } from "@sigongon/types";
+import { sendWorkerInvite } from "@/lib/aligo";
 
 interface LaborCodebook {
   version: string;
@@ -46,11 +45,31 @@ const FALLBACK_JOB_CODES: Record<string, string> = {
 };
 
 export default function DailyWorkersPage() {
+  const now = new Date();
+
   const [workers, setWorkers] = useState<DailyWorker[]>([]);
   const [filteredWorkers, setFilteredWorkers] = useState<DailyWorker[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [codebook, setCodebook] = useState<LaborCodebook | null>(null);
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
+
+  // Worker invitation modal state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [workerName, setWorkerName] = useState("");
+  const [workerPhone, setWorkerPhone] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
+  const [inviteSuccess, setInviteSuccess] = useState<{ inviteUrl: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Report download modal state
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadType, setDownloadType] = useState<"kwdi" | "tax">("kwdi");
+  const [downloadProjectId, setDownloadProjectId] = useState("");
+  const [downloadYear, setDownloadYear] = useState(now.getFullYear());
+  const [downloadMonth, setDownloadMonth] = useState(now.getMonth() + 1);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Registration modal state
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -94,6 +113,7 @@ export default function DailyWorkersPage() {
   useEffect(() => {
     fetchWorkers();
     fetchCodebook();
+    fetchProjects();
   }, []);
 
   useEffect(() => {
@@ -134,6 +154,18 @@ export default function DailyWorkersPage() {
       }
     } catch {
       // 코드북 조회 실패 시 입력은 계속 허용하되, 백엔드 검증을 신뢰한다.
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const response = await api.getProjects({ page: 1, per_page: 100 });
+      if (response.data) {
+        setProjects(response.data);
+        setDownloadProjectId((prev) => prev || response.data?.[0]?.id || "");
+      }
+    } catch {
+      toast.error("현장 목록을 불러오지 못했습니다.");
     }
   };
 
@@ -293,6 +325,122 @@ export default function DailyWorkersPage() {
     }
   };
 
+  const handlePhoneFormat = (value: string) => {
+    const cleaned = value.replace(/\D/g, "");
+    if (cleaned.length <= 3) return cleaned;
+    if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
+  };
+
+  const closeInviteModal = () => {
+    setShowInviteModal(false);
+    setWorkerName("");
+    setWorkerPhone("");
+    setInviteErrors({});
+    setInviteSuccess(null);
+    setCopied(false);
+  };
+
+  const handleInviteWorker = async () => {
+    const errors: Record<string, string> = {};
+
+    if (!workerName.trim()) {
+      errors.name = "이름을 입력하세요.";
+    }
+
+    const phoneRegex = /^010-\d{4}-\d{4}$/;
+    if (!workerPhone || !phoneRegex.test(workerPhone)) {
+      errors.phone = "010-0000-0000 형식으로 입력하세요.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setInviteErrors(errors);
+      return;
+    }
+
+    setIsInviting(true);
+    setInviteErrors({});
+    setInviteSuccess(null);
+
+    try {
+      const token = `WI${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
+      const inviteUrl = `${window.location.origin}/onboarding/worker/consent?token=${token}`;
+
+      const result = await sendWorkerInvite({
+        phone: workerPhone,
+        name: workerName.trim(),
+        companyName: "(주)유니그린",
+        inviteUrl,
+      });
+
+      if (result.success) {
+        setInviteSuccess({ inviteUrl });
+        toast.success(`${workerName}님에게 알림톡을 발송했습니다.`);
+      } else {
+        setInviteErrors({
+          submit: result.error_message || "알림톡 발송에 실패했습니다.",
+        });
+      }
+    } catch {
+      setInviteErrors({ submit: "초대에 실패했습니다." });
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleCopyInviteLink = async () => {
+    if (!inviteSuccess?.inviteUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(inviteSuccess.inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("복사에 실패했습니다.");
+    }
+  };
+
+  const openDownloadModal = (type: "kwdi" | "tax") => {
+    setDownloadType(type);
+    setShowDownloadModal(true);
+  };
+
+  const handleDownload = async () => {
+    if (!downloadProjectId) {
+      toast.error("현장을 선택하세요.");
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const response = await api.generateSiteReport(
+        downloadProjectId,
+        downloadYear,
+        downloadMonth,
+      );
+
+      if (!(response.success && response.data)) {
+        toast.error("신고 데이터를 불러오지 못했습니다.");
+        return;
+      }
+
+      const excelModule = await import("@/lib/labor/excelExport");
+      if (downloadType === "kwdi") {
+        await excelModule.generateKWDIReportExcel(response.data);
+        toast.success("근로복지공단 양식이 다운로드되었습니다.");
+      } else {
+        await excelModule.generateNationalTaxExcel(response.data);
+        toast.success("국세청 양식이 다운로드되었습니다.");
+      }
+
+      setShowDownloadModal(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "파일 생성에 실패했습니다.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const formatMaskedSSN = (birthDate: string, gender: 1 | 2 | 3 | 4) => {
     if (!birthDate || birthDate.length < 6) return "-";
     return `${birthDate.slice(0, 6)}-${gender}******`;
@@ -306,15 +454,29 @@ export default function DailyWorkersPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">근로자 주소록</h1>
             <p className="mt-1 text-slate-500">전체 {filteredWorkers.length}명</p>
           </div>
-          <Button onClick={() => setShowRegisterModal(true)}>
-            <Plus className="h-4 w-4" />
-            근로자 등록
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => openDownloadModal("kwdi")}>
+              <FileSpreadsheet className="h-4 w-4" />
+              근로복지공단 양식
+            </Button>
+            <Button variant="secondary" onClick={() => openDownloadModal("tax")}>
+              <Download className="h-4 w-4" />
+              국세청 양식
+            </Button>
+            <Button onClick={() => setShowInviteModal(true)}>
+              <MessageSquare className="h-4 w-4" />
+              근로자 초대
+            </Button>
+            <Button onClick={() => setShowRegisterModal(true)}>
+              <Plus className="h-4 w-4" />
+              근로자 등록
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
@@ -439,6 +601,157 @@ export default function DailyWorkersPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Worker Invite Modal */}
+      <Modal
+        isOpen={showInviteModal}
+        onClose={closeInviteModal}
+        title="근로자 초대"
+        size="md"
+      >
+        <div className="space-y-4">
+          <Input
+            label="근로자 이름"
+            placeholder="홍길동"
+            value={workerName}
+            onChange={(e) => setWorkerName(e.target.value)}
+            error={inviteErrors.name}
+          />
+          <Input
+            label="휴대폰 번호"
+            placeholder="010-0000-0000"
+            value={workerPhone}
+            onChange={(e) => setWorkerPhone(handlePhoneFormat(e.target.value))}
+            maxLength={13}
+            error={inviteErrors.phone}
+          />
+
+          {inviteErrors.submit && (
+            <p className="text-sm text-red-500">{inviteErrors.submit}</p>
+          )}
+
+          {inviteSuccess && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <p className="text-sm font-medium text-emerald-700">
+                알림톡 발송이 완료되었습니다.
+              </p>
+              <p className="mt-1 break-all text-xs text-emerald-600">
+                {inviteSuccess.inviteUrl}
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="mt-2"
+                onClick={handleCopyInviteLink}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                {copied ? "복사 완료" : "링크 복사"}
+              </Button>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <Button variant="secondary" onClick={closeInviteModal} fullWidth>
+              <X className="h-4 w-4" />
+              닫기
+            </Button>
+            <Button onClick={handleInviteWorker} fullWidth disabled={isInviting}>
+              {isInviting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <MessageSquare className="h-4 w-4" />
+                  알림톡 발송
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Tax/Welfare Download Modal */}
+      <Modal
+        isOpen={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        title={downloadType === "kwdi" ? "근로복지공단 양식 다운로드" : "국세청 양식 다운로드"}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              현장
+            </label>
+            <PrimitiveSelect
+              value={downloadProjectId}
+              onChange={(e) => setDownloadProjectId(e.target.value)}
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+            >
+              <option value="">선택하세요</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </PrimitiveSelect>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                연도
+              </label>
+              <PrimitiveSelect
+                value={String(downloadYear)}
+                onChange={(e) => setDownloadYear(Number(e.target.value))}
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              >
+                {Array.from({ length: 4 }, (_, idx) => now.getFullYear() - 1 + idx).map((year) => (
+                  <option key={year} value={year}>
+                    {year}년
+                  </option>
+                ))}
+              </PrimitiveSelect>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                월
+              </label>
+              <PrimitiveSelect
+                value={String(downloadMonth)}
+                onChange={(e) => setDownloadMonth(Number(e.target.value))}
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              >
+                {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => (
+                  <option key={month} value={month}>
+                    {month}월
+                  </option>
+                ))}
+              </PrimitiveSelect>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <Button
+              variant="secondary"
+              onClick={() => setShowDownloadModal(false)}
+              fullWidth
+            >
+              <X className="h-4 w-4" />
+              취소
+            </Button>
+            <Button onClick={handleDownload} fullWidth disabled={isDownloading}>
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  다운로드
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Registration Modal */}
       <Modal

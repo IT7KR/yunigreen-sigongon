@@ -356,7 +356,7 @@ export default function PayrollPage() {
   // Excel Downloads
   // ============================================
 
-  const handleExcelDownload = async (type: "site" | "consolidated" | "kwdi" | "tax") => {
+  const handleExcelDownload = async (type: "site" | "consolidated") => {
     if (!selectedProject && type !== "consolidated") {
       toast.error("프로젝트를 선택하세요.");
       return;
@@ -377,18 +377,6 @@ export default function PayrollPage() {
         if (res.success && res.data) {
           await excelModule.generateConsolidatedExcel(res.data);
           toast.success("월별 통합본이 다운로드되었습니다.");
-        }
-      } else if (type === "kwdi") {
-        const res = await api.generateSiteReport(selectedProject, selectedYear, selectedMonth);
-        if (res.success && res.data) {
-          await excelModule.generateKWDIReportExcel(res.data as SitePayrollReport);
-          toast.success("근로복지공단 양식이 다운로드되었습니다.");
-        }
-      } else if (type === "tax") {
-        const res = await api.generateSiteReport(selectedProject, selectedYear, selectedMonth);
-        if (res.success && res.data) {
-          await excelModule.generateNationalTaxExcel(res.data as SitePayrollReport);
-          toast.success("국세청 양식이 다운로드되었습니다.");
         }
       }
     } catch {
@@ -528,18 +516,6 @@ export default function PayrollPage() {
                       className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                     >
                       월별 통합본
-                    </PrimitiveButton>
-                    <PrimitiveButton
-                      onClick={() => handleExcelDownload("kwdi")}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
-                    >
-                      근로복지공단 양식
-                    </PrimitiveButton>
-                    <PrimitiveButton
-                      onClick={() => handleExcelDownload("tax")}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
-                    >
-                      국세청 양식
                     </PrimitiveButton>
                   </div>
                 )}
