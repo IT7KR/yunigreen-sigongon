@@ -7,7 +7,7 @@ export type ProjectRepresentativeAssignment = {
   projectId: string;
   representativeId: number;
   effectiveDate: string;
-  assignedAt: string;
+  assignedAt?: string;
 };
 
 // ─── Async API-based functions ────────────────────────────
@@ -60,12 +60,17 @@ export async function deleteFieldRepresentative(
 
 export async function getRepresentativeAssignmentByProjectId(
   projectId: string,
-): Promise<{ representativeId: number; effectiveDate: string } | null> {
+): Promise<{
+  representativeId: number;
+  effectiveDate: string;
+  assignedAt?: string;
+} | null> {
   const response = await api.getProjectRepresentative(projectId);
   if (!response.success || !response.data) return null;
   return {
     representativeId: response.data.representative_id,
     effectiveDate: response.data.effective_date,
+    assignedAt: response.data.assigned_at,
   };
 }
 
@@ -78,6 +83,12 @@ export async function assignRepresentativeToProject(
     representative_id: representativeId,
     effective_date: effectiveDate,
   });
+}
+
+export async function removeRepresentativeFromProject(
+  projectId: string,
+): Promise<void> {
+  await api.removeProjectRepresentative(projectId);
 }
 
 export async function getRepresentativeById(

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -44,12 +44,6 @@ export default function StartReportPage({
   } | null>(null);
 
   useEffect(() => {
-    if (reportId) {
-      loadReport();
-    }
-  }, [reportId]);
-
-  useEffect(() => {
     async function loadRepresentative() {
       const assignment = await getRepresentativeAssignmentByProjectId(id);
       if (!assignment) {
@@ -70,7 +64,7 @@ export default function StartReportPage({
     loadRepresentative();
   }, [id]);
 
-  async function loadReport() {
+  const loadReport = useCallback(async () => {
     if (!reportId) return;
 
     try {
@@ -87,7 +81,13 @@ export default function StartReportPage({
     } finally {
       setLoading(false);
     }
-  }
+  }, [reportId]);
+
+  useEffect(() => {
+    if (reportId) {
+      loadReport();
+    }
+  }, [reportId, loadReport]);
 
   function buildPayloadWithRepresentative(data: any): any {
     if (!autoLinkRepresentativeDocs || !assignedRepresentative) {
@@ -168,25 +168,42 @@ export default function StartReportPage({
           <CardTitle>착공계</CardTitle>
         </CardHeader>
         <CardContent>
-          {!isReadOnly && assignedRepresentative && (
+          {!isReadOnly && (
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm font-medium text-amber-900">
-                배정된 현장대리인: {assignedRepresentative.name} ({assignedRepresentative.phone})
-              </p>
-              <p className="mt-1 text-xs text-amber-800">
-                적용 기준일: {assignedRepresentative.effectiveDate}
-              </p>
-              <label className="mt-3 flex items-center gap-2 text-sm text-amber-900">
-                <PrimitiveInput
-                  type="checkbox"
-                  checked={autoLinkRepresentativeDocs}
-                  onChange={(event) =>
-                    setAutoLinkRepresentativeDocs(event.target.checked)
-                  }
-                  className="h-4 w-4 rounded border-amber-300 text-brand-point-600 focus:ring-brand-point-500"
-                />
-                현장대리인 서류를 착공계에 자동 연동
-              </label>
+              {assignedRepresentative ? (
+                <>
+                  <p className="text-sm font-medium text-amber-900">
+                    배정된 현장대리인: {assignedRepresentative.name} (
+                    {assignedRepresentative.phone})
+                  </p>
+                  <p className="mt-1 text-xs text-amber-800">
+                    적용 기준일: {assignedRepresentative.effectiveDate}
+                  </p>
+                  <label className="mt-3 flex items-center gap-2 text-sm text-amber-900">
+                    <PrimitiveInput
+                      type="checkbox"
+                      checked={autoLinkRepresentativeDocs}
+                      onChange={(event) =>
+                        setAutoLinkRepresentativeDocs(event.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-amber-300 text-brand-point-600 focus:ring-brand-point-500"
+                    />
+                    현장대리인 서류를 착공계에 자동 연동
+                  </label>
+                </>
+              ) : (
+                <p className="text-sm text-amber-900">
+                  아직 배정된 현장대리인이 없습니다. 착공계 제출 전에 배정을 완료해
+                  주세요.
+                </p>
+              )}
+              <div className="mt-3">
+                <Button variant="secondary" size="sm" asChild>
+                  <Link href={`/projects/${id}/representative`}>
+                    현장대리인 배정 관리
+                  </Link>
+                </Button>
+              </div>
             </div>
           )}
 
