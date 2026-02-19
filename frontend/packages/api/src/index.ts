@@ -25,6 +25,7 @@ export type {
   SeasonCategoryPurpose,
   SeasonDocumentInfo,
   SeasonDocumentStatusInfo,
+  EstimationGovernanceOverview,
   DiagnosisCase,
   DiagnosisCaseImage,
   VisionResultDetail,
