@@ -1,4 +1,10 @@
-"""Harness 운영 API."""
+"""Harness 운영 API.
+
+Tenant isolation note: Harness endpoints access global operational data
+(code quality checks, system health metrics) stored in file-backed JSON.
+No organization-specific business data is exposed, so tenant filtering
+is not required here.
+"""
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query

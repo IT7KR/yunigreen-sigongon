@@ -26,6 +26,53 @@ DBSession = Annotated[AsyncSession, Depends(get_async_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
+async def get_contract_with_auth(
+    contract_id: int, db: AsyncSession, current_user: User,
+) -> Contract:
+    """Fetch contract and verify organization ownership via its project."""
+    contract = (
+        await db.execute(select(Contract).where(Contract.id == contract_id))
+    ).scalar_one_or_none()
+    if not contract:
+        raise HTTPException(status_code=404, detail="계약서를 찾을 수 없어요")
+
+    # Super admin bypass
+    if current_user.organization_id is None:
+        return contract
+
+    # Verify via project ownership
+    project = (
+        await db.execute(
+            select(Project).where(
+                Project.id == contract.project_id,
+                Project.organization_id == current_user.organization_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=403, detail="이 계약서에 접근할 권한이 없어요")
+
+    return contract
+
+
+async def verify_project_access(
+    project_id: int, db: AsyncSession, current_user: User,
+) -> None:
+    """Verify that the project belongs to the current user's organization."""
+    if current_user.organization_id is None:  # super admin
+        return
+    project = (
+        await db.execute(
+            select(Project).where(
+                Project.id == project_id,
+                Project.organization_id == current_user.organization_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=403, detail="이 프로젝트에 접근할 권한이 없어요")
+
+
 class SignRequest(BaseModel):
     signature_data: str
     signer_type: str
@@ -43,6 +90,7 @@ async def get_contract(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await get_contract_with_auth(contract_id, db, current_user)
     service = ContractService(db)
     try:
         contract = await service.get_by_id(contract_id)
@@ -74,6 +122,7 @@ async def send_contract_for_signature(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await get_contract_with_auth(contract_id, db, current_user)
     service = ContractService(db)
     try:
         contract = await service.send_for_signature(contract_id)
@@ -101,6 +150,7 @@ async def sign_contract(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await get_contract_with_auth(contract_id, db, current_user)
     service = ContractService(db)
     try:
         contract = await service.sign(
@@ -131,6 +181,7 @@ async def update_contract(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await get_contract_with_auth(contract_id, db, current_user)
     service = ContractService(db)
     try:
         contract = await service.update(contract_id, update_data)
@@ -217,9 +268,7 @@ async def request_modusign(
     db: DBSession,
     current_user: CurrentUser,
 ):
-    contract = (await db.execute(select(Contract).where(Contract.id == contract_id))).scalar_one_or_none()
-    if not contract:
-        raise NotFoundException("contract", contract_id)
+    contract = await get_contract_with_auth(contract_id, db, current_user)
 
     req = (await db.execute(select(ModusignRequest).where(ModusignRequest.contract_id == contract_id))).scalar_one_or_none()
     now = datetime.utcnow()
@@ -263,6 +312,7 @@ async def get_modusign_status(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await get_contract_with_auth(contract_id, db, current_user)
     req = (await db.execute(select(ModusignRequest).where(ModusignRequest.contract_id == contract_id))).scalar_one_or_none()
     if not req:
         return APIResponse.ok(
@@ -294,6 +344,7 @@ async def cancel_modusign(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await get_contract_with_auth(contract_id, db, current_user)
     req = (await db.execute(select(ModusignRequest).where(ModusignRequest.contract_id == contract_id))).scalar_one_or_none()
     if not req:
         return APIResponse.ok(None)
@@ -309,6 +360,7 @@ async def download_modusign_document(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await get_contract_with_auth(contract_id, db, current_user)
     req = (await db.execute(select(ModusignRequest).where(ModusignRequest.contract_id == contract_id))).scalar_one_or_none()
     if not req:
         raise NotFoundException("modusign_request", contract_id)
@@ -331,6 +383,7 @@ async def get_project_contracts(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await verify_project_access(project_id, db, current_user)
     service = ContractService(db)
     contracts = await service.get_by_project(project_id)
     return {
@@ -363,6 +416,7 @@ async def create_contract(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await verify_project_access(project_id, db, current_user)
     service = ContractService(db)
     try:
         contract = await service.create(

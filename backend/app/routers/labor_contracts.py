@@ -143,12 +143,32 @@ async def update_labor_contract(
 project_labor_router = APIRouter(prefix="/projects/{project_id}/labor-contracts", tags=["labor-contracts"])
 
 
+async def verify_project_access(
+    project_id: int, db: AsyncSession, current_user: User,
+) -> None:
+    """Verify that the project belongs to the current user's organization."""
+    if current_user.organization_id is None:  # super admin
+        return
+    from app.models.project import Project
+    project = (
+        await db.execute(
+            select(Project).where(
+                Project.id == project_id,
+                Project.organization_id == current_user.organization_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=403, detail="이 프로젝트에 접근할 권한이 없어요")
+
+
 @project_labor_router.get("", response_model=APIResponse)
 async def get_project_labor_contracts(
     project_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await verify_project_access(project_id, db, current_user)
     return {
         "success": True,
         "data": [],
@@ -168,6 +188,7 @@ async def create_labor_contract(
     work_type: Optional[str] = None,
     hours_worked: Optional[Decimal] = None,
 ):
+    await verify_project_access(project_id, db, current_user)
     return {
         "success": True,
         "data": {
@@ -186,6 +207,7 @@ async def get_labor_contracts_summary(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await verify_project_access(project_id, db, current_user)
     return {
         "success": True,
         "data": {

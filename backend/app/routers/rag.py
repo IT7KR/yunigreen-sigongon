@@ -1,4 +1,11 @@
-"""RAG 검색 API 라우터."""
+"""RAG 검색 API 라우터.
+
+Tenant isolation note: RAG endpoints search a global knowledge base
+(construction guidelines, pricebook data, safety regulations) that is
+shared across all organizations. No organization-specific data is stored
+in or returned from the document chunks, so tenant filtering is not
+required here.
+"""
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, Query

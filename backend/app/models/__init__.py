@@ -1,5 +1,5 @@
 # Models package - Export all models
-from app.models.base import BaseModel, TimestampMixin
+from app.models.base import BaseModel, TimestampMixin, TenantMixin, require_same_org
 from app.models.user import Organization, User, UserRole
 from app.models.project import (
     Project, ProjectStatus, SiteVisit, VisitType, Photo, PhotoType,
@@ -86,11 +86,21 @@ from app.models.operations import (
     NotificationType,
     ModusignRequest,
 )
+from app.models.field_representative import (
+    FieldRepresentative,
+    ProjectRepresentativeAssignment,
+    FieldRepresentativeCreate,
+    FieldRepresentativeRead,
+    AssignmentCreate,
+    AssignmentRead,
+)
 
 __all__ = [
     # Base
     "BaseModel",
     "TimestampMixin",
+    "TenantMixin",
+    "require_same_org",
     # User
     "Organization",
     "User",
@@ -217,4 +227,11 @@ __all__ = [
     "AppNotification",
     "NotificationType",
     "ModusignRequest",
+    # Field Representative
+    "FieldRepresentative",
+    "ProjectRepresentativeAssignment",
+    "FieldRepresentativeCreate",
+    "FieldRepresentativeRead",
+    "AssignmentCreate",
+    "AssignmentRead",
 ]
