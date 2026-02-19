@@ -60,6 +60,9 @@ export default function ProjectsPage() {
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
   };
 
+  const getCustomerPrimaryPhone = (customer: CustomerMaster) =>
+    customer.representative_phone || customer.contact_phone || customer.phone || "";
+
   const loadCustomers = async () => {
     try {
       const response = await api.getCustomers({ per_page: 100 });
@@ -164,6 +167,7 @@ export default function ProjectsPage() {
       setCustomerError("");
       const response = await api.createCustomer({
         name: trimmedName,
+        representative_phone: newCustomerPhone.trim() || undefined,
         phone: newCustomerPhone.trim() || undefined,
       });
       if (!response.success || !response.data) {
@@ -398,8 +402,8 @@ export default function ProjectsPage() {
             placeholder="선택 안 함"
             options={customers.map((customer) => ({
               value: customer.id,
-              label: customer.phone
-                ? `${customer.name} (${customer.phone})`
+              label: getCustomerPrimaryPhone(customer)
+                ? `${customer.name} (${getCustomerPrimaryPhone(customer)})`
                 : customer.name,
             }))}
           />
@@ -486,8 +490,8 @@ export default function ProjectsPage() {
               }
               options={customers.map((customer) => ({
                 value: customer.id,
-                label: customer.phone
-                  ? `${customer.name} (${customer.phone})`
+                label: getCustomerPrimaryPhone(customer)
+                  ? `${customer.name} (${getCustomerPrimaryPhone(customer)})`
                   : customer.name,
               }))}
             />

@@ -37,6 +37,9 @@ export default function NewProjectPage() {
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
   };
 
+  const getCustomerPrimaryPhone = (customer: CustomerMaster) =>
+    customer.representative_phone || customer.contact_phone || customer.phone || "";
+
   useEffect(() => {
     const query = customerQuery.trim();
     if (!query || selectedCustomerId) {
@@ -63,7 +66,7 @@ export default function NewProjectPage() {
     setSelectedCustomerId(customer.id);
     setCustomerQuery(customer.name);
     setClientName(customer.name);
-    setClientPhone(customer.phone || "");
+    setClientPhone(getCustomerPrimaryPhone(customer));
     setCustomerResults([]);
   };
 
@@ -86,6 +89,7 @@ export default function NewProjectPage() {
       setNewCustomerError("");
       const res = await api.createCustomer({
         name: trimmedName,
+        representative_phone: newCustomerPhone.trim() || undefined,
         phone: newCustomerPhone.trim() || undefined,
       });
       if (!res.success || !res.data) {
@@ -229,7 +233,7 @@ export default function NewProjectPage() {
                   >
                     <p className="font-medium text-slate-900">{customer.name}</p>
                     <p className="text-xs text-slate-500">
-                      {customer.phone || "연락처 없음"}
+                      {getCustomerPrimaryPhone(customer) || "연락처 없음"}
                     </p>
                   </button>
                 ))}
