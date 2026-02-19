@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { CheckCircle2, Loader2, Clock3, Circle } from "lucide-react";
 import { Button, cn } from "@sigongon/ui";
-import type { ProjectStatus, EstimateStatus, ContractStatus } from "@sigongon/types";
+import type {
+  ProjectStatus,
+  EstimateStatus,
+  ContractStatus,
+} from "@sigongon/types";
 
 interface ProjectWorkflowTimelineProps {
   projectId: string;
@@ -43,7 +47,8 @@ export function ProjectWorkflowTimeline({
   };
 
   const STATUS_COLORS: Record<WorkflowStage["status"], string> = {
-    completed: "border-brand-point-200 bg-brand-point-50/60 text-brand-point-900",
+    completed:
+      "border-brand-point-200 bg-brand-point-50/60 text-brand-point-900",
     in_progress: "border-blue-300 bg-blue-50 text-blue-900",
     pending: "border-amber-200 bg-amber-50 text-amber-900",
     not_started: "border-slate-200 bg-slate-50 text-slate-700",
@@ -72,20 +77,26 @@ export function ProjectWorkflowTimeline({
       if (diagnosisCount > 0 || visitCount > 0) return "pending";
       return "not_started";
     }
-    if (estimateStatus === "issued" || estimateStatus === "accepted") return "completed";
+    if (estimateStatus === "issued" || estimateStatus === "accepted")
+      return "completed";
     if (estimateStatus === "draft") return "in_progress";
     return "pending";
   };
 
   const getContractStatus = (): WorkflowStage["status"] => {
     if (!hasContract) {
-      if (hasEstimate && (estimateStatus === "issued" || estimateStatus === "accepted")) {
+      if (
+        hasEstimate &&
+        (estimateStatus === "issued" || estimateStatus === "accepted")
+      ) {
         return "pending";
       }
       return "not_started";
     }
-    if (contractStatus === "signed" || contractStatus === "active") return "completed";
-    if (contractStatus === "draft" || contractStatus === "sent") return "in_progress";
+    if (contractStatus === "signed" || contractStatus === "active")
+      return "completed";
+    if (contractStatus === "draft" || contractStatus === "sent")
+      return "in_progress";
     return "pending";
   };
 
@@ -98,14 +109,21 @@ export function ProjectWorkflowTimeline({
       if (projectStatus === "in_progress") return "in_progress";
       return "completed";
     }
-    if (hasContract && (contractStatus === "signed" || contractStatus === "active")) {
+    if (
+      hasContract &&
+      (contractStatus === "signed" || contractStatus === "active")
+    ) {
       return "pending";
     }
     return "not_started";
   };
 
   const getCompletionStatus = (): WorkflowStage["status"] => {
-    if (projectStatus === "completed" || projectStatus === "warranty" || projectStatus === "closed") {
+    if (
+      projectStatus === "completed" ||
+      projectStatus === "warranty" ||
+      projectStatus === "closed"
+    ) {
       return "completed";
     }
     if (projectStatus === "in_progress") return "pending";
@@ -169,9 +187,13 @@ export function ProjectWorkflowTimeline({
   ) => {
     switch (status) {
       case "completed":
-        return <CheckCircle2 className={cn(className, "text-brand-point-600")} />;
+        return (
+          <CheckCircle2 className={cn(className, "text-brand-point-600")} />
+        );
       case "in_progress":
-        return <Loader2 className={cn(className, "animate-spin text-blue-600")} />;
+        return (
+          <Loader2 className={cn(className, "animate-spin text-blue-600")} />
+        );
       case "pending":
         return <Clock3 className={cn(className, "text-amber-500")} />;
       case "not_started":
@@ -210,74 +232,82 @@ export function ProjectWorkflowTimeline({
   };
 
   return (
-    <ol className="space-y-3" aria-label="프로젝트 진행 단계">
+    <div className="space-y-0" aria-label="프로젝트 진행 단계">
       {stages.map((stage, index) => {
         const isCurrent = currentStageId === stage.id;
+        const isCompleted = stage.status === "completed";
+        const isLast = index === stages.length - 1;
 
         return (
-          <li key={stage.id} className="relative">
-            {index < stages.length - 1 && (
+          <li key={stage.id} className="relative flex gap-4 pb-0 last:pb-0">
+            {/* Timeline Line */}
+            {!isLast && (
               <div
                 aria-hidden
                 className={cn(
-                  "absolute left-[19px] top-[44px] h-[calc(100%-16px)] w-px",
-                  stage.status === "completed" ? "bg-brand-point-200" : "bg-slate-200",
+                  "absolute left-[15px] top-[32px] h-[calc(100%-8px)] w-0.5",
+                  isCompleted ? "bg-brand-point-200" : "bg-slate-100",
                 )}
               />
             )}
+
+            {/* Icon */}
             <div
               className={cn(
-                "flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-start sm:justify-between",
-                STATUS_COLORS[stage.status],
-                isCurrent && "ring-2 ring-brand-point-300 ring-offset-1",
+                "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-white transition-colors",
+                stage.status === "completed" &&
+                  "border-brand-point-200 text-brand-point-600",
+                stage.status === "in_progress" &&
+                  "border-brand-point-500 text-brand-point-600 ring-4 ring-brand-point-50",
+                (stage.status === "pending" ||
+                  stage.status === "not_started") &&
+                  "border-slate-200 text-slate-300",
               )}
             >
-              <div className="flex min-w-0 items-start gap-3">
-                <div
-                  className={cn(
-                    "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-white",
-                    stage.status === "completed" && "border-brand-point-300",
-                    stage.status === "in_progress" && "border-blue-300",
-                    stage.status === "pending" && "border-amber-300",
-                    stage.status === "not_started" && "border-slate-200",
-                  )}
-                  aria-hidden
-                >
-                  {getStatusIcon(stage.status, "h-4 w-4")}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold">{stage.label}</h3>
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                        STATUS_BADGES[stage.status],
-                      )}
-                    >
-                      {STATUS_LABELS[stage.status]}
-                    </span>
-                    {isCurrent && (
-                      <span className="inline-flex items-center rounded-full bg-brand-point-100 px-2 py-0.5 text-xs font-semibold text-brand-point-700">
-                        현재 단계
-                      </span>
+              {getStatusIcon(stage.status, "h-4 w-4")}
+            </div>
+
+            {/* Content */}
+            <div className={cn("flex-1 pb-8", isLast && "pb-0")}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "text-sm font-semibold",
+                      isCurrent ? "text-slate-900" : "text-slate-500",
                     )}
-                  </div>
-                  <p className="mt-1 text-sm text-slate-600">{stage.description}</p>
-                  <p className="mt-1 text-xs text-slate-500">{getStatusHint(stage)}</p>
+                  >
+                    {stage.label}
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                      STATUS_BADGES[stage.status],
+                    )}
+                  >
+                    {STATUS_LABELS[stage.status]}
+                  </span>
                 </div>
+                {/* Action Button for Current Step Only (Mobile optimized) */}
+                {isCurrent && (
+                  <Button size="sm" className="h-8 px-3 text-xs" asChild>
+                    <Link href={stage.href}>
+                      {getActionLabel(stage.status)}
+                    </Link>
+                  </Button>
+                )}
               </div>
-              <Button
-                size="sm"
-                className="h-11 shrink-0"
-                variant={stage.status === "completed" ? "secondary" : "primary"}
-                asChild
-              >
-                <Link href={stage.href}>{getActionLabel(stage.status)}</Link>
-              </Button>
+
+              {/* Description - Show only for current step */}
+              {isCurrent && (
+                <div className="mt-2 text-xs text-slate-600">
+                  {stage.description}
+                </div>
+              )}
             </div>
           </li>
         );
       })}
-    </ol>
+    </div>
   );
 }
