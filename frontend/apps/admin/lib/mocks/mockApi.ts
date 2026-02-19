@@ -22,6 +22,10 @@ import type {
   LaborInsuranceRates,
   DailyWorker,
   DailyWorkRecord,
+  WorkerDocument,
+  WorkerDocumentReviewQueueItem,
+  WorkerDocumentType,
+  WorkerDocumentReviewAction,
   SitePayrollReport,
   SitePayrollWorkerEntry,
   MonthlyConsolidatedReport,
@@ -347,6 +351,16 @@ export class MockAPIClient {
       }
     >
   > = {};
+  private workerDocumentsByWorker: Record<string, WorkerDocument[]> = {};
+  private workerDocumentModerationLogs: Array<{
+    id: string;
+    worker_id: string;
+    worker_document_id?: string;
+    actor_user_id: string;
+    action: string;
+    reason?: string;
+    created_at: string;
+  }> = [];
 
   private notifications: Array<{
     id: string;
@@ -751,7 +765,7 @@ export class MockAPIClient {
           {
             id: `as_${pid}_1`,
             description: "옥상 방수 부위에서 미세 누수 재발생. 우천 시 천장 얼룩 확인됨.",
-            status: "received",
+            status: "pending",
             created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
           },
         ];
@@ -799,6 +813,121 @@ export class MockAPIClient {
   private getCurrentOrganizationId() {
     const user = this.getCurrentUser() || this.getStoredUsers()[0];
     return user.organization_id || "org_1";
+  }
+
+  private getWorkerDocumentLabel(documentType: WorkerDocumentType) {
+    return documentType === "id_card" ? "신분증" : "안전교육 이수증";
+  }
+
+  private ensureWorkerDocuments(workerId: string) {
+    const existing = this.workerDocumentsByWorker[workerId];
+    if (existing && existing.length > 0) {
+      return existing;
+    }
+
+    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === workerId);
+    const orgId = worker?.organization_id || this.getCurrentOrganizationId();
+
+    const docs: WorkerDocument[] = (["id_card", "safety_cert"] as WorkerDocumentType[]).map(
+      (documentType) => {
+        const approved = documentType === "id_card" ? !!worker?.has_id_card : !!worker?.has_safety_cert;
+        return {
+          id: randomId("wd"),
+          worker_id: workerId,
+          organization_id: orgId,
+          document_id: documentType,
+          document_type: documentType,
+          document_name: this.getWorkerDocumentLabel(documentType),
+          name: this.getWorkerDocumentLabel(documentType),
+          status: approved ? "submitted" : "pending",
+          storage_path: approved ? `mock://worker-documents/${workerId}/${documentType}.pdf` : null,
+          original_filename: approved ? `${this.getWorkerDocumentLabel(documentType)}.pdf` : null,
+          mime_type: approved ? "application/pdf" : null,
+          file_size_bytes: approved ? 1024 * 128 : 0,
+          file_hash_sha256: approved ? randomId("hash") : null,
+          review_status: approved ? "approved" : "pending_review",
+          review_reason: null,
+          reviewed_by_user_id: approved ? "u1" : null,
+          reviewed_at: approved ? nowIso() : null,
+          anomaly_flags: [],
+          uploaded_at: approved ? nowIso() : null,
+        };
+      },
+    );
+
+    this.workerDocumentsByWorker[workerId] = docs;
+    return docs;
+  }
+
+  private syncWorkerFlagsFromDocuments(workerId: string) {
+    const docs = this.ensureWorkerDocuments(workerId);
+    const hasIdCard = docs.some(
+      (doc) => doc.document_type === "id_card" && doc.review_status === "approved" && !!doc.storage_path,
+    );
+    const hasSafetyCert = docs.some(
+      (doc) => doc.document_type === "safety_cert" && doc.review_status === "approved" && !!doc.storage_path,
+    );
+
+    mockDb.update("dailyWorkers", (prev) =>
+      prev.map((worker) => {
+        if (worker.id !== workerId) return worker;
+        const nextRegistrationStatus =
+          hasIdCard && hasSafetyCert
+            ? worker.registration_status === "pending_docs"
+              ? "registered"
+              : worker.registration_status
+            : worker.registration_status === "registered"
+              ? "pending_docs"
+              : worker.registration_status;
+        return {
+          ...worker,
+          has_id_card: hasIdCard,
+          has_safety_cert: hasSafetyCert,
+          registration_status: nextRegistrationStatus,
+        };
+      }),
+    );
+  }
+
+  private pushWorkerModerationLog(payload: {
+    worker_id: string;
+    worker_document_id?: string;
+    action: string;
+    reason?: string;
+  }) {
+    const actor = this.getCurrentUser() || this.getStoredUsers()[0];
+    this.workerDocumentModerationLogs.unshift({
+      id: randomId("wdlog"),
+      worker_id: payload.worker_id,
+      worker_document_id: payload.worker_document_id,
+      actor_user_id: actor.id,
+      action: payload.action,
+      reason: payload.reason,
+      created_at: nowIso(),
+    });
+  }
+
+  private canReviewWorkerDocuments() {
+    const role = (this.getCurrentUser() || this.getStoredUsers()[0]).role;
+    return role === "company_admin" || role === "super_admin";
+  }
+
+  private isWorkerInScope(worker: DailyWorker) {
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    if (currentUser.role === "super_admin") {
+      return true;
+    }
+    return worker.organization_id === currentUser.organization_id;
+  }
+
+  private findWorkerDocumentById(documentId: string) {
+    for (const [workerId, docs] of Object.entries(this.workerDocumentsByWorker)) {
+      const found = docs.find((doc) => doc.id === documentId);
+      if (found) {
+        return { workerId, document: found };
+      }
+    }
+    return null;
   }
 
   private getCustomerCatalog(organizationId?: string) {
@@ -2293,7 +2422,7 @@ export class MockAPIClient {
     const req = {
       id: randomId("as"),
       description: data.description,
-      status: "received",
+      status: "pending",
       created_at: nowIso(),
     };
     this.warrantyRequestsByProject[projectId] = [
@@ -2301,6 +2430,42 @@ export class MockAPIClient {
       req,
     ];
     return delay(ok({ id: req.id, status: req.status, message: "접수했어요" }));
+  }
+
+  async updateASRequest(
+    projectId: string,
+    asRequestId: string,
+    data: { status: "pending" | "in_progress" | "resolved" | "cancelled" },
+  ) {
+    const requests = this.warrantyRequestsByProject[projectId] || [];
+    const nextRequests = requests.map((request) => {
+      if (request.id !== asRequestId) return request;
+      return {
+        ...request,
+        status: data.status,
+        resolved_at:
+          data.status === "resolved"
+            ? nowIso()
+            : request.status === "resolved"
+              ? undefined
+              : request.resolved_at,
+      };
+    });
+
+    this.warrantyRequestsByProject[projectId] = nextRequests;
+    const updated = nextRequests.find((request) => request.id === asRequestId);
+    if (!updated) {
+      return delay(fail("NOT_FOUND", "A/S 요청을 찾을 수 없어요"));
+    }
+
+    return delay(
+      ok({
+        id: updated.id,
+        status: updated.status,
+        resolved_at: updated.resolved_at,
+        message: "A/S 요청 상태를 변경했어요.",
+      }),
+    );
   }
 
   async completeProject(projectId: string) {
@@ -3330,76 +3495,125 @@ export class MockAPIClient {
     return delay(fail("NOT_FOUND", "면허 정보를 찾을 수 없어요"));
   }
 
-  async getLaborOverview() {
+  async getLaborOverview(): Promise<
+    APIResponse<{
+      summary: {
+        active_workers: number;
+        pending_paystubs: number;
+        unsigned_contracts: number;
+      };
+      workers: Array<{
+        id: string;
+        name: string;
+        role: string;
+        status: "active" | "inactive";
+        contract_status: "signed" | "pending";
+        last_work_date: string;
+        is_blocked_for_labor?: boolean;
+        block_reason?: string | null;
+      }>;
+    }>
+  > {
+    const workers = mockDb.get("dailyWorkers") as DailyWorker[];
+    const list = workers.slice(0, 20).map((worker) => ({
+      id: worker.id,
+      name: worker.name,
+      role: worker.job_type,
+      status: (worker.is_blocked_for_labor ? "inactive" : "active") as "active" | "inactive",
+      contract_status: (
+        worker.registration_status === "registered" ? "signed" : "pending"
+      ) as "signed" | "pending",
+      last_work_date: "2026-02-01",
+      is_blocked_for_labor: !!worker.is_blocked_for_labor,
+      block_reason: worker.block_reason || null,
+    }));
+
     return delay(
       ok({
         summary: {
-          active_workers: 12,
+          active_workers: workers.length,
           pending_paystubs: 3,
           unsigned_contracts: 2,
         },
-        workers: [
-          {
-            id: "w1",
-            name: "홍길동",
-            role: "미장공",
-            status: "active" as const,
-            contract_status: "signed" as const,
-            last_work_date: "2026-02-01",
-          },
-        ],
+        workers: list,
       })
     );
   }
 
-  async getSALaborOverview() {
+  async getSALaborOverview(): Promise<
+    APIResponse<{
+      summary: {
+        active_workers: number;
+        pending_paystubs: number;
+        unsigned_contracts: number;
+        organizations_with_workers: number;
+      };
+      workers: Array<{
+        id: string;
+        name: string;
+        role: string;
+        organization_id: string;
+        organization_name: string;
+        status: "active" | "inactive";
+        contract_status: "signed" | "pending";
+        last_work_date: string;
+        is_blocked_for_labor?: boolean;
+        block_reason?: string | null;
+      }>;
+      tenant_worker_distribution: Array<{
+        organization_id: string;
+        organization_name: string;
+        worker_count: number;
+      }>;
+    }>
+  > {
+    const workers = mockDb.get("dailyWorkers") as DailyWorker[];
+    const tenants = mockDb.get("tenants") as Tenant[];
+    const orgNameById = new Map(tenants.map((tenant) => [tenant.id, tenant.name]));
+
+    const workerRows = workers.slice(0, 200).map((worker) => ({
+      id: worker.id,
+      name: worker.name,
+      role: worker.job_type,
+      organization_id: worker.organization_id,
+      organization_name: orgNameById.get(worker.organization_id) || "미지정",
+      status: (worker.is_blocked_for_labor ? "inactive" : "active") as "active" | "inactive",
+      contract_status: (
+        worker.registration_status === "registered" ? "signed" : "pending"
+      ) as "signed" | "pending",
+      last_work_date: "2026-02-01",
+      is_blocked_for_labor: !!worker.is_blocked_for_labor,
+      block_reason: worker.block_reason || null,
+    }));
+
+    const tenantDistributionMap = new Map<string, { organization_name: string; worker_count: number }>();
+    workerRows.forEach((worker) => {
+      const current = tenantDistributionMap.get(worker.organization_id) || {
+        organization_name: worker.organization_name,
+        worker_count: 0,
+      };
+      current.worker_count += 1;
+      tenantDistributionMap.set(worker.organization_id, current);
+    });
+
+    const tenantWorkerDistribution = Array.from(tenantDistributionMap.entries()).map(
+      ([organization_id, info]) => ({
+        organization_id,
+        organization_name: info.organization_name,
+        worker_count: info.worker_count,
+      }),
+    );
+
     return delay(
       ok({
         summary: {
-          active_workers: 42,
+          active_workers: workers.length,
           pending_paystubs: 9,
           unsigned_contracts: 6,
-          organizations_with_workers: 3,
+          organizations_with_workers: tenantWorkerDistribution.length,
         },
-        workers: [
-          {
-            id: "w1",
-            name: "홍길동",
-            role: "미장공",
-            organization_id: "org_1",
-            organization_name: "유니그린개발",
-            status: "active" as const,
-            contract_status: "signed" as const,
-            last_work_date: "2026-02-01",
-          },
-          {
-            id: "w2",
-            name: "김영희",
-            role: "방수공",
-            organization_id: "org_2",
-            organization_name: "동방건설",
-            status: "active" as const,
-            contract_status: "pending" as const,
-            last_work_date: "2026-02-03",
-          },
-        ],
-        tenant_worker_distribution: [
-          {
-            organization_id: "org_1",
-            organization_name: "유니그린개발",
-            worker_count: 18,
-          },
-          {
-            organization_id: "org_2",
-            organization_name: "동방건설",
-            worker_count: 14,
-          },
-          {
-            organization_id: "org_3",
-            organization_name: "서울방수",
-            worker_count: 10,
-          },
-        ],
+        workers: workerRows,
+        tenant_worker_distribution: tenantWorkerDistribution,
       })
     );
   }
@@ -5508,25 +5722,350 @@ export class MockAPIClient {
     );
   }
 
-  async createDailyWorker(data: Omit<DailyWorker, "id">) {
+  async createDailyWorker(data: Omit<DailyWorker, "id">): Promise<APIResponse<{ id: string }>> {
     const id = randomId("dw");
-    const worker: DailyWorker = { id, ...data };
+    const worker: DailyWorker = {
+      id,
+      ...data,
+      has_id_card: false,
+      has_safety_cert: false,
+      is_blocked_for_labor: false,
+      block_reason: undefined,
+      blocked_by_user_id: undefined,
+      blocked_at: undefined,
+      registration_status: data.registration_status || "pending_docs",
+    };
     mockDb.update("dailyWorkers", (prev) => [...prev, worker]);
-    return delay(ok(worker));
+    this.ensureWorkerDocuments(id);
+    this.syncWorkerFlagsFromDocuments(id);
+    return delay(ok({ id }));
   }
 
-  async updateDailyWorker(id: string, data: Partial<Omit<DailyWorker, "id">>) {
+  async updateDailyWorker(id: string, data: Partial<Omit<DailyWorker, "id">>): Promise<APIResponse<{ id: string }>> {
     const workers = mockDb.get("dailyWorkers");
     const idx = workers.findIndex((w) => w.id === id);
     if (idx === -1) return delay(fail<DailyWorker>("NOT_FOUND", "근로자를 찾을 수 없습니다"));
-    const updated = { ...workers[idx], ...data };
+    const updated: DailyWorker = {
+      ...workers[idx],
+      ...data,
+      has_id_card: workers[idx].has_id_card,
+      has_safety_cert: workers[idx].has_safety_cert,
+    };
     mockDb.update("dailyWorkers", (prev) => prev.map((w) => (w.id === id ? updated : w)));
-    return delay(ok(updated));
+    this.syncWorkerFlagsFromDocuments(id);
+    return delay(ok({ id }));
   }
 
-  async deleteDailyWorker(id: string) {
+  async deleteDailyWorker(id: string): Promise<APIResponse<{ success: boolean }>> {
     mockDb.update("dailyWorkers", (prev) => prev.filter((w) => w.id !== id));
+    delete this.workerDocumentsByWorker[id];
     return delay(ok({ success: true }));
+  }
+
+  async getDailyWorkerDocuments(workerId: string): Promise<APIResponse<WorkerDocument[]>> {
+    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === workerId);
+    if (!worker || !this.isWorkerInScope(worker)) {
+      return delay(fail<WorkerDocument[]>("NOT_FOUND", "근로자를 찾을 수 없습니다"));
+    }
+
+    const docs = this.ensureWorkerDocuments(workerId);
+    const sorted = [...docs].sort((a, b) => {
+      if (a.document_type === b.document_type) return 0;
+      return a.document_type === "id_card" ? -1 : 1;
+    });
+    return delay(ok(sorted));
+  }
+
+  async uploadDailyWorkerDocument(
+    workerId: string,
+    documentType: WorkerDocumentType,
+    file: File,
+  ): Promise<APIResponse<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>> {
+    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === workerId);
+    if (!worker || !this.isWorkerInScope(worker)) {
+      return delay(
+        fail<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>(
+          "NOT_FOUND",
+          "근로자를 찾을 수 없습니다",
+        ),
+      );
+    }
+    if (documentType !== "id_card" && documentType !== "safety_cert") {
+      return delay(
+        fail<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>(
+          "INVALID_DOCUMENT_TYPE",
+          "지원하지 않는 서류 유형입니다",
+        ),
+      );
+    }
+    const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : "";
+    if (![".jpg", ".jpeg", ".png", ".pdf"].includes(ext)) {
+      return delay(
+        fail<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>(
+          "INVALID_FILE_TYPE",
+          "PDF 또는 JPG/PNG 파일만 업로드할 수 있습니다",
+        ),
+      );
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      return delay(
+        fail<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>(
+          "FILE_TOO_LARGE",
+          "파일은 10MB 이하로 업로드해 주세요",
+        ),
+      );
+    }
+
+    const docs = this.ensureWorkerDocuments(workerId);
+    const target = docs.find((doc) => doc.document_type === documentType);
+    if (!target) {
+      return delay(
+        fail<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>(
+          "NOT_FOUND",
+          "서류 슬롯을 찾을 수 없습니다",
+        ),
+      );
+    }
+
+    const anomalyFlags: string[] = [];
+    if (file.size < 512) {
+      anomalyFlags.push("small_file");
+    }
+    if (file.type === "application/pdf" && ext !== ".pdf") {
+      anomalyFlags.push("mime_extension_mismatch");
+    }
+    if (file.type.startsWith("image/") && ext === ".pdf") {
+      anomalyFlags.push("mime_extension_mismatch");
+    }
+
+    target.status = "submitted";
+    target.storage_path = `mock://worker-documents/${workerId}/${encodeURIComponent(file.name)}`;
+    target.original_filename = file.name;
+    target.mime_type = file.type || "application/octet-stream";
+    target.file_size_bytes = file.size;
+    target.file_hash_sha256 = randomId("hash");
+    target.review_status = "pending_review";
+    target.review_reason = null;
+    target.reviewed_by_user_id = null;
+    target.reviewed_at = null;
+    target.anomaly_flags = anomalyFlags;
+    target.uploaded_at = nowIso();
+
+    mockDb.update("dailyWorkers", (prev) =>
+      prev.map((item) => {
+        if (item.id !== workerId) return item;
+        return {
+          ...item,
+          has_id_card: documentType === "id_card" ? false : item.has_id_card,
+          has_safety_cert: documentType === "safety_cert" ? false : item.has_safety_cert,
+          registration_status: item.registration_status === "registered" ? "pending_docs" : item.registration_status,
+        };
+      }),
+    );
+    this.pushWorkerModerationLog({
+      worker_id: workerId,
+      worker_document_id: String(target.id),
+      action: "upload",
+    });
+    this.syncWorkerFlagsFromDocuments(workerId);
+
+    return delay(
+      ok({
+        worker_id: workerId,
+        document: target,
+        requires_review: true,
+      }),
+    );
+  }
+
+  async getWorkerDocumentReviewQueue(
+    reviewStatus: WorkerDocument["review_status"] | "all" = "pending_review",
+  ): Promise<APIResponse<WorkerDocumentReviewQueueItem[]>> {
+    if (!this.canReviewWorkerDocuments()) {
+      return delay(fail<WorkerDocumentReviewQueueItem[]>("FORBIDDEN", "검토 권한이 없습니다"));
+    }
+
+    const workers = mockDb.get("dailyWorkers") as DailyWorker[];
+    const queue: WorkerDocumentReviewQueueItem[] = [];
+    for (const worker of workers) {
+      if (!this.isWorkerInScope(worker)) continue;
+      const docs = this.ensureWorkerDocuments(worker.id);
+      docs.forEach((doc) => {
+        if (reviewStatus !== "all" && doc.review_status !== reviewStatus) {
+          return;
+        }
+        queue.push({
+          ...doc,
+          id: doc.id || randomId("wd"),
+          worker_name: worker.name,
+          worker_job_type: worker.job_type,
+          worker_registration_status: worker.registration_status || "pending_docs",
+          worker_is_blocked_for_labor: !!worker.is_blocked_for_labor,
+          worker_block_reason: worker.block_reason || null,
+        });
+      });
+    }
+
+    queue.sort((a, b) => {
+      const aTime = new Date(a.uploaded_at || "1970-01-01T00:00:00Z").getTime();
+      const bTime = new Date(b.uploaded_at || "1970-01-01T00:00:00Z").getTime();
+      return bTime - aTime;
+    });
+    return delay(ok(queue));
+  }
+
+  async reviewWorkerDocument(
+    workerDocumentId: string,
+    data: { action: WorkerDocumentReviewAction; reason?: string },
+  ): Promise<APIResponse<{ worker_id: string; document: WorkerDocument }>> {
+    if (!this.canReviewWorkerDocuments()) {
+      return delay(fail<{ worker_id: string; document: WorkerDocument }>("FORBIDDEN", "검토 권한이 없습니다"));
+    }
+
+    const found = this.findWorkerDocumentById(workerDocumentId);
+    if (!found) {
+      return delay(fail<{ worker_id: string; document: WorkerDocument }>("NOT_FOUND", "서류를 찾을 수 없습니다"));
+    }
+    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === found.workerId);
+    if (!worker || !this.isWorkerInScope(worker)) {
+      return delay(fail<{ worker_id: string; document: WorkerDocument }>("NOT_FOUND", "서류를 찾을 수 없습니다"));
+    }
+
+    const action = data.action;
+    if (!["approve", "reject", "quarantine", "request_reupload"].includes(action)) {
+      return delay(
+        fail<{ worker_id: string; document: WorkerDocument }>(
+          "INVALID_ACTION",
+          "지원하지 않는 검토 액션입니다",
+        ),
+      );
+    }
+    const reason = data.reason?.trim();
+    if ((action === "reject" || action === "quarantine" || action === "request_reupload") && !reason) {
+      return delay(fail<{ worker_id: string; document: WorkerDocument }>("MISSING_REASON", "사유를 입력해 주세요"));
+    }
+
+    const statusMap: Record<WorkerDocumentReviewAction, WorkerDocument["review_status"]> = {
+      approve: "approved",
+      reject: "rejected",
+      quarantine: "quarantined",
+      request_reupload: "rejected",
+    };
+    found.document.review_status = statusMap[action];
+    found.document.review_reason = reason || null;
+    found.document.reviewed_by_user_id = (this.getCurrentUser() || this.getStoredUsers()[0]).id;
+    found.document.reviewed_at = nowIso();
+    found.document.status =
+      action === "approve" ? "submitted" : action === "quarantine" ? "blocked" : "rejected";
+
+    this.pushWorkerModerationLog({
+      worker_id: found.workerId,
+      worker_document_id: String(found.document.id || ""),
+      action,
+      reason,
+    });
+    this.syncWorkerFlagsFromDocuments(found.workerId);
+
+    return delay(
+      ok({
+        worker_id: found.workerId,
+        document: found.document,
+      }),
+    );
+  }
+
+  async setDailyWorkerControl(
+    workerId: string,
+    data: { action: "block" | "unblock"; reason?: string },
+  ): Promise<
+    APIResponse<{
+      id: string;
+      is_blocked_for_labor: boolean;
+      block_reason: string | null;
+      blocked_by_user_id: string | null;
+      blocked_at: string | null;
+    }>
+  > {
+    if (!this.canReviewWorkerDocuments()) {
+      return delay(
+        fail<{
+          id: string;
+          is_blocked_for_labor: boolean;
+          block_reason: string | null;
+          blocked_by_user_id: string | null;
+          blocked_at: string | null;
+        }>("FORBIDDEN", "통제 권한이 없습니다"),
+      );
+    }
+    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === workerId);
+    if (!worker || !this.isWorkerInScope(worker)) {
+      return delay(
+        fail<{
+          id: string;
+          is_blocked_for_labor: boolean;
+          block_reason: string | null;
+          blocked_by_user_id: string | null;
+          blocked_at: string | null;
+        }>("NOT_FOUND", "근로자를 찾을 수 없습니다"),
+      );
+    }
+    if (data.action === "block" && !data.reason?.trim()) {
+      return delay(
+        fail<{
+          id: string;
+          is_blocked_for_labor: boolean;
+          block_reason: string | null;
+          blocked_by_user_id: string | null;
+          blocked_at: string | null;
+        }>("MISSING_REASON", "차단 사유를 입력해 주세요"),
+      );
+    }
+
+    const actorId = (this.getCurrentUser() || this.getStoredUsers()[0]).id;
+    const nextBlocked = data.action === "block";
+    mockDb.update("dailyWorkers", (prev) =>
+      prev.map((item) =>
+        item.id === workerId
+          ? {
+              ...item,
+              is_blocked_for_labor: nextBlocked,
+              block_reason: nextBlocked ? data.reason?.trim() : undefined,
+              blocked_by_user_id: nextBlocked ? actorId : undefined,
+              blocked_at: nextBlocked ? nowIso() : undefined,
+            }
+          : item,
+      ),
+    );
+
+    this.pushWorkerModerationLog({
+      worker_id: workerId,
+      action: `worker_${data.action}`,
+      reason: data.reason?.trim(),
+    });
+    const current = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === workerId)!;
+
+    return delay(
+      ok({
+        id: workerId,
+        is_blocked_for_labor: !!current.is_blocked_for_labor,
+        block_reason: current.block_reason || null,
+        blocked_by_user_id: current.blocked_by_user_id || null,
+        blocked_at: current.blocked_at || null,
+      }),
+    );
+  }
+
+  async downloadWorkerDocument(workerDocumentId: string): Promise<Blob> {
+    const found = this.findWorkerDocumentById(workerDocumentId);
+    if (!found) {
+      throw new Error("서류를 찾을 수 없습니다");
+    }
+
+    const filename = found.document.original_filename || "worker-document.pdf";
+    const blob = new Blob([`mock document: ${filename}`], {
+      type: found.document.mime_type || "application/pdf",
+    });
+    return blob;
   }
 
   async getWorkRecords(projectId: string, year: number, month: number) {
@@ -5546,6 +6085,7 @@ export class MockAPIClient {
         (worker) =>
           !worker.has_id_card ||
           !worker.has_safety_cert ||
+          !!worker.is_blocked_for_labor ||
           worker.registration_status === "pending_consent" ||
           worker.registration_status === "pending_docs",
       );

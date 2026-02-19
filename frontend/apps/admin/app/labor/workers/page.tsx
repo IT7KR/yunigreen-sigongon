@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ChangeEvent } from "react";
 import {
   Plus,
   Search,
@@ -13,11 +13,23 @@ import {
   Loader2,
   MessageSquare,
   Copy,
+  ShieldCheck,
+  CircleX,
+  ShieldAlert,
+  Ban,
+  CheckCircle2,
+  Eye,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Badge, Button, Card, CardContent, Input, Modal, PrimitiveInput, PrimitiveSelect, toast } from "@sigongon/ui";
 import { api } from "@/lib/api";
-import type { DailyWorker, ProjectListItem } from "@sigongon/types";
+import type {
+  DailyWorker,
+  ProjectListItem,
+  WorkerDocument,
+  WorkerDocumentReviewAction,
+  WorkerDocumentReviewQueueItem,
+} from "@sigongon/types";
 import { sendWorkerInvite } from "@/lib/aligo";
 
 interface LaborCodebook {
@@ -74,11 +86,23 @@ export default function DailyWorkersPage() {
   // Registration modal state
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [registerIdCardFile, setRegisterIdCardFile] = useState<File | null>(null);
+  const [registerSafetyCertFile, setRegisterSafetyCertFile] = useState<File | null>(null);
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingWorker, setEditingWorker] = useState<DailyWorker | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [editingDocuments, setEditingDocuments] = useState<WorkerDocument[]>([]);
+  const [editIdCardFile, setEditIdCardFile] = useState<File | null>(null);
+  const [editSafetyCertFile, setEditSafetyCertFile] = useState<File | null>(null);
+
+  // Review queue state
+  const [reviewQueue, setReviewQueue] = useState<WorkerDocumentReviewQueueItem[]>([]);
+  const [reviewFilter, setReviewFilter] = useState<WorkerDocument["review_status"] | "all">("pending_review");
+  const [isReviewLoading, setIsReviewLoading] = useState(false);
+  const [reviewActionKey, setReviewActionKey] = useState<string | null>(null);
+  const [workerActionKey, setWorkerActionKey] = useState<string | null>(null);
 
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -103,8 +127,6 @@ export default function DailyWorkersPage() {
     visa_status: "",
     nationality_code: "",
     english_name: "",
-    has_id_card: false,
-    has_safety_cert: false,
   });
   const nationalityCodes = codebook?.nationality_codes ?? FALLBACK_NATIONALITY_CODES;
   const visaCodes = codebook?.visa_status_codes ?? FALLBACK_VISA_CODES;
@@ -114,6 +136,7 @@ export default function DailyWorkersPage() {
     fetchWorkers();
     fetchCodebook();
     fetchProjects();
+    fetchReviewQueue("pending_review");
   }, []);
 
   useEffect(() => {
@@ -187,9 +210,147 @@ export default function DailyWorkersPage() {
       visa_status: "",
       nationality_code: "",
       english_name: "",
-      has_id_card: false,
-      has_safety_cert: false,
     });
+    setRegisterIdCardFile(null);
+    setRegisterSafetyCertFile(null);
+    setEditIdCardFile(null);
+    setEditSafetyCertFile(null);
+    setEditingDocuments([]);
+  };
+
+  const validateDocumentFile = (file: File) => {
+    const ext = file.name.includes(".")
+      ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
+      : "";
+    const allowedExt = [".jpg", ".jpeg", ".png", ".pdf"];
+    if (!allowedExt.includes(ext)) {
+      toast.error("PDF 또는 JPG/PNG 파일만 업로드할 수 있습니다.");
+      return false;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("파일은 10MB 이하로 업로드해주세요.");
+      return false;
+    }
+    return true;
+  };
+
+  const onFileChange = (
+    event: ChangeEvent<HTMLInputElement>,
+    setter: (file: File | null) => void,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!validateDocumentFile(file)) {
+      event.target.value = "";
+      return;
+    }
+    setter(file);
+  };
+
+  const formatFileSize = (size: number) => {
+    if (!size) return "0 KB";
+    if (size >= 1024 * 1024) {
+      return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    }
+    return `${Math.ceil(size / 1024)} KB`;
+  };
+
+  const fetchWorkerDocuments = async (workerId: string) => {
+    try {
+      const response = await api.getDailyWorkerDocuments(workerId);
+      if (response.success && response.data) {
+        setEditingDocuments(response.data);
+        return;
+      }
+      setEditingDocuments([]);
+    } catch {
+      setEditingDocuments([]);
+      toast.error("근로자 서류 정보를 불러오지 못했습니다.");
+    }
+  };
+
+  const fetchReviewQueue = async (
+    status: WorkerDocument["review_status"] | "all" = reviewFilter,
+  ) => {
+    setIsReviewLoading(true);
+    try {
+      const response = await api.getWorkerDocumentReviewQueue(status);
+      if (response.success && response.data) {
+        setReviewQueue(response.data);
+      }
+    } catch (error) {
+      toast.error("서류 검토 대기 목록을 불러오지 못했습니다.");
+    } finally {
+      setIsReviewLoading(false);
+    }
+  };
+
+  const handleDownloadDocument = async (item: WorkerDocumentReviewQueueItem | WorkerDocument) => {
+    if (!item.id) {
+      toast.error("다운로드할 서류가 없습니다.");
+      return;
+    }
+    try {
+      const blob = await api.downloadWorkerDocument(String(item.id));
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch {
+      toast.error("서류 파일을 열 수 없습니다.");
+    }
+  };
+
+  const handleReviewAction = async (
+    item: WorkerDocumentReviewQueueItem,
+    action: WorkerDocumentReviewAction,
+  ) => {
+    const key = `${item.id}:${action}`;
+    setReviewActionKey(key);
+    try {
+      let reason: string | undefined;
+      if (action === "reject" || action === "quarantine" || action === "request_reupload") {
+        const input = window.prompt("사유를 입력하세요.", "");
+        if (!input || !input.trim()) {
+          toast.error("사유를 입력해야 합니다.");
+          return;
+        }
+        reason = input.trim();
+      }
+      const response = await api.reviewWorkerDocument(String(item.id), { action, reason });
+      if (response.success) {
+        toast.success("검토 결과를 반영했습니다.");
+        await Promise.all([fetchReviewQueue(reviewFilter), fetchWorkers()]);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "서류 검토에 실패했습니다.");
+    } finally {
+      setReviewActionKey(null);
+    }
+  };
+
+  const handleWorkerControl = async (worker: DailyWorker) => {
+    const action = worker.is_blocked_for_labor ? "unblock" : "block";
+    let reason: string | undefined;
+    if (action === "block") {
+      const input = window.prompt("노무 투입 차단 사유를 입력하세요.", worker.block_reason || "");
+      if (!input || !input.trim()) {
+        toast.error("차단 사유를 입력해야 합니다.");
+        return;
+      }
+      reason = input.trim();
+    }
+    setWorkerActionKey(`${worker.id}:${action}`);
+    try {
+      const response = await api.setDailyWorkerControl(worker.id, { action, reason });
+      if (response.success) {
+        toast.success(action === "block" ? "근로자를 차단했습니다." : "근로자 차단을 해제했습니다.");
+        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter)]);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "근로자 통제 변경에 실패했습니다.");
+    } finally {
+      setWorkerActionKey(null);
+    }
   };
 
   const handleRegister = async () => {
@@ -209,6 +370,10 @@ export default function DailyWorkersPage() {
       toast.error("일당을 입력하세요.");
       return;
     }
+    if (!registerIdCardFile || !registerSafetyCertFile) {
+      toast.error("신분증과 안전교육 이수증 파일을 모두 업로드하세요.");
+      return;
+    }
 
     setIsRegistering(true);
     try {
@@ -220,11 +385,13 @@ export default function DailyWorkersPage() {
       };
 
       const response = await api.createDailyWorker(payload);
-      if (response.success) {
-        toast.success("근로자가 등록되었습니다.");
+      if (response.success && response.data?.id) {
+        await api.uploadDailyWorkerDocument(response.data.id, "id_card", registerIdCardFile);
+        await api.uploadDailyWorkerDocument(response.data.id, "safety_cert", registerSafetyCertFile);
+        toast.success("근로자 등록 및 필수 서류 업로드가 완료되었습니다.");
         setShowRegisterModal(false);
         resetForm();
-        fetchWorkers();
+        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter)]);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "근로자 등록에 실패했습니다.");
@@ -233,8 +400,10 @@ export default function DailyWorkersPage() {
     }
   };
 
-  const handleEdit = (worker: DailyWorker) => {
+  const handleEdit = async (worker: DailyWorker) => {
     setEditingWorker(worker);
+    setEditIdCardFile(null);
+    setEditSafetyCertFile(null);
     setFormData({
       name: worker.name,
       job_type: worker.job_type,
@@ -252,10 +421,9 @@ export default function DailyWorkersPage() {
       visa_status: worker.visa_status || "",
       nationality_code: worker.nationality_code || "",
       english_name: worker.english_name || "",
-      has_id_card: worker.has_id_card ?? false,
-      has_safety_cert: worker.has_safety_cert ?? false,
     });
     setShowEditModal(true);
+    await fetchWorkerDocuments(worker.id);
   };
 
   const handleUpdate = async () => {
@@ -277,6 +445,10 @@ export default function DailyWorkersPage() {
       toast.error("일당을 입력하세요.");
       return;
     }
+    if (!editIdCardFile || !editSafetyCertFile) {
+      toast.error("신분증과 안전교육 이수증 파일을 모두 업로드하세요.");
+      return;
+    }
 
     setIsUpdating(true);
     try {
@@ -288,11 +460,13 @@ export default function DailyWorkersPage() {
 
       const response = await api.updateDailyWorker(editingWorker.id, payload);
       if (response.success) {
+        await api.uploadDailyWorkerDocument(editingWorker.id, "id_card", editIdCardFile);
+        await api.uploadDailyWorkerDocument(editingWorker.id, "safety_cert", editSafetyCertFile);
         toast.success("근로자 정보가 수정되었습니다.");
         setShowEditModal(false);
         setEditingWorker(null);
         resetForm();
-        fetchWorkers();
+        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter)]);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "근로자 정보 수정에 실패했습니다.");
@@ -450,13 +624,46 @@ export default function DailyWorkersPage() {
     return `${amount.toLocaleString("ko-KR")}원`;
   };
 
+  const renderReviewBadge = (status: WorkerDocument["review_status"]) => {
+    if (status === "approved") {
+      return (
+        <Badge variant="success">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          승인
+        </Badge>
+      );
+    }
+    if (status === "rejected") {
+      return (
+        <Badge variant="warning">
+          <CircleX className="h-3.5 w-3.5" />
+          반려
+        </Badge>
+      );
+    }
+    if (status === "quarantined") {
+      return (
+        <Badge variant="error">
+          <ShieldAlert className="h-3.5 w-3.5" />
+          격리
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="default">
+        <Loader2 className="h-3.5 w-3.5" />
+        검토대기
+      </Badge>
+    );
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">근로자 주소록</h1>
+            <h1 className="text-2xl font-bold text-slate-900">근로자 관리</h1>
             <p className="mt-1 text-slate-500">전체 {filteredWorkers.length}명</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -495,6 +702,117 @@ export default function DailyWorkersPage() {
           </CardContent>
         </Card>
 
+        {/* Document Review Queue */}
+        <Card>
+          <CardContent className="space-y-4 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-base font-semibold text-slate-900">서류 검토 큐</p>
+                <p className="text-sm text-slate-500">
+                  신분증/안전교육 이수증 업로드 파일을 검토하고 이상 건을 제어합니다.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <PrimitiveSelect
+                  value={reviewFilter}
+                  onChange={(e) => {
+                    const next = e.target.value as WorkerDocument["review_status"] | "all";
+                    setReviewFilter(next);
+                    void fetchReviewQueue(next);
+                  }}
+                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                >
+                  <option value="pending_review">검토대기</option>
+                  <option value="approved">승인</option>
+                  <option value="rejected">반려</option>
+                  <option value="quarantined">격리</option>
+                  <option value="all">전체</option>
+                </PrimitiveSelect>
+                <Button
+                  variant="secondary"
+                  onClick={() => fetchReviewQueue(reviewFilter)}
+                  disabled={isReviewLoading}
+                >
+                  {isReviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "새로고침"}
+                </Button>
+              </div>
+            </div>
+
+            {isReviewLoading ? (
+              <div className="py-10 text-center text-sm text-slate-500">검토 목록을 불러오는 중...</div>
+            ) : reviewQueue.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">
+                검토할 서류가 없습니다.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {reviewQueue.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-lg border border-slate-200 p-3"
+                  >
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {item.worker_name} · {item.document_name}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {item.original_filename || "파일명 없음"} · {formatFileSize(item.file_size_bytes)}
+                        </p>
+                        {!!item.anomaly_flags?.length && (
+                          <p className="mt-1 text-xs text-amber-700">
+                            이상 플래그: {item.anomaly_flags.join(", ")}
+                          </p>
+                        )}
+                        {!!item.review_reason && (
+                          <p className="mt-1 text-xs text-red-600">사유: {item.review_reason}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {renderReviewBadge(item.review_status)}
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleDownloadDocument(item)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          보기
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleReviewAction(item, "approve")}
+                          disabled={reviewActionKey === `${item.id}:approve`}
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                          승인
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleReviewAction(item, "reject")}
+                          disabled={reviewActionKey === `${item.id}:reject`}
+                        >
+                          <CircleX className="h-3.5 w-3.5" />
+                          반려
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleReviewAction(item, "quarantine")}
+                          disabled={reviewActionKey === `${item.id}:quarantine`}
+                        >
+                          <ShieldAlert className="h-3.5 w-3.5" />
+                          격리
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Worker List Table */}
         <Card>
           <CardContent className="p-0">
@@ -519,6 +837,7 @@ export default function DailyWorkersPage() {
                       <th className="px-4 py-3 font-medium">연락처</th>
                       <th className="px-4 py-3 font-medium">외국인</th>
                       <th className="px-4 py-3 font-medium">계좌정보</th>
+                      <th className="px-4 py-3 font-medium">통제</th>
                       <th className="px-4 py-3 font-medium">작업</th>
                     </tr>
                   </thead>
@@ -539,10 +858,20 @@ export default function DailyWorkersPage() {
                                 서류 미완
                               </span>
                             )}
+                            {worker.is_blocked_for_labor && (
+                              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                                투입 차단
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs text-slate-500">
                             {formatMaskedSSN(worker.birth_date, worker.gender)}
                           </p>
+                          {worker.block_reason && (
+                            <p className="mt-1 text-xs text-red-600">
+                              사유: {worker.block_reason}
+                            </p>
+                          )}
                         </td>
                         <td className="px-4 py-4 text-slate-600">
                           {worker.job_type}
@@ -573,11 +902,22 @@ export default function DailyWorkersPage() {
                           </p>
                         </td>
                         <td className="px-4 py-4">
+                          <Button
+                            size="sm"
+                            variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
+                            onClick={() => handleWorkerControl(worker)}
+                            disabled={workerActionKey === `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`}
+                          >
+                            <Ban className="h-3.5 w-3.5" />
+                            {worker.is_blocked_for_labor ? "차단해제" : "차단"}
+                          </Button>
+                        </td>
+                        <td className="px-4 py-4">
                           <div className="flex gap-2">
                             <Button
                               size="sm"
                               variant="secondary"
-                              onClick={() => handleEdit(worker)}
+                              onClick={() => void handleEdit(worker)}
                             >
                               <Edit2 className="h-3.5 w-3.5" />
                               수정
@@ -967,29 +1307,40 @@ export default function DailyWorkersPage() {
             </div>
           )}
 
-          <div className="grid gap-3 rounded-lg border border-slate-200 p-3 md:grid-cols-2">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <PrimitiveInput
-                type="checkbox"
-                checked={formData.has_id_card}
-                onChange={(e) =>
-                  setFormData({ ...formData, has_id_card: e.target.checked })
-                }
-                className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
-              />
-              신분증 등록 완료
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <PrimitiveInput
-                type="checkbox"
-                checked={formData.has_safety_cert}
-                onChange={(e) =>
-                  setFormData({ ...formData, has_safety_cert: e.target.checked })
-                }
-                className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
-              />
-              안전교육 이수증 등록 완료
-            </label>
+          <div className="space-y-3 rounded-lg border border-slate-200 p-3">
+            <p className="text-sm font-medium text-slate-800">필수 서류 업로드 *</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="block rounded-lg border border-slate-200 p-3">
+                <p className="mb-1 text-sm font-medium text-slate-700">신분증</p>
+                <p className="mb-2 text-xs text-slate-500">JPG/PNG/PDF, 10MB 이하</p>
+                <PrimitiveInput
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={(e) => onFileChange(e, setRegisterIdCardFile)}
+                  className="w-full text-sm"
+                />
+                {registerIdCardFile && (
+                  <p className="mt-2 text-xs text-slate-600">
+                    {registerIdCardFile.name} · {formatFileSize(registerIdCardFile.size)}
+                  </p>
+                )}
+              </label>
+              <label className="block rounded-lg border border-slate-200 p-3">
+                <p className="mb-1 text-sm font-medium text-slate-700">안전교육 이수증</p>
+                <p className="mb-2 text-xs text-slate-500">JPG/PNG/PDF, 10MB 이하</p>
+                <PrimitiveInput
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={(e) => onFileChange(e, setRegisterSafetyCertFile)}
+                  className="w-full text-sm"
+                />
+                {registerSafetyCertFile && (
+                  <p className="mt-2 text-xs text-slate-600">
+                    {registerSafetyCertFile.name} · {formatFileSize(registerSafetyCertFile.size)}
+                  </p>
+                )}
+              </label>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -1239,29 +1590,64 @@ export default function DailyWorkersPage() {
             </div>
           )}
 
-          <div className="grid gap-3 rounded-lg border border-slate-200 p-3 md:grid-cols-2">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <PrimitiveInput
-                type="checkbox"
-                checked={formData.has_id_card}
-                onChange={(e) =>
-                  setFormData({ ...formData, has_id_card: e.target.checked })
-                }
-                className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
-              />
-              신분증 등록 완료
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <PrimitiveInput
-                type="checkbox"
-                checked={formData.has_safety_cert}
-                onChange={(e) =>
-                  setFormData({ ...formData, has_safety_cert: e.target.checked })
-                }
-                className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
-              />
-              안전교육 이수증 등록 완료
-            </label>
+          <div className="space-y-3 rounded-lg border border-slate-200 p-3">
+            <p className="text-sm font-medium text-slate-800">필수 서류 재업로드 *</p>
+            <p className="text-xs text-slate-500">
+              수정 저장 시 신분증과 안전교육 이수증을 모두 다시 첨부해야 합니다.
+            </p>
+            <div className="grid gap-3 md:grid-cols-2">
+              {(["id_card", "safety_cert"] as const).map((documentType) => {
+                const currentDocument = editingDocuments.find(
+                  (item) => item.document_type === documentType,
+                );
+                const uploadFile =
+                  documentType === "id_card" ? editIdCardFile : editSafetyCertFile;
+                const setUploadFile =
+                  documentType === "id_card" ? setEditIdCardFile : setEditSafetyCertFile;
+
+                return (
+                  <div key={documentType} className="rounded-lg border border-slate-200 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-medium text-slate-700">
+                        {documentType === "id_card" ? "신분증" : "안전교육 이수증"}
+                      </p>
+                      {currentDocument
+                        ? renderReviewBadge(currentDocument.review_status)
+                        : (
+                          <Badge variant="default">미등록</Badge>
+                        )}
+                    </div>
+                    {currentDocument?.original_filename && (
+                      <p className="mb-2 text-xs text-slate-500">
+                        현재 파일: {currentDocument.original_filename}
+                      </p>
+                    )}
+                    {currentDocument?.id && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="mb-2"
+                        onClick={() => handleDownloadDocument(currentDocument)}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        현재 파일 보기
+                      </Button>
+                    )}
+                    <PrimitiveInput
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={(e) => onFileChange(e, setUploadFile)}
+                      className="w-full text-sm"
+                    />
+                    {uploadFile && (
+                      <p className="mt-2 text-xs text-slate-600">
+                        신규 파일: {uploadFile.name} · {formatFileSize(uploadFile.size)}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">
