@@ -34,14 +34,6 @@ interface DailyReport {
   created_at: string;
 }
 
-const weatherEmoji: Record<string, string> = {
-  sunny: "☀️",
-  cloudy: "⛅",
-  rain: "🌧️",
-  snow: "❄️",
-  wind: "💨",
-};
-
 const weatherLabel: Record<string, string> = {
   sunny: "맑음",
   cloudy: "흐림",
@@ -49,6 +41,25 @@ const weatherLabel: Record<string, string> = {
   snow: "눈",
   wind: "강풍",
 };
+
+function getWeatherText(weather?: string) {
+  if (!weather) return "-";
+  return weatherLabel[weather] || weather;
+}
+
+function getPhotoPreviewSrc(photos: string[]) {
+  const firstPhoto = photos.find((photo) => photo?.trim());
+  if (!firstPhoto) return null;
+
+  const src = firstPhoto.trim();
+  const isRenderableSrc =
+    src.startsWith("http://") ||
+    src.startsWith("https://") ||
+    src.startsWith("/") ||
+    src.startsWith("data:image/");
+
+  return isRenderableSrc ? src : null;
+}
 
 export default function DailyReportsPage({
   params,
@@ -59,7 +70,9 @@ export default function DailyReportsPage({
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
+  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     loadDailyReports();
@@ -126,27 +139,30 @@ export default function DailyReportsPage({
             <FileText className="h-5 w-5 text-slate-400" />
             작업일지 목록
           </CardTitle>
-          <Button asChild><Link href={`/projects/${projectId}/construction/daily-reports/new`}>
-              <Plus className="h-4 w-4" />
-              새 작업일지
-            </Link></Button>
+          <Button asChild>
+            <Link
+              href={`/projects/${projectId}/construction/daily-reports/new`}
+            >
+              <Plus className="h-4 w-4" />새 작업일지
+            </Link>
+          </Button>
         </CardHeader>
         <CardContent>
           {reports.length === 0 ? (
             <div className="py-16 text-center">
               <FileText className="mx-auto h-12 w-12 text-slate-300" />
-              <p className="mt-4 text-slate-500">
-                아직 작업일지가 없습니다.
-              </p>
+              <p className="mt-4 text-slate-500">아직 작업일지가 없습니다.</p>
               <p className="mt-1 text-sm text-slate-400">
                 매일의 작업 내용을 기록해 보세요.
               </p>
-              <Button className="mt-6" asChild><Link
-                href={`/projects/${projectId}/construction/daily-reports/new`}
-              >
+              <Button className="mt-6" asChild>
+                <Link
+                  href={`/projects/${projectId}/construction/daily-reports/new`}
+                >
                   <Plus className="h-4 w-4" />
                   작업일지 작성하기
-                </Link></Button>
+                </Link>
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -162,79 +178,79 @@ export default function DailyReportsPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {reports.map((report) => (
-                    <tr
-                      key={report.id}
-                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                    >
-                      <td className="py-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-slate-400" />
-                          <span className="font-medium text-slate-900">
-                            {formatDate(report.work_date)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4">
-                        {report.weather ? (
+                  {reports.map((report) => {
+                    const previewSrc = getPhotoPreviewSrc(report.photos);
+
+                    return (
+                      <tr
+                        key={report.id}
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                      >
+                        <td className="py-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-2xl">
-                              {weatherEmoji[report.weather] || "🌤️"}
+                            <Calendar className="h-4 w-4 text-slate-400" />
+                            <span className="font-medium text-slate-900">
+                              {formatDate(report.work_date)}
                             </span>
-                            <div className="flex flex-col">
-                              <span className="text-sm text-slate-700">
-                                {weatherLabel[report.weather] || report.weather}
-                              </span>
-                              {report.temperature && (
-                                <span className="text-xs text-slate-500">
-                                  {report.temperature}℃
-                                </span>
+                          </div>
+                        </td>
+                        <td className="py-4">
+                          <span className="text-sm text-slate-700">
+                            {getWeatherText(report.weather)}
+                          </span>
+                        </td>
+                        <td className="py-4">
+                          <div className="max-w-md">
+                            <p className="line-clamp-2 text-sm text-slate-700">
+                              {report.work_description}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="py-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md border border-dashed border-slate-300 bg-slate-50">
+                              {previewSrc ? (
+                                <div
+                                  role="img"
+                                  aria-label={`${formatDate(report.work_date)} 작업사진`}
+                                  className="h-full w-full bg-cover bg-center"
+                                  style={{
+                                    backgroundImage: `url("${previewSrc}")`,
+                                  }}
+                                />
+                              ) : (
+                                <ImageIcon
+                                  className="h-4 w-4 text-slate-400"
+                                  aria-hidden
+                                />
                               )}
                             </div>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-slate-400">-</span>
-                        )}
-                      </td>
-                      <td className="py-4">
-                        <div className="max-w-md">
-                          <p className="line-clamp-2 text-sm text-slate-700">
-                            {report.work_description}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="py-4 text-center">
-                        {report.photo_count > 0 ? (
-                          <div className="flex items-center justify-center gap-1">
-                            <ImageIcon className="h-4 w-4 text-slate-400" />
-                            <span className="text-sm font-medium text-slate-700">
-                              {report.photo_count}
+                            <span className="text-sm text-slate-700">
+                              {report.photo_count}장
                             </span>
                           </div>
-                        ) : (
-                          <span className="text-sm text-slate-400">-</span>
-                        )}
-                      </td>
-                      <td className="py-4 text-sm text-slate-500">
-                        {formatDate(report.created_at)}
-                      </td>
-                      <td className="py-4 text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDownloadHwpx(report)}
-                          disabled={downloadingReportId === report.id}
-                        >
-                          {downloadingReportId === report.id ? (
-                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                          ) : (
-                            <FileDown className="mr-1 h-3 w-3" />
-                          )}
-                          HWPX
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-4 text-sm text-slate-500">
+                          {formatDate(report.created_at)}
+                        </td>
+                        <td className="py-4 text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownloadHwpx(report)}
+                            disabled={downloadingReportId === report.id}
+                          >
+                            {downloadingReportId === report.id ? (
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            ) : (
+                              <FileDown className="mr-1 h-3 w-3" />
+                            )}
+                            다운로드
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -264,9 +280,7 @@ export default function DailyReportsPage({
               <div className="rounded-lg border border-slate-200 p-4">
                 <p className="text-sm text-slate-500">최근 작업일</p>
                 <p className="mt-2 text-lg font-bold text-blue-600">
-                  {reports.length > 0
-                    ? formatDate(reports[0].work_date)
-                    : "-"}
+                  {reports.length > 0 ? formatDate(reports[0].work_date) : "-"}
                 </p>
               </div>
             </div>

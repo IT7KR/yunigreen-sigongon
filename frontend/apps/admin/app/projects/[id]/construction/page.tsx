@@ -39,40 +39,6 @@ interface ConstructionOverview {
   has_start_report: boolean;
 }
 
-function parseDate(dateString: string) {
-  const [year, month, day] = dateString.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function calculateProgressPercentage(overview: ConstructionOverview) {
-  if (overview.project_status === "completed" || overview.actual_end_date) {
-    return 100;
-  }
-
-  if (!overview.start_date || !overview.expected_end_date) {
-    return undefined;
-  }
-
-  const startDate = parseDate(overview.start_date);
-  const expectedEndDate = parseDate(overview.expected_end_date);
-
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(expectedEndDate.getTime())) {
-    return undefined;
-  }
-
-  const totalDuration = expectedEndDate.getTime() - startDate.getTime();
-  if (totalDuration <= 0) {
-    return undefined;
-  }
-
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const elapsed = today.getTime() - startDate.getTime();
-  const rawProgress = elapsed / totalDuration;
-  const clamped = Math.max(0, Math.min(rawProgress, 0.99));
-  return Math.round(clamped * 100);
-}
-
 export default function ConstructionPage({
   params,
 }: {
@@ -143,8 +109,6 @@ export default function ConstructionPage({
   }
 
   const canComplete = canTransition(overview.project_status, "completed");
-  const progressPercentage =
-    overview.progress_percentage ?? calculateProgressPercentage(overview);
 
   return (
     <div className="space-y-6">
@@ -168,7 +132,9 @@ export default function ConstructionPage({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">예상 준공일</p>
+                <p className="text-sm font-medium text-slate-500">
+                  예상 준공일
+                </p>
                 <p className="mt-1 text-2xl font-bold text-slate-900">
                   {overview.expected_end_date
                     ? formatDate(overview.expected_end_date)
@@ -195,26 +161,6 @@ export default function ConstructionPage({
         </Card>
       </div>
 
-      {/* 진행 상태 바 */}
-      {progressPercentage !== undefined && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-slate-700">시공 진행도</p>
-              <p className="text-sm font-medium text-brand-point-600">
-                {progressPercentage}%
-              </p>
-            </div>
-            <div className="w-full bg-slate-200 rounded-full h-3">
-              <div
-                className="bg-brand-point-500 h-3 rounded-full transition-all duration-300"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 착공계 */}
         <Card>
@@ -235,15 +181,21 @@ export default function ConstructionPage({
                       : "날짜 미정"}
                   </p>
                 </div>
-                <Button size="sm" variant="secondary" asChild><Link href={`/projects/${id}/reports/start`}>
+                <Button size="sm" variant="secondary" asChild>
+                  <Link href={`/projects/${id}/reports`}>
                     상세보기
                     <ArrowRight className="ml-1 h-4 w-4" />
-                  </Link></Button>
+                  </Link>
+                </Button>
               </div>
             ) : (
               <div className="py-8 text-center">
                 <p className="mb-4 text-slate-500">아직 착공계가 없습니다.</p>
-                <Button asChild><Link href={`/projects/${id}/reports/start`}>착공계 작성</Link></Button>
+                <Button asChild>
+                  <Link href={`/projects/${id}/reports`}>
+                    착공계 작성
+                  </Link>
+                </Button>
               </div>
             )}
           </CardContent>
@@ -267,10 +219,12 @@ export default function ConstructionPage({
                   작업 진행 상황 및 현장 기록
                 </p>
               </div>
-              <Button size="sm" variant="secondary" asChild><Link href={`/projects/${id}/construction/daily-reports`}>
+              <Button size="sm" variant="secondary" asChild>
+                <Link href={`/projects/${id}/construction/daily-reports`}>
                   목록보기
                   <ArrowRight className="ml-1 h-4 w-4" />
-                </Link></Button>
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -283,7 +237,10 @@ export default function ConstructionPage({
             <Users className="h-5 w-5 text-slate-400" />
             배정된 일용직
           </CardTitle>
-          <Link href={`/projects/${id}/labor`} className="text-sm text-brand-point-600 hover:text-brand-point-700 flex items-center gap-1">
+          <Link
+            href={`/projects/${id}/labor`}
+            className="text-sm text-brand-point-600 hover:text-brand-point-700 flex items-center gap-1"
+          >
             상세
             <ExternalLink className="h-3.5 w-3.5" />
           </Link>

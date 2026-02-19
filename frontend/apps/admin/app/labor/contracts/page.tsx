@@ -28,7 +28,9 @@ type LaborContract = {
 export default function LaborContractsPage() {
   const [contracts, setContracts] = useState<LaborContract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "draft" | "sent" | "signed" | "paid">("all");
+  const [filter, setFilter] = useState<
+    "all" | "draft" | "sent" | "signed" | "paid"
+  >("all");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,19 +83,18 @@ export default function LaborContractsPage() {
   };
 
   const filteredContracts =
-    filter === "all"
-      ? contracts
-      : contracts.filter((c) => c.status === filter);
+    filter === "all" ? contracts : contracts.filter((c) => c.status === filter);
 
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-900">근로계약 관리</h1>
-          <Button asChild><Link href="/labor/contracts/new">
-              <Plus className="mr-2 h-4 w-4" />
-              새 계약 작성
-            </Link></Button>
+          <Button asChild>
+            <Link href="/labor/contracts/new">
+              <Plus className="mr-2 h-4 w-4" />새 계약 작성
+            </Link>
+          </Button>
         </div>
 
         <Card>
@@ -215,7 +216,10 @@ export default function LaborContractsPage() {
                                 variant="outline"
                                 onClick={async () => {
                                   try {
-                                    const blob = await api.downloadLaborContractHwpx(contract.id);
+                                    const blob =
+                                      await api.downloadLaborContractHwpx(
+                                        contract.id,
+                                      );
                                     const url = URL.createObjectURL(blob);
                                     const a = document.createElement("a");
                                     a.href = url;
@@ -226,12 +230,14 @@ export default function LaborContractsPage() {
                                     URL.revokeObjectURL(url);
                                   } catch (e) {
                                     console.error("HWPX 다운로드 실패:", e);
-                                    toast.error("근로계약서 다운로드에 실패했어요.");
+                                    toast.error(
+                                      "근로계약서 다운로드에 실패했어요.",
+                                    );
                                   }
                                 }}
                               >
                                 <FileDown className="mr-1 h-3 w-3" />
-                                HWPX
+                                다운로드
                               </Button>
                             </div>
                           </td>
