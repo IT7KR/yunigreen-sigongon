@@ -1,6 +1,4 @@
 "use client";
-
-import Link from "next/link";
 import {
   FolderKanban,
   FileText,
@@ -10,6 +8,7 @@ import {
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import {
+  AppLink,
   Card,
   CardContent,
   CardHeader,
@@ -21,7 +20,6 @@ import {
   PageHeader,
   EmptyState,
   AlertBox,
-  PageTransition,
 } from "@sigongon/ui";
 import { useDashboardStats } from "@/hooks";
 import type { ProjectStatus } from "@sigongon/types";
@@ -54,9 +52,8 @@ export default function DashboardPage() {
 
   return (
     <AdminLayout>
-      <PageTransition>
-        <div className="space-y-8">
-          <PageHeader title="대시보드" description="오늘의 현황을 확인하세요" />
+      <div className="space-y-8">
+        <PageHeader title="대시보드" description="오늘의 현황을 확인하세요" />
 
         {isLoading ? (
           <>
@@ -133,12 +130,12 @@ export default function DashboardPage() {
                             className="border-b border-slate-100 last:border-0"
                           >
                             <td className="py-4">
-                              <Link
+                              <AppLink
                                 href={`/projects/${project.id}`}
                                 className="font-medium text-slate-900 hover:text-brand-point-600"
                               >
                                 {project.name}
-                              </Link>
+                              </AppLink>
                             </td>
                             <td className="py-4">
                               <StatusBadge
@@ -189,8 +186,7 @@ export default function DashboardPage() {
             </Card>
           </>
         )}
-        </div>
-      </PageTransition>
+      </div>
     </AdminLayout>
   );
 }

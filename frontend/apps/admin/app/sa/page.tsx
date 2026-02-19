@@ -8,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
   MotionNumber,
-  PageTransition,
   Skeleton,
 } from "@sigongon/ui";
 import {
@@ -21,7 +20,6 @@ import {
   Calendar,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import Link from "next/link";
 
 
 interface DashboardStats {
@@ -112,7 +110,7 @@ export default function SADashboardPage() {
 
   return (
     <AdminLayout>
-      <PageTransition className="space-y-8">
+      <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
             최고관리자 대시보드
@@ -438,7 +436,7 @@ export default function SADashboardPage() {
             </Card>
           </>
         )}
-      </PageTransition>
+      </div>
     </AdminLayout>
   );
 }

@@ -1,18 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Plus, Search, MoreHorizontal, X, FolderKanban, AlertCircle, Loader2, Pencil, Trash2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Button, Card, CardContent, ConfirmModal, EmptyState, Input, LoadingOverlay, Modal, PageHeader, PageTransition, PrimitiveButton, PrimitiveInput, Select, StatusBadge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
+import { AppLink, Button, Card, CardContent, ConfirmModal, EmptyState, Input, LoadingOverlay, Modal, PageHeader, PrimitiveButton, PrimitiveInput, Select, StatusBadge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate, useAppNavigation } from "@sigongon/ui";
 import { useProjects } from "@/hooks";
 import { api } from "@/lib/api";
 import type { CustomerMaster, ProjectCategory, ProjectStatus } from "@sigongon/types";
 import { PROJECT_CATEGORIES } from "@sigongon/types";
 
 export default function ProjectsPage() {
-  const router = useRouter();
+  const navigation = useAppNavigation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "">("");
   const [categoryFilter, setCategoryFilter] = useState<ProjectCategory | "">("");
@@ -145,7 +143,7 @@ export default function ProjectsPage() {
       if (result.success && result.data) {
         setShowCreateModal(false);
         refetch();
-        router.push(`/projects/${result.data.id}`);
+        navigation.push(`/projects/${result.data.id}`);
       }
     } catch (err) {
       console.error(err);
@@ -188,17 +186,16 @@ export default function ProjectsPage() {
 
   return (
     <AdminLayout>
-      <PageTransition>
-        <div className="space-y-6">
-          <PageHeader
-            title="프로젝트"
-            description={`전체 ${total}개 프로젝트`}
-            actions={
-              <Button onClick={() => setShowCreateModal(true)}>
-                <Plus className="h-4 w-4" />새 프로젝트
-              </Button>
-            }
-          />
+      <div className="space-y-6">
+        <PageHeader
+          title="프로젝트"
+          description={`전체 ${total}개 프로젝트`}
+          actions={
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4" />새 프로젝트
+            </Button>
+          }
+        />
 
         <Card>
           <CardContent className="p-4">
@@ -278,10 +275,10 @@ export default function ProjectsPage() {
                     <TableRow
                       key={project.id}
                       clickable
-                      onClick={() => router.push(`/projects/${project.id}`)}
+                      onClick={() => navigation.push(`/projects/${project.id}`)}
                     >
                       <TableCell>
-                        <Link
+                        <AppLink
                           href={`/projects/${project.id}`}
                           className="block"
                         >
@@ -291,7 +288,7 @@ export default function ProjectsPage() {
                           <p className="mt-0.5 text-sm text-slate-500">
                             {project.address}
                           </p>
-                        </Link>
+                        </AppLink>
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">
                         {project.category ? categoryMap[project.category] || "-" : "-"}
@@ -367,8 +364,7 @@ export default function ProjectsPage() {
             )}
           </CardContent>
         </Card>
-        </div>
-      </PageTransition>
+      </div>
 
       <Modal
         isOpen={showCreateModal}
