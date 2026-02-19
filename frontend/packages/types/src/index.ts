@@ -928,6 +928,13 @@ export type ActivityLogAction =
   | "estimate_create"
   | "contract_sign"
   | "settings_change"
+  | "consent_recorded"
+  | "invitation_create"
+  | "invitation_resend"
+  | "invitation_revoke"
+  | "invitation_accept"
+  | "notification_send_success"
+  | "notification_send_failure"
 
 export interface ActivityLogEntry {
   id: string
@@ -958,6 +965,13 @@ export interface LaborInsuranceRates {
   pension_lower_limit: number        // 국민연금 하한 기준소득월액 (default: 390000)
   health_premium_upper: number       // 건강보험 납부상한 (default: 7822560)
   health_premium_lower: number       // 건강보험 납부하한 (default: 19780)
+}
+
+export interface LaborCodebook {
+  version: string
+  nationality_codes: Record<string, string>
+  visa_status_codes: Record<string, string>
+  job_type_codes: Record<string, string>
 }
 
 /** 일용 근로자 (주소록) */

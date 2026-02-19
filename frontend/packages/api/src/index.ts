@@ -6,6 +6,7 @@ export {
   type FieldRepresentativeRead,
   type FieldRepresentativeCreate,
   type RepresentativeAssignment,
+  type LaborCodebookResponse,
 } from "./client";
 
 // Re-export types for convenience

@@ -70,6 +70,7 @@ export class APIError extends Error {
     message: string,
     public readonly status: number,
     public readonly code?: string,
+    public readonly details?: unknown,
   ) {
     super(message);
     this.name = "APIError";
@@ -121,6 +122,13 @@ export interface RepresentativeAssignment {
   representative_id: number;
   effective_date: string;
   assigned_at: string;
+}
+
+export interface LaborCodebookResponse {
+  version: string;
+  nationality_codes: Record<string, string>;
+  visa_status_codes: Record<string, string>;
+  job_type_codes: Record<string, string>;
 }
 
 export class APIClient {
@@ -236,8 +244,18 @@ export class APIClient {
 
     const status = error.response.status;
     const data = error.response.data as
-      | { message?: string; code?: string }
+      | Record<string, unknown>
       | undefined;
+    const detail = data?.detail;
+    const messageFromDetail = typeof detail === "string" ? detail : undefined;
+    const messageFromDetailObject =
+      detail && typeof detail === "object" && typeof (detail as { message?: unknown }).message === "string"
+        ? ((detail as { message: string }).message)
+        : undefined;
+    const messageFromBody =
+      typeof data?.message === "string" ? data.message : undefined;
+    const code =
+      typeof data?.code === "string" ? data.code : undefined;
 
     const messages: Record<number, string> = {
       400: "잘못된 요청이에요",
@@ -253,9 +271,10 @@ export class APIClient {
     };
 
     return new APIError(
-      data?.message || messages[status] || "알 수 없는 오류가 발생했어요",
+      messageFromBody || messageFromDetail || messageFromDetailObject || messages[status] || "알 수 없는 오류가 발생했어요",
       status,
-      data?.code,
+      code,
+      detail,
     );
   }
 
@@ -1623,6 +1642,11 @@ export class APIClient {
 
   async getDailyWorkers() {
     const response = await this.client.get<APIResponse<any[]>>("/labor/daily-workers");
+    return response.data;
+  }
+
+  async getLaborCodebook() {
+    const response = await this.client.get<APIResponse<LaborCodebookResponse>>("/labor/codebook");
     return response.data;
   }
 
