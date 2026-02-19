@@ -127,7 +127,7 @@ export function SignaturePad({
     <div className={cn("space-y-2", className)}>
       <div
         className={cn(
-          "inline-block rounded-lg border-2 border-slate-300 bg-white",
+          "block w-full rounded-lg border-2 border-slate-300 bg-white",
           disabled && "opacity-60 cursor-not-allowed"
         )}
       >
@@ -144,7 +144,7 @@ export function SignaturePad({
             "touch-none",
             !disabled && "cursor-crosshair"
           )}
-          style={{ width: `${width}px`, height: `${height}px` }}
+          style={{ width: '100%', height: `${height}px` }}
         />
       </div>
 
