@@ -10,10 +10,10 @@ from sqlalchemy import func
 from sqlmodel import select
 
 from app.core.database import get_async_db
+from app.core.permissions import get_project_for_user
 from app.core.security import get_current_user
 from app.core.exceptions import NotFoundException
 from app.models.user import User
-from app.models.project import Project
 from app.models.construction_report import (
     ConstructionReport,
     ReportType,
@@ -55,6 +55,7 @@ class ConstructionReportDetail(BaseModel):
     report_number: Optional[str]
     status: str
     notes: Optional[str]
+    auto_link_representative_docs: bool
     # 착공계 fields
     construction_name: Optional[str]
     site_address: Optional[str]
@@ -84,6 +85,7 @@ class CreateStartReportRequest(BaseModel):
     expected_end_date: Optional[date] = None
     supervisor_name: Optional[str] = None
     supervisor_phone: Optional[str] = None
+    auto_link_representative_docs: bool = True
     notes: Optional[str] = None
 
 
@@ -98,6 +100,7 @@ class CreateCompletionReportRequest(BaseModel):
 class UpdateReportRequest(BaseModel):
     """보고서 수정 요청."""
     notes: Optional[str] = None
+    auto_link_representative_docs: Optional[bool] = None
     construction_name: Optional[str] = None
     site_address: Optional[str] = None
     start_date: Optional[date] = None
@@ -117,6 +120,20 @@ def _generate_report_number(report_type: ReportType, project_id: int) -> str:
     return f"{prefix}-{date_str}-{id_suffix}"
 
 
+async def _get_report_and_project(
+    db: AsyncSession,
+    report_id: int,
+    current_user: User,
+) -> tuple[ConstructionReport, object]:
+    report = (
+        await db.execute(select(ConstructionReport).where(ConstructionReport.id == report_id))
+    ).scalar_one_or_none()
+    if not report:
+        raise NotFoundException("construction_report", report_id)
+    project = await get_project_for_user(db, report.project_id, current_user)
+    return report, project
+
+
 @router.get("/projects/{project_id}/construction-reports", response_model=PaginatedResponse[ConstructionReportListItem])
 async def list_project_reports(
     project_id: int,
@@ -131,16 +148,7 @@ async def list_project_reports(
 
     프로젝트에 속한 착공계와 준공계 목록을 조회해요.
     """
-    # Verify project access
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-
-    if not project:
-        raise NotFoundException("project", project_id)
+    await get_project_for_user(db, project_id, current_user)
 
     # Build query
     query = select(ConstructionReport).where(ConstructionReport.project_id == project_id)
@@ -201,16 +209,7 @@ async def create_start_report(
 
     프로젝트의 착공계를 생성해요.
     """
-    # Verify project access
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-
-    if not project:
-        raise NotFoundException("project", project_id)
+    await get_project_for_user(db, project_id, current_user)
 
     # Check if start report already exists
     existing_result = await db.execute(
@@ -229,6 +228,7 @@ async def create_start_report(
         project_id=project_id,
         report_type=ReportType.START,
         report_number=_generate_report_number(ReportType.START, project_id),
+        auto_link_representative_docs=report_data.auto_link_representative_docs,
         construction_name=report_data.construction_name,
         site_address=report_data.site_address,
         start_date=report_data.start_date,
@@ -240,7 +240,7 @@ async def create_start_report(
     )
 
     # 현장대리인 자동 연동 (supervisor 정보가 비어있을 때)
-    if not report.supervisor_name:
+    if report.auto_link_representative_docs and not report.supervisor_name:
         from app.models.field_representative import ProjectRepresentativeAssignment, FieldRepresentative
         assignment_result = await db.execute(
             select(ProjectRepresentativeAssignment)
@@ -278,16 +278,7 @@ async def create_completion_report(
 
     프로젝트의 준공계를 생성해요. 착공계가 승인된 후에만 생성할 수 있어요.
     """
-    # Verify project access
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-
-    if not project:
-        raise NotFoundException("project", project_id)
+    await get_project_for_user(db, project_id, current_user)
 
     # Check if start report exists and is approved
     start_report_result = await db.execute(
@@ -357,22 +348,7 @@ async def get_report(
 
     착공계 또는 준공계의 상세 정보를 확인해요.
     """
-    result = await db.execute(
-        select(ConstructionReport).where(ConstructionReport.id == report_id)
-    )
-    report = result.scalar_one_or_none()
-
-    if not report:
-        raise NotFoundException("construction_report", report_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == report.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("construction_report", report_id)
+    report, _ = await _get_report_and_project(db, report_id, current_user)
 
     return APIResponse.ok(_to_detail(report))
 
@@ -388,22 +364,7 @@ async def update_report(
 
     착공계 또는 준공계 정보를 수정해요. 초안(draft) 상태에서만 수정할 수 있어요.
     """
-    result = await db.execute(
-        select(ConstructionReport).where(ConstructionReport.id == report_id)
-    )
-    report = result.scalar_one_or_none()
-
-    if not report:
-        raise NotFoundException("construction_report", report_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == report.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("construction_report", report_id)
+    report, _ = await _get_report_and_project(db, report_id, current_user)
 
     # Only allow editing draft reports
     if report.status != ReportStatus.DRAFT:
@@ -434,22 +395,7 @@ async def submit_report(
 
     착공계 또는 준공계를 제출해요. 제출 후에는 수정할 수 없어요.
     """
-    result = await db.execute(
-        select(ConstructionReport).where(ConstructionReport.id == report_id)
-    )
-    report = result.scalar_one_or_none()
-
-    if not report:
-        raise NotFoundException("construction_report", report_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == report.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("construction_report", report_id)
+    report, _ = await _get_report_and_project(db, report_id, current_user)
 
     # Only draft reports can be submitted
     if report.status != ReportStatus.DRAFT:
@@ -477,22 +423,7 @@ async def approve_report(
 
     제출된 착공계 또는 준공계를 승인해요.
     """
-    result = await db.execute(
-        select(ConstructionReport).where(ConstructionReport.id == report_id)
-    )
-    report = result.scalar_one_or_none()
-
-    if not report:
-        raise NotFoundException("construction_report", report_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == report.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("construction_report", report_id)
+    report, _ = await _get_report_and_project(db, report_id, current_user)
 
     # Only submitted reports can be approved
     if report.status != ReportStatus.SUBMITTED:
@@ -522,22 +453,7 @@ async def reject_report(
 
     제출된 착공계 또는 준공계를 반려해요.
     """
-    result = await db.execute(
-        select(ConstructionReport).where(ConstructionReport.id == report_id)
-    )
-    report = result.scalar_one_or_none()
-
-    if not report:
-        raise NotFoundException("construction_report", report_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == report.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("construction_report", report_id)
+    report, _ = await _get_report_and_project(db, report_id, current_user)
 
     # Only submitted reports can be rejected
     if report.status != ReportStatus.SUBMITTED:
@@ -566,23 +482,7 @@ async def export_report(
 
     착공계 또는 준공계를 PDF로 다운로드할 수 있는 데이터를 제공해요.
     """
-    result = await db.execute(
-        select(ConstructionReport).where(ConstructionReport.id == report_id)
-    )
-    report = result.scalar_one_or_none()
-
-    if not report:
-        raise NotFoundException("construction_report", report_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == report.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-    if not project:
-        raise NotFoundException("construction_report", report_id)
+    report, project = await _get_report_and_project(db, report_id, current_user)
 
     # Return data for PDF generation
     return APIResponse.ok({
@@ -591,6 +491,7 @@ async def export_report(
         "report_type": report.report_type.value,
         "report_type_name": "착공계" if report.report_type == ReportType.START else "준공계",
         "status": report.status.value,
+        "auto_link_representative_docs": report.auto_link_representative_docs,
         "project_name": project.name,
         "project_address": project.address,
         "construction_name": report.construction_name,
@@ -619,6 +520,7 @@ def _to_detail(report: ConstructionReport) -> ConstructionReportDetail:
         report_number=report.report_number,
         status=report.status.value,
         notes=report.notes,
+        auto_link_representative_docs=report.auto_link_representative_docs,
         construction_name=report.construction_name,
         site_address=report.site_address,
         start_date=report.start_date,

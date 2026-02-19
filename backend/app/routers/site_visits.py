@@ -72,6 +72,7 @@ async def create_site_visit(
         technician_id=current_user.id,
         visit_type=visit_data.visit_type,
         visited_at=visit_data.visited_at,
+        estimated_area_m2=visit_data.estimated_area_m2,
         notes=visit_data.notes,
     )
     
@@ -86,6 +87,7 @@ async def create_site_visit(
             technician_id=site_visit.technician_id,
             visit_type=site_visit.visit_type,
             visited_at=site_visit.visited_at,
+            estimated_area_m2=site_visit.estimated_area_m2,
             notes=site_visit.notes,
             created_at=site_visit.created_at,
             photo_count=0,
@@ -127,6 +129,7 @@ async def list_site_visits(
                 technician_id=visit.technician_id,
                 visit_type=visit.visit_type,
                 visited_at=visit.visited_at,
+                estimated_area_m2=visit.estimated_area_m2,
                 notes=visit.notes,
                 created_at=visit.created_at,
                 photo_count=len(visit.photos) if visit.photos else 0,
@@ -162,6 +165,7 @@ async def get_site_visit(
             technician_id=visit.technician_id,
             visit_type=visit.visit_type,
             visited_at=visit.visited_at,
+            estimated_area_m2=visit.estimated_area_m2,
             notes=visit.notes,
             created_at=visit.created_at,
             photo_count=len(visit.photos) if visit.photos else 0,

@@ -24,6 +24,13 @@ from sqlmodel import select
 from app.core.config import settings
 from app.core.database import get_async_db
 from app.core.exceptions import NotFoundException
+from app.core.permissions import (
+    ROLE_COMPANY_ADMIN,
+    ROLE_SUPER_ADMIN,
+    ROLE_WORKER,
+    ensure_can_create_invitation,
+    get_project_for_user,
+)
 from app.core.security import get_current_user, get_password_hash, verify_password
 from app.models.billing import Payment, PaymentStatus, Subscription, SubscriptionPlan, SubscriptionStatus
 from app.models.consent import ConsentRecord
@@ -57,7 +64,7 @@ from app.models.operations import (
     WorkerAccessRequest,
     WorkerDocument,
 )
-from app.models.project import Project, SiteVisit
+from app.models.project import Project, ProjectStatus, SiteVisit
 from app.models.user import Organization, User, UserRole
 from app.schemas.response import APIResponse, PaginatedResponse
 from app.services.audit_log import write_activity_log
@@ -108,15 +115,7 @@ async def _get_project_for_user(
     project_id: int,
     user: User,
 ) -> Project:
-    query = select(Project).where(Project.id == project_id)
-    if user.organization_id is not None:
-        query = query.where(Project.organization_id == user.organization_id)
-
-    result = await db.execute(query)
-    project = result.scalar_one_or_none()
-    if not project:
-        raise NotFoundException("project", project_id)
-    return project
+    return await get_project_for_user(db, project_id, user)
 
 
 async def _get_daily_report_for_project(
@@ -370,7 +369,12 @@ async def _seed_utilities_if_empty(db: AsyncSession, project_id: int) -> None:
     await db.flush()
 
 
-async def _resolve_worker_user_id(db: AsyncSession, worker_id: str) -> int:
+async def _resolve_worker_user_id(
+    db: AsyncSession,
+    worker_id: str,
+    *,
+    create_if_missing: bool = False,
+) -> int:
     candidate_id: Optional[int] = None
 
     if worker_id.isdigit():
@@ -389,7 +393,10 @@ async def _resolve_worker_user_id(db: AsyncSession, worker_id: str) -> int:
     if user:
         return user.id
 
-    # fallback worker account
+    if not create_if_missing:
+        raise NotFoundException("worker", worker_id)
+
+    # fallback worker account (legacy compatibility)
     username = worker_id if worker_id.startswith("worker_") else f"worker_{worker_id}"
     fallback = User(
         username=username,
@@ -404,6 +411,48 @@ async def _resolve_worker_user_id(db: AsyncSession, worker_id: str) -> int:
     db.add(fallback)
     await db.flush()
     return fallback.id
+
+
+def _ensure_worker_role(current_user: User) -> None:
+    if _role_value(current_user) != ROLE_WORKER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="근로자 계정만 접근할 수 있어요",
+        )
+
+
+async def _require_worker_self(
+    db: AsyncSession,
+    current_user: User,
+    worker_id: str,
+) -> int:
+    _ensure_worker_role(current_user)
+    worker_user_id = await _resolve_worker_user_id(db, worker_id)
+    if worker_user_id != int(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="본인 정보만 조회할 수 있어요",
+        )
+    return worker_user_id
+
+
+def _require_worker_contract_access(contract: LaborContract, current_user: User) -> None:
+    _ensure_worker_role(current_user)
+    worker_phone = _normalize_phone_digits(contract.worker_phone)
+    current_phone = _normalize_phone_digits(current_user.phone)
+    if not worker_phone or not current_phone or worker_phone != current_phone:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="본인 계약서만 조회할 수 있어요",
+        )
+
+
+def _require_project_policy_admin(current_user: User) -> None:
+    if _role_value(current_user) not in {ROLE_COMPANY_ADMIN, ROLE_SUPER_ADMIN}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="프로젝트 접근권한은 대표 또는 슈퍼관리자만 수정할 수 있어요",
+        )
 
 
 async def _seed_worker_documents(db: AsyncSession, worker_user_id: int) -> list[WorkerDocument]:
@@ -464,9 +513,16 @@ async def _seed_paystub_if_empty(db: AsyncSession, worker_user_id: int) -> None:
     await db.flush()
 
 
-async def _ensure_labor_contract_stub(db: AsyncSession, contract_id: int) -> LaborContract:
+async def _ensure_labor_contract_stub(
+    db: AsyncSession,
+    contract_id: int,
+    *,
+    worker_phone: Optional[str] = None,
+) -> LaborContract:
     labor_contract = (await db.execute(select(LaborContract).where(LaborContract.id == contract_id))).scalar_one_or_none()
     if labor_contract:
+        if worker_phone and not labor_contract.worker_phone:
+            labor_contract.worker_phone = worker_phone
         return labor_contract
 
     project = (await db.execute(select(Project).order_by(Project.created_at.asc()).limit(1))).scalar_one_or_none()
@@ -490,7 +546,7 @@ async def _ensure_labor_contract_stub(db: AsyncSession, contract_id: int) -> Lab
         id=contract_id,
         project_id=project.id,
         worker_name="현장근로자",
-        worker_phone=None,
+        worker_phone=worker_phone,
         work_date=date.today(),
         work_type="보통인부",
         daily_rate=Decimal("150000"),
@@ -613,6 +669,7 @@ async def get_project_access_policy(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    _require_project_policy_admin(current_user)
     await _get_project_for_user(db, project_id, current_user)
 
     result = await db.execute(
@@ -631,9 +688,30 @@ async def update_project_access_policy(
     db: DBSession,
     current_user: CurrentUser,
 ):
-    await _get_project_for_user(db, project_id, current_user)
+    _require_project_policy_admin(current_user)
+    project = await _get_project_for_user(db, project_id, current_user)
+    manager_ids = list(dict.fromkeys(_to_int(v) for v in payload.manager_ids))
 
-    manager_ids = [_to_int(v) for v in payload.manager_ids]
+    if manager_ids:
+        managers = (
+            await db.execute(
+                select(User).where(
+                    User.id.in_(manager_ids),
+                    User.role == UserRole.SITE_MANAGER,
+                )
+            )
+        ).scalars().all()
+        valid_manager_ids = {
+            int(manager.id)
+            for manager in managers
+            if manager.organization_id == project.organization_id
+        }
+        invalid_ids = [mid for mid in manager_ids if mid not in valid_manager_ids]
+        if invalid_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="같은 조직의 현장소장만 접근권한에 추가할 수 있어요",
+            )
 
     result = await db.execute(
         select(ProjectAccessPolicy).where(ProjectAccessPolicy.project_id == project_id)
@@ -787,7 +865,35 @@ async def get_utilities(
     db: DBSession,
     current_user: CurrentUser,
 ):
-    await _get_project_for_user(db, project_id, current_user)
+    project = await _get_project_for_user(db, project_id, current_user)
+
+    project_category = (project.category or "").strip().lower()
+    if project_category != "school":
+        return APIResponse.ok(
+            {
+                "enabled": False,
+                "reason": "school_only",
+                "message": "수도광열비는 학교 프로젝트에서만 관리해요.",
+                "items": [],
+                "timeline": [],
+            }
+        )
+
+    if project.status not in {
+        ProjectStatus.COMPLETED,
+        ProjectStatus.WARRANTY,
+        ProjectStatus.CLOSED,
+    }:
+        return APIResponse.ok(
+            {
+                "enabled": False,
+                "reason": "completion_required",
+                "message": "실준공/준공 이후에 수도광열비 정산을 시작해요.",
+                "items": [],
+                "timeline": [],
+            }
+        )
+
     await _seed_utilities_if_empty(db, project_id)
 
     items_result = await db.execute(
@@ -806,6 +912,9 @@ async def get_utilities(
 
     return APIResponse.ok(
         {
+            "enabled": True,
+            "reason": None,
+            "message": None,
             "items": [
                 {
                     "id": str(item.id),
@@ -838,7 +947,23 @@ async def patch_utility_status(
     db: DBSession,
     current_user: CurrentUser,
 ):
-    await _get_project_for_user(db, project_id, current_user)
+    project = await _get_project_for_user(db, project_id, current_user)
+
+    project_category = (project.category or "").strip().lower()
+    if project_category != "school":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="학교 프로젝트에서만 수도광열비 상태를 변경할 수 있어요.",
+        )
+    if project.status not in {
+        ProjectStatus.COMPLETED,
+        ProjectStatus.WARRANTY,
+        ProjectStatus.CLOSED,
+    }:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="준공 이후 프로젝트만 수도광열비 상태를 변경할 수 있어요.",
+        )
 
     result = await db.execute(
         select(UtilityItem)
@@ -1437,6 +1562,7 @@ class InvitationCreateRequest(BaseModel):
     phone: str
     name: str
     role: str
+    organization_id: Optional[str] = None
 
 
 class InvitationAcceptRequest(BaseModel):
@@ -1449,7 +1575,29 @@ async def create_invitation(
     db: DBSession,
     current_user: CurrentUser,
 ):
-    org_id = _require_org_id(current_user)
+    ensure_can_create_invitation(current_user, payload.role)
+
+    role = _role_value(current_user)
+    if role == ROLE_COMPANY_ADMIN:
+        org_id = _require_org_id(current_user)
+    elif role == ROLE_SUPER_ADMIN:
+        if not payload.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="슈퍼관리자 초대에는 organization_id가 필요해요",
+            )
+        try:
+            org_id = _to_int(payload.organization_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="organization_id 형식이 올바르지 않아요",
+            ) from exc
+        org = (await db.execute(select(Organization).where(Organization.id == org_id))).scalar_one_or_none()
+        if not org:
+            raise NotFoundException("organization", org_id)
+    else:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="초대 권한이 없어요")
 
     token = secrets.token_urlsafe(24)
     invitation = Invitation(
@@ -3358,8 +3506,14 @@ class WorkerSignRequest(BaseModel):
 async def get_worker_contract(
     contract_id: int,
     db: DBSession,
+    current_user: CurrentUser,
 ):
-    labor_contract = await _ensure_labor_contract_stub(db, contract_id)
+    labor_contract = await _ensure_labor_contract_stub(
+        db,
+        contract_id,
+        worker_phone=current_user.phone,
+    )
+    _require_worker_contract_access(labor_contract, current_user)
 
     project = (await db.execute(select(Project).where(Project.id == labor_contract.project_id))).scalar_one_or_none()
 
@@ -3388,8 +3542,14 @@ async def sign_worker_contract(
     contract_id: int,
     payload: WorkerSignRequest,
     db: DBSession,
+    current_user: CurrentUser,
 ):
-    labor_contract = await _ensure_labor_contract_stub(db, contract_id)
+    labor_contract = await _ensure_labor_contract_stub(
+        db,
+        contract_id,
+        worker_phone=current_user.phone,
+    )
+    _require_worker_contract_access(labor_contract, current_user)
 
     labor_contract.status = LaborContractStatus.SIGNED
     labor_contract.signed_at = datetime.utcnow()
@@ -3402,8 +3562,9 @@ async def sign_worker_contract(
 async def get_worker_paystubs(
     worker_id: str,
     db: DBSession,
+    current_user: CurrentUser,
 ):
-    worker_user_id = await _resolve_worker_user_id(db, worker_id)
+    worker_user_id = await _require_worker_self(db, current_user, worker_id)
     await _seed_paystub_if_empty(db, worker_user_id)
 
     rows = (await db.execute(
@@ -3429,8 +3590,9 @@ async def get_worker_paystub(
     worker_id: str,
     paystub_id: int,
     db: DBSession,
+    current_user: CurrentUser,
 ):
-    worker_user_id = await _resolve_worker_user_id(db, worker_id)
+    worker_user_id = await _require_worker_self(db, current_user, worker_id)
 
     paystub = (await db.execute(
         select(Paystub)
@@ -3462,8 +3624,9 @@ async def ack_worker_paystub(
     worker_id: str,
     paystub_id: int,
     db: DBSession,
+    current_user: CurrentUser,
 ):
-    worker_user_id = await _resolve_worker_user_id(db, worker_id)
+    worker_user_id = await _require_worker_self(db, current_user, worker_id)
 
     paystub = (await db.execute(
         select(Paystub)
@@ -3481,8 +3644,9 @@ async def ack_worker_paystub(
 async def get_worker_profile(
     worker_id: str,
     db: DBSession,
+    current_user: CurrentUser,
 ):
-    worker_user_id = await _resolve_worker_user_id(db, worker_id)
+    worker_user_id = await _require_worker_self(db, current_user, worker_id)
 
     user = (await db.execute(select(User).where(User.id == worker_user_id))).scalar_one_or_none()
     if not user:
@@ -3512,9 +3676,10 @@ async def upload_worker_document(
     worker_id: str,
     doc_id: str,
     db: DBSession,
+    current_user: CurrentUser,
     file: UploadFile = File(...),
 ):
-    worker_user_id = await _resolve_worker_user_id(db, worker_id)
+    worker_user_id = await _require_worker_self(db, current_user, worker_id)
 
     docs = await _seed_worker_documents(db, worker_user_id)
     target = next((d for d in docs if d.document_id == doc_id), None)

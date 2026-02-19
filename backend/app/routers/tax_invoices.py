@@ -10,10 +10,10 @@ from sqlalchemy import func
 from sqlmodel import select
 
 from app.core.database import get_async_db
+from app.core.permissions import get_project_for_user
 from app.core.security import get_current_user
 from app.core.exceptions import NotFoundException
 from app.models.user import User, Organization
-from app.models.project import Project
 from app.models.tax_invoice import (
     TaxInvoice,
     TaxInvoiceStatus,
@@ -29,6 +29,24 @@ router = APIRouter()
 # Type aliases
 DBSession = Annotated[AsyncSession, Depends(get_async_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def _get_invoice_for_user(
+    db: DBSession,
+    invoice_id: int,
+    current_user: User,
+) -> TaxInvoice:
+    invoice = (
+        await db.execute(select(TaxInvoice).where(TaxInvoice.id == invoice_id))
+    ).scalar_one_or_none()
+    if not invoice:
+        raise NotFoundException("tax_invoice", invoice_id)
+
+    if current_user.organization_id is not None and invoice.organization_id != current_user.organization_id:
+        raise NotFoundException("tax_invoice", invoice_id)
+
+    await get_project_for_user(db, invoice.project_id, current_user)
+    return invoice
 
 
 # Response Schemas
@@ -157,16 +175,7 @@ async def list_project_tax_invoices(
 
     프로젝트에 발행된 세금계산서 목록을 조회해요.
     """
-    # Verify project access
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-
-    if not project:
-        raise NotFoundException("project", project_id)
+    await get_project_for_user(db, project_id, current_user)
 
     # Build query
     query = select(TaxInvoice).where(TaxInvoice.project_id == project_id)
@@ -224,16 +233,7 @@ async def create_tax_invoice(
 
     프로젝트의 세금계산서 초안을 생성해요. 공급자 정보는 조직 정보에서 자동으로 채워져요.
     """
-    # Verify project access
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-
-    if not project:
-        raise NotFoundException("project", project_id)
+    await get_project_for_user(db, project_id, current_user)
 
     # Get organization for supplier info
     org_result = await db.execute(
@@ -306,17 +306,7 @@ async def get_tax_invoice(
 
     세금계산서의 상세 정보를 확인해요.
     """
-    result = await db.execute(
-        select(TaxInvoice).where(TaxInvoice.id == invoice_id)
-    )
-    invoice = result.scalar_one_or_none()
-
-    if not invoice:
-        raise NotFoundException("tax_invoice", invoice_id)
-
-    # Verify access through organization
-    if invoice.organization_id != current_user.organization_id:
-        raise NotFoundException("tax_invoice", invoice_id)
+    invoice = await _get_invoice_for_user(db, invoice_id, current_user)
 
     return APIResponse.ok(_to_detail(invoice))
 
@@ -332,17 +322,7 @@ async def update_tax_invoice(
 
     세금계산서 정보를 수정해요. 초안(draft) 상태에서만 수정할 수 있어요.
     """
-    result = await db.execute(
-        select(TaxInvoice).where(TaxInvoice.id == invoice_id)
-    )
-    invoice = result.scalar_one_or_none()
-
-    if not invoice:
-        raise NotFoundException("tax_invoice", invoice_id)
-
-    # Verify access through organization
-    if invoice.organization_id != current_user.organization_id:
-        raise NotFoundException("tax_invoice", invoice_id)
+    invoice = await _get_invoice_for_user(db, invoice_id, current_user)
 
     # Only allow editing draft invoices
     if invoice.status != TaxInvoiceStatus.DRAFT:
@@ -374,17 +354,7 @@ async def issue_tax_invoice(
 
     세금계산서를 팝빌을 통해 발행해요. 발행 후에는 수정할 수 없어요.
     """
-    result = await db.execute(
-        select(TaxInvoice).where(TaxInvoice.id == invoice_id)
-    )
-    invoice = result.scalar_one_or_none()
-
-    if not invoice:
-        raise NotFoundException("tax_invoice", invoice_id)
-
-    # Verify access through organization
-    if invoice.organization_id != current_user.organization_id:
-        raise NotFoundException("tax_invoice", invoice_id)
+    invoice = await _get_invoice_for_user(db, invoice_id, current_user)
 
     # Only draft invoices can be issued
     if invoice.status != TaxInvoiceStatus.DRAFT:
@@ -442,17 +412,7 @@ async def cancel_tax_invoice(
 
     발행된 세금계산서를 취소해요. 국세청 규정에 따라 발행 당일에만 취소할 수 있어요.
     """
-    result = await db.execute(
-        select(TaxInvoice).where(TaxInvoice.id == invoice_id)
-    )
-    invoice = result.scalar_one_or_none()
-
-    if not invoice:
-        raise NotFoundException("tax_invoice", invoice_id)
-
-    # Verify access through organization
-    if invoice.organization_id != current_user.organization_id:
-        raise NotFoundException("tax_invoice", invoice_id)
+    invoice = await _get_invoice_for_user(db, invoice_id, current_user)
 
     # Only issued invoices can be cancelled
     if invoice.status != TaxInvoiceStatus.ISSUED:
@@ -500,17 +460,7 @@ async def retry_tax_invoice(
 
     발행 실패한 세금계산서를 다시 시도할 수 있도록 초안 상태로 되돌려요.
     """
-    result = await db.execute(
-        select(TaxInvoice).where(TaxInvoice.id == invoice_id)
-    )
-    invoice = result.scalar_one_or_none()
-
-    if not invoice:
-        raise NotFoundException("tax_invoice", invoice_id)
-
-    # Verify access through organization
-    if invoice.organization_id != current_user.organization_id:
-        raise NotFoundException("tax_invoice", invoice_id)
+    invoice = await _get_invoice_for_user(db, invoice_id, current_user)
 
     # Only failed invoices can be retried
     if invoice.status != TaxInvoiceStatus.FAILED:
@@ -539,17 +489,7 @@ async def get_popbill_popup_url(
 
     세금계산서를 팝빌 팝업에서 확인할 수 있는 URL을 제공해요.
     """
-    result = await db.execute(
-        select(TaxInvoice).where(TaxInvoice.id == invoice_id)
-    )
-    invoice = result.scalar_one_or_none()
-
-    if not invoice:
-        raise NotFoundException("tax_invoice", invoice_id)
-
-    # Verify access through organization
-    if invoice.organization_id != current_user.organization_id:
-        raise NotFoundException("tax_invoice", invoice_id)
+    invoice = await _get_invoice_for_user(db, invoice_id, current_user)
 
     # Only issued invoices have popup URL
     if invoice.status != TaxInvoiceStatus.ISSUED:

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.core.database import get_async_db
+from app.core.permissions import get_project_for_user
 from app.core.security import get_current_user, get_password_hash
 from app.schemas.response import APIResponse
 from app.models.user import User, UserRole
@@ -145,22 +146,8 @@ async def download_labor_contract_hwpx(
     if not contract:
         raise HTTPException(status_code=404, detail="근로계약서를 찾을 수 없습니다")
 
-    # 2. Tenant isolation: verify project belongs to current org
-    if current_user.organization_id is not None:
-        from app.models.project import Project
-        project = (
-            await db.execute(
-                select(Project).where(
-                    Project.id == contract.project_id,
-                    Project.organization_id == current_user.organization_id,
-                )
-            )
-        ).scalar_one_or_none()
-        if not project:
-            raise HTTPException(status_code=403, detail="이 계약에 접근할 권한이 없어요")
-    else:
-        from app.models.project import Project
-        project = await db.get(Project, contract.project_id)
+    # 2. Tenant and project access policy verification
+    project = await get_project_for_user(db, contract.project_id, current_user)
 
     # 3. Build context
     now = datetime.now()
@@ -294,20 +281,7 @@ project_labor_router = APIRouter(prefix="/projects/{project_id}/labor-contracts"
 async def verify_project_access(
     project_id: int, db: AsyncSession, current_user: User,
 ) -> None:
-    """Verify that the project belongs to the current user's organization."""
-    if current_user.organization_id is None:  # super admin
-        return
-    from app.models.project import Project
-    project = (
-        await db.execute(
-            select(Project).where(
-                Project.id == project_id,
-                Project.organization_id == current_user.organization_id,
-            )
-        )
-    ).scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=403, detail="이 프로젝트에 접근할 권한이 없어요")
+    await get_project_for_user(db, project_id, current_user)
 
 
 @project_labor_router.get("", response_model=APIResponse)

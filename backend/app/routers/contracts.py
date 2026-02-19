@@ -11,13 +11,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.core.database import get_async_db
+from app.core.permissions import get_project_for_user
 from app.core.security import get_current_user
 from app.core.exceptions import NotFoundException
 from app.schemas.response import APIResponse
 from app.models.user import User
-from app.models.contract import Contract, ContractUpdate, ContractStatus
+from app.models.contract import (
+    Contract,
+    ContractUpdate,
+    ContractStatus,
+    ContractTemplateType,
+)
 from app.models.operations import ModusignRequest
-from app.models.project import Project
 from app.services.contract import ContractService
 from app.services.pdf_generator import generate_contract_pdf
 
@@ -39,41 +44,14 @@ async def get_contract_with_auth(
     if not contract:
         raise HTTPException(status_code=404, detail="계약서를 찾을 수 없어요")
 
-    # Super admin bypass
-    if current_user.organization_id is None:
-        return contract
-
-    # Verify via project ownership
-    project = (
-        await db.execute(
-            select(Project).where(
-                Project.id == contract.project_id,
-                Project.organization_id == current_user.organization_id,
-            )
-        )
-    ).scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=403, detail="이 계약서에 접근할 권한이 없어요")
-
+    await get_project_for_user(db, contract.project_id, current_user, resource_name="project")
     return contract
 
 
 async def verify_project_access(
     project_id: int, db: AsyncSession, current_user: User,
 ) -> None:
-    """Verify that the project belongs to the current user's organization."""
-    if current_user.organization_id is None:  # super admin
-        return
-    project = (
-        await db.execute(
-            select(Project).where(
-                Project.id == project_id,
-                Project.organization_id == current_user.organization_id,
-            )
-        )
-    ).scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=403, detail="이 프로젝트에 접근할 권한이 없어요")
+    await get_project_for_user(db, project_id, current_user)
 
 
 class SignRequest(BaseModel):
@@ -105,6 +83,7 @@ async def get_contract(
                 "estimate_id": str(contract.estimate_id),
                 "contract_number": contract.contract_number,
                 "contract_amount": str(contract.contract_amount),
+                "template_type": contract.template_type.value,
                 "status": contract.status.value,
                 "notes": contract.notes,
                 "created_at": contract.created_at.isoformat(),
@@ -207,22 +186,8 @@ async def export_contract(
     db: DBSession,
     current_user: CurrentUser,
 ):
-    result = await db.execute(
-        select(Contract).where(Contract.id == contract_id)
-    )
-    contract = result.scalar_one_or_none()
-    
-    if not contract:
-        raise NotFoundException("contract", contract_id)
-    
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == contract.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-    if not project:
-        raise NotFoundException("contract", contract_id)
+    contract = await get_contract_with_auth(contract_id, db, current_user)
+    project = await get_project_for_user(db, contract.project_id, current_user)
     
     default_terms = """
 1. 공사 범위: 견적서에 명시된 공사 내용에 한함
@@ -492,6 +457,7 @@ async def get_project_contracts(
                 "id": str(c.id),
                 "contract_number": c.contract_number,
                 "contract_amount": str(c.contract_amount),
+                "template_type": c.template_type.value,
                 "status": c.status.value,
                 "created_at": c.created_at.isoformat(),
             }
@@ -503,6 +469,7 @@ async def get_project_contracts(
 
 class CreateContractRequest(BaseModel):
     estimate_id: int
+    template_type: ContractTemplateType = ContractTemplateType.PUBLIC_OFFICE
     start_date: Optional[date] = None
     expected_end_date: Optional[date] = None
     notes: Optional[str] = None
@@ -521,6 +488,7 @@ async def create_contract(
         contract = await service.create(
             project_id=project_id,
             estimate_id=request.estimate_id,
+            template_type=request.template_type,
             start_date=request.start_date,
             expected_end_date=request.expected_end_date,
             notes=request.notes,
@@ -530,6 +498,7 @@ async def create_contract(
             "data": {
                 "id": str(contract.id),
                 "contract_number": contract.contract_number,
+                "template_type": contract.template_type.value,
                 "status": contract.status.value,
                 "message": "계약서를 만들었어요",
             },
@@ -537,3 +506,5 @@ async def create_contract(
         }
     except NotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

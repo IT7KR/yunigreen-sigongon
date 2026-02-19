@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.core.database import get_async_db, async_session_factory
+from app.core.permissions import get_project_for_user
 from app.core.security import get_current_user
 from app.services.diagnosis import DiagnosisService
 from app.services.rag import RAGService
@@ -177,13 +178,9 @@ async def _ensure_diagnosis_access(
     if not visit:
         raise NotFoundException("diagnosis", diagnosis_id)
 
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == visit.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-    if not project:
+    try:
+        project = await get_project_for_user(db, visit.project_id, current_user)
+    except NotFoundException as exc:
         raise NotFoundException("diagnosis", diagnosis_id)
     return diagnosis, project
 
@@ -367,16 +364,10 @@ async def request_diagnosis(
     if not visit:
         raise NotFoundException("site_visit", visit_id)
     
-    # 프로젝트 권한 확인
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == visit.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("site_visit", visit_id)
+    try:
+        await get_project_for_user(db, visit.project_id, current_user)
+    except NotFoundException as exc:
+        raise NotFoundException("site_visit", visit_id) from exc
     
     # 사진 확인
     if request_data.photo_ids:
@@ -458,14 +449,10 @@ async def get_diagnosis(
     if not visit:
         raise NotFoundException("diagnosis", diagnosis_id)
     
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == visit.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-    if not project:
-        raise NotFoundException("diagnosis", diagnosis_id)
+    try:
+        project = await get_project_for_user(db, visit.project_id, current_user)
+    except NotFoundException as exc:
+        raise NotFoundException("diagnosis", diagnosis_id) from exc
     
     await db.refresh(diagnosis, ["suggestions"])
 
@@ -667,13 +654,10 @@ async def list_diagnoses(
     if not visit:
         raise NotFoundException("site_visit", visit_id)
     
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == visit.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("site_visit", visit_id)
+    try:
+        await get_project_for_user(db, visit.project_id, current_user)
+    except NotFoundException as exc:
+        raise NotFoundException("site_visit", visit_id) from exc
     
     # 진단 목록 조회
     result = await db.execute(
@@ -712,13 +696,10 @@ async def update_diagnosis_field_opinion(
     if not visit:
         raise NotFoundException("diagnosis", diagnosis_id)
 
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == visit.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("diagnosis", diagnosis_id)
+    try:
+        await get_project_for_user(db, visit.project_id, current_user)
+    except NotFoundException as exc:
+        raise NotFoundException("diagnosis", diagnosis_id) from exc
 
     diagnosis.field_opinion_text = payload.field_opinion_text
     await db.commit()
@@ -766,13 +747,10 @@ async def update_suggestion(
     if not visit:
         raise NotFoundException("diagnosis", diagnosis_id)
     
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == visit.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("diagnosis", diagnosis_id)
+    try:
+        await get_project_for_user(db, visit.project_id, current_user)
+    except NotFoundException as exc:
+        raise NotFoundException("diagnosis", diagnosis_id) from exc
     
     # 자재 추천 조회
     suggestion_result = await db.execute(
@@ -831,14 +809,10 @@ async def download_diagnosis_pdf(
     project_name = "미상"
     site_address = "미상"
     if site_visit:
-        proj_result = await db.execute(
-            select(Project)
-            .where(Project.id == site_visit.project_id)
-            .where(Project.organization_id == current_user.organization_id)
-        )
-        project = proj_result.scalar_one_or_none()
-        if not project:
-            raise NotFoundException("diagnosis", diagnosis_id)
+        try:
+            project = await get_project_for_user(db, site_visit.project_id, current_user)
+        except NotFoundException as exc:
+            raise NotFoundException("diagnosis", diagnosis_id) from exc
         project_name = project.name
         site_address = project.address or project.name
 

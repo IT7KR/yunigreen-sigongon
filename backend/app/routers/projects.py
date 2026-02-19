@@ -4,14 +4,15 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.core.database import get_async_db
 from app.core.exceptions import NotFoundException
+from app.core.permissions import filter_projects_for_user, get_project_for_user
 from app.core.security import get_current_user
+from app.models.operations import ProjectAccessPolicy
 from app.models.customer import CustomerMaster, CustomerMasterSummary
 from app.models.pricebook import PricebookRevision, RevisionStatus
 from app.models.project import (
@@ -28,7 +29,7 @@ from app.models.project import (
     ProjectUpdate,
     SiteVisit,
 )
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.response import APIResponse, PaginatedResponse
 from app.services.customer_master import (
     get_customer_master_for_org,
@@ -71,6 +72,15 @@ def _require_organization_id(current_user: User) -> int:
             detail="고객사 사용자만 프로젝트를 관리할 수 있어요.",
         )
     return current_user.organization_id
+
+
+async def _get_project_for_current_user(
+    db: AsyncSession,
+    project_id: int,
+    current_user: User,
+) -> Project:
+    _require_organization_id(current_user)
+    return await get_project_for_user(db, project_id, current_user)
 
 
 async def _load_customer_summary_map(
@@ -143,16 +153,17 @@ async def list_projects(
             (Project.customer_master_id.in_(customer_id_subquery))
         )
     
-    # 전체 개수 조회
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-    
     query = query.order_by(Project.created_at.desc())
-    query = query.offset((page - 1) * per_page).limit(per_page)
     query = query.options(selectinload(Project.site_visits), selectinload(Project.estimates))
-    
+
     result = await db.execute(query)
-    projects = result.scalars().all()
+    scoped_projects = result.scalars().all()
+    scoped_projects = await filter_projects_for_user(db, scoped_projects, current_user)
+
+    total = len(scoped_projects)
+    start = (page - 1) * per_page
+    end = start + per_page
+    projects = scoped_projects[start:end]
 
     customer_ids = list(
         {
@@ -173,6 +184,7 @@ async def list_projects(
             id=p.id,
             name=p.name,
             address=p.address,
+            category=p.category,
             customer_master_id=p.customer_master_id,
             client_name=p.client_name,
             client_phone=p.client_phone,
@@ -258,6 +270,7 @@ async def create_project(
     project = Project(
         name=project_data.name,
         address=project_data.address,
+        category=project_data.category,
         customer_master_id=selected_customer.id if selected_customer else None,
         client_name=snapshot_name,
         client_phone=snapshot_phone,
@@ -268,6 +281,20 @@ async def create_project(
     )
     
     db.add(project)
+    await db.flush()
+
+    # 신규 프로젝트는 같은 조직의 현장소장을 기본 공개 대상으로 초기화해요.
+    site_manager_rows = (
+        await db.execute(
+            select(User.id).where(
+                User.organization_id == organization_id,
+                User.role == UserRole.SITE_MANAGER,
+            )
+        )
+    ).all()
+    default_manager_ids = [int(row[0]) for row in site_manager_rows]
+    db.add(ProjectAccessPolicy(project_id=project.id, manager_ids=default_manager_ids))
+
     await db.commit()
     await db.refresh(project)
     
@@ -284,24 +311,14 @@ async def get_project(
     
     프로젝트의 상세 정보를 확인해요.
     """
-    organization_id = _require_organization_id(current_user)
-
-    result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == organization_id)
-    )
-    project = result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("project", project_id)
+    project = await _get_project_for_current_user(db, project_id, current_user)
     
     # 관계 데이터 로드
     await db.refresh(project, ["site_visits", "estimates"])
     
     customer_summary_map = await _load_customer_summary_map(
         db=db,
-        organization_id=organization_id,
+        organization_id=project.organization_id,
         customer_ids=[project.customer_master_id] if project.customer_master_id else [],
     )
 
@@ -310,6 +327,7 @@ async def get_project(
             id=project.id,
             name=project.name,
             address=project.address,
+            category=project.category,
             customer_master_id=project.customer_master_id,
             client_name=project.client_name,
             client_phone=project.client_phone,
@@ -339,17 +357,8 @@ async def update_project(
     
     프로젝트 정보를 수정해요.
     """
-    organization_id = _require_organization_id(current_user)
-
-    result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == organization_id)
-    )
-    project = result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("project", project_id)
+    project = await _get_project_for_current_user(db, project_id, current_user)
+    organization_id = project.organization_id
     
     marker = object()
     update_data = project_data.model_dump(exclude_unset=True)
@@ -423,17 +432,7 @@ async def update_project_status(
     
     프로젝트의 진행 상태를 변경해요.
     """
-    organization_id = _require_organization_id(current_user)
-
-    result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == organization_id)
-    )
-    project = result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("project", project_id)
+    project = await _get_project_for_current_user(db, project_id, current_user)
     
     new_status = status_data.status
     
@@ -470,17 +469,7 @@ async def delete_project(
     
     프로젝트를 삭제해요. 삭제하면 되돌릴 수 없어요.
     """
-    organization_id = _require_organization_id(current_user)
-
-    result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == organization_id)
-    )
-    project = result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("project", project_id)
+    project = await _get_project_for_current_user(db, project_id, current_user)
     
     # 계약 완료된 프로젝트는 삭제 불가
     if project.status in [ProjectStatus.CONTRACTED, ProjectStatus.IN_PROGRESS, 
@@ -517,17 +506,7 @@ async def get_project_photo_album(
     
     프로젝트의 모든 사진을 시공 전/중/후로 분류해서 보여줘요.
     """
-    organization_id = _require_organization_id(current_user)
-
-    result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == organization_id)
-    )
-    project = result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("project", project_id)
+    project = await _get_project_for_current_user(db, project_id, current_user)
     
     # Get all site visits with photos
     visits_result = await db.execute(
@@ -596,17 +575,7 @@ async def get_warranty_info(
     
     프로젝트의 하자보증 기간과 AS 요청 내역을 확인해요.
     """
-    organization_id = _require_organization_id(current_user)
-
-    result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == organization_id)
-    )
-    project = result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("project", project_id)
+    project = await _get_project_for_current_user(db, project_id, current_user)
     
     # Calculate days remaining
     days_remaining = 0
@@ -670,17 +639,7 @@ async def create_as_request(
     
     하자보증 기간 내에 AS 요청을 등록해요.
     """
-    organization_id = _require_organization_id(current_user)
-
-    result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == organization_id)
-    )
-    project = result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("project", project_id)
+    project = await _get_project_for_current_user(db, project_id, current_user)
     
     # Check if project is in warranty period
     if project.status != ProjectStatus.WARRANTY and project.status != ProjectStatus.COMPLETED:
@@ -737,17 +696,7 @@ async def complete_project(
     
     시공이 완료된 프로젝트를 완료 처리하고 하자보증 기간을 시작해요.
     """
-    organization_id = _require_organization_id(current_user)
-
-    result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == organization_id)
-    )
-    project = result.scalar_one_or_none()
-    
-    if not project:
-        raise NotFoundException("project", project_id)
+    project = await _get_project_for_current_user(db, project_id, current_user)
     
     # Only IN_PROGRESS projects can be completed
     if project.status != ProjectStatus.IN_PROGRESS:

@@ -11,10 +11,11 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.core.database import get_async_db
+from app.core.permissions import get_project_for_user
 from app.core.security import get_current_user
 from app.core.exceptions import NotFoundException
 from app.models.user import User
-from app.models.project import Project, Photo
+from app.models.project import Photo
 from app.models.photo_album import (
     PhotoAlbum,
     PhotoAlbumStatus,
@@ -133,6 +134,28 @@ async def _get_album_photos(db: DBSession, album_id: int) -> List[AlbumPhotoDeta
     return photos
 
 
+async def _ensure_project_access(
+    db: DBSession,
+    project_id: int,
+    current_user: User,
+):
+    return await get_project_for_user(db, project_id, current_user)
+
+
+async def _get_album_for_user(
+    db: DBSession,
+    album_id: int,
+    current_user: User,
+) -> PhotoAlbum:
+    album = (
+        await db.execute(select(PhotoAlbum).where(PhotoAlbum.id == album_id))
+    ).scalar_one_or_none()
+    if not album:
+        raise NotFoundException("photo_album", album_id)
+    await _ensure_project_access(db, album.project_id, current_user)
+    return album
+
+
 @router.get("/projects/{project_id}/albums", response_model=PaginatedResponse[PhotoAlbumListItem])
 async def list_project_albums(
     project_id: int,
@@ -146,16 +169,7 @@ async def list_project_albums(
 
     프로젝트에 속한 준공사진첩 목록을 조회해요.
     """
-    # Verify project access
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-
-    if not project:
-        raise NotFoundException("project", project_id)
+    await _ensure_project_access(db, project_id, current_user)
 
     # Build query
     query = select(PhotoAlbum).where(PhotoAlbum.project_id == project_id)
@@ -211,16 +225,7 @@ async def create_album(
 
     프로젝트에 새 준공사진첩을 만들어요.
     """
-    # Verify project access
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-
-    if not project:
-        raise NotFoundException("project", project_id)
+    await _ensure_project_access(db, project_id, current_user)
 
     # Create album
     album = PhotoAlbum(
@@ -260,24 +265,7 @@ async def get_album(
 
     앨범의 상세 정보와 포함된 사진들을 확인해요.
     """
-    result = await db.execute(
-        select(PhotoAlbum)
-        .where(PhotoAlbum.id == album_id)
-        .options(selectinload(PhotoAlbum.album_photos))
-    )
-    album = result.scalar_one_or_none()
-
-    if not album:
-        raise NotFoundException("photo_album", album_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == album.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("photo_album", album_id)
+    album = await _get_album_for_user(db, album_id, current_user)
 
     # Get photos with details
     photos = await _get_album_photos(db, album_id)
@@ -308,22 +296,7 @@ async def update_album(
 
     앨범 정보를 수정해요.
     """
-    result = await db.execute(
-        select(PhotoAlbum).where(PhotoAlbum.id == album_id)
-    )
-    album = result.scalar_one_or_none()
-
-    if not album:
-        raise NotFoundException("photo_album", album_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == album.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("photo_album", album_id)
+    album = await _get_album_for_user(db, album_id, current_user)
 
     # Update fields
     update_data = album_data.model_dump(exclude_unset=True)
@@ -367,22 +340,7 @@ async def delete_album(
 
     앨범을 삭제해요. 초안(draft) 상태인 앨범만 삭제할 수 있어요.
     """
-    result = await db.execute(
-        select(PhotoAlbum).where(PhotoAlbum.id == album_id)
-    )
-    album = result.scalar_one_or_none()
-
-    if not album:
-        raise NotFoundException("photo_album", album_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == album.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("photo_album", album_id)
+    album = await _get_album_for_user(db, album_id, current_user)
 
     # Only allow deleting draft albums
     if album.status != PhotoAlbumStatus.DRAFT:
@@ -411,22 +369,7 @@ async def add_photos_to_album(
 
     선택한 사진들을 앨범에 추가해요.
     """
-    result = await db.execute(
-        select(PhotoAlbum).where(PhotoAlbum.id == album_id)
-    )
-    album = result.scalar_one_or_none()
-
-    if not album:
-        raise NotFoundException("photo_album", album_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == album.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("photo_album", album_id)
+    album = await _get_album_for_user(db, album_id, current_user)
 
     # Get current max sort_order
     existing_photos_result = await db.execute(
@@ -498,23 +441,7 @@ async def remove_photo_from_album(
 
     앨범에서 특정 사진을 제거해요.
     """
-    # Verify album exists and user has access
-    album_result = await db.execute(
-        select(PhotoAlbum).where(PhotoAlbum.id == album_id)
-    )
-    album = album_result.scalar_one_or_none()
-
-    if not album:
-        raise NotFoundException("photo_album", album_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == album.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("photo_album", album_id)
+    album = await _get_album_for_user(db, album_id, current_user)
 
     # Find and delete the album-photo relationship
     album_photo_result = await db.execute(
@@ -543,22 +470,7 @@ async def reorder_album_photos(
 
     앨범 내 사진들의 순서를 재정렬해요.
     """
-    result = await db.execute(
-        select(PhotoAlbum).where(PhotoAlbum.id == album_id)
-    )
-    album = result.scalar_one_or_none()
-
-    if not album:
-        raise NotFoundException("photo_album", album_id)
-
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == album.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    if not project_result.scalar_one_or_none():
-        raise NotFoundException("photo_album", album_id)
+    album = await _get_album_for_user(db, album_id, current_user)
 
     # Update sort orders
     for photo_order in reorder_data.photos:
@@ -614,15 +526,7 @@ async def export_album_as_pdf(
     if not album:
         raise NotFoundException("photo_album", album_id)
 
-    # Verify access through project
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.id == album.project_id)
-        .where(Project.organization_id == current_user.organization_id)
-    )
-    project = project_result.scalar_one_or_none()
-    if not project:
-        raise NotFoundException("photo_album", album_id)
+    project = await _ensure_project_access(db, album.project_id, current_user)
 
     # Get photos with details
     photos = await _get_album_photos(db, album_id)

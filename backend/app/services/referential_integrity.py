@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel, select
 
 from app.core.exceptions import NotFoundException
+from app.core.permissions import ensure_project_visible_to_user
 from app.models.base import require_same_org
 
 
@@ -40,6 +41,8 @@ async def ensure_exists_in_org(
     row = await ensure_exists(db, model, resource_id, resource_name)
     resource_org_id = getattr(row, org_field, None)
     require_same_org(resource_org_id, current_user, resource_name)
+    if getattr(model, "__name__", "") == "Project":
+        await ensure_project_visible_to_user(db, row, current_user)
     return row
 
 
