@@ -98,6 +98,7 @@
 | 동일인 판별 기준은 **휴대전화번호 + 이름** 조합 | 2026-02-02 | 유효 | `docs/project-management/meeting/20260202_meeting.md` |
 | 대표가 프로젝트 단위로 현장소장 가시성(보이기/숨기기) 제어 | 2026-01-21 | 유효 | `docs/project-management/meeting/20260121_meeting.md` |
 | 근로자(일용직)는 관리자 웹 접속 불가 처리 | 2026-02-06 | 유효 | `docs/project-management/meeting/20260206_meeting.md` |
+| 권한 충돌 시 2026-01-21 회의 원문 우선 적용: 현장소장은 착공~준공 현장서류(착공계 포함), 대표자는 일당 확정/지급명세서 발급 담당 | 2026-02-19 | 유효 | `docs/project-management/meeting/20260121_meeting.md` |
 
 ### 3.3 DIAG/EST(적산/견적 엔진)
 
