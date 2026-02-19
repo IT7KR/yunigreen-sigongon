@@ -247,3 +247,102 @@ async def test_worker_can_access_only_own_worker_endpoints(async_client: AsyncCl
     set_user(company_admin)
     admin_using_worker_endpoint = await async_client.get(f"/api/v1/workers/{worker_a.id}/paystubs")
     assert admin_using_worker_endpoint.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_site_manager_can_submit_but_cannot_approve_construction_report(
+    async_client: AsyncClient,
+    permission_context,
+):
+    set_user = permission_context["set_user"]
+    site_manager_a1 = permission_context["site_manager_a1"]
+    project_a1 = permission_context["project_a1"]
+
+    set_user(site_manager_a1)
+    create_response = await async_client.post(
+        f"/api/v1/projects/{project_a1.id}/construction-reports/start",
+        json={
+            "construction_name": "A1 착공계",
+            "site_address": "서울시 강남구",
+            "start_date": "2026-02-20",
+            "expected_end_date": "2026-03-05",
+            "supervisor_name": "현장소장",
+            "supervisor_phone": "010-1000-0002",
+        },
+    )
+    assert create_response.status_code == 201
+    report_id = create_response.json()["data"]["id"]
+
+    submit_response = await async_client.post(
+        f"/api/v1/construction-reports/{report_id}/submit"
+    )
+    assert submit_response.status_code == 200
+    assert submit_response.json()["data"]["status"] == "submitted"
+
+    approve_response = await async_client.post(
+        f"/api/v1/construction-reports/{report_id}/approve"
+    )
+    assert approve_response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_company_admin_can_approve_or_reject_submitted_construction_report(
+    async_client: AsyncClient,
+    permission_context,
+):
+    set_user = permission_context["set_user"]
+    site_manager_a1 = permission_context["site_manager_a1"]
+    company_admin = permission_context["company_admin"]
+    project_a1 = permission_context["project_a1"]
+
+    set_user(site_manager_a1)
+    start_create_response = await async_client.post(
+        f"/api/v1/projects/{project_a1.id}/construction-reports/start",
+        json={
+            "construction_name": "A1 착공계",
+            "site_address": "서울시 강남구",
+            "start_date": "2026-02-20",
+            "expected_end_date": "2026-03-05",
+            "supervisor_name": "현장소장",
+            "supervisor_phone": "010-1000-0002",
+        },
+    )
+    assert start_create_response.status_code == 201
+    start_report_id = start_create_response.json()["data"]["id"]
+
+    start_submit_response = await async_client.post(
+        f"/api/v1/construction-reports/{start_report_id}/submit"
+    )
+    assert start_submit_response.status_code == 200
+
+    set_user(company_admin)
+    start_approve_response = await async_client.post(
+        f"/api/v1/construction-reports/{start_report_id}/approve"
+    )
+    assert start_approve_response.status_code == 200
+    assert start_approve_response.json()["data"]["status"] == "approved"
+
+    set_user(site_manager_a1)
+    completion_create_response = await async_client.post(
+        f"/api/v1/projects/{project_a1.id}/construction-reports/completion",
+        json={
+            "actual_end_date": "2026-03-06",
+            "final_amount": "12000000",
+            "defect_warranty_period": 36,
+        },
+    )
+    assert completion_create_response.status_code == 201
+    completion_report_id = completion_create_response.json()["data"]["id"]
+
+    completion_submit_response = await async_client.post(
+        f"/api/v1/construction-reports/{completion_report_id}/submit"
+    )
+    assert completion_submit_response.status_code == 200
+
+    set_user(company_admin)
+    completion_reject_response = await async_client.post(
+        f"/api/v1/construction-reports/{completion_report_id}/reject",
+        params={"reason": "보완 필요"},
+    )
+    assert completion_reject_response.status_code == 200
+    assert completion_reject_response.json()["data"]["status"] == "rejected"
