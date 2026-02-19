@@ -27,6 +27,8 @@ export const middleware = createAuthMiddleware({
   forbiddenRedirectPath: "/403",
   superAdminRoutePrefix: "/sa",
   superAdminRole: "super_admin",
+  superAdminBlockedRoutePrefixes: ["/labor"],
+  superAdminBlockedRedirectPath: "/sa/labor",
 });
 
 export const config = {

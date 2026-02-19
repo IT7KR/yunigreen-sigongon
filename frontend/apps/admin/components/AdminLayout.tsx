@@ -83,7 +83,7 @@ const saNavItems = [
   { href: "/sa/tenants", icon: Building2, label: "고객사 관리" },
   { href: "/sa/users", icon: Users, label: "전체 사용자" },
   { href: "/sa/estimation-governance", icon: FileSpreadsheet, label: "적산 운영" },
-  { href: "/sa/labor", icon: HardHat, label: "노무 관리" },
+  { href: "/sa/labor", icon: HardHat, label: "노무 모니터링" },
 ];
 
 type NavItem = {
@@ -112,6 +112,10 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
       item.children.some((child) => isPathActive(child.href)),
   );
   const effectiveExpanded = expandedMenu ?? (autoExpandedMenu ? autoExpandedMenu.href : null);
+  const visibleNavItems =
+    user?.role === "super_admin"
+      ? navItems.filter((item) => item.href !== "/labor")
+      : navItems;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -183,7 +187,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const hasChildren = "children" in item && item.children && item.children.length > 0;
             const hasActiveChild =
               hasChildren &&

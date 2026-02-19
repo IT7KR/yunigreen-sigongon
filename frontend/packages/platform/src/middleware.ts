@@ -18,6 +18,8 @@ export interface CreateAuthMiddlewareOptions {
   forbiddenRedirectPath?: string;
   superAdminRoutePrefix?: string;
   superAdminRole?: string;
+  superAdminBlockedRoutePrefixes?: string[];
+  superAdminBlockedRedirectPath?: string;
 }
 
 function routeMatches(pathname: string, route: string): boolean {
@@ -54,6 +56,8 @@ export function createAuthMiddleware(options: CreateAuthMiddlewareOptions) {
     forbiddenRedirectPath = "/403",
     superAdminRoutePrefix,
     superAdminRole = "super_admin",
+    superAdminBlockedRoutePrefixes = [],
+    superAdminBlockedRedirectPath = "/",
   } = options;
 
   return function middleware(request: NextRequest) {
@@ -88,6 +92,14 @@ export function createAuthMiddleware(options: CreateAuthMiddlewareOptions) {
     }
 
     const role = accessToken ? parseJwt(accessToken)?.role : undefined;
+
+    if (
+      accessToken &&
+      role === superAdminRole &&
+      superAdminBlockedRoutePrefixes.some((prefix) => routeMatches(pathname, prefix))
+    ) {
+      return NextResponse.redirect(new URL(superAdminBlockedRedirectPath, request.url));
+    }
 
     if (forbidWorkerOnPrivateRoutes && accessToken && role === workerRole && !isPublicRoute) {
       return NextResponse.redirect(new URL(forbiddenRedirectPath, request.url));
