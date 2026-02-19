@@ -8,7 +8,7 @@ import {
   Button,
   Badge,
 } from "@sigongon/ui";
-import { Plus, Filter } from "lucide-react";
+import { Plus, FileDown } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
@@ -209,6 +209,29 @@ export default function LaborContractsPage() {
                               {contract.status === "draft" && (
                                 <Button size="sm">발송</Button>
                               )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  try {
+                                    const blob = await api.downloadLaborContractHwpx(contract.id);
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = `표준근로계약서_${contract.worker_name}.hwpx`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                  } catch (e) {
+                                    console.error("HWPX 다운로드 실패:", e);
+                                    alert("근로계약서 다운로드에 실패했어요.");
+                                  }
+                                }}
+                              >
+                                <FileDown className="mr-1 h-3 w-3" />
+                                HWPX
+                              </Button>
                             </div>
                           </td>
                         </tr>

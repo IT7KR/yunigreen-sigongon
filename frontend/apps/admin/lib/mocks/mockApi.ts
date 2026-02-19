@@ -5266,6 +5266,12 @@ export class MockAPIClient {
     console.log("[MockAPI] saveConsentRecords:", payload);
     return delay({ success: true, data: payload.records.map((r, i) => ({ id: i + 1, consent_type: r.consent_type, consented: r.consented, consented_at: new Date().toISOString() })), error: null });
   }
+
+  async downloadLaborContractHwpx(laborContractId: number | string): Promise<Blob> {
+    // Mock HWPX blob (returns empty blob for testing)
+    console.log("[MockAPI] downloadLaborContractHwpx:", laborContractId);
+    return new Blob(["mock-hwpx-content"], { type: "application/vnd.hancom.hwpx" });
+  }
 }
 
 export const mockApiClient = new MockAPIClient();

@@ -2810,4 +2810,12 @@ export class APIClient {
     }>>(`/labor-contracts/workers/${workerId}/document-check`);
     return response.data;
   }
+
+  async downloadLaborContractHwpx(laborContractId: number | string): Promise<Blob> {
+    const response = await this.client.get<Blob>(
+      `/labor-contracts/${laborContractId}/hwpx`,
+      { responseType: "blob" },
+    );
+    return response.data;
+  }
 }

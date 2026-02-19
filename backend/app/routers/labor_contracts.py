@@ -1,9 +1,14 @@
 """일용 계약 관리 API 라우터."""
-from typing import Annotated, Optional
-from datetime import date
+import io
+import pathlib
+import tempfile
+import urllib.parse
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -12,7 +17,7 @@ from app.core.database import get_async_db
 from app.core.security import get_current_user, get_password_hash
 from app.schemas.response import APIResponse
 from app.models.user import User, UserRole
-from app.models.contract import LaborContractStatus
+from app.models.contract import LaborContract, LaborContractStatus
 
 router = APIRouter(prefix="/labor-contracts", tags=["labor-contracts"])
 
@@ -118,6 +123,113 @@ async def check_worker_documents(
         "documents_complete": len(missing_docs) == 0,
         "missing_documents": missing_docs,
     })
+
+
+_TEMPLATE_PATH = (
+    pathlib.Path(__file__).parent.parent.parent.parent
+    / "sample"
+    / "generated"
+    / "표준근로계약서_토큰템플릿.hwpx"
+)
+
+
+@router.get("/{labor_contract_id}/hwpx")
+async def download_labor_contract_hwpx(
+    labor_contract_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """표준근로계약서 HWPX 파일 다운로드."""
+    # 1. Fetch labor contract
+    contract = await db.get(LaborContract, labor_contract_id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="근로계약서를 찾을 수 없습니다")
+
+    # 2. Tenant isolation: verify project belongs to current org
+    if current_user.organization_id is not None:
+        from app.models.project import Project
+        project = (
+            await db.execute(
+                select(Project).where(
+                    Project.id == contract.project_id,
+                    Project.organization_id == current_user.organization_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if not project:
+            raise HTTPException(status_code=403, detail="이 계약에 접근할 권한이 없어요")
+    else:
+        from app.models.project import Project
+        project = await db.get(Project, contract.project_id)
+
+    # 3. Build context
+    now = datetime.now()
+    org = current_user.organization
+
+    context = {
+        "worker_name": contract.worker_name or "",
+        "worker_birth_date": "",  # not stored directly; use id_number hint
+        "worker_address": "",
+        "worker_phone": contract.worker_phone or "",
+        "contractor_name": org.name if org else "",
+        "contractor_address": org.address if org and hasattr(org, "address") else "",
+        "ceo_name": org.representative_name if org and hasattr(org, "representative_name") else "",
+        "project_name": project.name if project else "",
+        "work_type": contract.work_type or "",
+        "site_address": project.address if project and hasattr(project, "address") else "",
+        "work_description": contract.work_type or "",
+        "work_period_start": str(contract.work_date) if contract.work_date else "",
+        "work_period_end": str(contract.work_date) if contract.work_date else "",
+        "daily_wage": f"{int(contract.daily_rate):,}" if contract.daily_rate else "",
+        "hourly_wage": "",
+        "payment_day": "10",
+        "year": str(now.year),
+        "month": str(now.month),
+        "day": str(now.day),
+    }
+
+    # 4. Generate HWPX
+    if not _TEMPLATE_PATH.exists():
+        raise HTTPException(
+            status_code=500,
+            detail="표준근로계약서 템플릿을 찾을 수 없어요",
+        )
+
+    try:
+        from app.services.hwpx_template_engine import HwpxTemplateEngine
+
+        engine = HwpxTemplateEngine(strict=False)
+
+        with tempfile.NamedTemporaryFile(suffix=".hwpx", delete=False) as tmp:
+            tmp_path = pathlib.Path(tmp.name)
+
+        try:
+            engine.render(
+                template_path=_TEMPLATE_PATH,
+                output_path=tmp_path,
+                context=context,
+            )
+            output_bytes = tmp_path.read_bytes()
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"근로계약서 HWPX 생성에 실패했어요: {str(e)}",
+        )
+
+    worker_name = contract.worker_name or "근로자"
+    filename = f"표준근로계약서_{worker_name}.hwpx"
+    encoded_filename = urllib.parse.quote(filename, safe="")
+
+    return StreamingResponse(
+        io.BytesIO(output_bytes),
+        media_type="application/vnd.hancom.hwpx",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
+        },
+    )
 
 
 @router.post("/{labor_contract_id}/send", response_model=APIResponse)
