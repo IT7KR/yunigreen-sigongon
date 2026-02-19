@@ -42,7 +42,9 @@ export {
   type ConfirmDialogOptions,
 } from "./components/ConfirmDialogProvider"
 export { AnimatedPage, type AnimatedPageProps } from "./components/AnimatedPage"
+export { AppLink, type AppLinkProps } from "./components/AppLink"
 export { PageTransition, type PageTransitionProps, type PageTransitionStyle } from "./components/PageTransition"
+export { RouteTransitionShell } from "./components/RouteTransitionShell"
 export { StaggerGrid, type StaggerGridProps } from "./components/StaggerGrid"
 export { InteractiveCard, type InteractiveCardProps } from "./components/InteractiveCard"
 export { PrimitiveButton, type PrimitiveButtonProps } from "./components/PrimitiveButton"
@@ -51,6 +53,11 @@ export { PrimitiveSelect, type PrimitiveSelectProps } from "./components/Primiti
 export { ActionButton, type ActionButtonProps } from "./components/ActionButton"
 export { AnimatedCard, type AnimatedCardProps } from "./components/AnimatedCard"
 export { AnimatedList } from "./components/AnimatedList"
+export {
+  NavigationProgress,
+  NavigationProgressProvider,
+  useNavigationProgress,
+} from "./components/NavigationProgress"
 
 // Table
 export {
@@ -68,6 +75,7 @@ export { Pagination, type PaginationProps } from "./components/Pagination"
 
 // Hooks
 export { useReducedMotion } from "./hooks"
+export { useAppNavigation } from "./hooks"
 
 // Utilities
 export { cn, formatCurrency, formatDate, formatRelativeTime } from "./lib/utils"
