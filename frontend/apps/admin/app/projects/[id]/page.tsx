@@ -5,12 +5,17 @@ import Link from "next/link";
 import {
   AlertCircle,
   CalendarDays,
+  ChevronDown,
+  ChevronUp,
   ClipboardCheck,
   ClipboardList,
-  FileSignature,
+  FileText,
+  Hammer,
   HardHat,
+  MapPin,
   Sparkles,
   User,
+  Zap,
 } from "lucide-react";
 import {
   Button,
@@ -20,6 +25,7 @@ import {
   CardTitle,
   Skeleton,
   StatusBadge,
+  cn,
   formatDate,
 } from "@sigongon/ui";
 import type { ProjectDetail, ProjectStatus } from "@sigongon/types";
@@ -40,7 +46,8 @@ interface RepresentativeInfo {
 interface OverviewAction {
   label: string;
   href: string;
-  description: string;
+  icon: ReactNode;
+  primary?: boolean;
 }
 
 const PROJECT_PHASE_LABELS: Record<ProjectStatus, string> = {
@@ -62,112 +69,68 @@ function buildOverviewActions(
   diagnosisCount: number,
   hasEstimate: boolean,
   hasContract: boolean,
-): { primaryAction: OverviewAction; secondaryActions: OverviewAction[] } {
-  const actionCatalog = {
-    createVisit: {
-      label: "현장방문 등록",
+): OverviewAction[] {
+  // Define all possible actions with icons
+  const actions: OverviewAction[] = [
+    {
+      label: "현장방문",
       href: `/projects/${projectId}/visits/new`,
-      description: "현장 사진과 방문 내용을 등록해 다음 단계를 시작합니다.",
+      icon: <MapPin className="h-5 w-5" />,
     },
-    reviewDiagnosis: {
-      label: "AI 진단 확인",
+    {
+      label: "AI 진단",
       href: `/projects/${projectId}/diagnoses`,
-      description: "진단 결과와 추천 자재를 검토합니다.",
+      icon: <Sparkles className="h-5 w-5" />,
     },
-    createEstimate: {
-      label: "견적서 작성",
+    {
+      label: "견적작성",
       href: `/projects/${projectId}/estimates`,
-      description: "최신 단가 기준으로 견적을 생성하고 발행 준비를 합니다.",
+      icon: <FileText className="h-5 w-5" />,
     },
-    manageContract: {
-      label: "계약 진행",
+    {
+      label: "계약관리",
       href: `/projects/${projectId}/contracts`,
-      description: "계약서 발행 및 서명 상태를 관리합니다.",
+      icon: <ClipboardCheck className="h-5 w-5" />,
     },
-    openStartReport: {
-      label: "착공계 준비",
-      href: `/projects/${projectId}/construction/start-report`,
-      description: "착공 서류를 준비하고 시공 단계로 전환합니다.",
-    },
-    writeDailyReport: {
-      label: "작업일지 작성",
+    {
+      label: "작업일지",
       href: `/projects/${projectId}/construction/daily-reports/new`,
-      description: "당일 작업과 인력, 사진을 기록합니다.",
+      icon: <ClipboardList className="h-5 w-5" />,
     },
-    reviewConstruction: {
-      label: "시공 현황 보기",
+    {
+      label: "시공현황",
       href: `/projects/${projectId}/construction`,
-      description: "시공 진행률과 일일보고/노무 현황을 확인합니다.",
+      icon: <Hammer className="h-5 w-5" />,
     },
-    openCompletion: {
-      label: "준공정산 확인",
+    {
+      label: "준공정산",
       href: `/projects/${projectId}/completion/closeout-report`,
-      description: "준공 서류와 정산/후속 절차를 정리합니다.",
+      icon: <Zap className="h-5 w-5" />,
     },
-    openTaxInvoice: {
-      label: "세금계산서 관리",
-      href: `/projects/${projectId}/tax-invoice`,
-      description: "발행 이력 확인 및 신규 발행을 진행합니다.",
-    },
-    openDocuments: {
-      label: "문서함 열기",
-      href: `/projects/${projectId}/documents`,
-      description: "프로젝트 단계별 문서를 한 곳에서 관리합니다.",
-    },
-  } as const;
-
-  let primaryAction: OverviewAction = actionCatalog.reviewConstruction;
-
-  if (visitCount === 0) {
-    primaryAction = actionCatalog.createVisit;
-  } else if (diagnosisCount === 0) {
-    primaryAction = actionCatalog.reviewDiagnosis;
-  } else if (!hasEstimate) {
-    primaryAction = actionCatalog.createEstimate;
-  } else if (!hasContract) {
-    primaryAction = actionCatalog.manageContract;
-  } else if (projectStatus === "contracted") {
-    primaryAction = actionCatalog.openStartReport;
-  } else if (projectStatus === "in_progress") {
-    primaryAction = actionCatalog.writeDailyReport;
-  } else if (
-    projectStatus === "completed" ||
-    projectStatus === "warranty" ||
-    projectStatus === "closed"
-  ) {
-    primaryAction = actionCatalog.openCompletion;
-  }
-
-  const secondaryPool: OverviewAction[] = [
-    actionCatalog.createVisit,
-    actionCatalog.reviewDiagnosis,
-    actionCatalog.createEstimate,
-    actionCatalog.manageContract,
-    actionCatalog.reviewConstruction,
-    actionCatalog.openCompletion,
-    actionCatalog.openTaxInvoice,
-    actionCatalog.openDocuments,
   ];
 
-  if (projectStatus === "in_progress") {
-    secondaryPool.unshift(actionCatalog.writeDailyReport);
-  }
+  // Determine Primary Action based on status
+  let primaryIndex = 5; // Default: 시공현황
 
-  if (projectStatus === "contracted") {
-    secondaryPool.unshift(actionCatalog.openStartReport);
-  }
+  if (visitCount === 0)
+    primaryIndex = 0; // 현장방문
+  else if (diagnosisCount === 0)
+    primaryIndex = 1; // AI 진단
+  else if (!hasEstimate)
+    primaryIndex = 2; // 견적작성
+  else if (!hasContract)
+    primaryIndex = 3; // 계약관리
+  else if (projectStatus === "contracted")
+    primaryIndex = 4; // 작업일지 (착공 후)
+  else if (projectStatus === "in_progress")
+    primaryIndex = 4; // 작업일지
+  else if (["completed", "warranty", "closed"].includes(projectStatus))
+    primaryIndex = 6; // 준공정산
 
-  const seen = new Set<string>();
-  const secondaryActions = secondaryPool
-    .filter((action) => {
-      if (action.href === primaryAction.href) return false;
-      if (seen.has(action.href)) return false;
-      seen.add(action.href);
-      return true;
-    })
-    .slice(0, 3);
+  // Set primary flag
+  actions[primaryIndex].primary = true;
 
-  return { primaryAction, secondaryActions };
+  return actions;
 }
 
 export default function ProjectDetailPage({
@@ -176,70 +139,48 @@ export default function ProjectDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const {
-    data: response,
-    isLoading,
-    isError,
-    refetch,
-  } = useProject(id);
+  const { data: response, isLoading, isError, refetch } = useProject(id);
   const project = response?.success ? (response.data as ProjectDetail) : null;
 
   const [representativeInfo, setRepresentativeInfo] =
     useState<RepresentativeInfo | null>(null);
   const [representativeLoading, setRepresentativeLoading] = useState(true);
-  const [representativeError, setRepresentativeError] = useState<string | null>(
-    null,
-  );
 
   useEffect(() => {
     let isCancelled = false;
-
     async function loadRepresentative() {
       try {
         setRepresentativeLoading(true);
-        setRepresentativeError(null);
-
         const assignment = await getRepresentativeAssignmentByProjectId(id);
         if (!assignment) {
           if (!isCancelled) setRepresentativeInfo(null);
           return;
         }
-
         const representative = await getRepresentativeById(
           assignment.representativeId,
         );
-
-        if (!isCancelled) {
-          if (!representative) {
-            setRepresentativeInfo(null);
-          } else {
-            setRepresentativeInfo({
-              name: representative.name,
-              phone: representative.phone,
-              effectiveDate: assignment.effectiveDate,
-            });
-          }
-        }
-      } catch {
-        if (!isCancelled) {
-          setRepresentativeError("현장대리인 정보를 불러오지 못했습니다.");
+        if (!isCancelled && representative) {
+          setRepresentativeInfo({
+            name: representative.name,
+            phone: representative.phone,
+            effectiveDate: assignment.effectiveDate,
+          });
+        } else if (!isCancelled) {
           setRepresentativeInfo(null);
         }
+      } catch {
+        if (!isCancelled) setRepresentativeInfo(null);
       } finally {
         if (!isCancelled) setRepresentativeLoading(false);
       }
     }
-
     loadRepresentative();
-
     return () => {
       isCancelled = true;
     };
   }, [id]);
 
-  if (isLoading) {
-    return <OverviewLoadingState />;
-  }
+  if (isLoading) return <OverviewLoadingState />;
 
   if (isError || !project) {
     return (
@@ -250,16 +191,8 @@ export default function ProjectDetailPage({
             <p className="font-semibold text-slate-900">
               프로젝트를 불러오지 못했어요
             </p>
-            <p className="text-sm text-slate-500">
-              네트워크 상태를 확인한 뒤 다시 시도해 주세요.
-            </p>
-          </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Button size="md" className="h-11" onClick={() => refetch()}>
+            <Button size="md" onClick={() => refetch()}>
               다시 시도
-            </Button>
-            <Button size="md" variant="secondary" className="h-11" asChild>
-              <Link href="/projects">목록으로 돌아가기</Link>
             </Button>
           </div>
         </CardContent>
@@ -267,337 +200,200 @@ export default function ProjectDetailPage({
     );
   }
 
-  const visitCount = project.site_visits?.length ?? 0;
-  const diagnosisCount = project.diagnoses_count ?? 0;
-  const estimateCount = project.estimates?.length ?? 0;
-  const contractCount = project.contracts?.length ?? 0;
-  const latestEstimate =
-    project.estimates.length > 0
-      ? project.estimates.reduce((latest, current) => {
-          if (current.version > latest.version) return current;
-          return latest;
-        }, project.estimates[0])
-      : undefined;
-  const latestContract =
-    project.contracts && project.contracts.length > 0
-      ? project.contracts[project.contracts.length - 1]
-      : undefined;
-
-  const { primaryAction, secondaryActions } = buildOverviewActions(
+  const actions = buildOverviewActions(
     id,
     project.status,
-    visitCount,
-    diagnosisCount,
-    estimateCount > 0,
-    contractCount > 0,
+    project.site_visits?.length ?? 0,
+    project.diagnoses_count ?? 0,
+    (project.estimates?.length ?? 0) > 0,
+    (project.contracts?.length ?? 0) > 0,
   );
 
+  const primaryAction = actions.find((a) => a.primary) || actions[0];
+  const quickActions = actions.filter((a) => a !== primaryAction).slice(0, 5); // Limit quick actions
+
   const categoryLabel = project.category
-    ? PROJECT_CATEGORIES.find((category) => category.id === project.category)
-        ?.label ?? project.category
+    ? (PROJECT_CATEGORIES.find((category) => category.id === project.category)
+        ?.label ?? project.category)
     : "-";
 
   return (
-    <div className="space-y-6">
-      <Card className="border-brand-point-200 bg-gradient-to-r from-brand-point-50/80 via-white to-white">
-        <CardContent className="p-5">
-          <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
-            <div>
-              <p className="text-sm font-medium text-slate-600">현재 단계</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">
+    <div className="space-y-4">
+      {/* 1. Action-First Hero Section (V2) */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center sm:text-left">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex flex-col items-center gap-2 sm:items-start">
+              <StatusBadge status={project.status} className="scale-110" />
+              <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
                 {PROJECT_PHASE_LABELS[project.status]}
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                다음 추천 액션: {primaryAction.label}
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-medium text-slate-500">견적</span>
-                {latestEstimate ? (
-                  <StatusBadge status={latestEstimate.status} />
-                ) : (
-                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                    없음
-                  </span>
-                )}
-                <span className="text-xs font-medium text-slate-500">계약</span>
-                {latestContract ? (
-                  <StatusBadge status={latestContract.status} />
-                ) : (
-                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                    없음
-                  </span>
-                )}
-              </div>
+              </h2>
             </div>
-
-            <SummaryMetric
-              icon={<ClipboardList className="h-5 w-5 text-brand-point-600" />}
-              label="현장방문"
-              value={`${visitCount}건`}
-              href={`/projects/${id}/visits`}
-            />
-            <SummaryMetric
-              icon={<Sparkles className="h-5 w-5 text-blue-600" />}
-              label="AI 진단"
-              value={`${diagnosisCount}건`}
-              href={`/projects/${id}/diagnoses`}
-            />
-            <SummaryMetric
-              icon={<ClipboardCheck className="h-5 w-5 text-amber-600" />}
-              label="견적/계약"
-              value={`${estimateCount}/${contractCount}`}
-              description="견적건수/계약건수"
-              href={`/projects/${id}/contracts`}
-            />
           </div>
-        </CardContent>
-      </Card>
+          <Button
+            size="lg"
+            className="w-full text-lg shadow-md sm:w-auto sm:px-8 sm:h-14"
+            asChild
+          >
+            <Link
+              href={primaryAction.href}
+              className="flex items-center justify-center gap-2"
+            >
+              {primaryAction.icon}
+              {primaryAction.label} 바로가기
+            </Link>
+          </Button>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>빠른 액션</CardTitle>
-          <p className="text-sm text-slate-500">
-            지금 진행할 업무를 바로 시작할 수 있도록 단계별 액션을 추천합니다.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-3 pt-0">
-          <div className="rounded-xl border border-brand-point-200 bg-brand-point-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand-point-700">
-              추천 액션
-            </p>
-            <p className="mt-1 text-lg font-semibold text-brand-point-900">
-              {primaryAction.label}
-            </p>
-            <p className="mt-1 text-sm text-brand-point-800">
-              {primaryAction.description}
-            </p>
-            <Button className="mt-3 h-11" asChild>
-              <Link href={primaryAction.href}>{primaryAction.label}</Link>
-            </Button>
+      {/* 2. Minimal Quick Actions (V2: Max 4 items, flat style) */}
+      <div className="grid grid-cols-4 gap-2">
+        {quickActions.slice(0, 4).map((action) => (
+          <Link
+            key={action.label}
+            href={action.href}
+            className="flex flex-col items-center justify-center gap-2 p-2 transition-opacity hover:opacity-70"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+              {action.icon}
+            </div>
+            <span className="text-xs font-medium text-slate-600 text-center leading-tight">
+              {action.label}
+            </span>
+          </Link>
+        ))}
+      </div>
+
+      {/* 3. Collapsible Info Sections */}
+      <div className="space-y-3">
+        <CollapsibleCard
+          title="기본 및 고객 정보"
+          icon={<User className="h-5 w-5 text-slate-400" />}
+        >
+          <div className="grid gap-6 py-2 sm:grid-cols-2">
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase text-slate-400">
+                프로젝트 정보
+              </h4>
+              <InfoRow label="공사 유형" value={categoryLabel} />
+              <InfoRow label="등록일" value={formatDate(project.created_at)} />
+              <InfoRow label="주소" value={project.address || "-"} />
+            </div>
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase text-slate-400">
+                고객 정보
+              </h4>
+              <InfoRow label="고객명" value={project.client_name || "-"} />
+              <InfoRow label="연락처" value={project.client_phone || "-"} />
+            </div>
           </div>
+        </CollapsibleCard>
 
-          <div className="grid gap-3 md:grid-cols-3">
-            {secondaryActions.map((action) => (
-              <div
-                key={action.href}
-                className="rounded-xl border border-slate-200 bg-white p-4"
-              >
-                <p className="text-sm font-semibold text-slate-900">{action.label}</p>
-                <p className="mt-1 text-sm text-slate-500">{action.description}</p>
-                <Button
-                  variant="secondary"
-                  className="mt-3 h-11 w-full"
-                  asChild
-                >
-                  <Link href={action.href}>이동하기</Link>
-                </Button>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-brand-point-500" />
-            프로젝트 진행 현황
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <ProjectWorkflowTimeline
-            projectId={id}
-            visitCount={visitCount}
-            diagnosisCount={diagnosisCount}
-            hasEstimate={estimateCount > 0}
-            estimateStatus={latestEstimate?.status}
-            hasContract={contractCount > 0}
-            contractStatus={latestContract?.status}
-            projectStatus={project.status}
-          />
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-slate-400" />
-              기본 정보
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-0">
-            <InfoRow label="공사 유형" value={categoryLabel} />
-            <InfoRow label="등록일" value={formatDate(project.created_at)} />
-            <InfoRow label="프로젝트 ID" value={project.id} mono />
-            <InfoRow label="주소" value={project.address || "-"} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-slate-400" />
-              고객 정보
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-0">
-            <InfoRow label="고객명" value={project.client_name || "-"} />
-            <InfoRow label="연락처" value={project.client_phone || "-"} />
-            <InfoRow
-              label="추천 다음 단계"
-              value={primaryAction.label}
-              emphasize
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <HardHat className="h-5 w-5 text-slate-400" />
-              현장대리인
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-0">
+        <CollapsibleCard
+          title="현장대리인"
+          icon={<HardHat className="h-5 w-5 text-slate-400" />}
+        >
+          <div className="py-2">
             {representativeLoading ? (
               <div className="space-y-2">
                 <Skeleton className="h-5 w-24" />
                 <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-5 w-32" />
               </div>
-            ) : representativeError ? (
-              <p className="text-sm text-red-600">{representativeError}</p>
             ) : representativeInfo ? (
-              <>
+              <div className="space-y-3">
                 <InfoRow label="이름" value={representativeInfo.name} />
                 <InfoRow label="연락처" value={representativeInfo.phone} />
                 <InfoRow
-                  label="적용 기준일"
+                  label="배정일"
                   value={formatDate(representativeInfo.effectiveDate)}
                 />
-              </>
+              </div>
             ) : (
               <p className="text-sm text-slate-500">
                 배정된 현장대리인이 없습니다.
               </p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileSignature className="h-5 w-5 text-slate-400" />
-              메모
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="whitespace-pre-line text-sm text-slate-600">
-              {project.notes || "메모가 없습니다."}
-            </p>
-          </CardContent>
-        </Card>
+        <CollapsibleCard
+          title="진행 타임라인"
+          icon={<CalendarDays className="h-5 w-5 text-slate-400" />}
+        >
+          <div className="py-2">
+            <ProjectWorkflowTimeline
+              projectId={id}
+              visitCount={project.site_visits?.length ?? 0}
+              diagnosisCount={project.diagnoses_count ?? 0}
+              hasEstimate={(project.estimates?.length ?? 0) > 0}
+              estimateStatus={project.estimates?.[0]?.status}
+              hasContract={(project.contracts?.length ?? 0) > 0}
+              contractStatus={project.contracts?.[0]?.status}
+              projectStatus={project.status}
+            />
+          </div>
+        </CollapsibleCard>
       </div>
     </div>
   );
 }
 
-function SummaryMetric({
+function CollapsibleCard({
+  title,
   icon,
-  label,
-  value,
-  href,
-  description,
+  children,
+  defaultOpen = false,
 }: {
+  title: string;
   icon: ReactNode;
-  label: string;
-  value: string;
-  href: string;
-  description?: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <Link
-      href={href}
-      className="block rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-brand-point-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-point-500"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">{value}</p>
-          {description && <p className="mt-1 text-xs text-slate-500">{description}</p>}
-        </div>
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
+    <Card>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full items-center justify-between p-4 focus:outline-none"
+      >
+        <div className="flex items-center gap-2 font-semibold text-slate-900">
           {icon}
-        </span>
-      </div>
-    </Link>
+          {title}
+        </div>
+        {isOpen ? (
+          <ChevronUp className="h-4 w-4 text-slate-400" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-slate-400" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="animate-in slide-in-from-top-1 fade-in-0 border-t border-slate-100 px-4 pb-4 pt-4">
+          {children}
+        </div>
+      )}
+    </Card>
   );
 }
 
-function InfoRow({
-  label,
-  value,
-  mono = false,
-  emphasize = false,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-  emphasize?: boolean;
-}) {
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-slate-500">{label}</p>
-      <p
-        className={[
-          "mt-0.5 break-all text-slate-900",
-          mono ? "font-mono text-sm" : "font-medium",
-          emphasize ? "text-brand-point-700" : "",
-        ].join(" ")}
-      >
-        {value}
-      </p>
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="font-medium text-slate-900">{value}</p>
     </div>
   );
 }
 
 function OverviewLoadingState() {
   return (
-    <div className="space-y-6" aria-live="polite" aria-busy="true">
-      <Card>
-        <CardContent className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-28" />
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-28" />
-          <Skeleton className="h-4 w-80" />
-        </CardHeader>
-        <CardContent className="space-y-3 pt-0">
-          <Skeleton className="h-36" />
-          <div className="grid gap-3 md:grid-cols-3">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-        </CardHeader>
-        <CardContent className="space-y-3 pt-0">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <Skeleton className="h-32 w-full rounded-xl" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+      </div>
+      <Skeleton className="h-64 w-full rounded-xl" />
     </div>
   );
 }
