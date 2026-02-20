@@ -346,3 +346,207 @@ async def test_company_admin_can_approve_or_reject_submitted_construction_report
     )
     assert completion_reject_response.status_code == 200
     assert completion_reject_response.json()["data"]["status"] == "rejected"
+
+
+@pytest.mark.asyncio
+async def test_start_report_approval_auto_transitions_project_status(
+    async_client: AsyncClient,
+    permission_context,
+):
+    set_user = permission_context["set_user"]
+    site_manager_a1 = permission_context["site_manager_a1"]
+    company_admin = permission_context["company_admin"]
+    project_a1 = permission_context["project_a1"]
+
+    set_user(site_manager_a1)
+    start_create_response = await async_client.post(
+        f"/api/v1/projects/{project_a1.id}/construction-reports/start",
+        json={
+            "construction_name": "A1 착공계",
+            "site_address": "서울시 강남구",
+            "start_date": "2026-02-20",
+            "expected_end_date": "2026-03-05",
+            "supervisor_name": "현장소장",
+            "supervisor_phone": "010-1000-0002",
+        },
+    )
+    assert start_create_response.status_code == 201
+    start_report_id = start_create_response.json()["data"]["id"]
+
+    start_submit_response = await async_client.post(
+        f"/api/v1/construction-reports/{start_report_id}/submit"
+    )
+    assert start_submit_response.status_code == 200
+
+    set_user(company_admin)
+    status_update_response = await async_client.patch(
+        f"/api/v1/projects/{project_a1.id}/status",
+        json={"status": "contracted"},
+    )
+    assert status_update_response.status_code == 200
+
+    start_approve_response = await async_client.post(
+        f"/api/v1/construction-reports/{start_report_id}/approve"
+    )
+    assert start_approve_response.status_code == 200
+    start_approve_data = start_approve_response.json()["data"]
+    assert start_approve_data["status"] == "approved"
+    assert start_approve_data["project_status_changed"] is True
+    assert start_approve_data["project_status_before"] == "contracted"
+    assert start_approve_data["project_status_after"] == "in_progress"
+
+    project_response = await async_client.get(f"/api/v1/projects/{project_a1.id}")
+    assert project_response.status_code == 200
+    assert project_response.json()["data"]["status"] == "in_progress"
+
+
+@pytest.mark.asyncio
+async def test_completion_report_approval_auto_transitions_project_status(
+    async_client: AsyncClient,
+    permission_context,
+):
+    set_user = permission_context["set_user"]
+    site_manager_a1 = permission_context["site_manager_a1"]
+    company_admin = permission_context["company_admin"]
+    project_a1 = permission_context["project_a1"]
+
+    set_user(site_manager_a1)
+    start_create_response = await async_client.post(
+        f"/api/v1/projects/{project_a1.id}/construction-reports/start",
+        json={
+            "construction_name": "A1 착공계",
+            "site_address": "서울시 강남구",
+            "start_date": "2026-02-20",
+            "expected_end_date": "2026-03-05",
+            "supervisor_name": "현장소장",
+            "supervisor_phone": "010-1000-0002",
+        },
+    )
+    assert start_create_response.status_code == 201
+    start_report_id = start_create_response.json()["data"]["id"]
+
+    start_submit_response = await async_client.post(
+        f"/api/v1/construction-reports/{start_report_id}/submit"
+    )
+    assert start_submit_response.status_code == 200
+
+    set_user(company_admin)
+    status_update_response = await async_client.patch(
+        f"/api/v1/projects/{project_a1.id}/status",
+        json={"status": "contracted"},
+    )
+    assert status_update_response.status_code == 200
+
+    start_approve_response = await async_client.post(
+        f"/api/v1/construction-reports/{start_report_id}/approve"
+    )
+    assert start_approve_response.status_code == 200
+
+    set_user(site_manager_a1)
+    completion_create_response = await async_client.post(
+        f"/api/v1/projects/{project_a1.id}/construction-reports/completion",
+        json={
+            "actual_end_date": "2026-03-06",
+            "final_amount": "12000000",
+            "defect_warranty_period": 36,
+        },
+    )
+    assert completion_create_response.status_code == 201
+    completion_report_id = completion_create_response.json()["data"]["id"]
+
+    completion_submit_response = await async_client.post(
+        f"/api/v1/construction-reports/{completion_report_id}/submit"
+    )
+    assert completion_submit_response.status_code == 200
+
+    set_user(company_admin)
+    completion_approve_response = await async_client.post(
+        f"/api/v1/construction-reports/{completion_report_id}/approve"
+    )
+    assert completion_approve_response.status_code == 200
+    completion_approve_data = completion_approve_response.json()["data"]
+    assert completion_approve_data["status"] == "approved"
+    assert completion_approve_data["project_status_changed"] is True
+    assert completion_approve_data["project_status_before"] == "in_progress"
+    assert completion_approve_data["project_status_after"] == "completed"
+
+    project_response = await async_client.get(f"/api/v1/projects/{project_a1.id}")
+    assert project_response.status_code == 200
+    assert project_response.json()["data"]["status"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_completion_report_approval_skips_auto_transition_when_project_status_mismatch(
+    async_client: AsyncClient,
+    permission_context,
+):
+    set_user = permission_context["set_user"]
+    site_manager_a1 = permission_context["site_manager_a1"]
+    company_admin = permission_context["company_admin"]
+    project_a1 = permission_context["project_a1"]
+
+    set_user(site_manager_a1)
+    start_create_response = await async_client.post(
+        f"/api/v1/projects/{project_a1.id}/construction-reports/start",
+        json={
+            "construction_name": "A1 착공계",
+            "site_address": "서울시 강남구",
+            "start_date": "2026-02-20",
+            "expected_end_date": "2026-03-05",
+            "supervisor_name": "현장소장",
+            "supervisor_phone": "010-1000-0002",
+        },
+    )
+    assert start_create_response.status_code == 201
+    start_report_id = start_create_response.json()["data"]["id"]
+
+    start_submit_response = await async_client.post(
+        f"/api/v1/construction-reports/{start_report_id}/submit"
+    )
+    assert start_submit_response.status_code == 200
+
+    set_user(company_admin)
+    await async_client.patch(
+        f"/api/v1/projects/{project_a1.id}/status",
+        json={"status": "contracted"},
+    )
+    await async_client.post(f"/api/v1/construction-reports/{start_report_id}/approve")
+
+    set_user(site_manager_a1)
+    completion_create_response = await async_client.post(
+        f"/api/v1/projects/{project_a1.id}/construction-reports/completion",
+        json={
+            "actual_end_date": "2026-03-06",
+            "final_amount": "12000000",
+            "defect_warranty_period": 36,
+        },
+    )
+    assert completion_create_response.status_code == 201
+    completion_report_id = completion_create_response.json()["data"]["id"]
+
+    completion_submit_response = await async_client.post(
+        f"/api/v1/construction-reports/{completion_report_id}/submit"
+    )
+    assert completion_submit_response.status_code == 200
+
+    set_user(company_admin)
+    status_update_response = await async_client.patch(
+        f"/api/v1/projects/{project_a1.id}/status",
+        json={"status": "contracted"},
+    )
+    assert status_update_response.status_code == 200
+
+    completion_approve_response = await async_client.post(
+        f"/api/v1/construction-reports/{completion_report_id}/approve"
+    )
+    assert completion_approve_response.status_code == 200
+    completion_approve_data = completion_approve_response.json()["data"]
+    assert completion_approve_data["status"] == "approved"
+    assert completion_approve_data["project_status_changed"] is False
+    assert completion_approve_data["project_status_before"] == "contracted"
+    assert completion_approve_data["project_status_after"] == "contracted"
+    assert "in_progress" in completion_approve_data["project_status_change_reason"]
+
+    project_response = await async_client.get(f"/api/v1/projects/{project_a1.id}")
+    assert project_response.status_code == 200
+    assert project_response.json()["data"]["status"] == "contracted"
