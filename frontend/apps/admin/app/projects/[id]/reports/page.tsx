@@ -1,10 +1,10 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FileText, Plus, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, Button, Badge } from "@sigongon/ui";
+import { Card, CardContent, CardHeader, CardTitle, Button, Badge, toast } from "@sigongon/ui";
+import type { ProjectStatus } from "@sigongon/types";
 import { api } from "@/lib/api";
 
 type ReportStatus = "draft" | "submitted" | "approved" | "rejected";
@@ -36,26 +36,49 @@ const statusVariants: Record<ReportStatus, "default" | "success" | "warning" | "
   rejected: "error",
 };
 
+const projectStatusLabels: Record<ProjectStatus, string> = {
+  draft: "초안",
+  diagnosing: "진단중",
+  estimating: "견적작성",
+  quoted: "견적발송",
+  contracted: "계약완료",
+  in_progress: "시공중",
+  completed: "준공",
+  warranty: "하자보증",
+  closed: "완결",
+};
+
 export default function ConstructionReportsPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const router = useRouter();
   const [reports, setReports] = useState<ConstructionReport[]>([]);
+  const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState<ProjectStatus | null>(null);
 
   useEffect(() => {
-    loadReports();
+    loadData();
   }, [id]);
 
-  async function loadReports() {
+  async function loadData() {
     try {
       setLoading(true);
-      const response = await api.getConstructionReports(id);
-      if (response.success && response.data) {
-        setReports(response.data);
+      const [reportsResponse, projectResponse] = await Promise.all([
+        api.getConstructionReports(id),
+        api.getProject(id),
+      ]);
+
+      if (reportsResponse.success && reportsResponse.data) {
+        setReports(reportsResponse.data);
+      } else {
+        setReports([]);
+      }
+
+      if (projectResponse.success && projectResponse.data) {
+        setProjectStatus(projectResponse.data.status);
       }
     } catch (err) {
       console.error(err);
@@ -64,9 +87,39 @@ export default function ConstructionReportsPage({
     }
   }
 
+  async function updateProjectStatus(targetStatus: ProjectStatus) {
+    try {
+      setUpdatingStatus(targetStatus);
+      const response = await api.updateProjectStatus(id, targetStatus);
+      if (!response.success || !response.data) {
+        toast.error("프로젝트 상태를 변경하지 못했어요");
+        return;
+      }
+      setProjectStatus(response.data.status);
+      toast.success("프로젝트 상태를 변경했어요");
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      toast.error("오류가 발생했어요");
+    } finally {
+      setUpdatingStatus(null);
+    }
+  }
+
   const startReports = reports.filter((r) => r.report_type === "start");
   const completionReports = reports.filter((r) => r.report_type === "completion");
   const hasApprovedStartReport = startReports.some((r) => r.status === "approved");
+  const hasApprovedCompletionReport = completionReports.some((r) => r.status === "approved");
+
+  const needsInProgressAction =
+    hasApprovedStartReport &&
+    !!projectStatus &&
+    !["in_progress", "completed", "warranty", "closed"].includes(projectStatus);
+
+  const needsCompletedAction =
+    hasApprovedCompletionReport &&
+    !!projectStatus &&
+    projectStatus === "in_progress";
 
   if (loading) {
     return (
@@ -78,7 +131,56 @@ export default function ConstructionReportsPage({
 
   return (
     <div className="space-y-6">
-      {/* 착공계 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">프로젝트 상태</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-slate-700">
+            현재 상태:{" "}
+            <span className="font-semibold text-slate-900">
+              {projectStatus ? projectStatusLabels[projectStatus] : "-"}
+            </span>
+          </p>
+
+          {(needsInProgressAction || needsCompletedAction) && (
+            <div className="flex flex-wrap gap-2">
+              {needsInProgressAction && (
+                <Button
+                  size="sm"
+                  onClick={() => updateProjectStatus("in_progress")}
+                  disabled={!!updatingStatus}
+                >
+                  {updatingStatus === "in_progress" && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  시공중으로 변경
+                </Button>
+              )}
+              {needsCompletedAction && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => updateProjectStatus("completed")}
+                  disabled={!!updatingStatus}
+                >
+                  {updatingStatus === "completed" && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  준공으로 변경
+                </Button>
+              )}
+            </div>
+          )}
+
+          {!needsInProgressAction && !needsCompletedAction && (
+            <p className="text-xs text-slate-500">
+              착공계/준공계 승인 시 자동으로 프로젝트 상태가 변경됩니다.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -86,17 +188,17 @@ export default function ConstructionReportsPage({
             착공계
           </CardTitle>
           {startReports.length === 0 && (
-            <Button size="sm" asChild><Link href={`/projects/${id}/reports/start`}>
+            <Button size="sm" asChild>
+              <Link href={`/projects/${id}/reports/start`}>
                 <Plus className="h-4 w-4" />
                 착공계 작성
-              </Link></Button>
+              </Link>
+            </Button>
           )}
         </CardHeader>
         <CardContent>
           {startReports.length === 0 ? (
-            <p className="py-8 text-center text-slate-500">
-              아직 착공계가 없습니다.
-            </p>
+            <p className="py-8 text-center text-slate-500">아직 착공계가 없습니다.</p>
           ) : (
             <div className="space-y-3">
               {startReports.map((report) => (
@@ -105,7 +207,7 @@ export default function ConstructionReportsPage({
                   href={`/projects/${id}/reports/start?reportId=${report.id}`}
                   className="block"
                 >
-                  <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50">
                     <div>
                       <p className="font-medium text-slate-900">
                         {report.construction_name || "착공계"}
@@ -114,7 +216,7 @@ export default function ConstructionReportsPage({
                         {new Date(report.created_at).toLocaleDateString("ko-KR")}
                       </p>
                       {report.rejection_reason && (
-                        <p className="text-sm text-red-600 mt-1">
+                        <p className="mt-1 text-sm text-red-600">
                           반려 사유: {report.rejection_reason}
                         </p>
                       )}
@@ -130,7 +232,6 @@ export default function ConstructionReportsPage({
         </CardContent>
       </Card>
 
-      {/* 준공계 */}
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -138,10 +239,12 @@ export default function ConstructionReportsPage({
             준공계
           </CardTitle>
           {hasApprovedStartReport && completionReports.length === 0 && (
-            <Button size="sm" asChild><Link href={`/projects/${id}/reports/completion`}>
+            <Button size="sm" asChild>
+              <Link href={`/projects/${id}/reports/completion`}>
                 <Plus className="h-4 w-4" />
                 준공계 작성
-              </Link></Button>
+              </Link>
+            </Button>
           )}
         </CardHeader>
         <CardContent>
@@ -150,9 +253,7 @@ export default function ConstructionReportsPage({
               착공계가 승인되면 준공계를 작성할 수 있어요.
             </p>
           ) : completionReports.length === 0 ? (
-            <p className="py-8 text-center text-slate-500">
-              아직 준공계가 없습니다.
-            </p>
+            <p className="py-8 text-center text-slate-500">아직 준공계가 없습니다.</p>
           ) : (
             <div className="space-y-3">
               {completionReports.map((report) => (
@@ -161,7 +262,7 @@ export default function ConstructionReportsPage({
                   href={`/projects/${id}/reports/completion?reportId=${report.id}`}
                   className="block"
                 >
-                  <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50">
                     <div>
                       <p className="font-medium text-slate-900">
                         {report.construction_name || "준공계"}
@@ -170,7 +271,7 @@ export default function ConstructionReportsPage({
                         {new Date(report.created_at).toLocaleDateString("ko-KR")}
                       </p>
                       {report.rejection_reason && (
-                        <p className="text-sm text-red-600 mt-1">
+                        <p className="mt-1 text-sm text-red-600">
                           반려 사유: {report.rejection_reason}
                         </p>
                       )}
