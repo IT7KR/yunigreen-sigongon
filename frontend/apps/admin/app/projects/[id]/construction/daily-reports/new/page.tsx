@@ -3,7 +3,17 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Camera, X, ArrowLeft, LocateFixed } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, PrimitiveInput, Textarea, toast } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  PrimitiveButton,
+  PrimitiveInput,
+  Textarea,
+  toast,
+} from "@sigongon/ui";
 import { api } from "@/lib/api";
 import Link from "next/link";
 
@@ -82,7 +92,9 @@ export default function NewDailyReportPage({
 
   async function handleAutoFillWeather() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setAutoWeatherMessage("위치 기능을 사용할 수 없어 날씨를 수동 선택해 주세요.");
+      setAutoWeatherMessage(
+        "위치 기능을 사용할 수 없어 날씨를 수동 선택해 주세요.",
+      );
       return;
     }
 
@@ -119,7 +131,9 @@ export default function NewDailyReportPage({
       setAutoWeatherMessage("현재 위치 기준으로 날씨를 자동 반영했어요.");
     } catch (error) {
       console.error("Failed to auto-fill weather:", error);
-      setAutoWeatherMessage("날씨 자동 입력에 실패해 수동 선택으로 전환했어요.");
+      setAutoWeatherMessage(
+        "날씨 자동 입력에 실패해 수동 선택으로 전환했어요.",
+      );
     } finally {
       setAutoWeatherLoading(false);
     }
@@ -128,10 +142,12 @@ export default function NewDailyReportPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="secondary" size="sm" asChild><Link href={`/projects/${id}/construction/daily-reports`}>
+        <Button variant="secondary" size="sm" asChild>
+          <Link href={`/projects/${id}/construction/daily-reports`}>
             <ArrowLeft className="h-4 w-4" />
             목록으로
-          </Link></Button>
+          </Link>
+        </Button>
         <h1 className="text-2xl font-bold text-slate-900">작업일지 작성</h1>
       </div>
 
@@ -194,19 +210,10 @@ export default function NewDailyReportPage({
                   ))}
                 </div>
                 {autoWeatherMessage && (
-                  <p className="mb-2 text-xs text-slate-500">{autoWeatherMessage}</p>
+                  <p className="mb-2 text-xs text-slate-500">
+                    {autoWeatherMessage}
+                  </p>
                 )}
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-slate-700">기온:</label>
-                  <PrimitiveInput
-                    type="number"
-                    value={temperature}
-                    onChange={(e) => setTemperature(e.target.value)}
-                    placeholder="0"
-                    className="w-20 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-                  />
-                  <span className="text-sm text-slate-700">℃</span>
-                </div>
               </div>
             </div>
 
@@ -263,9 +270,11 @@ export default function NewDailyReportPage({
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="secondary" asChild><Link href={`/projects/${id}/construction/daily-reports`}>
+              <Button type="button" variant="secondary" asChild>
+                <Link href={`/projects/${id}/construction/daily-reports`}>
                   취소
-                </Link></Button>
+                </Link>
+              </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
