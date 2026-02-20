@@ -28,7 +28,9 @@ from app.models.construction_report import (
     ConstructionReportRead,
     ConstructionReportUpdate,
 )
+from app.models.project import ProjectStatus, Project
 from app.schemas.response import APIResponse, PaginatedResponse
+from app.services.project_status import apply_project_status_update
 
 router = APIRouter()
 
@@ -84,6 +86,11 @@ class ConstructionReportDetail(BaseModel):
     # Audit
     created_by: int
     approved_by: Optional[int]
+    # Project status transition metadata (approve endpoint)
+    project_status_changed: Optional[bool] = None
+    project_status_before: Optional[str] = None
+    project_status_after: Optional[str] = None
+    project_status_change_reason: Optional[str] = None
 
 
 class CreateStartReportRequest(BaseModel):
@@ -149,7 +156,7 @@ async def _get_report_and_project(
     db: AsyncSession,
     report_id: int,
     current_user: User,
-) -> tuple[ConstructionReport, object]:
+) -> tuple[ConstructionReport, Project]:
     report = (
         await db.execute(select(ConstructionReport).where(ConstructionReport.id == report_id))
     ).scalar_one_or_none()
@@ -452,7 +459,7 @@ async def approve_report(
 
     제출된 착공계 또는 준공계를 승인해요.
     """
-    report, _ = await _get_report_and_project(db, report_id, current_user)
+    report, project = await _get_report_and_project(db, report_id, current_user)
     _require_report_approve_role(current_user)
 
     # Only submitted reports can be approved
@@ -462,14 +469,51 @@ async def approve_report(
             detail="제출된 보고서만 승인할 수 있어요",
         )
 
+    now = datetime.utcnow()
+    project_status_before = project.status.value
+    project_status_changed = False
+    project_status_change_reason: Optional[str] = None
+
     report.status = ReportStatus.APPROVED
-    report.approved_at = datetime.utcnow()
+    report.approved_at = now
     report.approved_by = current_user.id
-    report.updated_at = datetime.utcnow()
+    report.updated_at = now
+
+    if report.report_type == ReportType.START:
+        if project.status == ProjectStatus.CONTRACTED:
+            project_status_changed = apply_project_status_update(
+                project,
+                ProjectStatus.IN_PROGRESS,
+                changed_at=now,
+            )
+        else:
+            project_status_change_reason = (
+                "착공계 승인 자동 전이는 프로젝트 상태가 contracted일 때만 가능해요."
+            )
+    elif report.report_type == ReportType.COMPLETION:
+        if project.status == ProjectStatus.IN_PROGRESS:
+            project_status_changed = apply_project_status_update(
+                project,
+                ProjectStatus.COMPLETED,
+                changed_at=now,
+            )
+        else:
+            project_status_change_reason = (
+                "준공계 승인 자동 전이는 프로젝트 상태가 in_progress일 때만 가능해요."
+            )
+
     await db.commit()
     await db.refresh(report)
 
-    return APIResponse.ok(_to_detail(report))
+    return APIResponse.ok(
+        _to_detail(
+            report,
+            project_status_changed=project_status_changed,
+            project_status_before=project_status_before,
+            project_status_after=project.status.value,
+            project_status_change_reason=project_status_change_reason,
+        )
+    )
 
 
 @router.post("/construction-reports/{report_id}/reject", response_model=APIResponse[ConstructionReportDetail])
@@ -542,7 +586,14 @@ async def export_report(
     })
 
 
-def _to_detail(report: ConstructionReport) -> ConstructionReportDetail:
+def _to_detail(
+    report: ConstructionReport,
+    *,
+    project_status_changed: Optional[bool] = None,
+    project_status_before: Optional[str] = None,
+    project_status_after: Optional[str] = None,
+    project_status_change_reason: Optional[str] = None,
+) -> ConstructionReportDetail:
     """Convert report model to detail response."""
     return ConstructionReportDetail(
         id=report.id,
@@ -567,4 +618,8 @@ def _to_detail(report: ConstructionReport) -> ConstructionReportDetail:
         approved_at=report.approved_at,
         created_by=report.created_by,
         approved_by=report.approved_by,
+        project_status_changed=project_status_changed,
+        project_status_before=project_status_before,
+        project_status_after=project_status_after,
+        project_status_change_reason=project_status_change_reason,
     )
