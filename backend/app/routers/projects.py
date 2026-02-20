@@ -35,6 +35,7 @@ from app.services.customer_master import (
     get_customer_master_for_org,
     upsert_customer_master,
 )
+from app.services.project_status import apply_project_status_update
 
 router = APIRouter()
 
@@ -439,19 +440,7 @@ async def update_project_status(
     # 상태 전이 유효성 검사 (선택적)
     # TODO: 상태 전이 규칙 추가
     
-    project.status = new_status
-    project.updated_at = datetime.utcnow()
-    
-    # 상태별 타임스탬프 업데이트
-    if new_status == ProjectStatus.CONTRACTED and not project.contracted_at:
-        project.contracted_at = datetime.utcnow()
-    elif new_status == ProjectStatus.IN_PROGRESS and not project.started_at:
-        project.started_at = datetime.utcnow()
-    elif new_status == ProjectStatus.COMPLETED and not project.completed_at:
-        project.completed_at = datetime.utcnow()
-        # 하자보증 3년
-        from datetime import timedelta
-        project.warranty_expires_at = project.completed_at + timedelta(days=365*3)
+    apply_project_status_update(project, new_status)
     
     await db.commit()
     await db.refresh(project)
@@ -809,13 +798,7 @@ async def complete_project(
             detail="진행 중인 프로젝트만 완료 처리할 수 있어요",
         )
     
-    now = datetime.utcnow()
-    from datetime import timedelta
-    
-    project.status = ProjectStatus.COMPLETED
-    project.completed_at = now
-    project.warranty_expires_at = now + timedelta(days=365 * 3)  # 3 years warranty
-    project.updated_at = now
+    apply_project_status_update(project, ProjectStatus.COMPLETED)
     
     await db.commit()
     await db.refresh(project)
