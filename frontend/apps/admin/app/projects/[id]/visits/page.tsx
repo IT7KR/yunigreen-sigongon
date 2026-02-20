@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Plus, Loader2, MapPin, FileText, ExternalLink } from "lucide-react";
+import { Camera, Plus, Loader2, MapPin, FileText } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,7 +15,8 @@ import {
 import type { SiteVisitDetail, VisitType } from "@sigongon/types";
 import { api } from "@/lib/api";
 
-const MOBILE_APP_URL = process.env.NEXT_PUBLIC_MOBILE_APP_URL || "http://localhost:3034";
+const MOBILE_APP_URL =
+  process.env.NEXT_PUBLIC_MOBILE_APP_URL || "http://localhost:3034";
 
 const visitTypeLabels: Record<VisitType, string> = {
   initial: "최초 방문",
@@ -64,10 +65,6 @@ export default function VisitsPage({
     router.push(`/projects/${projectId}/visits/new`);
   }
 
-  function handleAddVisitInMobile() {
-    window.open(`${MOBILE_APP_URL}/projects/${projectId}/visits/new`, "_blank");
-  }
-
   function handleViewVisit(visitId: string) {
     // Admin 앱 내에서 방문 상세 페이지로 이동
     router.push(`/projects/${projectId}/visits/${visitId}`);
@@ -107,13 +104,9 @@ export default function VisitsPage({
             현장 방문 목록
           </CardTitle>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleAddVisitInMobile}>
-              <ExternalLink className="h-4 w-4" />
-              모바일 등록
-            </Button>
             <Button onClick={handleAddVisit}>
               <Plus className="h-4 w-4" />
-              웹에서 방문 추가
+              방문 추가
             </Button>
           </div>
         </CardHeader>
@@ -128,13 +121,9 @@ export default function VisitsPage({
                 현장 방문을 추가하고 사진을 촬영해 보세요.
               </p>
               <div className="mt-6 flex justify-center gap-2">
-                <Button variant="secondary" onClick={handleAddVisitInMobile}>
-                  <ExternalLink className="h-4 w-4" />
-                  모바일 등록
-                </Button>
                 <Button onClick={handleAddVisit}>
                   <Plus className="h-4 w-4" />
-                  웹에서 첫 방문 추가
+                  방문 추가
                 </Button>
               </div>
             </div>
@@ -196,14 +185,6 @@ export default function VisitsPage({
                             onClick={() => handleViewVisit(visit.id)}
                           >
                             상세보기
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleViewVisitInMobile(visit.id)}
-                            title="모바일 앱에서 열기"
-                          >
-                            <ExternalLink className="h-4 w-4" />
                           </Button>
                         </div>
                       </td>
