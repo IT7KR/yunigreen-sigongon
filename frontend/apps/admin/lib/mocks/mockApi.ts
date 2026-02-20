@@ -56,6 +56,27 @@ const randomId = (prefix: string) => {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 };
 
+function applyProjectStatusSideEffects(
+  project: Project,
+  nextStatus: ProjectStatus,
+): Project {
+  const today = new Date().toISOString().slice(0, 10);
+  const updated: Project = {
+    ...project,
+    status: nextStatus,
+  };
+
+  if (nextStatus === "in_progress" && !updated.startDate) {
+    updated.startDate = today;
+  }
+
+  if (nextStatus === "completed" && !updated.endDate) {
+    updated.endDate = today;
+  }
+
+  return updated;
+}
+
 let snowflakeSeq = 0;
 const nextSnowflake = () => {
   snowflakeSeq = (snowflakeSeq + 1) % 1000;
@@ -771,6 +792,8 @@ export class MockAPIClient {
         ];
       }
     }
+
+    this.seedFieldRepresentatives(projects);
   }
 
   setAccessToken(token: string | null) {
@@ -1689,6 +1712,32 @@ export class MockAPIClient {
     );
 
     return delay(ok({ id: projectId }));
+  }
+
+  async updateProjectStatus(projectId: string, status: ProjectStatus) {
+    const currentProject = mockDb
+      .get("projects")
+      .find((project) => project.id === projectId);
+    if (!currentProject) {
+      return delay(
+        fail<{ id: string; status: ProjectStatus }>(
+          "NOT_FOUND",
+          "프로젝트를 찾을 수 없어요",
+        ),
+      );
+    }
+
+    const updatedProject = applyProjectStatusSideEffects(currentProject, status);
+    mockDb.update("projects", (prev) =>
+      prev.map((project) => (project.id === projectId ? updatedProject : project)),
+    );
+
+    return delay(
+      ok({
+        id: updatedProject.id,
+        status: updatedProject.status,
+      }),
+    );
   }
 
   async deleteProject(projectId: string) {
@@ -4663,6 +4712,58 @@ export class MockAPIClient {
     for (const reports of Object.values(this.constructionReportsByProject)) {
       const report = reports.find((r) => r.id === reportId);
       if (report) {
+        const project = mockDb
+          .get("projects")
+          .find((item) => item.id === report.project_id);
+        if (!project) {
+          return delay(
+            fail<any>("NOT_FOUND", "프로젝트를 찾을 수 없어요"),
+          );
+        }
+
+        const projectStatusBefore = project.status;
+        let projectStatusAfter = project.status;
+        let projectStatusChanged = false;
+        let projectStatusChangeReason: string | null = null;
+
+        if (report.report_type === "start") {
+          if (project.status === "contracted") {
+            mockDb.update("projects", (prev) =>
+              prev.map((item) => {
+                if (item.id !== project.id) return item;
+                const nextProject = applyProjectStatusSideEffects(
+                  item,
+                  "in_progress",
+                );
+                projectStatusAfter = nextProject.status;
+                return nextProject;
+              }),
+            );
+            projectStatusChanged = true;
+          } else {
+            projectStatusChangeReason =
+              "착공계 승인 자동 전이는 프로젝트 상태가 contracted일 때만 가능해요.";
+          }
+        } else if (report.report_type === "completion") {
+          if (project.status === "in_progress") {
+            mockDb.update("projects", (prev) =>
+              prev.map((item) => {
+                if (item.id !== project.id) return item;
+                const nextProject = applyProjectStatusSideEffects(
+                  item,
+                  "completed",
+                );
+                projectStatusAfter = nextProject.status;
+                return nextProject;
+              }),
+            );
+            projectStatusChanged = true;
+          } else {
+            projectStatusChangeReason =
+              "준공계 승인 자동 전이는 프로젝트 상태가 in_progress일 때만 가능해요.";
+          }
+        }
+
         report.status = "approved";
         report.approved_at = nowIso();
         return delay(
@@ -4670,6 +4771,10 @@ export class MockAPIClient {
             id: reportId,
             status: "approved",
             message: "승인했어요",
+            project_status_changed: projectStatusChanged,
+            project_status_before: projectStatusBefore,
+            project_status_after: projectStatusAfter,
+            project_status_change_reason: projectStatusChangeReason,
           }),
         );
       }
@@ -7090,9 +7195,9 @@ export class MockAPIClient {
   }
 
   async getProjectRepresentative(projectId: string) {
-    const projectIdNum = Number(projectId);
+    const projectIdNum = this.getProjectAssignmentId(projectId);
     const assignment = this.repAssignments.find(
-      (a) => a.project_id === projectIdNum || String(a.project_id) === projectId,
+      (a) => a.project_id === projectIdNum,
     );
     if (!assignment)
       return delay(
@@ -7105,10 +7210,10 @@ export class MockAPIClient {
     projectId: string,
     data: { representative_id: number; effective_date: string },
   ) {
-    const projectIdNum = Number(projectId) || 0;
+    const projectIdNum = this.getProjectAssignmentId(projectId);
     // Remove any existing assignment for this project
     this.repAssignments = this.repAssignments.filter(
-      (a) => a.project_id !== projectIdNum && String(a.project_id) !== projectId,
+      (a) => a.project_id !== projectIdNum,
     );
 
     const assignment: MockRepresentativeAssignment = {
@@ -7127,9 +7232,9 @@ export class MockAPIClient {
   }
 
   async removeProjectRepresentative(projectId: string) {
-    const projectIdNum = Number(projectId) || 0;
+    const projectIdNum = this.getProjectAssignmentId(projectId);
     this.repAssignments = this.repAssignments.filter(
-      (a) => a.project_id !== projectIdNum && String(a.project_id) !== projectId,
+      (a) => a.project_id !== projectIdNum,
     );
     this.refreshRepAssignedProjects();
     return delay(ok({ deleted: true, project_id: projectIdNum }));
@@ -7161,6 +7266,119 @@ export class MockAPIClient {
     expiry.setDate(expiry.getDate() + 90);
     const diffMs = expiry.getTime() - Date.now();
     return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  }
+
+  private getProjectAssignmentId(projectId: string): number {
+    const projects = mockDb.get("projects");
+    const index = projects.findIndex((project) => project.id === projectId);
+    if (index >= 0) return index + 1;
+
+    const numeric = Number(projectId);
+    if (Number.isInteger(numeric) && numeric > 0) return numeric;
+
+    const digitToken = projectId.match(/\d+/)?.[0];
+    if (!digitToken) return 0;
+    const parsed = Number(digitToken);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
+  }
+
+  private seedFieldRepresentatives(projects: Project[]) {
+    if (this.fieldRepresentatives.length > 0 || this.repAssignments.length > 0) {
+      return;
+    }
+
+    const now = Date.now();
+    const uploadedRecent = new Date(now - 1000 * 60 * 60 * 24 * 12).toISOString();
+    const uploadedSoonExpiry = new Date(now - 1000 * 60 * 60 * 24 * 83).toISOString();
+    const uploadedExpired = new Date(now - 1000 * 60 * 60 * 24 * 96).toISOString();
+
+    this.fieldRepresentatives = [
+      {
+        id: 1,
+        organization_id: 1,
+        name: "김현수",
+        phone: "010-2234-8899",
+        grade: "현장대리인(특급)",
+        notes: "공공 착공 서류 대응 경험 다수",
+        booklet_filename: "기술수첩_김현수.pdf",
+        career_cert_filename: "경력증명서_김현수.pdf",
+        career_cert_uploaded_at: uploadedRecent,
+        employment_cert_filename: "재직증명서_김현수.pdf",
+        created_at: uploadedRecent,
+        updated_at: uploadedRecent,
+        career_cert_days_remaining: this.calcCareerDaysRemaining(uploadedRecent),
+        assigned_project_ids: [],
+      },
+      {
+        id: 2,
+        organization_id: 1,
+        name: "박지훈",
+        phone: "010-4455-6677",
+        grade: "현장대리인(중급)",
+        notes: "주거시설 보수 전문",
+        booklet_filename: "기술수첩_박지훈.pdf",
+        career_cert_filename: "경력증명서_박지훈.pdf",
+        career_cert_uploaded_at: uploadedSoonExpiry,
+        employment_cert_filename: "재직증명서_박지훈.pdf",
+        created_at: uploadedSoonExpiry,
+        updated_at: uploadedSoonExpiry,
+        career_cert_days_remaining: this.calcCareerDaysRemaining(uploadedSoonExpiry),
+        assigned_project_ids: [],
+      },
+      {
+        id: 3,
+        organization_id: 1,
+        name: "오민서",
+        phone: "010-7788-9911",
+        grade: "현장대리인(초급)",
+        notes: "경력증명서 갱신 필요",
+        booklet_filename: "기술수첩_오민서.pdf",
+        career_cert_filename: "경력증명서_오민서.pdf",
+        career_cert_uploaded_at: uploadedExpired,
+        employment_cert_filename: "재직증명서_오민서.pdf",
+        created_at: uploadedExpired,
+        updated_at: uploadedExpired,
+        career_cert_days_remaining: this.calcCareerDaysRemaining(uploadedExpired),
+        assigned_project_ids: [],
+      },
+    ];
+    this.fieldRepNextId = 4;
+
+    const projectIdPool = projects.map((project) => project.id);
+    const primaryProjectId = projectIdPool.find((id) => id === "p2") ?? projectIdPool[0];
+    const secondaryProjectId =
+      projectIdPool.find((id) => id === "p3" && id !== primaryProjectId) ??
+      projectIdPool.find((id) => id !== primaryProjectId);
+
+    const assignments: MockRepresentativeAssignment[] = [];
+    if (primaryProjectId) {
+      const effectiveDate = new Date(now - 1000 * 60 * 60 * 24 * 14)
+        .toISOString()
+        .slice(0, 10);
+      assignments.push({
+        id: 1,
+        project_id: this.getProjectAssignmentId(primaryProjectId),
+        representative_id: 1,
+        effective_date: effectiveDate,
+        assigned_at: new Date(now - 1000 * 60 * 60 * 24 * 14).toISOString(),
+      });
+    }
+    if (secondaryProjectId) {
+      const effectiveDate = new Date(now - 1000 * 60 * 60 * 24 * 5)
+        .toISOString()
+        .slice(0, 10);
+      assignments.push({
+        id: 2,
+        project_id: this.getProjectAssignmentId(secondaryProjectId),
+        representative_id: 2,
+        effective_date: effectiveDate,
+        assigned_at: new Date(now - 1000 * 60 * 60 * 24 * 5).toISOString(),
+      });
+    }
+
+    this.repAssignments = assignments;
+    this.repAssignNextId = assignments.length + 1;
+    this.refreshRepAssignedProjects();
   }
 
   private refreshRepAssignedProjects() {
