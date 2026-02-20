@@ -109,8 +109,8 @@ function buildOverviewActions(
       icon: <Hammer className="h-5 w-5" />,
     },
     {
-      label: "준공정산",
-      href: `/projects/${projectId}/completion/closeout-report`,
+      label: "준공사진첩",
+      href: `/projects/${projectId}/album`,
       icon: <Zap className="h-5 w-5" />,
     },
   ];
@@ -131,7 +131,7 @@ function buildOverviewActions(
   else if (projectStatus === "in_progress")
     primaryIndex = 5; // 작업일지
   else if (["completed", "warranty", "closed"].includes(projectStatus))
-    primaryIndex = 7; // 준공정산
+    primaryIndex = 7; // 준공사진첩
 
   // Set primary flag
   actions[primaryIndex].primary = true;

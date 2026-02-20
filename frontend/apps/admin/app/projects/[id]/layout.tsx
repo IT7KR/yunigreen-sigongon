@@ -81,9 +81,10 @@ export default function ProjectDetailLayout({
       requiresCompletion: true,
     },
     {
-      name: "준공정산",
-      href: `/projects/${id}/completion/closeout-report`,
+      name: "준공사진첩",
+      href: `/projects/${id}/album`,
       category: "closeout",
+      requiresCompletion: true,
     },
     {
       name: "하자보증",

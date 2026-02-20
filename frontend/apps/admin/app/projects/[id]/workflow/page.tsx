@@ -379,8 +379,8 @@ function buildSteps(id: string): WorkflowStep[] {
         },
       ],
       action: {
-        label: "준공/정산",
-        href: `/projects/${id}/completion/closeout-report`,
+        label: "준공사진첩",
+        href: `/projects/${id}/album`,
       },
     },
     {

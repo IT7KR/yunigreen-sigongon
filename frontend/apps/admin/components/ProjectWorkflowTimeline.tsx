@@ -187,15 +187,15 @@ export function ProjectWorkflowTimeline({
     {
       id: "construction",
       label: "시공",
-      href: `/projects/${projectId}/construction`,
+      href: `/projects/${projectId}/construction/daily-reports`,
       description: "착공계 승인 이후 작업일지/노무를 관리하며 진행률을 업데이트합니다.",
       status: getConstructionStatus(),
     },
     {
       id: "completion",
       label: "준공",
-      href: `/projects/${projectId}/completion/closeout-report`,
-      description: "준공 정리와 정산/세금계산서 발행 준비를 완료합니다.",
+      href: `/projects/${projectId}/album`,
+      description: "준공사진첩을 정리하고 준공 마감 서류 준비를 완료합니다.",
       status: getCompletionStatus(),
     },
   ];

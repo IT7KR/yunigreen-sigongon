@@ -16,7 +16,6 @@ import {
   ChevronRight,
   ClipboardList,
   FileCheck,
-  CheckCircle2,
   Package,
 } from "lucide-react";
 import { MobileLayout } from "@/components/MobileLayout";
@@ -144,7 +143,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     | "orders"
     | "reports"
     | "daily"
-    | "closeout"
     | "album";
   const isSiteManager = user?.role === "site_manager";
 
@@ -156,7 +154,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "orders",
         "reports",
         "daily",
-        "closeout",
         "album",
       ])
     : new Set<ActionKey>([
@@ -167,7 +164,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "orders",
         "reports",
         "daily",
-        "closeout",
         "album",
       ]);
 
@@ -184,7 +180,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "orders",
         "reports",
         "daily",
-        "closeout",
         "album",
       ]);
     if (!hasDiagnosis)
@@ -196,7 +191,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "photo",
         "reports",
         "daily",
-        "closeout",
         "album",
       ]);
     if (!hasEstimate)
@@ -208,7 +202,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "photo",
         "reports",
         "daily",
-        "closeout",
         "album",
       ]);
     if (!hasContract)
@@ -220,7 +213,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "visit",
         "diagnosis",
         "photo",
-        "closeout",
         "album",
       ]);
     if (projectStatus === "contracted")
@@ -232,7 +224,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "orders",
         "visit",
         "diagnosis",
-        "closeout",
         "album",
       ]);
     if (projectStatus === "in_progress")
@@ -244,12 +235,10 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         "orders",
         "visit",
         "diagnosis",
-        "closeout",
         "album",
       ]);
     if (["completed", "warranty", "closed"].includes(projectStatus))
       return filterByRole([
-        "closeout",
         "album",
         "reports",
         "daily",
@@ -267,7 +256,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
       "orders",
       "reports",
       "daily",
-      "closeout",
       "album",
     ]);
   };
@@ -343,17 +331,9 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         </Link>
       </Button>
     ),
-    closeout: (
-      <Button key="closeout" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
-        <Link href={`/projects/${id}/completion/closeout-report`}>
-          <CheckCircle2 className="h-5 w-5" />
-          <span className="text-xs">준공/정산</span>
-        </Link>
-      </Button>
-    ),
     album: (
       <Button key="album" variant="secondary" fullWidth className="flex-col gap-1 py-3" asChild>
-        <Link href={`/projects/${id}/completion/photo-album`}>
+        <Link href={`/projects/${id}/album`}>
           <Image className="h-5 w-5" />
           <span className="text-xs">준공사진첩</span>
         </Link>

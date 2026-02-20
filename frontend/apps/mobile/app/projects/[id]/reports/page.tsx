@@ -7,7 +7,6 @@ import {
   FileX,
   Calendar,
   ChevronRight,
-  CheckCircle2,
   Image,
   Plus,
 } from "lucide-react";
@@ -101,15 +100,13 @@ export default function ReportsPage({ params }: ReportsPageProps) {
     >
       <div className="space-y-6 p-4">
         <Card>
-          <CardContent className="grid grid-cols-2 gap-2 p-4">
-            <Button variant="secondary" fullWidth asChild><Link href={`/projects/${id}/completion/closeout-report`}>
-                <CheckCircle2 className="h-4 w-4" />
-                준공/정산
-              </Link></Button>
-            <Button variant="secondary" fullWidth asChild><Link href={`/projects/${id}/completion/photo-album`}>
+          <CardContent className="p-4">
+            <Button variant="secondary" fullWidth asChild>
+              <Link href={`/projects/${id}/album`}>
                 <Image className="h-4 w-4" />
                 준공사진첩
-              </Link></Button>
+              </Link>
+            </Button>
           </CardContent>
         </Card>
 
