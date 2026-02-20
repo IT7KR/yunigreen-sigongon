@@ -19,7 +19,19 @@ import {
 import { AdminLayout } from "@/components/AdminLayout";
 import { EstimateLineModal } from "@/components/EstimateLineModal";
 import { RAGSearchPanel } from "@/components/RAGSearchPanel";
-import { Button, Card, CardContent, CardHeader, CardTitle, LoadingOverlay, PrimitiveButton, StatusBadge, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingOverlay,
+  PrimitiveButton,
+  StatusBadge,
+  formatDate,
+  toast,
+  useConfirmDialog,
+} from "@sigongon/ui";
 import type { EstimateStatus, EstimateLineSource } from "@sigongon/types";
 import { api } from "@/lib/api";
 import ExcelJS from "exceljs";
@@ -124,7 +136,9 @@ export default function EstimateDetailPage({
       await api.decideEstimate(id, { action });
       await loadEstimate();
       toast.success(
-        isAccepted ? "고객 수락으로 반영했어요." : "고객 미선정으로 반영했어요.",
+        isAccepted
+          ? "고객 수락으로 반영했어요."
+          : "고객 미선정으로 반영했어요.",
       );
     } catch (err) {
       toast.error("상태 변경에 실패했어요");
@@ -283,7 +297,9 @@ export default function EstimateDetailPage({
       <AdminLayout>
         <div className="flex h-64 flex-col items-center justify-center gap-4">
           <p className="text-red-500">{error || "견적서를 찾을 수 없어요"}</p>
-          <Button asChild><Link href="/estimates">목록으로 돌아가기</Link></Button>
+          <Button asChild>
+            <Link href="/estimates">목록으로 돌아가기</Link>
+          </Button>
         </div>
       </AdminLayout>
     );
@@ -308,10 +324,6 @@ export default function EstimateDetailPage({
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => window.print()}>
-              <Printer className="h-4 w-4" />
-              인쇄
-            </Button>
             <Button
               variant="secondary"
               onClick={() => {

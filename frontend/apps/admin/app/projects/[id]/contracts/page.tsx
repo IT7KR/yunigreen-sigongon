@@ -79,7 +79,9 @@ export default function ContractsPage({
   const [selectedEstimateId, setSelectedEstimateId] = useState("");
   const [creating, setCreating] = useState(false);
   const [showModusignModal, setShowModusignModal] = useState(false);
-  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(
+    null,
+  );
 
   const [projectContext, setProjectContext] = useState<{
     name?: string;
@@ -104,8 +106,12 @@ export default function ContractsPage({
   const [ownerBusinessNumber, setOwnerBusinessNumber] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
 
-  const [contractDate, setContractDate] = useState<string>(new Date().toISOString().split("T")[0]);
-  const [workStartDate, setWorkStartDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [contractDate, setContractDate] = useState<string>(
+    new Date().toISOString().split("T")[0],
+  );
+  const [workStartDate, setWorkStartDate] = useState<string>(
+    new Date().toISOString().split("T")[0],
+  );
   const [workEndDate, setWorkEndDate] = useState("");
   const [delayPenaltyRate, setDelayPenaltyRate] = useState("0.0005");
   const [specialTerms, setSpecialTerms] = useState("");
@@ -284,7 +290,10 @@ export default function ContractsPage({
       return;
     }
 
-    if (contract.contract_kind === "public_platform" && contract.source_document_path) {
+    if (
+      contract.contract_kind === "public_platform" &&
+      contract.source_document_path
+    ) {
       window.open(`/api/v1/contracts/${contract.id}/source`, "_blank");
       return;
     }
@@ -357,12 +366,12 @@ export default function ContractsPage({
             계약서 목록
           </CardTitle>
           <div className="flex gap-2">
-            {contracts.length > 0 && (
+            {/* {contracts.length > 0 && (
               <Button variant="secondary" onClick={handleDownloadExcel}>
                 <FileSpreadsheet className="h-4 w-4" />
                 Excel
               </Button>
-            )}
+            )} */}
             <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4" />
               계약서 생성
@@ -412,7 +421,9 @@ export default function ContractsPage({
                           : "민간"}
                       </td>
                       <td className="py-4">
-                        <Badge className={contractStatusColors[contract.status]}>
+                        <Badge
+                          className={contractStatusColors[contract.status]}
+                        >
                           {contractStatusLabels[contract.status]}
                         </Badge>
                       </td>
@@ -426,7 +437,9 @@ export default function ContractsPage({
                         {formatDate(contract.created_at)}
                       </td>
                       <td className="py-4 text-slate-500">
-                        {contract.signed_at ? formatDate(contract.signed_at) : "-"}
+                        {contract.signed_at
+                          ? formatDate(contract.signed_at)
+                          : "-"}
                       </td>
                       <td className="py-4">
                         <div className="flex items-center gap-2">
@@ -434,7 +447,9 @@ export default function ContractsPage({
                             <Button
                               size="sm"
                               variant="secondary"
-                              onClick={() => handleFinalizeContract(contract.id)}
+                              onClick={() =>
+                                handleFinalizeContract(contract.id)
+                              }
                             >
                               <CheckCircle className="h-4 w-4" />
                               확정
@@ -446,7 +461,9 @@ export default function ContractsPage({
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  onClick={() => handleSendForSignature(contract.id)}
+                                  onClick={() =>
+                                    handleSendForSignature(contract.id)
+                                  }
                                 >
                                   <Send className="h-4 w-4" />
                                   서명 요청
@@ -454,7 +471,9 @@ export default function ContractsPage({
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  onClick={() => handleOpenModusign(contract.id)}
+                                  onClick={() =>
+                                    handleOpenModusign(contract.id)
+                                  }
                                 >
                                   <Stamp className="h-4 w-4" />
                                   모두싸인
@@ -467,7 +486,9 @@ export default function ContractsPage({
                             onClick={() => handleDownloadPDF(contract)}
                           >
                             <Download className="h-4 w-4" />
-                            {contract.contract_kind === "public_platform" ? "원본" : "PDF"}
+                            {contract.contract_kind === "public_platform"
+                              ? "원본"
+                              : "PDF"}
                           </Button>
                         </div>
                       </td>
@@ -498,7 +519,9 @@ export default function ContractsPage({
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700">견적서 선택</label>
+              <label className="block text-sm font-medium text-slate-700">
+                견적서 선택
+              </label>
               <PrimitiveSelect
                 value={selectedEstimateId}
                 onChange={(e) => setSelectedEstimateId(e.target.value)}
@@ -506,21 +529,30 @@ export default function ContractsPage({
               >
                 {availableEstimates.map((estimate) => (
                   <option key={estimate.id} value={estimate.id}>
-                    v{estimate.version} - {Number(estimate.total_amount).toLocaleString()}원
+                    v{estimate.version} -{" "}
+                    {Number(estimate.total_amount).toLocaleString()}원
                   </option>
                 ))}
               </PrimitiveSelect>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">계약 구분</label>
+              <label className="block text-sm font-medium text-slate-700">
+                계약 구분
+              </label>
               <PrimitiveSelect
                 value={selectedContractKind}
-                onChange={(e) => setSelectedContractKind(e.target.value as ContractKind)}
+                onChange={(e) =>
+                  setSelectedContractKind(e.target.value as ContractKind)
+                }
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
               >
-                <option value="private_standard">민간 표준계약 (모두싸인)</option>
-                <option value="public_platform">관공서 계약 (원본 업로드)</option>
+                <option value="private_standard">
+                  민간 표준계약 (모두싸인)
+                </option>
+                <option value="public_platform">
+                  관공서 계약 (원본 업로드)
+                </option>
               </PrimitiveSelect>
             </div>
 
@@ -528,7 +560,9 @@ export default function ContractsPage({
               <>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">발주자명</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      발주자명
+                    </label>
                     <input
                       value={ownerName}
                       onChange={(e) => setOwnerName(e.target.value)}
@@ -536,7 +570,9 @@ export default function ContractsPage({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">발주자 대표자</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      발주자 대표자
+                    </label>
                     <input
                       value={ownerRepresentative}
                       onChange={(e) => setOwnerRepresentative(e.target.value)}
@@ -544,7 +580,9 @@ export default function ContractsPage({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">발주자 사업자번호</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      발주자 사업자번호
+                    </label>
                     <input
                       value={ownerBusinessNumber}
                       onChange={(e) => setOwnerBusinessNumber(e.target.value)}
@@ -552,7 +590,9 @@ export default function ContractsPage({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">발주자 연락처</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      발주자 연락처
+                    </label>
                     <input
                       value={ownerPhone}
                       onChange={(e) => setOwnerPhone(e.target.value)}
@@ -562,7 +602,9 @@ export default function ContractsPage({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">발주자 주소</label>
+                  <label className="block text-sm font-medium text-slate-700">
+                    발주자 주소
+                  </label>
                   <input
                     value={ownerAddress}
                     onChange={(e) => setOwnerAddress(e.target.value)}
@@ -572,7 +614,9 @@ export default function ContractsPage({
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">계약일</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      계약일
+                    </label>
                     <input
                       type="date"
                       value={contractDate}
@@ -581,7 +625,9 @@ export default function ContractsPage({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">착공일</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      착공일
+                    </label>
                     <input
                       type="date"
                       value={workStartDate}
@@ -590,7 +636,9 @@ export default function ContractsPage({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">준공예정일</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      준공예정일
+                    </label>
                     <input
                       type="date"
                       value={workEndDate}
@@ -601,7 +649,9 @@ export default function ContractsPage({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">지체상금율</label>
+                  <label className="block text-sm font-medium text-slate-700">
+                    지체상금율
+                  </label>
                   <input
                     value={delayPenaltyRate}
                     onChange={(e) => setDelayPenaltyRate(e.target.value)}
@@ -611,7 +661,9 @@ export default function ContractsPage({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">특약사항</label>
+                  <label className="block text-sm font-medium text-slate-700">
+                    특약사항
+                  </label>
                   <textarea
                     value={specialTerms}
                     onChange={(e) => setSpecialTerms(e.target.value)}
@@ -624,10 +676,16 @@ export default function ContractsPage({
               <>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">플랫폼</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      플랫폼
+                    </label>
                     <PrimitiveSelect
                       value={publicPlatformType}
-                      onChange={(e) => setPublicPlatformType(e.target.value as PublicPlatformType)}
+                      onChange={(e) =>
+                        setPublicPlatformType(
+                          e.target.value as PublicPlatformType,
+                        )
+                      }
                       className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
                     >
                       <option value="narajangteo">나라장터</option>
@@ -636,7 +694,9 @@ export default function ContractsPage({
                     </PrimitiveSelect>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">계약참조번호</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      계약참조번호
+                    </label>
                     <input
                       value={publicReference}
                       onChange={(e) => setPublicReference(e.target.value)}
@@ -644,7 +704,9 @@ export default function ContractsPage({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">공고번호</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      공고번호
+                    </label>
                     <input
                       value={publicNoticeNumber}
                       onChange={(e) => setPublicNoticeNumber(e.target.value)}
@@ -652,7 +714,9 @@ export default function ContractsPage({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">입찰번호</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      입찰번호
+                    </label>
                     <input
                       value={publicBidNumber}
                       onChange={(e) => setPublicBidNumber(e.target.value)}
@@ -662,11 +726,15 @@ export default function ContractsPage({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">관공서 원본 계약서 파일</label>
+                  <label className="block text-sm font-medium text-slate-700">
+                    관공서 원본 계약서 파일
+                  </label>
                   <input
                     type="file"
                     accept=".pdf,.hwp,.hwpx,.doc,.docx"
-                    onChange={(e) => setPublicSourceFile(e.target.files?.[0] || null)}
+                    onChange={(e) =>
+                      setPublicSourceFile(e.target.files?.[0] || null)
+                    }
                     className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                   />
                   <p className="mt-1 text-xs text-slate-500">

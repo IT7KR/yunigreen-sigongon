@@ -35,20 +35,11 @@ export function TaxInvoicePreview({ invoice }: TaxInvoicePreviewProps) {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end print:hidden">
-        <Button variant="secondary" size="sm" onClick={handlePrint}>
-          <Printer className="h-4 w-4" />
-          인쇄
-        </Button>
-      </div>
-
       <div className="rounded-lg border border-slate-300 bg-white p-8 print:border-0">
         {/* 제목 */}
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold text-slate-900">세금계산서</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            (공급받는자 보관용)
-          </p>
+          <p className="mt-2 text-sm text-slate-500">(공급받는자 보관용)</p>
         </div>
 
         {/* 승인번호 및 발행일 */}
@@ -93,7 +84,9 @@ export function TaxInvoicePreview({ invoice }: TaxInvoicePreviewProps) {
               </div>
               <div className="flex">
                 <span className="w-24 text-slate-500">주소</span>
-                <span className="text-slate-900">{invoice.supplier_address}</span>
+                <span className="text-slate-900">
+                  {invoice.supplier_address}
+                </span>
               </div>
               <div className="flex">
                 <span className="w-24 text-slate-500">이메일</span>
