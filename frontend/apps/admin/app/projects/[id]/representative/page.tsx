@@ -161,22 +161,19 @@ export default function ProjectRepresentativePage({
   }));
 
   if (loading) {
-    return <LoadingOverlay variant="inline" text="배정 정보를 불러오는 중..." />;
+    return (
+      <LoadingOverlay variant="inline" text="배정 정보를 불러오는 중..." />
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="secondary" size="sm" asChild>
-          <Link href={`/projects/${id}`}>
-            <ArrowLeft className="h-4 w-4" />
-            프로젝트 개요
-          </Link>
-        </Button>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">현장대리인 배정</h1>
           <p className="mt-1 text-sm text-slate-500">
-            {project?.name || "이 프로젝트"}에 착공 기준 담당 현장대리인을 연결합니다.
+            {project?.name || "이 프로젝트"}에 착공 기준 담당 현장대리인을
+            연결합니다.
           </p>
         </div>
       </div>
@@ -272,8 +269,8 @@ export default function ProjectRepresentativePage({
                 <p>프로젝트에는 기준일 기준으로 현장대리인 1명만 배정됩니다.</p>
                 <p className="mt-1">
                   착공계 작성 시{" "}
-                  <span className="font-medium">현장대리인 서류 자동 연동</span>을
-                  선택하면 배정 정보가 반영됩니다.
+                  <span className="font-medium">현장대리인 서류 자동 연동</span>
+                  을 선택하면 배정 정보가 반영됩니다.
                 </p>
               </div>
 

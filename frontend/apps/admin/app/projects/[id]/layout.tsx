@@ -59,16 +59,10 @@ export default function ProjectDetailLayout({
     },
     { name: "보고서", href: `/projects/${id}/reports`, category: "field" },
     {
-      name: "시공현황",
-      href: `/projects/${id}/construction`,
-      category: "field",
-    },
-    {
       name: "현장대리인",
       href: `/projects/${id}/representative`,
       category: "field",
     },
-    { name: "문서함", href: `/projects/${id}/documents`, category: "admin" }, // Increased priority for mobile access
     { name: "AI진단", href: `/projects/${id}/diagnoses`, category: "field" },
     { name: "견적", href: `/projects/${id}/estimates`, category: "admin" },
     { name: "계약", href: `/projects/${id}/contracts`, category: "admin" },
@@ -123,10 +117,16 @@ export default function ProjectDetailLayout({
   const ordersTab = tabs.find((tab) => tab.href === `/projects/${id}/orders`);
   const mobilePrimaryTabs =
     hasActiveMaterialOrders && ordersTab
-      ? [...defaultMobilePrimaryTabs.filter((tab) => tab.href !== ordersTab.href).slice(0, 2), ordersTab]
+      ? [
+          ...defaultMobilePrimaryTabs
+            .filter((tab) => tab.href !== ordersTab.href)
+            .slice(0, 2),
+          ordersTab,
+        ]
       : defaultMobilePrimaryTabs;
   const mobileMenuTabs = tabs.filter(
-    (tab) => !mobilePrimaryTabs.some((primaryTab) => primaryTab.href === tab.href),
+    (tab) =>
+      !mobilePrimaryTabs.some((primaryTab) => primaryTab.href === tab.href),
   );
 
   // Desktop: All in one line (scrollable if needed)
@@ -137,9 +137,8 @@ export default function ProjectDetailLayout({
   };
 
   const activeTabHref =
-    tabs
-      .filter(isTabMatch)
-      .sort((a, b) => b.href.length - a.href.length)[0]?.href ?? null;
+    tabs.filter(isTabMatch).sort((a, b) => b.href.length - a.href.length)[0]
+      ?.href ?? null;
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
