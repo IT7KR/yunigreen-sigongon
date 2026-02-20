@@ -93,6 +93,11 @@ export default function MobileMaterialOrdersPage({
                             {order.summary_amount.toLocaleString()}원
                           </p>
                         )}
+                        {order.summary_amount === null && (
+                          <p className="mt-1 text-sm font-medium text-slate-500">
+                            금액 비공개
+                          </p>
+                        )}
                         {order.requested_at && (
                           <p className="mt-1 text-xs text-slate-500">
                             요청일 {new Date(order.requested_at).toLocaleDateString()}

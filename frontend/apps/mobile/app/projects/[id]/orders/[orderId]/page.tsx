@@ -135,6 +135,7 @@ export default function MobileMaterialOrderDetailPage({
   const nextStatus = nextStatusFor(order.status);
   const nextLabel = nextStatus ? NEXT_LABELS[normalizeStatus(order.status)] || "다음 단계" : null;
   const isSiteManager = user?.role === "site_manager";
+  const canViewAmount = user?.role !== "site_manager";
   const canAdvance =
     Boolean(nextStatus) &&
     (!isSiteManager || (nextStatus ? SITE_MANAGER_ALLOWED.has(nextStatus) : false));
@@ -151,7 +152,9 @@ export default function MobileMaterialOrderDetailPage({
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-slate-700">총 금액</p>
               <p className="font-semibold text-slate-900">
-                {(order.total_amount || 0).toLocaleString()}원
+                {canViewAmount
+                  ? `${(order.total_amount || 0).toLocaleString()}원`
+                  : "비공개"}
               </p>
             </div>
             {order.requested_at && (
@@ -177,7 +180,10 @@ export default function MobileMaterialOrderDetailPage({
                   <p className="mt-0.5 text-xs text-slate-500">{item.specification}</p>
                 )}
                 <p className="mt-1 text-xs text-slate-600">
-                  {item.quantity} {item.unit} × {(item.unit_price || 0).toLocaleString()}원
+                  {item.quantity} {item.unit}
+                  {canViewAmount
+                    ? ` × ${(item.unit_price || 0).toLocaleString()}원`
+                    : ""}
                 </p>
                 {item.price_source === "manual_override" && item.override_reason && (
                   <p className="mt-1 text-xs text-amber-600">수동 사유: {item.override_reason}</p>
@@ -187,7 +193,7 @@ export default function MobileMaterialOrderDetailPage({
           </CardContent>
         </Card>
 
-        {(order.invoice_number || order.invoice_amount || order.invoice_file_url) && (
+        {canViewAmount && (order.invoice_number || order.invoice_amount || order.invoice_file_url) && (
           <Card>
             <CardContent className="space-y-2 p-4 text-xs text-slate-600">
               <p className="text-sm font-medium text-slate-700">계산서 정보</p>
