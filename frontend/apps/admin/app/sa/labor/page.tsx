@@ -7,6 +7,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Modal,
   PrimitiveSelect,
   toast,
 } from "@sigongon/ui";
@@ -47,6 +48,13 @@ type TenantWorkerDistribution = {
   worker_count: number;
 };
 
+type ReviewSummary = {
+  pending_review: number;
+  approved: number;
+  rejected: number;
+  quarantined: number;
+};
+
 export default function SALaborPage() {
   const [summary, setSummary] = useState({
     active_workers: 0,
@@ -61,8 +69,15 @@ export default function SALaborPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [reviewQueue, setReviewQueue] = useState<WorkerDocumentReviewQueueItem[]>([]);
   const [reviewFilter, setReviewFilter] = useState<WorkerDocument["review_status"] | "all">("pending_review");
+  const [isReviewQueueOpen, setIsReviewQueueOpen] = useState(false);
   const [isReviewLoading, setIsReviewLoading] = useState(false);
   const [reviewActionKey, setReviewActionKey] = useState<string | null>(null);
+  const [reviewSummary, setReviewSummary] = useState<ReviewSummary>({
+    pending_review: 0,
+    approved: 0,
+    rejected: 0,
+    quarantined: 0,
+  });
   const [workerActionKey, setWorkerActionKey] = useState<string | null>(null);
 
   const fetchReviewQueue = async (
@@ -81,6 +96,35 @@ export default function SALaborPage() {
     }
   };
 
+  const fetchReviewSummary = async () => {
+    try {
+      const response = await api.getWorkerDocumentReviewQueue("all");
+      if (response.success && response.data) {
+        const nextSummary: ReviewSummary = {
+          pending_review: 0,
+          approved: 0,
+          rejected: 0,
+          quarantined: 0,
+        };
+        response.data.forEach((item) => {
+          if (item.review_status === "pending_review") {
+            nextSummary.pending_review += 1;
+          } else if (item.review_status === "approved") {
+            nextSummary.approved += 1;
+          } else if (item.review_status === "rejected") {
+            nextSummary.rejected += 1;
+          } else if (item.review_status === "quarantined") {
+            nextSummary.quarantined += 1;
+          }
+        });
+        setReviewSummary(nextSummary);
+      }
+    } catch {
+      // 요약 조회 실패 시 화면을 유지한다.
+    }
+  };
+
+  // 초기 진입 시 데이터 1회 로드
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -96,8 +140,8 @@ export default function SALaborPage() {
       }
     };
 
-    void Promise.all([fetchData(), fetchReviewQueue("pending_review")]);
-  }, []);
+    void Promise.all([fetchData(), fetchReviewQueue("pending_review"), fetchReviewSummary()]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatFileSize = (size: number) => {
     if (!size) return "0 KB";
@@ -170,7 +214,7 @@ export default function SALaborPage() {
       const response = await api.reviewWorkerDocument(item.id, { action, reason });
       if (response.success) {
         toast.success("검토 결과를 반영했습니다.");
-        await Promise.all([fetchReviewQueue(reviewFilter), refreshWorkerOverview()]);
+        await Promise.all([fetchReviewQueue(reviewFilter), refreshWorkerOverview(), fetchReviewSummary()]);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "서류 검토에 실패했습니다.");
@@ -205,13 +249,27 @@ export default function SALaborPage() {
       const response = await api.setDailyWorkerControl(worker.id, { action, reason });
       if (response.success) {
         toast.success(action === "block" ? "근로자를 차단했습니다." : "근로자 차단을 해제했습니다.");
-        await Promise.all([refreshWorkerOverview(), fetchReviewQueue(reviewFilter)]);
+        await Promise.all([refreshWorkerOverview(), fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "근로자 통제 변경에 실패했습니다.");
     } finally {
       setWorkerActionKey(null);
     }
+  };
+
+  const handleOpenReviewQueue = () => {
+    setIsReviewQueueOpen(true);
+    setReviewFilter("pending_review");
+    void fetchReviewQueue("pending_review");
+  };
+
+  const handleCloseReviewQueue = () => {
+    setIsReviewQueueOpen(false);
+  };
+
+  const handleRefreshReviewQueue = () => {
+    void Promise.all([fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
   };
 
   return (
@@ -307,100 +365,24 @@ export default function SALaborPage() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>서류 검토 큐</CardTitle>
-              <div className="flex items-center gap-2">
-                <PrimitiveSelect
-                  value={reviewFilter}
-                  onChange={(e) => {
-                    const next = e.target.value as WorkerDocument["review_status"] | "all";
-                    setReviewFilter(next);
-                    void fetchReviewQueue(next);
-                  }}
-                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm"
-                >
-                  <option value="pending_review">검토대기</option>
-                  <option value="approved">승인</option>
-                  <option value="rejected">반려</option>
-                  <option value="quarantined">격리</option>
-                  <option value="all">전체</option>
-                </PrimitiveSelect>
-                <Button
-                  variant="secondary"
-                  onClick={() => fetchReviewQueue(reviewFilter)}
-                  disabled={isReviewLoading}
-                >
-                  {isReviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "새로고침"}
-                </Button>
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-base font-semibold text-slate-900">서류 검토 현황</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                <Badge variant="default">검토대기 {reviewSummary.pending_review}건</Badge>
+                <Badge variant="success">승인 {reviewSummary.approved}건</Badge>
+                <Badge variant="warning">반려 {reviewSummary.rejected}건</Badge>
+                <Badge variant="error">격리 {reviewSummary.quarantined}건</Badge>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {isReviewLoading ? (
-              <div className="py-8 text-center text-sm text-slate-500">검토 목록을 불러오는 중...</div>
-            ) : reviewQueue.length === 0 ? (
-              <div className="py-8 text-center text-sm text-slate-500">검토할 서류가 없습니다.</div>
-            ) : (
-              <div className="space-y-3">
-                {reviewQueue.map((item) => (
-                  <div key={item.id} className="rounded-lg border border-slate-200 p-3">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {item.worker_name} · {item.document_name}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {item.original_filename || "파일명 없음"} · {formatFileSize(item.file_size_bytes)}
-                        </p>
-                        {!!item.anomaly_flags.length && (
-                          <p className="mt-1 text-xs text-amber-700">
-                            이상 플래그: {item.anomaly_flags.join(", ")}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {renderReviewBadge(item.review_status)}
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleDownloadDocument(item)}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          보기
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleReviewAction(item, "approve")}
-                          disabled={reviewActionKey === `${item.id}:approve`}
-                        >
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                          승인
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleReviewAction(item, "reject")}
-                          disabled={reviewActionKey === `${item.id}:reject`}
-                        >
-                          <CircleX className="h-3.5 w-3.5" />
-                          반려
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleReviewAction(item, "quarantine")}
-                          disabled={reviewActionKey === `${item.id}:quarantine`}
-                        >
-                          <ShieldAlert className="h-3.5 w-3.5" />
-                          격리
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={handleOpenReviewQueue}>
+                서류 검토 열기
+              </Button>
+              <Button variant="ghost" onClick={() => void fetchReviewSummary()}>
+                요약 새로고침
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -476,6 +458,114 @@ export default function SALaborPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Modal
+        isOpen={isReviewQueueOpen}
+        onClose={handleCloseReviewQueue}
+        title="서류 검토 큐"
+        description="업로드된 서류를 검토하고 이상 건을 제어합니다."
+        size="xl"
+      >
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-slate-500">
+              현재 필터 결과 {reviewQueue.length}건
+            </div>
+            <div className="flex items-center gap-2">
+              <PrimitiveSelect
+                value={reviewFilter}
+                onChange={(e) => {
+                  const next = e.target.value as WorkerDocument["review_status"] | "all";
+                  setReviewFilter(next);
+                  void fetchReviewQueue(next);
+                }}
+                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              >
+                <option value="pending_review">검토대기</option>
+                <option value="approved">승인</option>
+                <option value="rejected">반려</option>
+                <option value="quarantined">격리</option>
+                <option value="all">전체</option>
+              </PrimitiveSelect>
+              <Button
+                variant="secondary"
+                onClick={handleRefreshReviewQueue}
+                disabled={isReviewLoading}
+              >
+                {isReviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "새로고침"}
+              </Button>
+            </div>
+          </div>
+
+          {isReviewLoading ? (
+            <div className="py-8 text-center text-sm text-slate-500">검토 목록을 불러오는 중...</div>
+          ) : reviewQueue.length === 0 ? (
+            <div className="py-8 text-center text-sm text-slate-500">검토할 서류가 없습니다.</div>
+          ) : (
+            <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+              {reviewQueue.map((item) => (
+                <div key={item.id} className="rounded-lg border border-slate-200 p-3">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {item.worker_name} · {item.document_name}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {item.original_filename || "파일명 없음"} · {formatFileSize(item.file_size_bytes)}
+                      </p>
+                      {!!item.anomaly_flags.length && (
+                        <p className="mt-1 text-xs text-amber-700">
+                          이상 플래그: {item.anomaly_flags.join(", ")}
+                        </p>
+                      )}
+                      {!!item.review_reason && (
+                        <p className="mt-1 text-xs text-red-600">사유: {item.review_reason}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {renderReviewBadge(item.review_status)}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleDownloadDocument(item)}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        보기
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleReviewAction(item, "approve")}
+                        disabled={reviewActionKey === `${item.id}:approve`}
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        승인
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleReviewAction(item, "reject")}
+                        disabled={reviewActionKey === `${item.id}:reject`}
+                      >
+                        <CircleX className="h-3.5 w-3.5" />
+                        반려
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleReviewAction(item, "quarantine")}
+                        disabled={reviewActionKey === `${item.id}:quarantine`}
+                      >
+                        <ShieldAlert className="h-3.5 w-3.5" />
+                        격리
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
     </AdminLayout>
   );
 }

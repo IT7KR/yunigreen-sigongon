@@ -39,6 +39,15 @@ interface LaborCodebook {
   job_type_codes: Record<string, string>;
 }
 
+type WorkerQuickFilter = "all" | "docs_pending" | "blocked" | "needs_review";
+
+interface ReviewSummary {
+  pending_review: number;
+  approved: number;
+  rejected: number;
+  quarantined: number;
+}
+
 const FALLBACK_NATIONALITY_CODES: Record<string, string> = {
   "100": "한국",
   "156": "중국",
@@ -100,9 +109,19 @@ export default function DailyWorkersPage() {
   // Review queue state
   const [reviewQueue, setReviewQueue] = useState<WorkerDocumentReviewQueueItem[]>([]);
   const [reviewFilter, setReviewFilter] = useState<WorkerDocument["review_status"] | "all">("pending_review");
+  const [isReviewQueueOpen, setIsReviewQueueOpen] = useState(false);
   const [isReviewLoading, setIsReviewLoading] = useState(false);
   const [reviewActionKey, setReviewActionKey] = useState<string | null>(null);
+  const [reviewSummary, setReviewSummary] = useState<ReviewSummary>({
+    pending_review: 0,
+    approved: 0,
+    rejected: 0,
+    quarantined: 0,
+  });
+  const [pendingReviewWorkerIds, setPendingReviewWorkerIds] = useState<string[]>([]);
   const [workerActionKey, setWorkerActionKey] = useState<string | null>(null);
+
+  const [workerFilter, setWorkerFilter] = useState<WorkerQuickFilter>("all");
 
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -132,27 +151,47 @@ export default function DailyWorkersPage() {
   const visaCodes = codebook?.visa_status_codes ?? FALLBACK_VISA_CODES;
   const jobCodes = codebook?.job_type_codes ?? FALLBACK_JOB_CODES;
 
+  const isWorkerDocumentIncomplete = (worker: DailyWorker) => {
+    return (
+      worker.registration_status === "pending_consent" ||
+      worker.registration_status === "pending_docs" ||
+      worker.has_id_card === false ||
+      worker.has_safety_cert === false
+    );
+  };
+
+  // 초기 진입 시 데이터 1회 로드
   useEffect(() => {
     fetchWorkers();
     fetchCodebook();
     fetchProjects();
     fetchReviewQueue("pending_review");
-  }, []);
+    fetchReviewSummary();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (search.trim() === "") {
-      setFilteredWorkers(workers);
-    } else {
-      const searchLower = search.toLowerCase();
-      setFilteredWorkers(
-        workers.filter(
-          (worker) =>
-            worker.name.toLowerCase().includes(searchLower) ||
-            worker.phone.includes(searchLower)
-        )
-      );
-    }
-  }, [search, workers]);
+    const searchKeyword = search.trim().toLowerCase();
+    const pendingReviewIds = new Set(pendingReviewWorkerIds);
+    const nextWorkers = workers.filter((worker) => {
+      const matchesSearch =
+        !searchKeyword ||
+        worker.name.toLowerCase().includes(searchKeyword) ||
+        worker.phone.includes(searchKeyword);
+      if (!matchesSearch) return false;
+
+      if (workerFilter === "docs_pending") {
+        return isWorkerDocumentIncomplete(worker);
+      }
+      if (workerFilter === "blocked") {
+        return !!worker.is_blocked_for_labor;
+      }
+      if (workerFilter === "needs_review") {
+        return pendingReviewIds.has(worker.id);
+      }
+      return true;
+    });
+    setFilteredWorkers(nextWorkers);
+  }, [search, workers, workerFilter, pendingReviewWorkerIds]);
 
   const fetchWorkers = async () => {
     setIsLoading(true);
@@ -277,11 +316,45 @@ export default function DailyWorkersPage() {
       const response = await api.getWorkerDocumentReviewQueue(status);
       if (response.success && response.data) {
         setReviewQueue(response.data);
+        if (status === "pending_review") {
+          setPendingReviewWorkerIds(Array.from(new Set(response.data.map((item) => item.worker_id))));
+        }
       }
     } catch (error) {
       toast.error("서류 검토 대기 목록을 불러오지 못했습니다.");
     } finally {
       setIsReviewLoading(false);
+    }
+  };
+
+  const fetchReviewSummary = async () => {
+    try {
+      const response = await api.getWorkerDocumentReviewQueue("all");
+      if (response.success && response.data) {
+        const nextSummary: ReviewSummary = {
+          pending_review: 0,
+          approved: 0,
+          rejected: 0,
+          quarantined: 0,
+        };
+        const nextPendingWorkerIds = new Set<string>();
+        response.data.forEach((item) => {
+          if (item.review_status === "pending_review") {
+            nextSummary.pending_review += 1;
+            nextPendingWorkerIds.add(item.worker_id);
+          } else if (item.review_status === "approved") {
+            nextSummary.approved += 1;
+          } else if (item.review_status === "rejected") {
+            nextSummary.rejected += 1;
+          } else if (item.review_status === "quarantined") {
+            nextSummary.quarantined += 1;
+          }
+        });
+        setReviewSummary(nextSummary);
+        setPendingReviewWorkerIds(Array.from(nextPendingWorkerIds));
+      }
+    } catch {
+      // 요약 실패는 큐 실사용에 직접 영향이 없어 화면을 유지한다.
     }
   };
 
@@ -319,7 +392,7 @@ export default function DailyWorkersPage() {
       const response = await api.reviewWorkerDocument(String(item.id), { action, reason });
       if (response.success) {
         toast.success("검토 결과를 반영했습니다.");
-        await Promise.all([fetchReviewQueue(reviewFilter), fetchWorkers()]);
+        await Promise.all([fetchReviewQueue(reviewFilter), fetchWorkers(), fetchReviewSummary()]);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "서류 검토에 실패했습니다.");
@@ -344,7 +417,7 @@ export default function DailyWorkersPage() {
       const response = await api.setDailyWorkerControl(worker.id, { action, reason });
       if (response.success) {
         toast.success(action === "block" ? "근로자를 차단했습니다." : "근로자 차단을 해제했습니다.");
-        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter)]);
+        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "근로자 통제 변경에 실패했습니다.");
@@ -391,7 +464,7 @@ export default function DailyWorkersPage() {
         toast.success("근로자 등록 및 필수 서류 업로드가 완료되었습니다.");
         setShowRegisterModal(false);
         resetForm();
-        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter)]);
+        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "근로자 등록에 실패했습니다.");
@@ -466,7 +539,7 @@ export default function DailyWorkersPage() {
         setShowEditModal(false);
         setEditingWorker(null);
         resetForm();
-        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter)]);
+        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "근로자 정보 수정에 실패했습니다.");
@@ -490,7 +563,7 @@ export default function DailyWorkersPage() {
         toast.success("근로자가 삭제되었습니다.");
         setShowDeleteModal(false);
         setDeletingWorker(null);
-        fetchWorkers();
+        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
       }
     } catch (error) {
       toast.error("근로자 삭제에 실패했습니다.");
@@ -657,6 +730,25 @@ export default function DailyWorkersPage() {
     );
   };
 
+  const pendingReviewWorkerSet = new Set(pendingReviewWorkerIds);
+  const docsPendingCount = workers.filter((worker) => isWorkerDocumentIncomplete(worker)).length;
+  const blockedWorkerCount = workers.filter((worker) => !!worker.is_blocked_for_labor).length;
+  const needsReviewCount = workers.filter((worker) => pendingReviewWorkerSet.has(worker.id)).length;
+
+  const handleOpenReviewQueue = () => {
+    setIsReviewQueueOpen(true);
+    setReviewFilter("pending_review");
+    void fetchReviewQueue("pending_review");
+  };
+
+  const handleCloseReviewQueue = () => {
+    setIsReviewQueueOpen(false);
+  };
+
+  const handleRefreshReviewQueue = () => {
+    void Promise.all([fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -664,7 +756,9 @@ export default function DailyWorkersPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">근로자 관리</h1>
-            <p className="mt-1 text-slate-500">전체 {filteredWorkers.length}명</p>
+            <p className="mt-1 text-slate-500">
+              검색/필터 결과 {filteredWorkers.length}명 · 전체 {workers.length}명
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => openDownloadModal("kwdi")}>
@@ -686,9 +780,9 @@ export default function DailyWorkersPage() {
           </div>
         </div>
 
-        {/* Search */}
+        {/* Search + Quick Filters */}
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="space-y-3 p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <PrimitiveInput
@@ -699,117 +793,59 @@ export default function DailyWorkersPage() {
                 className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-4 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
               />
             </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant={workerFilter === "all" ? "secondary" : "ghost"}
+                onClick={() => setWorkerFilter("all")}
+              >
+                전체 {workers.length}
+              </Button>
+              <Button
+                size="sm"
+                variant={workerFilter === "docs_pending" ? "secondary" : "ghost"}
+                onClick={() => setWorkerFilter("docs_pending")}
+              >
+                서류 미완 {docsPendingCount}
+              </Button>
+              <Button
+                size="sm"
+                variant={workerFilter === "blocked" ? "secondary" : "ghost"}
+                onClick={() => setWorkerFilter("blocked")}
+              >
+                투입 차단 {blockedWorkerCount}
+              </Button>
+              <Button
+                size="sm"
+                variant={workerFilter === "needs_review" ? "secondary" : "ghost"}
+                onClick={() => setWorkerFilter("needs_review")}
+              >
+                검토 필요 {needsReviewCount}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Document Review Queue */}
+        {/* Review Summary */}
         <Card>
-          <CardContent className="space-y-4 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-base font-semibold text-slate-900">서류 검토 큐</p>
-                <p className="text-sm text-slate-500">
-                  신분증/안전교육 이수증 업로드 파일을 검토하고 이상 건을 제어합니다.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <PrimitiveSelect
-                  value={reviewFilter}
-                  onChange={(e) => {
-                    const next = e.target.value as WorkerDocument["review_status"] | "all";
-                    setReviewFilter(next);
-                    void fetchReviewQueue(next);
-                  }}
-                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm"
-                >
-                  <option value="pending_review">검토대기</option>
-                  <option value="approved">승인</option>
-                  <option value="rejected">반려</option>
-                  <option value="quarantined">격리</option>
-                  <option value="all">전체</option>
-                </PrimitiveSelect>
-                <Button
-                  variant="secondary"
-                  onClick={() => fetchReviewQueue(reviewFilter)}
-                  disabled={isReviewLoading}
-                >
-                  {isReviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "새로고침"}
-                </Button>
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-base font-semibold text-slate-900">서류 검토 현황</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                <Badge variant="default">검토대기 {reviewSummary.pending_review}건</Badge>
+                <Badge variant="success">승인 {reviewSummary.approved}건</Badge>
+                <Badge variant="warning">반려 {reviewSummary.rejected}건</Badge>
+                <Badge variant="error">격리 {reviewSummary.quarantined}건</Badge>
               </div>
             </div>
-
-            {isReviewLoading ? (
-              <div className="py-10 text-center text-sm text-slate-500">검토 목록을 불러오는 중...</div>
-            ) : reviewQueue.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">
-                검토할 서류가 없습니다.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {reviewQueue.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-lg border border-slate-200 p-3"
-                  >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {item.worker_name} · {item.document_name}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {item.original_filename || "파일명 없음"} · {formatFileSize(item.file_size_bytes)}
-                        </p>
-                        {!!item.anomaly_flags?.length && (
-                          <p className="mt-1 text-xs text-amber-700">
-                            이상 플래그: {item.anomaly_flags.join(", ")}
-                          </p>
-                        )}
-                        {!!item.review_reason && (
-                          <p className="mt-1 text-xs text-red-600">사유: {item.review_reason}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {renderReviewBadge(item.review_status)}
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleDownloadDocument(item)}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          보기
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleReviewAction(item, "approve")}
-                          disabled={reviewActionKey === `${item.id}:approve`}
-                        >
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                          승인
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleReviewAction(item, "reject")}
-                          disabled={reviewActionKey === `${item.id}:reject`}
-                        >
-                          <CircleX className="h-3.5 w-3.5" />
-                          반려
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleReviewAction(item, "quarantine")}
-                          disabled={reviewActionKey === `${item.id}:quarantine`}
-                        >
-                          <ShieldAlert className="h-3.5 w-3.5" />
-                          격리
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={handleOpenReviewQueue}>
+                서류 검토 열기
+              </Button>
+              <Button variant="ghost" onClick={() => void fetchReviewSummary()}>
+                요약 새로고침
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -851,9 +887,7 @@ export default function DailyWorkersPage() {
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-slate-900">{worker.name}</p>
-                            {(worker.registration_status === "pending_consent" ||
-                              worker.registration_status === "pending_docs" ||
-                              worker.has_id_card === false) && (
+                            {isWorkerDocumentIncomplete(worker) && (
                               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
                                 서류 미완
                               </span>
@@ -940,7 +974,122 @@ export default function DailyWorkersPage() {
             )}
           </CardContent>
         </Card>
+
       </div>
+
+      {/* Worker Document Review Queue Modal */}
+      <Modal
+        isOpen={isReviewQueueOpen}
+        onClose={handleCloseReviewQueue}
+        title="서류 검토 큐"
+        description="신분증/안전교육 이수증 업로드 파일을 검토하고 이상 건을 제어합니다."
+        size="xl"
+      >
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-slate-500">
+              현재 필터 결과 {reviewQueue.length}건
+            </div>
+            <div className="flex items-center gap-2">
+              <PrimitiveSelect
+                value={reviewFilter}
+                onChange={(e) => {
+                  const next = e.target.value as WorkerDocument["review_status"] | "all";
+                  setReviewFilter(next);
+                  void fetchReviewQueue(next);
+                }}
+                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              >
+                <option value="pending_review">검토대기</option>
+                <option value="approved">승인</option>
+                <option value="rejected">반려</option>
+                <option value="quarantined">격리</option>
+                <option value="all">전체</option>
+              </PrimitiveSelect>
+              <Button
+                variant="secondary"
+                onClick={handleRefreshReviewQueue}
+                disabled={isReviewLoading}
+              >
+                {isReviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "새로고침"}
+              </Button>
+            </div>
+          </div>
+
+          {isReviewLoading ? (
+            <div className="py-10 text-center text-sm text-slate-500">검토 목록을 불러오는 중...</div>
+          ) : reviewQueue.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">
+              검토할 서류가 없습니다.
+            </div>
+          ) : (
+            <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+              {reviewQueue.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-lg border border-slate-200 p-3"
+                >
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {item.worker_name} · {item.document_name}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {item.original_filename || "파일명 없음"} · {formatFileSize(item.file_size_bytes)}
+                      </p>
+                      {!!item.anomaly_flags?.length && (
+                        <p className="mt-1 text-xs text-amber-700">
+                          이상 플래그: {item.anomaly_flags.join(", ")}
+                        </p>
+                      )}
+                      {!!item.review_reason && (
+                        <p className="mt-1 text-xs text-red-600">사유: {item.review_reason}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {renderReviewBadge(item.review_status)}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleDownloadDocument(item)}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        보기
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleReviewAction(item, "approve")}
+                        disabled={reviewActionKey === `${item.id}:approve`}
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        승인
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleReviewAction(item, "reject")}
+                        disabled={reviewActionKey === `${item.id}:reject`}
+                      >
+                        <CircleX className="h-3.5 w-3.5" />
+                        반려
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleReviewAction(item, "quarantine")}
+                        disabled={reviewActionKey === `${item.id}:quarantine`}
+                      >
+                        <ShieldAlert className="h-3.5 w-3.5" />
+                        격리
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* Worker Invite Modal */}
       <Modal
