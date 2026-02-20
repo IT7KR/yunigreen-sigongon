@@ -95,6 +95,11 @@ const NEXT_LABEL_BY_STATUS: Partial<Record<MaterialOrderStatus, string>> = {
   confirmed: "입금 완료",
 };
 
+const SITE_MANAGER_ALLOWED_TARGETS = new Set<MaterialOrderStatus>([
+  "requested",
+  "delivered",
+]);
+
 function normalizeStatus(status: MaterialOrderStatus): MaterialOrderStatus {
   if (status === "confirmed") return "invoice_received";
   return status;
@@ -118,6 +123,18 @@ function nextStatusFor(status: MaterialOrderStatus): MaterialOrderStatus | null 
 
 function nextLabelFor(status: MaterialOrderStatus): string {
   return NEXT_LABEL_BY_STATUS[normalizeStatus(status)] || "다음 단계";
+}
+
+function canAdvanceByRole(
+  status: MaterialOrderStatus,
+  role?: string,
+): boolean {
+  const next = nextStatusFor(status);
+  if (!next) return false;
+  if (role === "site_manager") {
+    return SITE_MANAGER_ALLOWED_TARGETS.has(next);
+  }
+  return true;
 }
 
 export default function MaterialOrdersPage({
@@ -197,6 +214,13 @@ export default function MaterialOrdersPage({
   const handleAdvance = (order: MaterialOrder) => {
     const next = nextStatusFor(order.status);
     if (!next) return;
+    if (
+      user?.role === "site_manager" &&
+      !SITE_MANAGER_ALLOWED_TARGETS.has(next)
+    ) {
+      toast.info("이 단계는 관리자 권한이 필요합니다.");
+      return;
+    }
 
     const payload: {
       orderId: string;
@@ -476,9 +500,14 @@ export default function MaterialOrdersPage({
               {nextStatusFor(selectedOrder.status) && (
                 <Button
                   onClick={() => handleAdvance(selectedOrder)}
-                  disabled={updateStatusMutation.isPending}
+                  disabled={
+                    updateStatusMutation.isPending ||
+                    !canAdvanceByRole(selectedOrder.status, user?.role)
+                  }
                 >
-                  {nextLabelFor(selectedOrder.status)}
+                  {canAdvanceByRole(selectedOrder.status, user?.role)
+                    ? nextLabelFor(selectedOrder.status)
+                    : "관리자 권한 필요"}
                 </Button>
               )}
             </div>
@@ -518,7 +547,7 @@ type CreateItem = {
 };
 
 function isItemSubmittable(item: CreateItem): boolean {
-  if (item.catalog_item_id && item.pricebook_revision_id && item.quantity > 0) {
+  if (item.catalog_item_id && item.quantity > 0) {
     return true;
   }
   return Boolean(
