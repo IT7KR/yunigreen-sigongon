@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { Button } from "@sigongon/ui";
+import { useAuth } from "@/lib/auth";
 
 export default function ForbiddenPage() {
+  const { user } = useAuth();
+  const backHref = user?.role === "worker" ? "/worker/home" : "/dashboard";
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50">
       <div className="text-center">
@@ -19,11 +23,8 @@ export default function ForbiddenPage() {
         <p className="mt-2 text-lg text-slate-600">
           이 페이지에 접근할 권한이 없습니다.
         </p>
-        <p className="mt-1 text-sm text-slate-500">
-          최고관리자 권한이 필요한 페이지입니다.
-        </p>
         <div className="mt-8">
-          <Button asChild><Link href="/dashboard">대시보드로 돌아가기</Link></Button>
+          <Button asChild><Link href={backHref}>돌아가기</Link></Button>
         </div>
       </div>
     </div>

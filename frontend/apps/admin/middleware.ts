@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = [
   "/accept-invite",
   "/onboarding/worker",
   "/worker",
+  "/403",
 ];
 
 const AUTH_ROUTES = ["/login"];

@@ -11,7 +11,7 @@ import Image from "next/image";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading, user } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -22,10 +22,11 @@ function LoginForm() {
   const redirectTo = searchParams.get("redirect") || "/dashboard";
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push(redirectTo);
+    if (!authLoading && isAuthenticated && user) {
+      const dest = user.role === "worker" ? "/worker/home" : redirectTo;
+      router.push(dest);
     }
-  }, [authLoading, isAuthenticated, router, redirectTo]);
+  }, [authLoading, isAuthenticated, user, router, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,11 +35,10 @@ function LoginForm() {
 
     const result = await login(username, password);
 
-    if (result.success) {
-      router.push(redirectTo);
-    } else {
+    if (!result.success) {
       setError(result.error || "로그인에 실패했어요");
     }
+    // redirect is handled by useEffect once user state updates
 
     setIsLoading(false);
   };
@@ -47,11 +47,10 @@ function LoginForm() {
     setError(null);
     setIsLoading(true);
     const result = await login(testUsername, "test1234");
-    if (result.success) {
-      router.push(redirectTo);
-    } else {
+    if (!result.success) {
       setError(result.error || "로그인에 실패했어요");
     }
+    // redirect is handled by useEffect once user state updates
     setIsLoading(false);
   };
 
