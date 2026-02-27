@@ -32,6 +32,7 @@ export function AppRootLayout({
       <body className={bodyClassName}>
         <Providers>{children}</Providers>
         <Toaster />
+        <div id="modal-root" />
       </body>
     </html>
   );

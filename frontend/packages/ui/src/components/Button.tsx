@@ -18,12 +18,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-brand-point-500 text-white hover:bg-brand-point-600 active:bg-brand-point-700",
+        primary:
+          "bg-brand-point-500 text-white hover:bg-brand-point-600 active:bg-brand-point-700",
         secondary:
           "border border-brand-point-500 text-brand-point-600 hover:bg-brand-point-50 active:bg-brand-point-100",
-        ghost: "text-brand-point-600 hover:bg-brand-point-50 active:bg-brand-point-100",
+        ghost:
+          "text-brand-point-600 hover:bg-brand-point-50 active:bg-brand-point-100",
         destructive: "bg-red-500 text-white hover:bg-red-600 active:bg-red-700",
-        outline: "border border-slate-300 text-slate-700 hover:bg-slate-50 active:bg-slate-100",
+        outline:
+          "border border-slate-300 text-slate-700 hover:bg-slate-50 active:bg-slate-100",
       },
       size: {
         sm: "h-8 px-3 text-sm",
@@ -96,7 +99,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <button
-        className={buttonClassName}
+        className={cn(buttonClassName, "h-11")}
         ref={ref}
         disabled={isDisabled}
         {...props}

@@ -59,10 +59,10 @@ export function ContentTransitionBoundary({
         <motion.div
           key={routeKey}
           className={cn(className)}
-          initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
+          style={{ willChange: "auto" }}
+          initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
           animate={{
             opacity: 1,
-            y: 0,
             transition: prefersReducedMotion
               ? { duration: 0 }
               : {
@@ -72,7 +72,6 @@ export function ContentTransitionBoundary({
           }}
           exit={{
             opacity: prefersReducedMotion ? 1 : 0,
-            y: prefersReducedMotion ? 0 : -6,
             transition: prefersReducedMotion
               ? { duration: 0 }
               : {

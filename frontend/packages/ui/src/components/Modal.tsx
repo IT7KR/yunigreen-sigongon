@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -11,7 +12,7 @@ export interface ModalProps {
   title: string;
   description?: string;
   children: ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
   closeOnBackdropClick?: boolean;
 }
 
@@ -20,6 +21,8 @@ const sizeClasses = {
   md: "max-w-md",
   lg: "max-w-lg",
   xl: "max-w-xl",
+  "2xl": "max-w-2xl",
+  "3xl": "max-w-3xl",
 };
 
 export function Modal({
@@ -32,10 +35,16 @@ export function Modal({
   closeOnBackdropClick = true,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const portalRef = useRef<HTMLElement | null>(null);
+  const [mounted, setMounted] = useState(false);
   const titleId = `modal-title-${title.replace(/\s+/g, "-").toLowerCase()}`;
   const descriptionId = description
     ? `modal-desc-${title.replace(/\s+/g, "-").toLowerCase()}`
     : undefined;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Body scroll lock
   useEffect(() => {
@@ -102,11 +111,11 @@ export function Modal({
     }
   };
 
-  return (
+  const content = (
     <AnimatePresence>
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
+          className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:justify-center"
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
@@ -126,14 +135,17 @@ export function Modal({
           <motion.div
             ref={modalRef}
             className={cn(
-              "relative mx-4 w-full max-h-[calc(100dvh-2rem)] overflow-hidden rounded-xl bg-white p-6 shadow-xl",
+              "relative w-full max-h-[90dvh] sm:max-h-[80vh] overflow-hidden bg-white p-6 shadow-xl",
+              "rounded-t-2xl sm:rounded-xl sm:mx-6",
               sizeClasses[size]
             )}
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
+            initial={{ opacity: 0, y: "100%" }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: "100%" }}
+            transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
           >
+            {/* 모바일 드래그 핸들 */}
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-slate-300 sm:hidden" />
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -163,7 +175,7 @@ export function Modal({
             </div>
 
             {/* Content */}
-            <div className="mt-4 overflow-y-auto">
+            <div className="mt-4 max-h-[calc(90dvh-8rem)] sm:max-h-[calc(80vh-8rem)] overflow-y-auto">
               {children}
             </div>
           </motion.div>
@@ -171,4 +183,18 @@ export function Modal({
       )}
     </AnimatePresence>
   );
+
+  if (mounted && !portalRef.current) {
+    let root = document.getElementById("modal-root");
+    if (!root) {
+      root = document.createElement("div");
+      root.id = "modal-root";
+      document.body.appendChild(root);
+    }
+    portalRef.current = root;
+  }
+
+  return mounted && portalRef.current
+    ? createPortal(content, portalRef.current)
+    : null;
 }

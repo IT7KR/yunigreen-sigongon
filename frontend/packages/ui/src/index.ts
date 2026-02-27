@@ -80,6 +80,7 @@ export { Pagination, type PaginationProps } from "./components/Pagination"
 // Hooks
 export { useReducedMotion } from "./hooks"
 export { useAppNavigation } from "./hooks"
+export { useMediaQuery, useIsMobile, useIsTablet } from "./hooks"
 
 // Utilities
 export { cn, formatCurrency, formatDate, formatRelativeTime } from "./lib/utils"

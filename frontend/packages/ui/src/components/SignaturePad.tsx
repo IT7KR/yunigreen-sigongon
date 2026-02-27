@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useEffect, useState, type MouseEvent, type TouchEvent } from "react";
+import { RotateCcw } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Button } from "./Button";
 
 export interface SignaturePadProps {
   width?: number;
@@ -124,43 +124,50 @@ export function SignaturePad({
   };
 
   return (
-    <div className={cn("space-y-2", className)}>
-      <div
-        className={cn(
-          "block w-full rounded-lg border-2 border-slate-300 bg-white",
-          disabled && "opacity-60 cursor-not-allowed"
-        )}
-      >
-        <canvas
-          ref={canvasRef}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={draw}
-          onTouchEnd={stopDrawing}
+    <div className={cn(className)}>
+      <div className="relative">
+        <div
           className={cn(
-            "touch-none",
-            !disabled && "cursor-crosshair"
+            "block w-full rounded-lg border-2 border-slate-300 bg-white",
+            !isEmpty && "border-brand-point-400",
+            disabled && "opacity-60 cursor-not-allowed"
           )}
-          style={{ width: "100%", maxWidth: `${width}px`, height: `${height}px` }}
-        />
-      </div>
-
-      <div className="flex gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleClear}
-          disabled={isEmpty || disabled}
         >
-          지우기
-        </Button>
+          <canvas
+            ref={canvasRef}
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={stopDrawing}
+            className={cn(
+              "touch-none",
+              !disabled && "cursor-crosshair"
+            )}
+            style={{ width: "100%", maxWidth: `${width}px`, height: `${height}px` }}
+          />
+        </div>
+
+        {/* 빈 상태 힌트 */}
         {isEmpty && (
-          <p className="text-sm text-slate-500 flex items-center">
-            서명을 작성해주세요
-          </p>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1">
+            <p className="text-sm text-slate-400">여기에 서명해 주세요</p>
+          </div>
+        )}
+
+        {/* 지우기 오버레이 버튼 */}
+        {!isEmpty && !disabled && (
+          <button
+            type="button"
+            onClick={handleClear}
+            aria-label="서명 지우기"
+            className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-xs text-slate-500 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-700 active:scale-95 transition-all"
+          >
+            <RotateCcw className="h-3 w-3" />
+            지우기
+          </button>
         )}
       </div>
     </div>
