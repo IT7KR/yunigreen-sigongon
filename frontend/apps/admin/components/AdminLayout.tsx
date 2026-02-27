@@ -12,7 +12,6 @@ import {
   LogOut,
   Menu,
   X,
-  Droplets,
   Shield,
   BarChart3,
   Building2,
@@ -34,6 +33,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
 import { AdminContentLoadingOverlay } from "./AdminContentLoadingOverlay";
+import { AdminBottomNav } from "./AdminBottomNav";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -81,7 +81,11 @@ const saNavItems = [
   { href: "/sa", icon: BarChart3, label: "플랫폼 현황", exact: true },
   { href: "/sa/tenants", icon: Building2, label: "고객사 관리" },
   { href: "/sa/users", icon: Users, label: "전체 사용자" },
-  { href: "/sa/estimation-governance", icon: FileSpreadsheet, label: "적산 운영" },
+  {
+    href: "/sa/estimation-governance",
+    icon: FileSpreadsheet,
+    label: "적산 운영",
+  },
   { href: "/sa/labor", icon: HardHat, label: "노무 모니터링" },
 ];
 
@@ -90,7 +94,11 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   exact?: boolean;
-  children?: Array<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }>;
+  children?: Array<{
+    href: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }>;
 };
 
 function AdminLayoutFrame({ children }: AdminLayoutProps) {
@@ -110,14 +118,15 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
       item.children &&
       item.children.some((child) => isPathActive(child.href)),
   );
-  const effectiveExpanded = expandedMenu ?? (autoExpandedMenu ? autoExpandedMenu.href : null);
+  const effectiveExpanded =
+    expandedMenu ?? (autoExpandedMenu ? autoExpandedMenu.href : null);
   const visibleNavItems =
     user?.role === "super_admin"
       ? navItems.filter((item) => item.href !== "/labor")
       : navItems;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="isolate min-h-screen bg-slate-50">
       {/* Skip navigation */}
       <a
         href="#main-content"
@@ -125,30 +134,11 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
       >
         본문으로 건너뛰기
       </a>
-      {/* Mobile header */}
-      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
-        <PrimitiveButton
-          onClick={() => setSidebarOpen(true)}
-          className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
-          aria-label="메뉴 열기"
-          aria-expanded={sidebarOpen}
-          aria-controls="main-sidebar"
-        >
-          <Menu className="h-6 w-6" />
-        </PrimitiveButton>
-        <AppLink href="/dashboard" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-point-500 text-white">
-            <Droplets className="h-4 w-4" />
-          </div>
-          <span className="font-semibold text-slate-900">시공ON</span>
-        </AppLink>
-        <div className="w-10" /> {/* Spacer */}
-      </header>
 
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-[60] bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-label="메뉴 닫기"
           role="button"
@@ -161,7 +151,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
         id="main-sidebar"
         aria-label="주 메뉴"
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 transform flex-col bg-white shadow-lg transition-transform lg:translate-x-0 lg:shadow-none",
+          "fixed inset-y-0 left-0 z-[60] flex w-64 transform flex-col bg-white shadow-lg transition-transform lg:translate-x-0 lg:shadow-none",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -187,7 +177,8 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
           {visibleNavItems.map((item) => {
-            const hasChildren = "children" in item && item.children && item.children.length > 0;
+            const hasChildren =
+              "children" in item && item.children && item.children.length > 0;
             const hasActiveChild =
               hasChildren &&
               item.children!.some((child) => isPathActive(child.href));
@@ -198,9 +189,11 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
               return (
                 <div key={item.href}>
                   <PrimitiveButton
-                    onClick={() => setExpandedMenu(isExpanded ? null : item.href)}
+                    onClick={() =>
+                      setExpandedMenu(isExpanded ? null : item.href)
+                    }
                     aria-expanded={isExpanded}
-                    aria-controls={`submenu-${item.href.replace(/\//g, '-')}`}
+                    aria-controls={`submenu-${item.href.replace(/\//g, "-")}`}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       isActive
@@ -217,7 +210,10 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
                     )}
                   </PrimitiveButton>
                   {isExpanded && (
-                    <div id={`submenu-${item.href.replace(/\//g, '-')}`} className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-slate-200 pl-3">
+                    <div
+                      id={`submenu-${item.href.replace(/\//g, "-")}`}
+                      className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-slate-200 pl-3"
+                    >
                       {item.children!.map((child) => {
                         const isChildActive = isPathActive(child.href);
                         return (
@@ -307,7 +303,9 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
               {user?.name?.charAt(0) || "?"}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-slate-900">{user?.name}</p>
+              <p className="truncate font-medium text-slate-900">
+                {user?.name}
+              </p>
               <p className="text-xs text-slate-500">
                 {user?.role === "super_admin"
                   ? "최고관리자"
@@ -335,14 +333,15 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
       </aside>
 
       {/* Main content */}
-      <main className="lg:ml-64">
+      <main className="lg:ml-64 pb-nav-safe lg:pb-0">
         <ContentTransitionBoundary
-          className="mx-auto max-w-7xl p-4 lg:p-8"
+          className="mx-auto max-w-7xl lg:p-8"
           loadingOverlay={<AdminContentLoadingOverlay />}
         >
           <div id="main-content">{children}</div>
         </ContentTransitionBoundary>
       </main>
+      <AdminBottomNav onOpenSidebar={() => setSidebarOpen(true)} />
     </div>
   );
 }

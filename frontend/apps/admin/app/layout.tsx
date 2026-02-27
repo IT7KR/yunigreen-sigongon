@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { AppRootLayout } from "@sigongon/features";
 import { Providers } from "@/lib/providers";
 import "./globals.css";
@@ -6,6 +6,12 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "시공ON 관리자",
   description: "AI 누수진단 관리 시스템",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

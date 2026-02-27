@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../../../packages/ui/src";
+@source "../../../packages/features/src";
 
 @theme {
   /* Colors - SigongOn Brand */
@@ -37,6 +39,8 @@
   --radius-card: 0.75rem;
   --radius-button: 0.5rem;
   --radius-input: 0.5rem;
+
+  --spacing-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Base styles */
@@ -53,6 +57,40 @@ body {
 /* Focus styles */
 *:focus-visible {
   @apply outline-none ring-2 ring-brand-point-500 ring-offset-2;
+}
+
+/* Touch optimization */
+@media (hover: none) {
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Safe area for mobile */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.safe-area-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.pb-nav-safe {
+  padding-bottom: calc(4rem + max(1rem, env(safe-area-inset-bottom)));
+}
+
+/* Bottom position above the fixed nav bar (for action buttons) */
+.bottom-above-nav {
+  bottom: calc(4rem + max(1rem, env(safe-area-inset-bottom)));
 }
 
 /* View Transition tuning for supported browsers */

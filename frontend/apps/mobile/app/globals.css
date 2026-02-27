@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../../../packages/ui/src";
+@source "../../../packages/features/src";
 
 @theme {
   /* Colors - SigongOn Brand */
