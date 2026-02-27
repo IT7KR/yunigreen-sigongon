@@ -16,9 +16,6 @@ import type { SiteVisitDetail, VisitType } from "@sigongon/types";
 import { api } from "@/lib/api";
 import { MobileListCard } from "@/components/MobileListCard";
 
-const MOBILE_APP_URL =
-  process.env.NEXT_PUBLIC_MOBILE_APP_URL || "http://localhost:3034";
-
 const visitTypeLabels: Record<VisitType, string> = {
   initial: "최초 방문",
   progress: "진행 점검",
@@ -69,14 +66,6 @@ export default function VisitsPage({
   function handleViewVisit(visitId: string) {
     // Admin 앱 내에서 방문 상세 페이지로 이동
     router.push(`/projects/${projectId}/visits/${visitId}`);
-  }
-
-  function handleViewVisitInMobile(visitId: string) {
-    // 모바일 앱에서 방문 보기 (사진 추가 등)
-    window.open(
-      `${MOBILE_APP_URL}/projects/${projectId}/visits/${visitId}`,
-      "_blank",
-    );
   }
 
   if (loading) {
