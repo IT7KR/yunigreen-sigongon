@@ -14,13 +14,13 @@ class Settings(BaseSettings):
     )
     
     # 애플리케이션
-    app_name: str = "SigongOn API"
+    app_name: str = "SigongCore API"
     app_version: str = "0.1.0"
     debug: bool = False
     enable_docs: bool = True
     
     # 데이터베이스 (비동기)
-    database_url: str = "postgresql+asyncpg://postgres:password@db:5432/sigongon"
+    database_url: str = "postgresql+asyncpg://postgres:password@db:5432/sigongcore"
     
     # JWT 인증
     jwt_secret: str = "your-super-secret-key-change-in-production"

@@ -219,7 +219,7 @@ async def send_contract_for_signature(contract_id: int, db: DBSession, current_u
                 "id": str(contract.id),
                 "status": contract.status.value,
                 "sent_at": contract.sent_at.isoformat() if contract.sent_at else None,
-                "signature_url": f"https://sign.sigongon.com/contracts/{contract.id}",
+                "signature_url": f"https://sign.sigongcore.com/contracts/{contract.id}",
                 "completeness": completeness,
                 "message": "서명 요청을 보냈어요",
             }

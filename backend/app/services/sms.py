@@ -105,7 +105,7 @@ class AligoSMSService(SMSService):
             "expires_at": time.time() + 300,
             "attempts": 0,
         }
-        message = f"[시공ON] 인증번호는 [{code}]입니다. 5분 내 입력해주세요."
+        message = f"[시공코어] 인증번호는 [{code}]입니다. 5분 내 입력해주세요."
         result = await self.send_sms(phone, message)
         if not result.get("success"):
             self._logger.error(f"OTP SMS 발송 실패: {result}")

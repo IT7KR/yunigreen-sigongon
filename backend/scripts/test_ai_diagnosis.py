@@ -23,7 +23,7 @@ def main():
     
     print("\n[1/5] 로그인...")
     login = requests.post(f"{BASE}/auth/login", json={
-        "email": "tech1@sigongon.test",
+        "email": "tech1@sigongcore.test",
         "password": "tech123!"
     })
     

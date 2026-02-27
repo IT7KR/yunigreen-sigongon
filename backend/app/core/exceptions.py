@@ -8,7 +8,7 @@ UX 라이팅 원칙:
 from typing import Any, Optional
 
 
-class SigongOnException(Exception):
+class SigongCoreException(Exception):
     """유니그린 기본 예외."""
     
     def __init__(
@@ -23,7 +23,7 @@ class SigongOnException(Exception):
         super().__init__(message)
 
 
-class NotFoundException(SigongOnException):
+class NotFoundException(SigongCoreException):
     """리소스를 찾을 수 없음."""
     
     # 리소스별 친근한 메시지
@@ -51,7 +51,7 @@ class NotFoundException(SigongOnException):
         )
 
 
-class ValidationException(SigongOnException):
+class ValidationException(SigongCoreException):
     """유효성 검사 실패."""
     
     def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
@@ -62,7 +62,7 @@ class ValidationException(SigongOnException):
         )
 
 
-class AuthenticationException(SigongOnException):
+class AuthenticationException(SigongCoreException):
     """인증 실패."""
     
     def __init__(self, message: str = "로그인이 필요해요"):
@@ -90,7 +90,7 @@ class TokenExpiredException(AuthenticationException):
         )
 
 
-class AuthorizationException(SigongOnException):
+class AuthorizationException(SigongCoreException):
     """권한 부족."""
     
     def __init__(self, message: str = "이 기능은 관리자만 쓸 수 있어요"):
@@ -100,7 +100,7 @@ class AuthorizationException(SigongOnException):
         )
 
 
-class PricebookException(SigongOnException):
+class PricebookException(SigongCoreException):
     """적산 자료 관련 예외."""
     
     def __init__(self, message: str, code: str = "PRICEBOOK_ERROR"):
@@ -117,7 +117,7 @@ class NoPricebookActiveException(PricebookException):
         )
 
 
-class EstimateException(SigongOnException):
+class EstimateException(SigongCoreException):
     """견적서 관련 예외."""
     
     def __init__(self, message: str, code: str = "ESTIMATE_ERROR"):
@@ -134,7 +134,7 @@ class EstimateLockedException(EstimateException):
         )
 
 
-class AIServiceException(SigongOnException):
+class AIServiceException(SigongCoreException):
     """AI 서비스 관련 예외."""
     
     def __init__(
@@ -158,7 +158,7 @@ class AIAnalysisFailedException(AIServiceException):
         )
 
 
-class FileUploadException(SigongOnException):
+class FileUploadException(SigongCoreException):
     """파일 업로드 관련 예외."""
     
     def __init__(self, message: str = "파일을 올리는 데 실패했어요"):
@@ -187,7 +187,7 @@ class InvalidFileTypeException(FileUploadException):
         )
 
 
-class DuplicateException(SigongOnException):
+class DuplicateException(SigongCoreException):
     """중복 데이터."""
     
     def __init__(self, field: str, value: str):
@@ -198,7 +198,7 @@ class DuplicateException(SigongOnException):
         )
 
 
-class InactiveAccountException(SigongOnException):
+class InactiveAccountException(SigongCoreException):
     """비활성 계정."""
     
     def __init__(self):

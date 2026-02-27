@@ -230,7 +230,7 @@ async def send_labor_contract_for_signature(
         "data": {
             "id": str(labor_contract_id),
             "status": "sent",
-            "signature_url": f"https://sign.sigongon.com/labor/{labor_contract_id}",
+            "signature_url": f"https://sign.sigongcore.com/labor/{labor_contract_id}",
             "message": "서명 요청을 보냈어요",
         },
         "error": None,

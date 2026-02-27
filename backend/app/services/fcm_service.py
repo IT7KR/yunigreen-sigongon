@@ -162,7 +162,7 @@ class RealFCMService:
                     priority="high",
                     notification=messaging.AndroidNotification(
                         sound="default",
-                        channel_id="sigongon_default",
+                        channel_id="sigongcore_default",
                     ),
                 ),
             )

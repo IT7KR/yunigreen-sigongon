@@ -461,9 +461,9 @@ class HarnessService:
             text = file_path.read_text(encoding="utf-8")
             if re.search(r"from\s+['\"].*apps\/(admin|mobile)", text):
                 violations.append(str(file_path))
-            if "from '@sigongon/admin'" in text or 'from "@sigongon/admin"' in text:
+            if "from '@sigongcore/admin'" in text or 'from "@sigongcore/admin"' in text:
                 violations.append(str(file_path))
-            if "from '@sigongon/mobile'" in text or 'from "@sigongon/mobile"' in text:
+            if "from '@sigongcore/mobile'" in text or 'from "@sigongcore/mobile"' in text:
                 violations.append(str(file_path))
 
         if violations:

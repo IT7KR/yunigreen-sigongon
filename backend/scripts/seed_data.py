@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy import text
 
 import sys
-sys.path.insert(0, '/workspace/sigongon-dev/backend')
+sys.path.insert(0, '/workspace/sigongcore-dev/backend')
 
 from app.core.security import get_password_hash
 from app.models.user import User, UserRole, Organization
@@ -21,7 +21,7 @@ from app.models.pricebook import (
     CatalogItem, CatalogItemPrice, ItemType,
 )
 
-DOCKER_DB_URL = "postgresql+asyncpg://postgres:password@localhost:5437/sigongon"
+DOCKER_DB_URL = "postgresql+asyncpg://postgres:password@localhost:5437/sigongcore"
 
 
 async def create_seed_data():
@@ -46,7 +46,7 @@ async def create_seed_data():
             phone="02-1234-5678",
             rep_name="관리자",
             rep_phone="010-1111-1111",
-            rep_email="admin@sigongon.test",
+            rep_email="admin@sigongcore.test",
             created_at=datetime.utcnow(),
         )
         db.add(org)
@@ -55,7 +55,7 @@ async def create_seed_data():
         
         users_data = [
             {
-            "email": "admin@sigongon.test",
+            "email": "admin@sigongcore.test",
                 "username": "admin",
                 "password": "admin123!",
                 "name": "관리자",
@@ -63,7 +63,7 @@ async def create_seed_data():
                 "phone": "010-1111-1111",
             },
             {
-            "email": "manager@sigongon.test",
+            "email": "manager@sigongcore.test",
                 "username": "manager_kim",
                 "password": "manager123!",
                 "name": "김매니저",
@@ -71,7 +71,7 @@ async def create_seed_data():
                 "phone": "010-2222-2222",
             },
             {
-            "email": "tech1@sigongon.test",
+            "email": "tech1@sigongcore.test",
                 "username": "tech_park",
                 "password": "tech123!",
                 "name": "박기술",
@@ -79,7 +79,7 @@ async def create_seed_data():
                 "phone": "010-3333-3333",
             },
             {
-            "email": "tech2@sigongon.test",
+            "email": "tech2@sigongcore.test",
                 "username": "tech_lee",
                 "password": "tech123!",
                 "name": "이기사",

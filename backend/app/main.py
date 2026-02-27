@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.database import init_db, close_db
-from app.core.exceptions import SigongOnException
+from app.core.exceptions import SigongCoreException
 from app.core.snowflake import set_snowflake_worker
 
 
@@ -52,10 +52,10 @@ app.add_middleware(
 
 
 # 전역 예외 핸들러
-@app.exception_handler(SigongOnException)
-async def sigongon_exception_handler(
+@app.exception_handler(SigongCoreException)
+async def sigongcore_exception_handler(
     request: Request,
-    exc: SigongOnException,
+    exc: SigongCoreException,
 ) -> JSONResponse:
     """커스텀 예외 핸들러."""
     return JSONResponse(
@@ -136,6 +136,8 @@ from app.routers.documents import router as documents_router
 from app.routers.notifications import router as notifications_router
 from app.routers.dashboard import router as dashboard_router
 from app.routers.device_tokens import router as device_tokens_router
+from app.routers.cost_calculations import router as cost_calculations_router
+from app.routers.construction_rates import router as construction_rates_router
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["인증"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["사용자 관리"])
@@ -165,3 +167,5 @@ app.include_router(documents_router, prefix="/api/v1", tags=["문서 생성"])
 app.include_router(notifications_router, prefix="/api/v1", tags=["알림"])
 app.include_router(dashboard_router, prefix="/api/v1", tags=["대시보드"])
 app.include_router(device_tokens_router, prefix="/api/v1", tags=["FCM 디바이스 토큰"])
+app.include_router(cost_calculations_router, prefix="/api/v1", tags=["원가계산서"])
+app.include_router(construction_rates_router, prefix="/api/v1", tags=["건설 원가 요율"])

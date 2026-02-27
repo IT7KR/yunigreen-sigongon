@@ -540,7 +540,7 @@ def generate_diagnosis_pdf(
         footer_style,
     ))
     story.append(Paragraph(
-        f"생성일시: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC | 시공ON AI 진단 시스템",
+        f"생성일시: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC | 시공코어 AI 진단 시스템",
         footer_style,
     ))
 
