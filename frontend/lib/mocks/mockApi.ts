@@ -39,8 +39,17 @@ import type {
   DiagnosisCaseImage,
   VisionResultDetail,
   DiagnosisCaseEstimate,
-} from "@sigongon/types";
-import { mockDb, type Project, type User, type Tenant, type Invitation, type InvitationStatus, type NotificationPrefs, type ActivityLog } from "./db";
+} from "@sigongcore/types";
+import {
+  mockDb,
+  type Project,
+  type User,
+  type Tenant,
+  type Invitation,
+  type InvitationStatus,
+  type NotificationPrefs,
+  type ActivityLog,
+} from "./db";
 import { buildWorkerEntry } from "@/lib/labor/calculations";
 import { PROJECT_MOCK_EXPORT_SAMPLE_FILES } from "@/lib/sampleFiles";
 
@@ -166,11 +175,41 @@ const recalcTotals = (estimate: StoredEstimate): StoredEstimate => {
 };
 
 const SAMPLE_ESTIMATE_LINES = [
-  { description: "옥상 우레탄 방수", spec: "우레탄 도막방수 2회", unit: "㎡", quantity: "150", unit_price: "35000" },
-  { description: "외벽 크랙 보수", spec: "에폭시 주입", unit: "m", quantity: "45", unit_price: "25000" },
-  { description: "실내 도장 공사", spec: "수성페인트 2회", unit: "㎡", quantity: "200", unit_price: "12000" },
-  { description: "바닥 방수 처리", spec: "시트방수", unit: "㎡", quantity: "80", unit_price: "45000" },
-  { description: "비계 설치/해체", spec: "강관비계", unit: "식", quantity: "1", unit_price: "1500000" },
+  {
+    description: "옥상 우레탄 방수",
+    spec: "우레탄 도막방수 2회",
+    unit: "㎡",
+    quantity: "150",
+    unit_price: "35000",
+  },
+  {
+    description: "외벽 크랙 보수",
+    spec: "에폭시 주입",
+    unit: "m",
+    quantity: "45",
+    unit_price: "25000",
+  },
+  {
+    description: "실내 도장 공사",
+    spec: "수성페인트 2회",
+    unit: "㎡",
+    quantity: "200",
+    unit_price: "12000",
+  },
+  {
+    description: "바닥 방수 처리",
+    spec: "시트방수",
+    unit: "㎡",
+    quantity: "80",
+    unit_price: "45000",
+  },
+  {
+    description: "비계 설치/해체",
+    spec: "강관비계",
+    unit: "식",
+    quantity: "1",
+    unit_price: "1500000",
+  },
 ];
 
 // ─── 현장대리인 Mock Types ─────────────────────────────────
@@ -380,7 +419,11 @@ export class MockAPIClient {
         total_amount: number;
         deductions: number;
         net_amount: number;
-        items: Array<{ label: string; amount: number; type?: "income" | "deduction" }>;
+        items: Array<{
+          label: string;
+          amount: number;
+          type?: "income" | "deduction";
+        }>;
         status: "sent" | "confirmed";
       }
     >
@@ -411,7 +454,12 @@ export class MockAPIClient {
     { worker_id: string; name: string; phone: string; created_at: string }
   > = {};
   private seasons: SeasonInfo[] = [
-    { id: 202601010001, name: "2026H1", is_active: true, created_at: "2026-01-01T00:00:00Z" },
+    {
+      id: 202601010001,
+      name: "2026H1",
+      is_active: true,
+      created_at: "2026-01-01T00:00:00Z",
+    },
   ];
   private seasonCategories: SeasonCategoryInfo[] = [
     {
@@ -654,9 +702,24 @@ export class MockAPIClient {
           notes: "현장 초기 방문 조사",
           photo_count: 3,
           photos: [
-            { id: `ph_${pid}_1`, photo_type: "before", storage_path: `mock://photos/${pid}/before.jpg`, caption: "시공 전 현장" },
-            { id: `ph_${pid}_2`, photo_type: "during", storage_path: `mock://photos/${pid}/during.jpg`, caption: "조사 중" },
-            { id: `ph_${pid}_3`, photo_type: "after", storage_path: `mock://photos/${pid}/after.jpg`, caption: "조사 완료" },
+            {
+              id: `ph_${pid}_1`,
+              photo_type: "before",
+              storage_path: `mock://photos/${pid}/before.jpg`,
+              caption: "시공 전 현장",
+            },
+            {
+              id: `ph_${pid}_2`,
+              photo_type: "during",
+              storage_path: `mock://photos/${pid}/during.jpg`,
+              caption: "조사 중",
+            },
+            {
+              id: `ph_${pid}_3`,
+              photo_type: "after",
+              storage_path: `mock://photos/${pid}/after.jpg`,
+              caption: "조사 완료",
+            },
           ],
         };
         this.siteVisitsByProject[pid] = [visit];
@@ -672,7 +735,8 @@ export class MockAPIClient {
           site_visit_id: `sv_${pid}`,
           project_id: pid,
           status: "completed",
-          leak_opinion_text: "누수 원인: 옥상 방수층 노후화 및 외벽 균열. 우레탄 방수 도포 및 크랙 보수 권장.",
+          leak_opinion_text:
+            "누수 원인: 옥상 방수층 노후화 및 외벽 균열. 우레탄 방수 도포 및 크랙 보수 권장.",
           confidence_score: 0.85,
           processing_time_ms: 2400,
           suggested_materials: [
@@ -682,7 +746,11 @@ export class MockAPIClient {
               suggested_spec: "도막방수용",
               suggested_unit: "set",
               suggested_quantity: 2,
-              matched_catalog_item: { id: "mat_1", name_ko: "우레탄 방수제", unit_price: "45000" },
+              matched_catalog_item: {
+                id: "mat_1",
+                name_ko: "우레탄 방수제",
+                unit_price: "45000",
+              },
               match_confidence: 0.88,
               is_confirmed: true,
             },
@@ -691,19 +759,32 @@ export class MockAPIClient {
       }
 
       // quoted 이상: estimate
-      if (["quoted", "contracted", "in_progress", "completed", "warranty"].includes(s)) {
+      if (
+        [
+          "quoted",
+          "contracted",
+          "in_progress",
+          "completed",
+          "warranty",
+        ].includes(s)
+      ) {
         const estimateId = `est_${pid}`;
-        const lines: StoredEstimate["lines"] = SAMPLE_ESTIMATE_LINES.map((item, idx) => ({
-          id: `el_${pid}_${idx + 1}`,
-          sort_order: idx + 1,
-          description: item.description,
-          specification: item.spec,
-          unit: item.unit,
-          quantity: item.quantity,
-          unit_price_snapshot: item.unit_price,
-          amount: calcAmount(item.quantity, item.unit_price),
-          source: idx === 0 ? ("ai" as EstimateLineSource) : ("manual" as EstimateLineSource),
-        }));
+        const lines: StoredEstimate["lines"] = SAMPLE_ESTIMATE_LINES.map(
+          (item, idx) => ({
+            id: `el_${pid}_${idx + 1}`,
+            sort_order: idx + 1,
+            description: item.description,
+            specification: item.spec,
+            unit: item.unit,
+            quantity: item.quantity,
+            unit_price_snapshot: item.unit_price,
+            amount: calcAmount(item.quantity, item.unit_price),
+            source:
+              idx === 0
+                ? ("ai" as EstimateLineSource)
+                : ("manual" as EstimateLineSource),
+          }),
+        );
 
         const estimate: StoredEstimate = recalcTotals({
           id: estimateId,
@@ -736,8 +817,12 @@ export class MockAPIClient {
           status: "signed",
           created_at: new Date(Date.now() - 86400000 * 20).toISOString(),
           signed_at: new Date(Date.now() - 86400000 * 18).toISOString(),
-          start_date: project.startDate || new Date(Date.now() - 86400000 * 15).toISOString().slice(0, 10),
-          expected_end_date: project.endDate || new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10),
+          start_date:
+            project.startDate ||
+            new Date(Date.now() - 86400000 * 15).toISOString().slice(0, 10),
+          expected_end_date:
+            project.endDate ||
+            new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10),
           project_name: project.name,
           client_name: project.clientName,
         };
@@ -752,7 +837,9 @@ export class MockAPIClient {
           {
             id: `lc_${pid}_1`,
             worker_name: "김철수",
-            work_date: new Date(Date.now() - 86400000 * 10).toISOString().slice(0, 10),
+            work_date: new Date(Date.now() - 86400000 * 10)
+              .toISOString()
+              .slice(0, 10),
             work_type: "목수",
             daily_rate: "250000",
             status: "signed",
@@ -761,7 +848,9 @@ export class MockAPIClient {
           {
             id: `lc_${pid}_2`,
             worker_name: "이영희",
-            work_date: new Date(Date.now() - 86400000 * 10).toISOString().slice(0, 10),
+            work_date: new Date(Date.now() - 86400000 * 10)
+              .toISOString()
+              .slice(0, 10),
             work_type: "전기",
             daily_rate: "280000",
             status: "signed",
@@ -778,8 +867,12 @@ export class MockAPIClient {
             status: "approved" as const,
             construction_name: project.name,
             site_address: project.address,
-            start_date: project.startDate || new Date(Date.now() - 86400000 * 15).toISOString().slice(0, 10),
-            expected_end_date: project.endDate || new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10),
+            start_date:
+              project.startDate ||
+              new Date(Date.now() - 86400000 * 15).toISOString().slice(0, 10),
+            expected_end_date:
+              project.endDate ||
+              new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10),
             supervisor_name: "김소장",
             supervisor_phone: "010-2222-3333",
             created_at: new Date(Date.now() - 86400000 * 14).toISOString(),
@@ -800,12 +893,19 @@ export class MockAPIClient {
             status: "approved" as const,
             construction_name: project.name,
             site_address: project.address,
-            start_date: project.startDate || new Date(Date.now() - 86400000 * 60).toISOString().slice(0, 10),
-            expected_end_date: project.endDate || new Date(Date.now() - 86400000 * 5).toISOString().slice(0, 10),
-            actual_end_date: project.endDate || new Date(Date.now() - 86400000 * 3).toISOString().slice(0, 10),
+            start_date:
+              project.startDate ||
+              new Date(Date.now() - 86400000 * 60).toISOString().slice(0, 10),
+            expected_end_date:
+              project.endDate ||
+              new Date(Date.now() - 86400000 * 5).toISOString().slice(0, 10),
+            actual_end_date:
+              project.endDate ||
+              new Date(Date.now() - 86400000 * 3).toISOString().slice(0, 10),
             supervisor_name: "김소장",
             supervisor_phone: "010-2222-3333",
-            final_amount: this.estimatesById[`est_${pid}`]?.total_amount || "10000000",
+            final_amount:
+              this.estimatesById[`est_${pid}`]?.total_amount || "10000000",
             defect_warranty_period: "1년",
             notes: "공사 정상 완료",
             created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
@@ -819,25 +919,57 @@ export class MockAPIClient {
 
         // Photo album
         const albumId = `album_${pid}`;
-        this.albumsByProject[pid] = [{
-          id: albumId,
-          project_id: pid,
-          name: `${project.name} 시공사진`,
-          description: "착공부터 준공까지 현장 사진",
-          layout: "three_column",
-          status: "published",
-          photo_count: 6,
-          photos: [
-            { id: `aph_${pid}_1`, url: `mock://album/${pid}/1.jpg`, caption: "착공 전 현장", category: "before" },
-            { id: `aph_${pid}_2`, url: `mock://album/${pid}/2.jpg`, caption: "기초공사", category: "during" },
-            { id: `aph_${pid}_3`, url: `mock://album/${pid}/3.jpg`, caption: "방수공사", category: "during" },
-            { id: `aph_${pid}_4`, url: `mock://album/${pid}/4.jpg`, caption: "마감공사", category: "during" },
-            { id: `aph_${pid}_5`, url: `mock://album/${pid}/5.jpg`, caption: "준공 후 외관", category: "after" },
-            { id: `aph_${pid}_6`, url: `mock://album/${pid}/6.jpg`, caption: "준공 후 내부", category: "after" },
-          ],
-          created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-          updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-        }];
+        this.albumsByProject[pid] = [
+          {
+            id: albumId,
+            project_id: pid,
+            name: `${project.name} 시공사진`,
+            description: "착공부터 준공까지 현장 사진",
+            layout: "three_column",
+            status: "published",
+            photo_count: 6,
+            photos: [
+              {
+                id: `aph_${pid}_1`,
+                url: `mock://album/${pid}/1.jpg`,
+                caption: "착공 전 현장",
+                category: "before",
+              },
+              {
+                id: `aph_${pid}_2`,
+                url: `mock://album/${pid}/2.jpg`,
+                caption: "기초공사",
+                category: "during",
+              },
+              {
+                id: `aph_${pid}_3`,
+                url: `mock://album/${pid}/3.jpg`,
+                caption: "방수공사",
+                category: "during",
+              },
+              {
+                id: `aph_${pid}_4`,
+                url: `mock://album/${pid}/4.jpg`,
+                caption: "마감공사",
+                category: "during",
+              },
+              {
+                id: `aph_${pid}_5`,
+                url: `mock://album/${pid}/5.jpg`,
+                caption: "준공 후 외관",
+                category: "after",
+              },
+              {
+                id: `aph_${pid}_6`,
+                url: `mock://album/${pid}/6.jpg`,
+                caption: "준공 후 내부",
+                category: "after",
+              },
+            ],
+            created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+            updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+          },
+        ];
         this.albumsById[albumId] = this.albumsByProject[pid][0];
       }
 
@@ -846,7 +978,8 @@ export class MockAPIClient {
         this.warrantyRequestsByProject[pid] = [
           {
             id: `as_${pid}_1`,
-            description: "옥상 방수 부위에서 미세 누수 재발생. 우천 시 천장 얼룩 확인됨.",
+            description:
+              "옥상 방수 부위에서 미세 누수 재발생. 우천 시 천장 얼룩 확인됨.",
             status: "pending",
             created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
           },
@@ -891,7 +1024,12 @@ export class MockAPIClient {
   }
 
   private getCustomerPrimaryPhone(customer: Partial<CustomerMaster>) {
-    return customer.representative_phone || customer.contact_phone || customer.phone || "";
+    return (
+      customer.representative_phone ||
+      customer.contact_phone ||
+      customer.phone ||
+      ""
+    );
   }
 
   private getCurrentOrganizationId() {
@@ -909,35 +1047,44 @@ export class MockAPIClient {
       return existing;
     }
 
-    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === workerId);
+    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find(
+      (item) => item.id === workerId,
+    );
     const orgId = worker?.organization_id || this.getCurrentOrganizationId();
 
-    const docs: WorkerDocument[] = (["id_card", "safety_cert"] as WorkerDocumentType[]).map(
-      (documentType) => {
-        const approved = documentType === "id_card" ? !!worker?.has_id_card : !!worker?.has_safety_cert;
-        return {
-          id: randomId("wd"),
-          worker_id: workerId,
-          organization_id: orgId,
-          document_id: documentType,
-          document_type: documentType,
-          document_name: this.getWorkerDocumentLabel(documentType),
-          name: this.getWorkerDocumentLabel(documentType),
-          status: approved ? "submitted" : "pending",
-          storage_path: approved ? `mock://worker-documents/${workerId}/${documentType}.pdf` : null,
-          original_filename: approved ? `${this.getWorkerDocumentLabel(documentType)}.pdf` : null,
-          mime_type: approved ? "application/pdf" : null,
-          file_size_bytes: approved ? 1024 * 128 : 0,
-          file_hash_sha256: approved ? randomId("hash") : null,
-          review_status: approved ? "approved" : "pending_review",
-          review_reason: null,
-          reviewed_by_user_id: approved ? "u1" : null,
-          reviewed_at: approved ? nowIso() : null,
-          anomaly_flags: [],
-          uploaded_at: approved ? nowIso() : null,
-        };
-      },
-    );
+    const docs: WorkerDocument[] = (
+      ["id_card", "safety_cert"] as WorkerDocumentType[]
+    ).map((documentType) => {
+      const approved =
+        documentType === "id_card"
+          ? !!worker?.has_id_card
+          : !!worker?.has_safety_cert;
+      return {
+        id: randomId("wd"),
+        worker_id: workerId,
+        organization_id: orgId,
+        document_id: documentType,
+        document_type: documentType,
+        document_name: this.getWorkerDocumentLabel(documentType),
+        name: this.getWorkerDocumentLabel(documentType),
+        status: approved ? "submitted" : "pending",
+        storage_path: approved
+          ? `mock://worker-documents/${workerId}/${documentType}.pdf`
+          : null,
+        original_filename: approved
+          ? `${this.getWorkerDocumentLabel(documentType)}.pdf`
+          : null,
+        mime_type: approved ? "application/pdf" : null,
+        file_size_bytes: approved ? 1024 * 128 : 0,
+        file_hash_sha256: approved ? randomId("hash") : null,
+        review_status: approved ? "approved" : "pending_review",
+        review_reason: null,
+        reviewed_by_user_id: approved ? "u1" : null,
+        reviewed_at: approved ? nowIso() : null,
+        anomaly_flags: [],
+        uploaded_at: approved ? nowIso() : null,
+      };
+    });
 
     this.workerDocumentsByWorker[workerId] = docs;
     return docs;
@@ -946,10 +1093,16 @@ export class MockAPIClient {
   private syncWorkerFlagsFromDocuments(workerId: string) {
     const docs = this.ensureWorkerDocuments(workerId);
     const hasIdCard = docs.some(
-      (doc) => doc.document_type === "id_card" && doc.review_status === "approved" && !!doc.storage_path,
+      (doc) =>
+        doc.document_type === "id_card" &&
+        doc.review_status === "approved" &&
+        !!doc.storage_path,
     );
     const hasSafetyCert = docs.some(
-      (doc) => doc.document_type === "safety_cert" && doc.review_status === "approved" && !!doc.storage_path,
+      (doc) =>
+        doc.document_type === "safety_cert" &&
+        doc.review_status === "approved" &&
+        !!doc.storage_path,
     );
 
     mockDb.update("dailyWorkers", (prev) =>
@@ -1005,7 +1158,9 @@ export class MockAPIClient {
   }
 
   private findWorkerDocumentById(documentId: string) {
-    for (const [workerId, docs] of Object.entries(this.workerDocumentsByWorker)) {
+    for (const [workerId, docs] of Object.entries(
+      this.workerDocumentsByWorker,
+    )) {
       const found = docs.find((doc) => doc.id === documentId);
       if (found) {
         return { workerId, document: found };
@@ -1038,7 +1193,8 @@ export class MockAPIClient {
         customer = catalog.find(
           (item) =>
             item.name === snapshotName &&
-            this.normalizePhone(this.getCustomerPrimaryPhone(item)) === snapshotPhoneNormalized,
+            this.normalizePhone(this.getCustomerPrimaryPhone(item)) ===
+              snapshotPhoneNormalized,
         );
       }
       if (!customer) {
@@ -1067,11 +1223,17 @@ export class MockAPIClient {
     return catalog;
   }
 
-  private getLicenseOwnerKey(ownerType: MockLicenseOwnerType, ownerId: string | number) {
+  private getLicenseOwnerKey(
+    ownerType: MockLicenseOwnerType,
+    ownerId: string | number,
+  ) {
     return `${this.getCurrentOrganizationId()}:${ownerType}:${String(ownerId)}`;
   }
 
-  private getLicenseCatalog(ownerType: MockLicenseOwnerType, ownerId: string | number) {
+  private getLicenseCatalog(
+    ownerType: MockLicenseOwnerType,
+    ownerId: string | number,
+  ) {
     const key = this.getLicenseOwnerKey(ownerType, ownerId);
     if (!this.licenseRecordsByOwner[key]) {
       this.licenseRecordsByOwner[key] = [];
@@ -1087,7 +1249,9 @@ export class MockAPIClient {
     }
 
     const users = this.getStoredUsers();
-    const user = users.find(u => u.username === username) || users.find(u => u.email?.toLowerCase() === username.toLowerCase());
+    const user =
+      users.find((u) => u.username === username) ||
+      users.find((u) => u.email?.toLowerCase() === username.toLowerCase());
 
     if (!user) {
       return delay(
@@ -1152,7 +1316,7 @@ export class MockAPIClient {
         role: user.role,
         organization: {
           id: user.organization_id,
-          name: "시공ON",
+          name: "시공코어",
         },
         created_at: user.created_at,
         last_login_at: user.last_login_at,
@@ -1162,19 +1326,19 @@ export class MockAPIClient {
 
   async checkUsername(username: string) {
     const users = this.getStoredUsers();
-    const exists = users.some(u => u.username === username);
+    const exists = users.some((u) => u.username === username);
     return delay(ok({ available: !exists }));
   }
 
   async checkPhone(phone: string) {
     const users = this.getStoredUsers();
-    const exists = users.some(u => u.phone === phone);
+    const exists = users.some((u) => u.phone === phone);
     return delay(ok({ available: !exists }));
   }
 
   async checkBusinessNumber(businessNumber: string) {
     const tenants = mockDb.get("tenants");
-    const exists = tenants.some(t => t.businessNumber === businessNumber);
+    const exists = tenants.some((t) => t.businessNumber === businessNumber);
     return delay(ok({ available: !exists }));
   }
 
@@ -1191,26 +1355,40 @@ export class MockAPIClient {
 
   async requestPasswordReset(username: string) {
     const users = this.getStoredUsers();
-    const user = users.find(u => u.username === username);
+    const user = users.find((u) => u.username === username);
     if (!user || !user.phone) {
-      return delay(fail<{ request_id: string; masked_phone: string; message: string }>("NOT_FOUND", "등록된 사용자를 찾을 수 없어요"));
+      return delay(
+        fail<{ request_id: string; masked_phone: string; message: string }>(
+          "NOT_FOUND",
+          "등록된 사용자를 찾을 수 없어요",
+        ),
+      );
     }
 
     const request_id = `pwd_${randomId("r")}`;
     const phone = user.phone.replace(/-/g, "");
-    const masked_phone = phone.length >= 8
-      ? `${phone.slice(0, 3)}-****-${phone.slice(-4)}`
-      : "***-****-****";
+    const masked_phone =
+      phone.length >= 8
+        ? `${phone.slice(0, 3)}-****-${phone.slice(-4)}`
+        : "***-****-****";
 
-    console.log(`[MockPasswordReset] Request for ${username}, OTP sent to ${user.phone}, request_id: ${request_id}`);
-    return delay(ok({
-      request_id,
-      masked_phone,
-      message: `${masked_phone}으로 인증번호가 발송되었어요.`
-    }));
+    console.log(
+      `[MockPasswordReset] Request for ${username}, OTP sent to ${user.phone}, request_id: ${request_id}`,
+    );
+    return delay(
+      ok({
+        request_id,
+        masked_phone,
+        message: `${masked_phone}으로 인증번호가 발송되었어요.`,
+      }),
+    );
   }
 
-  async confirmPasswordReset(_requestId: string, _code: string, _newPassword: string) {
+  async confirmPasswordReset(
+    _requestId: string,
+    _code: string,
+    _newPassword: string,
+  ) {
     // Mock에서는 항상 성공
     return delay(ok({ verified: true, message: "비밀번호가 변경되었어요." }));
   }
@@ -1236,7 +1414,9 @@ export class MockAPIClient {
         const representativeMatch = (customer.representative_name || "")
           .toLowerCase()
           .includes(query);
-        const contactMatch = (customer.contact_name || "").toLowerCase().includes(query);
+        const contactMatch = (customer.contact_name || "")
+          .toLowerCase()
+          .includes(query);
         const businessNumberMatch = (customer.business_number || "")
           .toLowerCase()
           .includes(query);
@@ -1303,7 +1483,8 @@ export class MockAPIClient {
     const duplicate = catalog.find(
       (item) =>
         item.name === normalizedName &&
-        this.normalizePhone(this.getCustomerPrimaryPhone(item)) === normalizedPhone,
+        this.normalizePhone(this.getCustomerPrimaryPhone(item)) ===
+          normalizedPhone,
     );
     if (duplicate) {
       return delay(
@@ -1365,7 +1546,9 @@ export class MockAPIClient {
     const next: CustomerMaster = {
       ...current,
       ...(data.name !== undefined && { name: data.name.trim() }),
-      ...(data.customer_kind !== undefined && { customer_kind: data.customer_kind }),
+      ...(data.customer_kind !== undefined && {
+        customer_kind: data.customer_kind,
+      }),
       ...(data.representative_name !== undefined && {
         representative_name: data.representative_name,
       }),
@@ -1375,10 +1558,18 @@ export class MockAPIClient {
       ...(data.business_number !== undefined && {
         business_number: data.business_number,
       }),
-      ...(data.contact_name !== undefined && { contact_name: data.contact_name }),
-      ...(data.contact_phone !== undefined && { contact_phone: data.contact_phone }),
-      ...(data.license_type !== undefined && { license_type: data.license_type }),
-      ...(data.is_women_owned !== undefined && { is_women_owned: data.is_women_owned }),
+      ...(data.contact_name !== undefined && {
+        contact_name: data.contact_name,
+      }),
+      ...(data.contact_phone !== undefined && {
+        contact_phone: data.contact_phone,
+      }),
+      ...(data.license_type !== undefined && {
+        license_type: data.license_type,
+      }),
+      ...(data.is_women_owned !== undefined && {
+        is_women_owned: data.is_women_owned,
+      }),
       ...(data.phone !== undefined && { phone: data.phone }),
       ...(data.memo !== undefined && { memo: data.memo }),
       ...(data.is_active !== undefined && { is_active: data.is_active }),
@@ -1413,13 +1604,15 @@ export class MockAPIClient {
     const existing = catalog.find(
       (item) =>
         item.name === normalizedName &&
-        this.normalizePhone(this.getCustomerPrimaryPhone(item)) === normalizedPhone,
+        this.normalizePhone(this.getCustomerPrimaryPhone(item)) ===
+          normalizedPhone,
     );
     if (existing) {
       const updated: CustomerMaster = {
         ...existing,
         customer_kind: data.customer_kind ?? existing.customer_kind,
-        representative_name: data.representative_name ?? existing.representative_name,
+        representative_name:
+          data.representative_name ?? existing.representative_name,
         representative_phone:
           data.representative_phone ?? existing.representative_phone,
         business_number: data.business_number ?? existing.business_number,
@@ -1427,7 +1620,8 @@ export class MockAPIClient {
         contact_phone: data.contact_phone ?? existing.contact_phone,
         license_type: data.license_type ?? existing.license_type,
         is_women_owned: data.is_women_owned ?? existing.is_women_owned,
-        phone: resolvedPhone || this.getCustomerPrimaryPhone(existing) || undefined,
+        phone:
+          resolvedPhone || this.getCustomerPrimaryPhone(existing) || undefined,
         memo: data.memo ?? existing.memo,
         is_active: true,
         updated_at: nowIso(),
@@ -1484,7 +1678,9 @@ export class MockAPIClient {
         category: p.category,
         customer_master_id: p.customerMasterId,
         customer_master_summary: p.customerMasterId
-          ? customerCatalog.find((customer) => customer.id === p.customerMasterId)
+          ? customerCatalog.find(
+              (customer) => customer.id === p.customerMasterId,
+            )
           : undefined,
         client_name: p.clientName,
         client_phone: p.clientPhone,
@@ -1529,8 +1725,9 @@ export class MockAPIClient {
         status: c.status,
       }));
 
-    const diagnosesCount = Object.values(this.diagnosesById)
-      .filter((d) => d.project_id === id).length;
+    const diagnosesCount = Object.values(this.diagnosesById).filter(
+      (d) => d.project_id === id,
+    ).length;
 
     return delay(
       ok<ProjectDetail>({
@@ -1541,7 +1738,9 @@ export class MockAPIClient {
         category: project.category,
         customer_master_id: project.customerMasterId,
         customer_master_summary: project.customerMasterId
-          ? customerCatalog.find((customer) => customer.id === project.customerMasterId)
+          ? customerCatalog.find(
+              (customer) => customer.id === project.customerMasterId,
+            )
           : undefined,
         client_name: project.clientName,
         client_phone: project.clientPhone,
@@ -1562,7 +1761,9 @@ export class MockAPIClient {
   }
 
   async getProjectAccess(projectId: string) {
-    const project = mockDb.get("projects").find((item) => item.id === projectId);
+    const project = mockDb
+      .get("projects")
+      .find((item) => item.id === projectId);
     if (!project) {
       return delay(
         fail<{ project_id: string; manager_ids: string[] }>(
@@ -1632,7 +1833,9 @@ export class MockAPIClient {
     const organizationId = this.getCurrentOrganizationId();
     const customerCatalog = this.getCustomerCatalog();
     let selectedCustomer = data.customer_master_id
-      ? customerCatalog.find((customer) => customer.id === data.customer_master_id)
+      ? customerCatalog.find(
+          (customer) => customer.id === data.customer_master_id,
+        )
       : undefined;
     if (!selectedCustomer && data.client_name) {
       const normalizedName = data.client_name.trim();
@@ -1640,7 +1843,8 @@ export class MockAPIClient {
       selectedCustomer = customerCatalog.find(
         (customer) =>
           customer.name === normalizedName &&
-          this.normalizePhone(this.getCustomerPrimaryPhone(customer)) === normalizedPhone,
+          this.normalizePhone(this.getCustomerPrimaryPhone(customer)) ===
+            normalizedPhone,
       );
       if (!selectedCustomer) {
         selectedCustomer = {
@@ -1674,7 +1878,9 @@ export class MockAPIClient {
       customerMasterId: data.customer_master_id || selectedCustomer?.id,
       clientName: data.client_name || selectedCustomer?.name || "",
       clientPhone:
-        data.client_phone || this.getCustomerPrimaryPhone(selectedCustomer || {}) || "",
+        data.client_phone ||
+        this.getCustomerPrimaryPhone(selectedCustomer || {}) ||
+        "",
       notes: data.notes,
       organization_id: organizationId,
       visibleToSiteManager: true,
@@ -1707,7 +1913,9 @@ export class MockAPIClient {
     const organizationId = this.getCurrentOrganizationId();
     const customerCatalog = this.getCustomerCatalog();
     let selectedCustomer = data.customer_master_id
-      ? customerCatalog.find((customer) => customer.id === data.customer_master_id)
+      ? customerCatalog.find(
+          (customer) => customer.id === data.customer_master_id,
+        )
       : undefined;
     if (!selectedCustomer && data.client_name) {
       const normalizedName = data.client_name.trim();
@@ -1715,7 +1923,8 @@ export class MockAPIClient {
       selectedCustomer = customerCatalog.find(
         (customer) =>
           customer.name === normalizedName &&
-          this.normalizePhone(this.getCustomerPrimaryPhone(customer)) === normalizedPhone,
+          this.normalizePhone(this.getCustomerPrimaryPhone(customer)) ===
+            normalizedPhone,
       );
       if (!selectedCustomer) {
         selectedCustomer = {
@@ -1747,7 +1956,9 @@ export class MockAPIClient {
               ...p,
               ...(data.name !== undefined && { name: data.name }),
               ...(data.address !== undefined && { address: data.address }),
-              ...(data.category !== undefined && { category: data.category as any }),
+              ...(data.category !== undefined && {
+                category: data.category as any,
+              }),
               ...(data.customer_master_id !== undefined && {
                 customerMasterId: data.customer_master_id || undefined,
               }),
@@ -1763,10 +1974,15 @@ export class MockAPIClient {
               ...(data.customer_master_id !== undefined &&
                 data.client_phone === undefined && {
                   clientPhone:
-                    this.getCustomerPrimaryPhone(selectedCustomer || {}) || p.clientPhone,
+                    this.getCustomerPrimaryPhone(selectedCustomer || {}) ||
+                    p.clientPhone,
                 }),
-              ...(data.client_name !== undefined && { clientName: data.client_name }),
-              ...(data.client_phone !== undefined && { clientPhone: data.client_phone }),
+              ...(data.client_name !== undefined && {
+                clientName: data.client_name,
+              }),
+              ...(data.client_phone !== undefined && {
+                clientPhone: data.client_phone,
+              }),
             }
           : p,
       ),
@@ -1788,9 +2004,14 @@ export class MockAPIClient {
       );
     }
 
-    const updatedProject = applyProjectStatusSideEffects(currentProject, status);
+    const updatedProject = applyProjectStatusSideEffects(
+      currentProject,
+      status,
+    );
     mockDb.update("projects", (prev) =>
-      prev.map((project) => (project.id === projectId ? updatedProject : project)),
+      prev.map((project) =>
+        project.id === projectId ? updatedProject : project,
+      ),
     );
 
     return delay(
@@ -2373,7 +2594,9 @@ export class MockAPIClient {
           : "public_platform"),
       execution_mode:
         data.execution_mode ||
-        (data.template_type === "private_standard" ? "modusign" : "upload_only"),
+        (data.template_type === "private_standard"
+          ? "modusign"
+          : "upload_only"),
       status: "draft",
       notes: data.notes,
       special_terms: data.special_terms,
@@ -2464,17 +2687,21 @@ export class MockAPIClient {
   ) {
     const contract = this.contractsById[contractId];
     if (!contract) {
-      return delay(fail<{ id: string }>("NOT_FOUND", "계약서를 찾을 수 없어요"));
+      return delay(
+        fail<{ id: string }>("NOT_FOUND", "계약서를 찾을 수 없어요"),
+      );
     }
     const next: ContractDetail = {
       ...contract,
       contract_kind: "public_platform",
       execution_mode: "upload_only",
       source_document_path: `mock://contracts/${contractId}/${data.file.name}`,
-      public_platform_type: data.public_platform_type || contract.public_platform_type,
+      public_platform_type:
+        data.public_platform_type || contract.public_platform_type,
       public_contract_reference:
         data.public_contract_reference || contract.public_contract_reference,
-      public_notice_number: data.public_notice_number || contract.public_notice_number,
+      public_notice_number:
+        data.public_notice_number || contract.public_notice_number,
       public_bid_number: data.public_bid_number || contract.public_bid_number,
       completeness: {
         is_complete: true,
@@ -2727,9 +2954,13 @@ export class MockAPIClient {
     let users = mockDb.get("users");
 
     // Tenant isolation: non-super_admin users only see users in their organization
-    if (currentUser && currentUser.role !== "super_admin" && currentUser.organization_id) {
+    if (
+      currentUser &&
+      currentUser.role !== "super_admin" &&
+      currentUser.organization_id
+    ) {
       users = users.filter(
-        (u) => u.organization_id === currentUser.organization_id
+        (u) => u.organization_id === currentUser.organization_id,
       );
     }
 
@@ -2791,7 +3022,9 @@ export class MockAPIClient {
 
     // System-level roles have null organization_id
     const isSystemRole = role === "super_admin" || role === "worker";
-    const organization_id = isSystemRole ? null : (data.organization_id ?? "org_1");
+    const organization_id = isSystemRole
+      ? null
+      : (data.organization_id ?? "org_1");
 
     const user: User = {
       id: randomId("u"),
@@ -2967,7 +3200,8 @@ export class MockAPIClient {
             item_name: "타일공사",
             field: "is_grounded",
             severity: "warning" as const,
-            message: "원본 문서에서 단가를 확인하지 못했습니다 (Grounding 실패)",
+            message:
+              "원본 문서에서 단가를 확인하지 못했습니다 (Grounding 실패)",
             value: null,
           },
           {
@@ -3088,7 +3322,10 @@ export class MockAPIClient {
       if (failed) {
         failed.status = "published";
         failed.failure_reason = undefined;
-        state.summary.failed_count = Math.max(0, state.summary.failed_count - 1);
+        state.summary.failed_count = Math.max(
+          0,
+          state.summary.failed_count - 1,
+        );
         state.summary.success_count += 1;
       } else {
         const newAmount = 1000000;
@@ -3161,7 +3398,7 @@ export class MockAPIClient {
       remark?: string;
       issue_date: string;
       status: "draft" | "issued" | "cancelled" | "failed";
-    }
+    },
   ) {
     const invoiceId = randomId("ti");
     const invoice = {
@@ -3198,7 +3435,7 @@ export class MockAPIClient {
         id: invoiceId,
         status: invoice.status,
         message: "생성했어요",
-      })
+      }),
     );
   }
 
@@ -3215,7 +3452,7 @@ export class MockAPIClient {
       description: string;
       remark: string;
       issue_date: string;
-    }>
+    }>,
   ) {
     const invoice = this.taxInvoicesById[invoiceId];
     if (!invoice) {
@@ -3229,7 +3466,9 @@ export class MockAPIClient {
     this.taxInvoicesById[invoiceId] = {
       ...invoice,
       ...data,
-      total_amount: (data.supply_amount ?? invoice.supply_amount) + (data.tax_amount ?? invoice.tax_amount),
+      total_amount:
+        (data.supply_amount ?? invoice.supply_amount) +
+        (data.tax_amount ?? invoice.tax_amount),
     };
 
     return delay(ok({ id: invoiceId, message: "수정했어요" }));
@@ -3242,7 +3481,9 @@ export class MockAPIClient {
     }
 
     if (invoice.status !== "issued") {
-      return delay(fail("INVALID_STATUS", "발행된 세금계산서만 취소할 수 있어요"));
+      return delay(
+        fail("INVALID_STATUS", "발행된 세금계산서만 취소할 수 있어요"),
+      );
     }
 
     // Check if same day
@@ -3270,7 +3511,9 @@ export class MockAPIClient {
     }
 
     if (invoice.status !== "failed") {
-      return delay(fail("INVALID_STATUS", "실패한 세금계산서만 재시도할 수 있어요"));
+      return delay(
+        fail("INVALID_STATUS", "실패한 세금계산서만 재시도할 수 있어요"),
+      );
     }
 
     this.taxInvoicesById[invoiceId] = {
@@ -3283,15 +3526,23 @@ export class MockAPIClient {
     return delay(ok({ status: "issued" as const, message: "재발행했어요" }));
   }
 
-  async registerWorker(data: { name: string; phone: string; id_number?: string }) {
+  async registerWorker(data: {
+    name: string;
+    phone: string;
+    id_number?: string;
+  }) {
     const users = this.getStoredUsers();
-    const existing = users.find(u => u.phone === data.phone && u.role === "worker");
+    const existing = users.find(
+      (u) => u.phone === data.phone && u.role === "worker",
+    );
     if (existing) {
-      return delay(ok({
-        user_id: existing.id,
-        is_new: false,
-        message: "기존 근로자 정보를 찾았어요.",
-      }));
+      return delay(
+        ok({
+          user_id: existing.id,
+          is_new: false,
+          message: "기존 근로자 정보를 찾았어요.",
+        }),
+      );
     }
 
     // 새 worker 생성
@@ -3309,13 +3560,16 @@ export class MockAPIClient {
       password_hash: "mock_hash",
     };
 
-    mockDb.update("users", prev => [...prev, newWorker]);
+    mockDb.update("users", (prev) => [...prev, newWorker]);
 
-    return delay(ok({
-      user_id: newWorkerId,
-      is_new: true,
-      message: "근로자가 등록되었어요. 임시 비밀번호는 전화번호 뒤 4자리입니다.",
-    }));
+    return delay(
+      ok({
+        user_id: newWorkerId,
+        is_new: true,
+        message:
+          "근로자가 등록되었어요. 임시 비밀번호는 전화번호 뒤 4자리입니다.",
+      }),
+    );
   }
 
   async getBillingOverview() {
@@ -3347,7 +3601,10 @@ export class MockAPIClient {
     const now = new Date();
     const endDate = new Date(tenant.subscription_end_date);
     const diffTime = endDate.getTime() - now.getTime();
-    const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    const daysRemaining = Math.max(
+      0,
+      Math.ceil(diffTime / (1000 * 60 * 60 * 24)),
+    );
 
     // 플랜 이름 변환
     const planNames: Record<string, string> = {
@@ -3373,20 +3630,28 @@ export class MockAPIClient {
         billing_amount: tenant.billing_amount || 0,
         seats_used: tenant.users_count,
         seats_total: seatLimits[tenant.plan] || 2,
-        payment_method: tenant.plan !== "trial" && !tenant.is_custom_trial ? {
-          brand: "현대카드",
-          last4: "1234",
-          expires: "12/28",
-        } : null,
-        history: tenant.plan !== "trial" && !tenant.is_custom_trial ? [
-          {
-            id: "h1",
-            date: tenant.subscription_start_date.slice(0, 10).replace(/-/g, "."),
-            description: `${planNames[tenant.plan]} 연간 구독`,
-            amount: tenant.billing_amount || 0,
-            status: "paid" as const,
-          },
-        ] : [],
+        payment_method:
+          tenant.plan !== "trial" && !tenant.is_custom_trial
+            ? {
+                brand: "현대카드",
+                last4: "1234",
+                expires: "12/28",
+              }
+            : null,
+        history:
+          tenant.plan !== "trial" && !tenant.is_custom_trial
+            ? [
+                {
+                  id: "h1",
+                  date: tenant.subscription_start_date
+                    .slice(0, 10)
+                    .replace(/-/g, "."),
+                  description: `${planNames[tenant.plan]} 연간 구독`,
+                  amount: tenant.billing_amount || 0,
+                  status: "paid" as const,
+                },
+              ]
+            : [],
       }),
     );
   }
@@ -3405,7 +3670,7 @@ export class MockAPIClient {
           expires: data.expiry,
         },
         message: "결제 수단이 변경되었습니다",
-      })
+      }),
     );
   }
 
@@ -3460,7 +3725,7 @@ export class MockAPIClient {
           p.business_number.includes(search) ||
           p.representative_phone.includes(search) ||
           p.contact_name.toLowerCase().includes(search) ||
-          p.contact_phone.includes(search)
+          p.contact_phone.includes(search),
       );
     }
 
@@ -3482,10 +3747,10 @@ export class MockAPIClient {
     is_female_owned?: boolean;
   }) {
     const representativeName = data.representative_name || data.owner || "대표";
-    const businessNumber = data.business_number || data.biz_no || "000-00-00000";
+    const businessNumber =
+      data.business_number || data.biz_no || "000-00-00000";
     const licenseType = data.license_type || data.license;
-    const womenOwned =
-      data.is_women_owned ?? data.is_female_owned ?? false;
+    const womenOwned = data.is_women_owned ?? data.is_female_owned ?? false;
 
     return delay(
       ok({
@@ -3503,7 +3768,7 @@ export class MockAPIClient {
         license: licenseType,
         is_female_owned: womenOwned,
         status: "active" as const,
-      })
+      }),
     );
   }
 
@@ -3522,10 +3787,11 @@ export class MockAPIClient {
       biz_no?: string;
       license?: string;
       is_female_owned?: boolean;
-    }
+    },
   ) {
     const representativeName = data.representative_name || data.owner || "대표";
-    const businessNumber = data.business_number || data.biz_no || "000-00-00000";
+    const businessNumber =
+      data.business_number || data.biz_no || "000-00-00000";
     const licenseType = data.license_type || data.license;
     const womenOwned = data.is_women_owned ?? data.is_female_owned ?? false;
 
@@ -3545,7 +3811,7 @@ export class MockAPIClient {
         license: licenseType,
         is_female_owned: womenOwned,
         status: "active" as const,
-      })
+      }),
     );
   }
 
@@ -3559,7 +3825,7 @@ export class MockAPIClient {
         id,
         status: "inactive" as const,
         message: "상태가 변경되었습니다",
-      })
+      }),
     );
   }
 
@@ -3646,8 +3912,12 @@ export class MockAPIClient {
       const current = catalog[index];
       const next: MockLicenseRecord = {
         ...current,
-        ...(data.license_name !== undefined && { license_name: data.license_name }),
-        ...(data.license_number !== undefined && { license_number: data.license_number }),
+        ...(data.license_name !== undefined && {
+          license_name: data.license_name,
+        }),
+        ...(data.license_number !== undefined && {
+          license_number: data.license_number,
+        }),
         ...(data.issuer !== undefined && { issuer: data.issuer }),
         ...(data.issued_on !== undefined && { issued_on: data.issued_on }),
         ...(data.expires_on !== undefined && { expires_on: data.expires_on }),
@@ -3749,10 +4019,12 @@ export class MockAPIClient {
       id: worker.id,
       name: worker.name,
       role: worker.job_type,
-      status: (worker.is_blocked_for_labor ? "inactive" : "active") as "active" | "inactive",
-      contract_status: (
-        worker.registration_status === "registered" ? "signed" : "pending"
-      ) as "signed" | "pending",
+      status: (worker.is_blocked_for_labor ? "inactive" : "active") as
+        | "active"
+        | "inactive",
+      contract_status: (worker.registration_status === "registered"
+        ? "signed"
+        : "pending") as "signed" | "pending",
       last_work_date: "2026-02-01",
       is_blocked_for_labor: !!worker.is_blocked_for_labor,
       block_reason: worker.block_reason || null,
@@ -3766,7 +4038,7 @@ export class MockAPIClient {
           unsigned_contracts: 2,
         },
         workers: list,
-      })
+      }),
     );
   }
 
@@ -3799,7 +4071,9 @@ export class MockAPIClient {
   > {
     const workers = mockDb.get("dailyWorkers") as DailyWorker[];
     const tenants = mockDb.get("tenants") as Tenant[];
-    const orgNameById = new Map(tenants.map((tenant) => [tenant.id, tenant.name]));
+    const orgNameById = new Map(
+      tenants.map((tenant) => [tenant.id, tenant.name]),
+    );
 
     const workerRows = workers.slice(0, 200).map((worker) => ({
       id: worker.id,
@@ -3807,16 +4081,21 @@ export class MockAPIClient {
       role: worker.job_type,
       organization_id: worker.organization_id,
       organization_name: orgNameById.get(worker.organization_id) || "미지정",
-      status: (worker.is_blocked_for_labor ? "inactive" : "active") as "active" | "inactive",
-      contract_status: (
-        worker.registration_status === "registered" ? "signed" : "pending"
-      ) as "signed" | "pending",
+      status: (worker.is_blocked_for_labor ? "inactive" : "active") as
+        | "active"
+        | "inactive",
+      contract_status: (worker.registration_status === "registered"
+        ? "signed"
+        : "pending") as "signed" | "pending",
       last_work_date: "2026-02-01",
       is_blocked_for_labor: !!worker.is_blocked_for_labor,
       block_reason: worker.block_reason || null,
     }));
 
-    const tenantDistributionMap = new Map<string, { organization_name: string; worker_count: number }>();
+    const tenantDistributionMap = new Map<
+      string,
+      { organization_name: string; worker_count: number }
+    >();
     workerRows.forEach((worker) => {
       const current = tenantDistributionMap.get(worker.organization_id) || {
         organization_name: worker.organization_name,
@@ -3826,13 +4105,13 @@ export class MockAPIClient {
       tenantDistributionMap.set(worker.organization_id, current);
     });
 
-    const tenantWorkerDistribution = Array.from(tenantDistributionMap.entries()).map(
-      ([organization_id, info]) => ({
-        organization_id,
-        organization_name: info.organization_name,
-        worker_count: info.worker_count,
-      }),
-    );
+    const tenantWorkerDistribution = Array.from(
+      tenantDistributionMap.entries(),
+    ).map(([organization_id, info]) => ({
+      organization_id,
+      organization_name: info.organization_name,
+      worker_count: info.worker_count,
+    }));
 
     return delay(
       ok({
@@ -3844,7 +4123,7 @@ export class MockAPIClient {
         },
         workers: workerRows,
         tenant_worker_distribution: tenantWorkerDistribution,
-      })
+      }),
     );
   }
 
@@ -3863,7 +4142,7 @@ export class MockAPIClient {
           photo_count: 0,
           created_at: nowIso(),
         },
-      ])
+      ]),
     );
   }
 
@@ -3880,7 +4159,7 @@ export class MockAPIClient {
         photos: [],
         photo_count: 0,
         created_at: nowIso(),
-      })
+      }),
     );
   }
 
@@ -3893,7 +4172,7 @@ export class MockAPIClient {
       work_description: string;
       tomorrow_plan?: string;
       photos?: string[];
-    }
+    },
   ) {
     return delay(
       ok({
@@ -3906,7 +4185,7 @@ export class MockAPIClient {
         tomorrow_plan: data.tomorrow_plan,
         photos: data.photos || [],
         created_at: nowIso(),
-      })
+      }),
     );
   }
 
@@ -3918,7 +4197,7 @@ export class MockAPIClient {
     return delay(
       new Blob([content], {
         type: "application/vnd.hancom.hwpx",
-      })
+      }),
     );
   }
 
@@ -3929,7 +4208,7 @@ export class MockAPIClient {
         status: "pending",
         sign_url: "https://modusign.co.kr/sign/...",
         created_at: nowIso(),
-      })
+      }),
     );
   }
 
@@ -3940,7 +4219,7 @@ export class MockAPIClient {
         status: "sent",
         sign_url: "https://modusign.co.kr/sign/...",
         message: "전자서명 요청이 전송되었습니다",
-      })
+      }),
     );
   }
 
@@ -3950,7 +4229,7 @@ export class MockAPIClient {
         id: "ms_1",
         status: "cancelled",
         message: "전자서명 요청이 취소되었습니다",
-      })
+      }),
     );
   }
 
@@ -3959,7 +4238,7 @@ export class MockAPIClient {
       ok({
         url: "https://modusign.co.kr/document/download/...",
         filename: "contract_signed.pdf",
-      })
+      }),
     );
   }
 
@@ -3971,11 +4250,26 @@ export class MockAPIClient {
         receivables: 6750000,
         monthly_workers: 24,
         recent_logs: [
-          { id: "1", project: "강남 삼성빌딩 방수공사", date: "2026-02-05", summary: "옥상 방수 1차 도포 완료" },
-          { id: "2", project: "서초 현대아파트 외벽공사", date: "2026-02-05", summary: "외벽 균열 보수 70% 완료" },
-          { id: "3", project: "송파 롯데타워 지하방수", date: "2026-02-04", summary: "지하 2층 방수 시공 시작" },
+          {
+            id: "1",
+            project: "강남 삼성빌딩 방수공사",
+            date: "2026-02-05",
+            summary: "옥상 방수 1차 도포 완료",
+          },
+          {
+            id: "2",
+            project: "서초 현대아파트 외벽공사",
+            date: "2026-02-05",
+            summary: "외벽 균열 보수 70% 완료",
+          },
+          {
+            id: "3",
+            project: "송파 롯데타워 지하방수",
+            date: "2026-02-04",
+            summary: "지하 2층 방수 시공 시작",
+          },
         ],
-      })
+      }),
     );
   }
 
@@ -3984,22 +4278,50 @@ export class MockAPIClient {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const total = projects.length;
-    const inProgress = projects.filter((p: { status: string }) => p.status === "in_progress").length;
-    const completed = projects.filter((p: { status: string }) => p.status === "completed" || p.status === "warranty").length;
-    const thisMonth = projects.filter((p: { createdAt?: string }) => p.createdAt && new Date(p.createdAt) >= monthStart).length;
-    return delay(ok({ total, in_progress: inProgress, completed, this_month: thisMonth }));
+    const inProgress = projects.filter(
+      (p: { status: string }) => p.status === "in_progress",
+    ).length;
+    const completed = projects.filter(
+      (p: { status: string }) =>
+        p.status === "completed" || p.status === "warranty",
+    ).length;
+    const thisMonth = projects.filter(
+      (p: { createdAt?: string }) =>
+        p.createdAt && new Date(p.createdAt) >= monthStart,
+    ).length;
+    return delay(
+      ok({ total, in_progress: inProgress, completed, this_month: thisMonth }),
+    );
   }
 
   async getExpiringSubscriptions(_days?: number) {
     return delay(
       ok({
         items: [
-          { id: "1", company_name: "(주)삼성건설", plan: "스탠다드", expires_at: "2026-02-10", days_remaining: 4 },
-          { id: "2", company_name: "현대방수", plan: "스타터", expires_at: "2026-02-12", days_remaining: 6 },
-          { id: "3", company_name: "롯데건축", plan: "프리미엄", expires_at: "2026-02-15", days_remaining: 9 },
+          {
+            id: "1",
+            company_name: "(주)삼성건설",
+            plan: "스탠다드",
+            expires_at: "2026-02-10",
+            days_remaining: 4,
+          },
+          {
+            id: "2",
+            company_name: "현대방수",
+            plan: "스타터",
+            expires_at: "2026-02-12",
+            days_remaining: 6,
+          },
+          {
+            id: "3",
+            company_name: "롯데건축",
+            plan: "프리미엄",
+            expires_at: "2026-02-15",
+            days_remaining: 9,
+          },
         ],
         total: 3,
-      })
+      }),
     );
   }
 
@@ -4038,7 +4360,7 @@ export class MockAPIClient {
           { plan: "Basic", count: 7, revenue: 4116000, percentage: 46.7 },
           { plan: "Pro", count: 3, revenue: 3564000, percentage: 20.0 },
         ],
-      })
+      }),
     );
   }
 
@@ -4048,7 +4370,7 @@ export class MockAPIClient {
       ok({
         sent_count: 5,
         message: "5건의 급여명세서를 발송했습니다",
-      })
+      }),
     );
   }
 
@@ -4069,7 +4391,10 @@ export class MockAPIClient {
     const target = this.workerInvitations[inviteToken];
     if (!target) {
       return delay(
-        fail<{ worker_id: string }>("INVALID_INVITE", "초대 링크가 유효하지 않아요"),
+        fail<{ worker_id: string }>(
+          "INVALID_INVITE",
+          "초대 링크가 유효하지 않아요",
+        ),
       );
     }
     return delay(ok({ worker_id: target.worker_id }));
@@ -4119,7 +4444,12 @@ export class MockAPIClient {
   }
 
   async getWorkerProfile(workerId: string) {
-    const users = mockDb.get("users") as Array<{ id: string; name: string; phone?: string; role: string }>;
+    const users = mockDb.get("users") as Array<{
+      id: string;
+      name: string;
+      phone?: string;
+      role: string;
+    }>;
     const user = users.find((u) => u.id === workerId);
     const workers = mockDb.get("dailyWorkers") as any[];
     const worker = workers.find((w) => w.id === workerId);
@@ -4170,11 +4500,19 @@ export class MockAPIClient {
         id: documentId,
         status: "submitted",
         file_name: file.name,
-      })
+      }),
     );
   }
 
-  async updateWorkerProfile(workerId: string, data: { phone?: string; address?: string; bank_name?: string; account_number?: string }) {
+  async updateWorkerProfile(
+    workerId: string,
+    data: {
+      phone?: string;
+      address?: string;
+      bank_name?: string;
+      account_number?: string;
+    },
+  ) {
     const workers = mockDb.get("dailyWorkers") as any[];
     const workerIndex = workers.findIndex((w) => w.id === workerId);
 
@@ -4186,28 +4524,42 @@ export class MockAPIClient {
     if (data.phone !== undefined) updated.phone = data.phone;
     if (data.address !== undefined) updated.address = data.address;
     if (data.bank_name !== undefined) updated.bank_name = data.bank_name;
-    if (data.account_number !== undefined) updated.account_number = data.account_number;
+    if (data.account_number !== undefined)
+      updated.account_number = data.account_number;
 
     mockDb.update("dailyWorkers", (prev: any[]) =>
-      prev.map((w, i) => (i === workerIndex ? updated : w))
+      prev.map((w, i) => (i === workerIndex ? updated : w)),
     );
 
     return delay(ok({ updated: true }));
   }
 
-  async changeWorkerPassword(_workerId: string, data: { current_password: string; new_password: string }) {
+  async changeWorkerPassword(
+    _workerId: string,
+    data: { current_password: string; new_password: string },
+  ) {
     if (!data.current_password || data.current_password.length < 1) {
       return delay(fail("INVALID_PASSWORD", "현재 비밀번호를 입력하세요."));
     }
     if (!data.new_password || data.new_password.length < 8) {
-      return delay(fail("WEAK_PASSWORD", "새 비밀번호는 8자 이상이어야 합니다."));
+      return delay(
+        fail("WEAK_PASSWORD", "새 비밀번호는 8자 이상이어야 합니다."),
+      );
     }
     // Mock: always succeeds (current password not verified in mock mode)
     return delay(ok({ updated: true }));
   }
 
-  async createWorkerInvitation(data: { name: string; phone: string; organization_id: string; invited_by: string; token: string }) {
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  async createWorkerInvitation(data: {
+    name: string;
+    phone: string;
+    organization_id: string;
+    invited_by: string;
+    token: string;
+  }) {
+    const expiresAt = new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
     const invitation: Invitation = {
       id: randomId("inv"),
       phone: data.phone,
@@ -4223,7 +4575,9 @@ export class MockAPIClient {
 
     mockDb.update("invitations", (prev: Invitation[]) => [...prev, invitation]);
 
-    return delay(ok({ id: invitation.id, token: data.token, expires_at: expiresAt }));
+    return delay(
+      ok({ id: invitation.id, token: data.token, expires_at: expiresAt }),
+    );
   }
 
   async verifyWorkerInviteToken(token: string) {
@@ -4251,19 +4605,24 @@ export class MockAPIClient {
     const orgId = invitation.organization_id;
     const org = orgId ? { name: "(주)유니그린" } : null;
 
-    return delay(ok({
-      valid: true,
-      name: invitation.name,
-      phone: invitation.phone,
-      companyName: org?.name || "(주)유니그린",
-      invitation_id: invitation.id,
-    }));
+    return delay(
+      ok({
+        valid: true,
+        name: invitation.name,
+        phone: invitation.phone,
+        companyName: org?.name || "(주)유니그린",
+        invitation_id: invitation.id,
+      }),
+    );
   }
 
   async getPendingWorkerInvitations(organization_id: string) {
     const invitations = mockDb.get("invitations") as Invitation[];
     const pending = invitations.filter(
-      (inv) => inv.organization_id === organization_id && inv.role === "worker" && inv.status === "pending"
+      (inv) =>
+        inv.organization_id === organization_id &&
+        inv.role === "worker" &&
+        inv.status === "pending",
     );
     return delay(ok(pending));
   }
@@ -4277,14 +4636,20 @@ export class MockAPIClient {
     }
 
     // Extend expiry
-    const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const newExpiresAt = new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
     mockDb.update("invitations", (prev: Invitation[]) =>
       prev.map((inv) =>
-        inv.id === invitationId ? { ...inv, expires_at: newExpiresAt, created_at: nowIso() } : inv
-      )
+        inv.id === invitationId
+          ? { ...inv, expires_at: newExpiresAt, created_at: nowIso() }
+          : inv,
+      ),
     );
 
-    return delay(ok({ resent: true, expires_at: newExpiresAt, invite_url: inviteUrl }));
+    return delay(
+      ok({ resent: true, expires_at: newExpiresAt, invite_url: inviteUrl }),
+    );
   }
 
   async revokeWorkerInvitation(invitationId: string) {
@@ -4297,8 +4662,10 @@ export class MockAPIClient {
 
     mockDb.update("invitations", (prev: Invitation[]) =>
       prev.map((inv) =>
-        inv.id === invitationId ? { ...inv, status: "revoked" as InvitationStatus } : inv
-      )
+        inv.id === invitationId
+          ? { ...inv, status: "revoked" as InvitationStatus }
+          : inv,
+      ),
     );
 
     return delay(ok({ revoked: true }));
@@ -4394,8 +4761,8 @@ export class MockAPIClient {
     const DEFAULT_TRIAL_DAYS = 30;
     const PLAN_PRICES: Record<string, number> = {
       trial: 0,
-      basic: 588000,  // 49,000 × 12 (연간)
-      pro: 1188000,   // 99,000 × 12 (연간)
+      basic: 588000, // 49,000 × 12 (연간)
+      pro: 1188000, // 99,000 × 12 (연간)
     };
 
     if (data.plan === "trial") {
@@ -4404,7 +4771,7 @@ export class MockAPIClient {
       billingAmount = 0;
     } else {
       endDate = new Date(now);
-      endDate.setFullYear(endDate.getFullYear() + 1);  // 1년 후
+      endDate.setFullYear(endDate.getFullYear() + 1); // 1년 후
       billingAmount = PLAN_PRICES[data.plan] || 0;
     }
 
@@ -4472,7 +4839,7 @@ export class MockAPIClient {
     if (currentUser?.organization_id) {
       const tenants = mockDb.get("tenants");
       const tenantIdx = tenants.findIndex(
-        (t) => t.id === currentUser.organization_id
+        (t) => t.id === currentUser.organization_id,
       );
 
       if (tenantIdx >= 0) {
@@ -4503,8 +4870,8 @@ export class MockAPIClient {
         mockDb.set(
           "tenants",
           tenants.map((t) =>
-            t.id === currentUser.organization_id ? updatedTenant : t
-          )
+            t.id === currentUser.organization_id ? updatedTenant : t,
+          ),
         );
       }
     }
@@ -4518,7 +4885,7 @@ export class MockAPIClient {
         order_id: data.order_id,
         amount: data.amount,
         approved_at: nowIso(),
-      })
+      }),
     );
   }
 
@@ -4530,7 +4897,7 @@ export class MockAPIClient {
     const currentUser = mockDb.get("currentUser");
     if (!currentUser?.organization_id) {
       return delay(
-        fail<{ message: string }>("UNAUTHORIZED", "인증이 필요합니다")
+        fail<{ message: string }>("UNAUTHORIZED", "인증이 필요합니다"),
       );
     }
 
@@ -4543,11 +4910,13 @@ export class MockAPIClient {
     const tenantPlan = planMapping[plan];
     const tenants = mockDb.get("tenants");
     const tenantIdx = tenants.findIndex(
-      (t) => t.id === currentUser.organization_id
+      (t) => t.id === currentUser.organization_id,
     );
 
     if (tenantIdx < 0) {
-      return delay(fail<{ message: string }>("NOT_FOUND", "테넌트를 찾을 수 없어요"));
+      return delay(
+        fail<{ message: string }>("NOT_FOUND", "테넌트를 찾을 수 없어요"),
+      );
     }
 
     const tenant = tenants[tenantIdx];
@@ -4571,7 +4940,9 @@ export class MockAPIClient {
 
     mockDb.set(
       "tenants",
-      tenants.map((t) => (t.id === currentUser.organization_id ? updatedTenant : t))
+      tenants.map((t) =>
+        t.id === currentUser.organization_id ? updatedTenant : t,
+      ),
     );
 
     return delay(ok({ message: "플랜이 변경되었습니다" }));
@@ -4581,17 +4952,19 @@ export class MockAPIClient {
     const currentUser = mockDb.get("currentUser");
     if (!currentUser?.organization_id) {
       return delay(
-        fail<{ message: string }>("UNAUTHORIZED", "인증이 필요합니다")
+        fail<{ message: string }>("UNAUTHORIZED", "인증이 필요합니다"),
       );
     }
 
     const tenants = mockDb.get("tenants");
     const tenantIdx = tenants.findIndex(
-      (t) => t.id === currentUser.organization_id
+      (t) => t.id === currentUser.organization_id,
     );
 
     if (tenantIdx < 0) {
-      return delay(fail<{ message: string }>("NOT_FOUND", "테넌트를 찾을 수 없어요"));
+      return delay(
+        fail<{ message: string }>("NOT_FOUND", "테넌트를 찾을 수 없어요"),
+      );
     }
 
     const tenant = tenants[tenantIdx];
@@ -4608,7 +4981,9 @@ export class MockAPIClient {
 
     mockDb.set(
       "tenants",
-      tenants.map((t) => (t.id === currentUser.organization_id ? updatedTenant : t))
+      tenants.map((t) =>
+        t.id === currentUser.organization_id ? updatedTenant : t,
+      ),
     );
 
     return delay(ok({ message: "구독이 취소되었습니다" }));
@@ -4644,18 +5019,19 @@ export class MockAPIClient {
   async getTenant(tenantId: string) {
     const tenant = mockDb.get("tenants").find((t) => t.id === tenantId);
     if (!tenant) {
-      return delay(
-        fail<Tenant>("NOT_FOUND", "테넌트를 찾을 수 없어요"),
-      );
+      return delay(fail<Tenant>("NOT_FOUND", "테넌트를 찾을 수 없어요"));
     }
 
     return delay(ok(tenant));
   }
 
-  async setCustomTrialPeriod(tenantId: string, data: {
-    end_date: string;  // ISO date
-    reason?: string;
-  }) {
+  async setCustomTrialPeriod(
+    tenantId: string,
+    data: {
+      end_date: string; // ISO date
+      reason?: string;
+    },
+  ) {
     const tenants = mockDb.get("tenants");
     const idx = tenants.findIndex((t) => t.id === tenantId);
 
@@ -4673,7 +5049,7 @@ export class MockAPIClient {
       ...tenants[idx],
       subscription_end_date: data.end_date,
       is_custom_trial: true,
-      billing_amount: 0,  // 무료
+      billing_amount: 0, // 무료
     };
 
     mockDb.set(
@@ -4805,9 +5181,7 @@ export class MockAPIClient {
         return delay(ok(report));
       }
     }
-    return delay(
-      fail<any>("NOT_FOUND", "보고서를 찾을 수 없어요"),
-    );
+    return delay(fail<any>("NOT_FOUND", "보고서를 찾을 수 없어요"));
   }
 
   async createStartReport(
@@ -4869,12 +5243,7 @@ export class MockAPIClient {
     );
 
     if (!startReport) {
-      return delay(
-        fail<any>(
-          "PRECONDITION_FAILED",
-          "승인된 착공계가 없어요",
-        ),
-      );
+      return delay(fail<any>("PRECONDITION_FAILED", "승인된 착공계가 없어요"));
     }
 
     const reportId = randomId("report");
@@ -4883,7 +5252,8 @@ export class MockAPIClient {
       project_id: projectId,
       report_type: "completion" as const,
       status: "draft" as const,
-      auto_link_representative_docs: startReport.auto_link_representative_docs ?? true,
+      auto_link_representative_docs:
+        startReport.auto_link_representative_docs ?? true,
       construction_name: startReport.construction_name,
       site_address: startReport.site_address,
       start_date: startReport.start_date,
@@ -4931,9 +5301,7 @@ export class MockAPIClient {
         return delay(ok({ id: reportId, message: "저장했어요" }));
       }
     }
-    return delay(
-      fail<any>("NOT_FOUND", "보고서를 찾을 수 없어요"),
-    );
+    return delay(fail<any>("NOT_FOUND", "보고서를 찾을 수 없어요"));
   }
 
   async submitConstructionReport(reportId: string) {
@@ -4951,9 +5319,7 @@ export class MockAPIClient {
         );
       }
     }
-    return delay(
-      fail<any>("NOT_FOUND", "보고서를 찾을 수 없어요"),
-    );
+    return delay(fail<any>("NOT_FOUND", "보고서를 찾을 수 없어요"));
   }
 
   async approveConstructionReport(reportId: string) {
@@ -4964,9 +5330,7 @@ export class MockAPIClient {
           .get("projects")
           .find((item) => item.id === report.project_id);
         if (!project) {
-          return delay(
-            fail<any>("NOT_FOUND", "프로젝트를 찾을 수 없어요"),
-          );
+          return delay(fail<any>("NOT_FOUND", "프로젝트를 찾을 수 없어요"));
         }
 
         const projectStatusBefore = project.status;
@@ -5027,9 +5391,7 @@ export class MockAPIClient {
         );
       }
     }
-    return delay(
-      fail<any>("NOT_FOUND", "보고서를 찾을 수 없어요"),
-    );
+    return delay(fail<any>("NOT_FOUND", "보고서를 찾을 수 없어요"));
   }
 
   async rejectConstructionReport(reportId: string, reason: string) {
@@ -5048,9 +5410,7 @@ export class MockAPIClient {
         );
       }
     }
-    return delay(
-      fail<any>("NOT_FOUND", "보고서를 찾을 수 없어요"),
-    );
+    return delay(fail<any>("NOT_FOUND", "보고서를 찾을 수 없어요"));
   }
 
   // Photo Album APIs
@@ -5072,7 +5432,11 @@ export class MockAPIClient {
 
   async createPhotoAlbum(
     projectId: string,
-    data: { name: string; description?: string; layout?: "three_column" | "four_column" }
+    data: {
+      name: string;
+      description?: string;
+      layout?: "three_column" | "four_column";
+    },
   ) {
     const albumId = randomId("album");
     const album = {
@@ -5104,7 +5468,7 @@ export class MockAPIClient {
       description?: string;
       layout?: "three_column" | "four_column";
       status?: "draft" | "published";
-    }
+    },
   ) {
     const album = this.albumsById[albumId];
     if (!album) {
@@ -5122,9 +5486,9 @@ export class MockAPIClient {
 
     this.albumsById[albumId] = updated;
     const projectId = album.project_id;
-    this.albumsByProject[projectId] = (this.albumsByProject[projectId] || []).map(
-      (a) => (a.id === albumId ? updated : a)
-    );
+    this.albumsByProject[projectId] = (
+      this.albumsByProject[projectId] || []
+    ).map((a) => (a.id === albumId ? updated : a));
 
     return delay(ok({ id: albumId, message: "수정했어요" }));
   }
@@ -5137,9 +5501,9 @@ export class MockAPIClient {
 
     const projectId = album.project_id;
     delete this.albumsById[albumId];
-    this.albumsByProject[projectId] = (this.albumsByProject[projectId] || []).filter(
-      (a) => a.id !== albumId
-    );
+    this.albumsByProject[projectId] = (
+      this.albumsByProject[projectId] || []
+    ).filter((a) => a.id !== albumId);
 
     return delay(ok<void>(null));
   }
@@ -5169,9 +5533,9 @@ export class MockAPIClient {
 
     this.albumsById[albumId] = updated;
     const projectId = album.project_id;
-    this.albumsByProject[projectId] = (this.albumsByProject[projectId] || []).map(
-      (a) => (a.id === albumId ? updated : a)
-    );
+    this.albumsByProject[projectId] = (
+      this.albumsByProject[projectId] || []
+    ).map((a) => (a.id === albumId ? updated : a));
 
     return delay(ok({ added_count: newPhotos.length }));
   }
@@ -5191,14 +5555,17 @@ export class MockAPIClient {
 
     this.albumsById[albumId] = updated;
     const projectId = album.project_id;
-    this.albumsByProject[projectId] = (this.albumsByProject[projectId] || []).map(
-      (a) => (a.id === albumId ? updated : a)
-    );
+    this.albumsByProject[projectId] = (
+      this.albumsByProject[projectId] || []
+    ).map((a) => (a.id === albumId ? updated : a));
 
     return delay(ok<void>(null));
   }
 
-  async reorderAlbumPhotos(albumId: string, photos: Array<{ id: string; sort_order: number }>) {
+  async reorderAlbumPhotos(
+    albumId: string,
+    photos: Array<{ id: string; sort_order: number }>,
+  ) {
     const album = this.albumsById[albumId];
     if (!album) {
       return delay(fail<any>("NOT_FOUND", "앨범을 찾을 수 없어요"));
@@ -5219,9 +5586,9 @@ export class MockAPIClient {
 
     this.albumsById[albumId] = updated;
     const projectId = album.project_id;
-    this.albumsByProject[projectId] = (this.albumsByProject[projectId] || []).map(
-      (a) => (a.id === albumId ? updated : a)
-    );
+    this.albumsByProject[projectId] = (
+      this.albumsByProject[projectId] || []
+    ).map((a) => (a.id === albumId ? updated : a));
 
     return delay(ok({ message: "순서를 변경했어요" }));
   }
@@ -5259,8 +5626,8 @@ export class MockAPIClient {
       return delay(
         fail<{ id: string; token: string; invite_url: string }>(
           "UNAUTHORIZED",
-          "로그인이 필요해요"
-        )
+          "로그인이 필요해요",
+        ),
       );
     }
 
@@ -5270,8 +5637,8 @@ export class MockAPIClient {
         return delay(
           fail<{ id: string; token: string; invite_url: string }>(
             "FORBIDDEN",
-            "현장소장만 초대할 수 있어요"
-          )
+            "현장소장만 초대할 수 있어요",
+          ),
         );
       }
     } else if (currentUser.role === "super_admin") {
@@ -5279,46 +5646,42 @@ export class MockAPIClient {
         return delay(
           fail<{ id: string; token: string; invite_url: string }>(
             "FORBIDDEN",
-            "슈퍼관리자는 대표 계정만 초대할 수 있어요"
-          )
+            "슈퍼관리자는 대표 계정만 초대할 수 있어요",
+          ),
         );
       }
     } else {
       return delay(
         fail<{ id: string; token: string; invite_url: string }>(
           "FORBIDDEN",
-          "초대 권한이 없어요"
-        )
+          "초대 권한이 없어요",
+        ),
       );
     }
 
     // Check for existing pending invitation
     const invitations = mockDb.get("invitations");
     const existingInvite = invitations.find(
-      (inv) =>
-        inv.phone === data.phone &&
-        inv.status === "pending"
+      (inv) => inv.phone === data.phone && inv.status === "pending",
     );
     if (existingInvite) {
       return delay(
         fail<{ id: string; token: string; invite_url: string }>(
           "DUPLICATE",
-          "이미 대기중인 초대가 있어요"
-        )
+          "이미 대기중인 초대가 있어요",
+        ),
       );
     }
 
     // Check if user already exists
     const users = mockDb.get("users");
-    const existingUser = users.find(
-      (u) => u.phone === data.phone
-    );
+    const existingUser = users.find((u) => u.phone === data.phone);
     if (existingUser) {
       return delay(
         fail<{ id: string; token: string; invite_url: string }>(
           "DUPLICATE",
-          "이미 등록된 사용자예요"
-        )
+          "이미 등록된 사용자예요",
+        ),
       );
     }
 
@@ -5344,14 +5707,17 @@ export class MockAPIClient {
 
     // Log invite URL for development
     const inviteUrl = `/accept-invite/${token}`;
-    console.log("📧 초대 링크:", `${typeof window !== "undefined" ? window.location.origin : ""}${inviteUrl}`);
+    console.log(
+      "📧 초대 링크:",
+      `${typeof window !== "undefined" ? window.location.origin : ""}${inviteUrl}`,
+    );
 
     return delay(
       ok({
         id: invitationId,
         token,
         invite_url: inviteUrl,
-      })
+      }),
     );
   }
 
@@ -5373,7 +5739,7 @@ export class MockAPIClient {
     // Filter by organization (unless super_admin)
     if (currentUser.role !== "super_admin" && currentUser.organization_id) {
       invitations = invitations.filter(
-        (inv) => inv.organization_id === currentUser.organization_id
+        (inv) => inv.organization_id === currentUser.organization_id,
       );
     }
 
@@ -5409,8 +5775,8 @@ export class MockAPIClient {
           created_at: inv.created_at,
           expires_at: inv.expires_at,
         })),
-        { page, per_page, total, total_pages }
-      )
+        { page, per_page, total, total_pages },
+      ),
     );
   }
 
@@ -5423,8 +5789,8 @@ export class MockAPIClient {
       return delay(
         fail<{ id: string; token: string; invite_url: string }>(
           "UNAUTHORIZED",
-          "로그인이 필요해요"
-        )
+          "로그인이 필요해요",
+        ),
       );
     }
 
@@ -5435,8 +5801,8 @@ export class MockAPIClient {
       return delay(
         fail<{ id: string; token: string; invite_url: string }>(
           "NOT_FOUND",
-          "초대를 찾을 수 없어요"
-        )
+          "초대를 찾을 수 없어요",
+        ),
       );
     }
 
@@ -5448,8 +5814,8 @@ export class MockAPIClient {
       return delay(
         fail<{ id: string; token: string; invite_url: string }>(
           "FORBIDDEN",
-          "권한이 없어요"
-        )
+          "권한이 없어요",
+        ),
       );
     }
 
@@ -5457,8 +5823,8 @@ export class MockAPIClient {
       return delay(
         fail<{ id: string; token: string; invite_url: string }>(
           "INVALID_STATUS",
-          "재발송할 수 없는 상태예요"
-        )
+          "재발송할 수 없는 상태예요",
+        ),
       );
     }
 
@@ -5475,18 +5841,21 @@ export class MockAPIClient {
 
     mockDb.set(
       "invitations",
-      invitations.map((inv) => (inv.id === invitationId ? updated : inv))
+      invitations.map((inv) => (inv.id === invitationId ? updated : inv)),
     );
 
     const inviteUrl = `/accept-invite/${newToken}`;
-    console.log("📧 초대 재발송:", `${typeof window !== "undefined" ? window.location.origin : ""}${inviteUrl}`);
+    console.log(
+      "📧 초대 재발송:",
+      `${typeof window !== "undefined" ? window.location.origin : ""}${inviteUrl}`,
+    );
 
     return delay(
       ok({
         id: invitationId,
         token: newToken,
         invite_url: inviteUrl,
-      })
+      }),
     );
   }
 
@@ -5496,36 +5865,56 @@ export class MockAPIClient {
   async revokeInvitation(invitationId: string) {
     const currentUser = this.getCurrentUser();
     if (!currentUser) {
-      return delay(fail<{ id: string; status: InvitationStatus }>("UNAUTHORIZED", "로그인이 필요해요"));
+      return delay(
+        fail<{ id: string; status: InvitationStatus }>(
+          "UNAUTHORIZED",
+          "로그인이 필요해요",
+        ),
+      );
     }
 
     const invitations = mockDb.get("invitations");
     const invitation = invitations.find((inv) => inv.id === invitationId);
 
     if (!invitation) {
-      return delay(fail<{ id: string; status: InvitationStatus }>("NOT_FOUND", "초대를 찾을 수 없어요"));
+      return delay(
+        fail<{ id: string; status: InvitationStatus }>(
+          "NOT_FOUND",
+          "초대를 찾을 수 없어요",
+        ),
+      );
     }
 
     if (
       currentUser.role !== "super_admin" &&
       invitation.organization_id !== currentUser.organization_id
     ) {
-      return delay(fail<{ id: string; status: InvitationStatus }>("FORBIDDEN", "권한이 없어요"));
+      return delay(
+        fail<{ id: string; status: InvitationStatus }>(
+          "FORBIDDEN",
+          "권한이 없어요",
+        ),
+      );
     }
 
     if (invitation.status !== "pending") {
       return delay(
-        fail<{ id: string; status: InvitationStatus }>("INVALID_STATUS", "취소할 수 없는 상태예요")
+        fail<{ id: string; status: InvitationStatus }>(
+          "INVALID_STATUS",
+          "취소할 수 없는 상태예요",
+        ),
       );
     }
 
     const updated: Invitation = { ...invitation, status: "revoked" };
     mockDb.set(
       "invitations",
-      invitations.map((inv) => (inv.id === invitationId ? updated : inv))
+      invitations.map((inv) => (inv.id === invitationId ? updated : inv)),
     );
 
-    return delay(ok({ id: invitationId, status: "revoked" as InvitationStatus }));
+    return delay(
+      ok({ id: invitationId, status: "revoked" as InvitationStatus }),
+    );
   }
 
   /**
@@ -5545,7 +5934,7 @@ export class MockAPIClient {
           organization_name: string;
           status: InvitationStatus;
           expires_at: string;
-        }>("NOT_FOUND", "유효하지 않은 초대 링크예요")
+        }>("NOT_FOUND", "유효하지 않은 초대 링크예요"),
       );
     }
 
@@ -5560,7 +5949,7 @@ export class MockAPIClient {
           organization_name: string;
           status: InvitationStatus;
           expires_at: string;
-        }>("EXPIRED", "만료된 초대 링크예요")
+        }>("EXPIRED", "만료된 초대 링크예요"),
       );
     }
 
@@ -5574,14 +5963,14 @@ export class MockAPIClient {
           organization_name: string;
           status: InvitationStatus;
           expires_at: string;
-        }>("INVALID_STATUS", "이미 처리된 초대예요")
+        }>("INVALID_STATUS", "이미 처리된 초대예요"),
       );
     }
 
     // Get organization name
     const tenants = mockDb.get("tenants");
     const tenant = tenants.find((t) => t.id === invitation.organization_id);
-    const organizationName = tenant?.name || "시공ON";
+    const organizationName = tenant?.name || "시공코어";
 
     return delay(
       ok({
@@ -5592,7 +5981,7 @@ export class MockAPIClient {
         organization_name: organizationName,
         status: invitation.status,
         expires_at: invitation.expires_at,
-      })
+      }),
     );
   }
 
@@ -5607,8 +5996,8 @@ export class MockAPIClient {
       return delay(
         fail<{ user_id: string; message: string }>(
           "NOT_FOUND",
-          "유효하지 않은 초대 링크예요"
-        )
+          "유효하지 않은 초대 링크예요",
+        ),
       );
     }
 
@@ -5616,8 +6005,8 @@ export class MockAPIClient {
       return delay(
         fail<{ user_id: string; message: string }>(
           "EXPIRED",
-          "만료된 초대 링크예요"
-        )
+          "만료된 초대 링크예요",
+        ),
       );
     }
 
@@ -5625,8 +6014,8 @@ export class MockAPIClient {
       return delay(
         fail<{ user_id: string; message: string }>(
           "INVALID_STATUS",
-          "이미 처리된 초대예요"
-        )
+          "이미 처리된 초대예요",
+        ),
       );
     }
 
@@ -5634,8 +6023,8 @@ export class MockAPIClient {
       return delay(
         fail<{ user_id: string; message: string }>(
           "VALIDATION",
-          "비밀번호는 6자 이상이어야 해요"
-        )
+          "비밀번호는 6자 이상이어야 해요",
+        ),
       );
     }
 
@@ -5644,7 +6033,7 @@ export class MockAPIClient {
     const newUser: User = {
       id: userId,
       username: `worker_${invitation.phone.replace(/[^0-9]/g, "")}`,
-      email: `worker_${invitation.phone.replace(/[^0-9]/g, "")}@sigongon.local`,
+      email: `worker_${invitation.phone.replace(/[^0-9]/g, "")}@sigongcore.local`,
       phone: invitation.phone,
       name: invitation.name,
       role: invitation.role,
@@ -5663,7 +6052,7 @@ export class MockAPIClient {
     };
     mockDb.set(
       "invitations",
-      invitations.map((inv) => (inv.token === token ? updated : inv))
+      invitations.map((inv) => (inv.token === token ? updated : inv)),
     );
 
     // Update tenant user count
@@ -5673,15 +6062,15 @@ export class MockAPIClient {
       tenants.map((t) =>
         t.id === invitation.organization_id
           ? { ...t, users_count: t.users_count + 1 }
-          : t
-      )
+          : t,
+      ),
     );
 
     return delay(
       ok({
         user_id: userId,
         message: "계정이 생성되었어요. 로그인해 주세요.",
-      })
+      }),
     );
   }
 
@@ -5765,7 +6154,7 @@ export class MockAPIClient {
         specification: "PVC 100A",
         unit: "m",
         unit_price: 18000,
-        confidence: 0.90,
+        confidence: 0.9,
       },
     ];
 
@@ -5773,7 +6162,7 @@ export class MockAPIClient {
     const filtered = allResults.filter(
       (item) =>
         item.description.toLowerCase().includes(lowerQuery) ||
-        (item.specification?.toLowerCase() || "").includes(lowerQuery)
+        (item.specification?.toLowerCase() || "").includes(lowerQuery),
     );
 
     return delay(ok(filtered.length > 0 ? filtered : allResults.slice(0, 5)));
@@ -5892,9 +6281,7 @@ export class MockAPIClient {
       });
     }
 
-    return delay(
-      ok(this.materialOrdersByProject[projectId] || [])
-    );
+    return delay(ok(this.materialOrdersByProject[projectId] || []));
   }
 
   async getMaterialOrdersMobile(projectId: string) {
@@ -5934,7 +6321,7 @@ export class MockAPIClient {
       }>;
       notes?: string;
       vendor_id?: number;
-    }
+    },
   ) {
     const orderId = randomId("mo");
     const orderNumber = `MO-2026-${String(Object.keys(this.materialOrdersById).length + 1).padStart(3, "0")}`;
@@ -5984,7 +6371,7 @@ export class MockAPIClient {
         order_number: orderNumber,
         status: "draft" as const,
         total_amount: totalAmount,
-      })
+      }),
     );
   }
 
@@ -6019,11 +6406,16 @@ export class MockAPIClient {
 
     // Update timestamps based on status
     if (typeof payload !== "string") {
-      if (payload.invoice_number !== undefined) order.invoice_number = payload.invoice_number;
-      if (payload.invoice_amount !== undefined) order.invoice_amount = payload.invoice_amount;
-      if (payload.invoice_file_url !== undefined) order.invoice_file_url = payload.invoice_file_url;
+      if (payload.invoice_number !== undefined)
+        order.invoice_number = payload.invoice_number;
+      if (payload.invoice_amount !== undefined)
+        order.invoice_amount = payload.invoice_amount;
+      if (payload.invoice_file_url !== undefined)
+        order.invoice_file_url = payload.invoice_file_url;
       if (payload.reason) {
-        order.notes = order.notes ? `[${payload.reason}] ${order.notes}` : payload.reason;
+        order.notes = order.notes
+          ? `[${payload.reason}] ${order.notes}`
+          : payload.reason;
       }
     }
 
@@ -6048,7 +6440,7 @@ export class MockAPIClient {
         id: orderId,
         status,
         message: "상태가 업데이트되었습니다",
-      })
+      }),
     );
   }
 
@@ -6064,7 +6456,9 @@ export class MockAPIClient {
     // Remove from project list
     if (this.materialOrdersByProject[order.project_id]) {
       this.materialOrdersByProject[order.project_id] =
-        this.materialOrdersByProject[order.project_id].filter(o => o.id !== orderId);
+        this.materialOrdersByProject[order.project_id].filter(
+          (o) => o.id !== orderId,
+        );
     }
 
     return delay(ok(null));
@@ -6085,7 +6479,7 @@ export class MockAPIClient {
         phone: user.phone,
         role: user.role,
         organization: user.organization_id
-          ? { id: user.organization_id, name: "시공ON" }
+          ? { id: user.organization_id, name: "시공코어" }
           : null,
         is_active: user.is_active,
         created_at: user.created_at || nowIso(),
@@ -6094,7 +6488,11 @@ export class MockAPIClient {
     );
   }
 
-  async updateMyProfile(data: { name?: string; email?: string; phone?: string }) {
+  async updateMyProfile(data: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  }) {
     const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
     const updatedUser = { ...currentUser, ...data };
 
@@ -6119,7 +6517,10 @@ export class MockAPIClient {
     return delay(ok({ success: true }));
   }
 
-  async changeMyPassword(data: { current_password: string; new_password: string }) {
+  async changeMyPassword(data: {
+    current_password: string;
+    new_password: string;
+  }) {
     // Mock: just validate that current_password is not empty
     if (!data.current_password) {
       return delay(fail("INVALID_PASSWORD", "현재 비밀번호를 입력해 주세요"));
@@ -6162,7 +6563,9 @@ export class MockAPIClient {
     return delay(ok(prefs));
   }
 
-  async updateMyNotificationPrefs(data: Partial<Omit<NotificationPrefs, "user_id">>) {
+  async updateMyNotificationPrefs(
+    data: Partial<Omit<NotificationPrefs, "user_id">>,
+  ) {
     const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
     const allPrefs = mockDb.get("notificationPrefs") as NotificationPrefs[];
     const idx = allPrefs.findIndex((p) => p.user_id === currentUser.id);
@@ -6215,13 +6618,17 @@ export class MockAPIClient {
   }
 
   async logoutAllDevices() {
-    return delay(ok({ success: true, message: "모든 기기에서 로그아웃되었습니다" }));
+    return delay(
+      ok({ success: true, message: "모든 기기에서 로그아웃되었습니다" }),
+    );
   }
 
   async requestAccountDeactivation(reason?: string) {
     const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
     if (currentUser.role === "super_admin") {
-      return delay(fail("FORBIDDEN", "최고관리자 계정은 비활성화할 수 없습니다"));
+      return delay(
+        fail("FORBIDDEN", "최고관리자 계정은 비활성화할 수 없습니다"),
+      );
     }
     return delay(ok({ success: true, message: "계정이 비활성화되었습니다" }));
   }
@@ -6283,7 +6690,9 @@ export class MockAPIClient {
     );
   }
 
-  async createDailyWorker(data: Omit<DailyWorker, "id">): Promise<APIResponse<{ id: string }>> {
+  async createDailyWorker(
+    data: Omit<DailyWorker, "id">,
+  ): Promise<APIResponse<{ id: string }>> {
     const id = randomId("dw");
     const worker: DailyWorker = {
       id,
@@ -6302,31 +6711,45 @@ export class MockAPIClient {
     return delay(ok({ id }));
   }
 
-  async updateDailyWorker(id: string, data: Partial<Omit<DailyWorker, "id">>): Promise<APIResponse<{ id: string }>> {
+  async updateDailyWorker(
+    id: string,
+    data: Partial<Omit<DailyWorker, "id">>,
+  ): Promise<APIResponse<{ id: string }>> {
     const workers = mockDb.get("dailyWorkers");
     const idx = workers.findIndex((w) => w.id === id);
-    if (idx === -1) return delay(fail<DailyWorker>("NOT_FOUND", "근로자를 찾을 수 없습니다"));
+    if (idx === -1)
+      return delay(fail<DailyWorker>("NOT_FOUND", "근로자를 찾을 수 없습니다"));
     const updated: DailyWorker = {
       ...workers[idx],
       ...data,
       has_id_card: workers[idx].has_id_card,
       has_safety_cert: workers[idx].has_safety_cert,
     };
-    mockDb.update("dailyWorkers", (prev) => prev.map((w) => (w.id === id ? updated : w)));
+    mockDb.update("dailyWorkers", (prev) =>
+      prev.map((w) => (w.id === id ? updated : w)),
+    );
     this.syncWorkerFlagsFromDocuments(id);
     return delay(ok({ id }));
   }
 
-  async deleteDailyWorker(id: string): Promise<APIResponse<{ success: boolean }>> {
+  async deleteDailyWorker(
+    id: string,
+  ): Promise<APIResponse<{ success: boolean }>> {
     mockDb.update("dailyWorkers", (prev) => prev.filter((w) => w.id !== id));
     delete this.workerDocumentsByWorker[id];
     return delay(ok({ success: true }));
   }
 
-  async getDailyWorkerDocuments(workerId: string): Promise<APIResponse<WorkerDocument[]>> {
-    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === workerId);
+  async getDailyWorkerDocuments(
+    workerId: string,
+  ): Promise<APIResponse<WorkerDocument[]>> {
+    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find(
+      (item) => item.id === workerId,
+    );
     if (!worker || !this.isWorkerInScope(worker)) {
-      return delay(fail<WorkerDocument[]>("NOT_FOUND", "근로자를 찾을 수 없습니다"));
+      return delay(
+        fail<WorkerDocument[]>("NOT_FOUND", "근로자를 찾을 수 없습니다"),
+      );
     }
 
     const docs = this.ensureWorkerDocuments(workerId);
@@ -6341,39 +6764,53 @@ export class MockAPIClient {
     workerId: string,
     documentType: WorkerDocumentType,
     file: File,
-  ): Promise<APIResponse<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>> {
-    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === workerId);
+  ): Promise<
+    APIResponse<{
+      worker_id: string;
+      document: WorkerDocument;
+      requires_review: boolean;
+    }>
+  > {
+    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find(
+      (item) => item.id === workerId,
+    );
     if (!worker || !this.isWorkerInScope(worker)) {
       return delay(
-        fail<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>(
-          "NOT_FOUND",
-          "근로자를 찾을 수 없습니다",
-        ),
+        fail<{
+          worker_id: string;
+          document: WorkerDocument;
+          requires_review: boolean;
+        }>("NOT_FOUND", "근로자를 찾을 수 없습니다"),
       );
     }
     if (documentType !== "id_card" && documentType !== "safety_cert") {
       return delay(
-        fail<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>(
-          "INVALID_DOCUMENT_TYPE",
-          "지원하지 않는 서류 유형입니다",
-        ),
+        fail<{
+          worker_id: string;
+          document: WorkerDocument;
+          requires_review: boolean;
+        }>("INVALID_DOCUMENT_TYPE", "지원하지 않는 서류 유형입니다"),
       );
     }
-    const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : "";
+    const ext = file.name.includes(".")
+      ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
+      : "";
     if (![".jpg", ".jpeg", ".png", ".pdf"].includes(ext)) {
       return delay(
-        fail<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>(
-          "INVALID_FILE_TYPE",
-          "PDF 또는 JPG/PNG 파일만 업로드할 수 있습니다",
-        ),
+        fail<{
+          worker_id: string;
+          document: WorkerDocument;
+          requires_review: boolean;
+        }>("INVALID_FILE_TYPE", "PDF 또는 JPG/PNG 파일만 업로드할 수 있습니다"),
       );
     }
     if (file.size > 10 * 1024 * 1024) {
       return delay(
-        fail<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>(
-          "FILE_TOO_LARGE",
-          "파일은 10MB 이하로 업로드해 주세요",
-        ),
+        fail<{
+          worker_id: string;
+          document: WorkerDocument;
+          requires_review: boolean;
+        }>("FILE_TOO_LARGE", "파일은 10MB 이하로 업로드해 주세요"),
       );
     }
 
@@ -6381,10 +6818,11 @@ export class MockAPIClient {
     const target = docs.find((doc) => doc.document_type === documentType);
     if (!target) {
       return delay(
-        fail<{ worker_id: string; document: WorkerDocument; requires_review: boolean }>(
-          "NOT_FOUND",
-          "서류 슬롯을 찾을 수 없습니다",
-        ),
+        fail<{
+          worker_id: string;
+          document: WorkerDocument;
+          requires_review: boolean;
+        }>("NOT_FOUND", "서류 슬롯을 찾을 수 없습니다"),
       );
     }
 
@@ -6418,8 +6856,12 @@ export class MockAPIClient {
         return {
           ...item,
           has_id_card: documentType === "id_card" ? false : item.has_id_card,
-          has_safety_cert: documentType === "safety_cert" ? false : item.has_safety_cert,
-          registration_status: item.registration_status === "registered" ? "pending_docs" : item.registration_status,
+          has_safety_cert:
+            documentType === "safety_cert" ? false : item.has_safety_cert,
+          registration_status:
+            item.registration_status === "registered"
+              ? "pending_docs"
+              : item.registration_status,
         };
       }),
     );
@@ -6443,7 +6885,12 @@ export class MockAPIClient {
     reviewStatus: WorkerDocument["review_status"] | "all" = "pending_review",
   ): Promise<APIResponse<WorkerDocumentReviewQueueItem[]>> {
     if (!this.canReviewWorkerDocuments()) {
-      return delay(fail<WorkerDocumentReviewQueueItem[]>("FORBIDDEN", "검토 권한이 없습니다"));
+      return delay(
+        fail<WorkerDocumentReviewQueueItem[]>(
+          "FORBIDDEN",
+          "검토 권한이 없습니다",
+        ),
+      );
     }
 
     const workers = mockDb.get("dailyWorkers") as DailyWorker[];
@@ -6460,7 +6907,8 @@ export class MockAPIClient {
           id: doc.id || randomId("wd"),
           worker_name: worker.name,
           worker_job_type: worker.job_type,
-          worker_registration_status: worker.registration_status || "pending_docs",
+          worker_registration_status:
+            worker.registration_status || "pending_docs",
           worker_is_blocked_for_labor: !!worker.is_blocked_for_labor,
           worker_block_reason: worker.block_reason || null,
         });
@@ -6480,20 +6928,39 @@ export class MockAPIClient {
     data: { action: WorkerDocumentReviewAction; reason?: string },
   ): Promise<APIResponse<{ worker_id: string; document: WorkerDocument }>> {
     if (!this.canReviewWorkerDocuments()) {
-      return delay(fail<{ worker_id: string; document: WorkerDocument }>("FORBIDDEN", "검토 권한이 없습니다"));
+      return delay(
+        fail<{ worker_id: string; document: WorkerDocument }>(
+          "FORBIDDEN",
+          "검토 권한이 없습니다",
+        ),
+      );
     }
 
     const found = this.findWorkerDocumentById(workerDocumentId);
     if (!found) {
-      return delay(fail<{ worker_id: string; document: WorkerDocument }>("NOT_FOUND", "서류를 찾을 수 없습니다"));
+      return delay(
+        fail<{ worker_id: string; document: WorkerDocument }>(
+          "NOT_FOUND",
+          "서류를 찾을 수 없습니다",
+        ),
+      );
     }
-    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === found.workerId);
+    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find(
+      (item) => item.id === found.workerId,
+    );
     if (!worker || !this.isWorkerInScope(worker)) {
-      return delay(fail<{ worker_id: string; document: WorkerDocument }>("NOT_FOUND", "서류를 찾을 수 없습니다"));
+      return delay(
+        fail<{ worker_id: string; document: WorkerDocument }>(
+          "NOT_FOUND",
+          "서류를 찾을 수 없습니다",
+        ),
+      );
     }
 
     const action = data.action;
-    if (!["approve", "reject", "quarantine", "request_reupload"].includes(action)) {
+    if (
+      !["approve", "reject", "quarantine", "request_reupload"].includes(action)
+    ) {
       return delay(
         fail<{ worker_id: string; document: WorkerDocument }>(
           "INVALID_ACTION",
@@ -6502,11 +6969,24 @@ export class MockAPIClient {
       );
     }
     const reason = data.reason?.trim();
-    if ((action === "reject" || action === "quarantine" || action === "request_reupload") && !reason) {
-      return delay(fail<{ worker_id: string; document: WorkerDocument }>("MISSING_REASON", "사유를 입력해 주세요"));
+    if (
+      (action === "reject" ||
+        action === "quarantine" ||
+        action === "request_reupload") &&
+      !reason
+    ) {
+      return delay(
+        fail<{ worker_id: string; document: WorkerDocument }>(
+          "MISSING_REASON",
+          "사유를 입력해 주세요",
+        ),
+      );
     }
 
-    const statusMap: Record<WorkerDocumentReviewAction, WorkerDocument["review_status"]> = {
+    const statusMap: Record<
+      WorkerDocumentReviewAction,
+      WorkerDocument["review_status"]
+    > = {
       approve: "approved",
       reject: "rejected",
       quarantine: "quarantined",
@@ -6514,10 +6994,16 @@ export class MockAPIClient {
     };
     found.document.review_status = statusMap[action];
     found.document.review_reason = reason || null;
-    found.document.reviewed_by_user_id = (this.getCurrentUser() || this.getStoredUsers()[0]).id;
+    found.document.reviewed_by_user_id = (
+      this.getCurrentUser() || this.getStoredUsers()[0]
+    ).id;
     found.document.reviewed_at = nowIso();
     found.document.status =
-      action === "approve" ? "submitted" : action === "quarantine" ? "blocked" : "rejected";
+      action === "approve"
+        ? "submitted"
+        : action === "quarantine"
+          ? "blocked"
+          : "rejected";
 
     this.pushWorkerModerationLog({
       worker_id: found.workerId,
@@ -6558,7 +7044,9 @@ export class MockAPIClient {
         }>("FORBIDDEN", "통제 권한이 없습니다"),
       );
     }
-    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === workerId);
+    const worker = (mockDb.get("dailyWorkers") as DailyWorker[]).find(
+      (item) => item.id === workerId,
+    );
     if (!worker || !this.isWorkerInScope(worker)) {
       return delay(
         fail<{
@@ -6603,7 +7091,9 @@ export class MockAPIClient {
       action: `worker_${data.action}`,
       reason: data.reason?.trim(),
     });
-    const current = (mockDb.get("dailyWorkers") as DailyWorker[]).find((item) => item.id === workerId)!;
+    const current = (mockDb.get("dailyWorkers") as DailyWorker[]).find(
+      (item) => item.id === workerId,
+    )!;
 
     return delay(
       ok({
@@ -6632,12 +7122,18 @@ export class MockAPIClient {
   async getWorkRecords(projectId: string, year: number, month: number) {
     const records = mockDb.get("dailyWorkRecords").filter((r) => {
       const d = new Date(r.work_date);
-      return r.project_id === projectId && d.getFullYear() === year && d.getMonth() + 1 === month;
+      return (
+        r.project_id === projectId &&
+        d.getFullYear() === year &&
+        d.getMonth() + 1 === month
+      );
     });
     return delay(ok(records));
   }
 
-  async upsertWorkRecords(records: Array<Omit<DailyWorkRecord, "id"> & { id?: string }>) {
+  async upsertWorkRecords(
+    records: Array<Omit<DailyWorkRecord, "id"> & { id?: string }>,
+  ) {
     const workers = mockDb.get("dailyWorkers");
     const blockedWorkers = [...new Set(records.map((r) => r.worker_id))]
       .map((workerId) => workers.find((worker) => worker.id === workerId))
@@ -6652,7 +7148,9 @@ export class MockAPIClient {
       );
 
     if (blockedWorkers.length > 0) {
-      const blockedNames = blockedWorkers.map((worker) => worker.name).join(", ");
+      const blockedNames = blockedWorkers
+        .map((worker) => worker.name)
+        .join(", ");
       return delay(
         fail(
           "LABOR_DEPLOYMENT_GATE",
@@ -6666,7 +7164,11 @@ export class MockAPIClient {
 
     for (const rec of records) {
       if (rec.id && existingMap.has(rec.id)) {
-        existingMap.set(rec.id, { ...existingMap.get(rec.id)!, ...rec, id: rec.id });
+        existingMap.set(rec.id, {
+          ...existingMap.get(rec.id)!,
+          ...rec,
+          id: rec.id,
+        });
       } else {
         const id = rec.id || randomId("dwr");
         existingMap.set(id, { ...rec, id } as DailyWorkRecord);
@@ -6678,47 +7180,65 @@ export class MockAPIClient {
   }
 
   async deleteWorkRecord(id: string) {
-    mockDb.update("dailyWorkRecords", (prev) => prev.filter((r) => r.id !== id));
+    mockDb.update("dailyWorkRecords", (prev) =>
+      prev.filter((r) => r.id !== id),
+    );
     return delay(ok({ success: true }));
   }
 
-  async generateSiteReport(projectId: string, year: number, month: number): Promise<APIResponse<SitePayrollReport>> {
+  async generateSiteReport(
+    projectId: string,
+    year: number,
+    month: number,
+  ): Promise<APIResponse<SitePayrollReport>> {
     const workers = mockDb.get("dailyWorkers");
     const allRecords = mockDb.get("dailyWorkRecords");
     const rates = this.getRatesForYear(year);
     const project = mockDb.get("projects").find((p) => p.id === projectId);
 
-    if (!project) return delay(fail("NOT_FOUND", "프로젝트를 찾을 수 없습니다"));
+    if (!project)
+      return delay(fail("NOT_FOUND", "프로젝트를 찾을 수 없습니다"));
 
     const projectRecords = allRecords.filter((r) => {
       const d = new Date(r.work_date);
-      return r.project_id === projectId && d.getFullYear() === year && d.getMonth() + 1 === month;
+      return (
+        r.project_id === projectId &&
+        d.getFullYear() === year &&
+        d.getMonth() + 1 === month
+      );
     });
 
     const workerIds = [...new Set(projectRecords.map((r) => r.worker_id))];
     // buildWorkerEntry imported at top level
 
-    const entries: SitePayrollWorkerEntry[] = workerIds.map((wid) => {
-      const worker = workers.find((w) => w.id === wid);
-      if (!worker) return null;
-      const workerRecords = projectRecords.filter((r) => r.worker_id === wid);
-      return buildWorkerEntry(worker, workerRecords, rates, year, month);
-    }).filter(Boolean) as SitePayrollWorkerEntry[];
+    const entries: SitePayrollWorkerEntry[] = workerIds
+      .map((wid) => {
+        const worker = workers.find((w) => w.id === wid);
+        if (!worker) return null;
+        const workerRecords = projectRecords.filter((r) => r.worker_id === wid);
+        return buildWorkerEntry(worker, workerRecords, rates, year, month);
+      })
+      .filter(Boolean) as SitePayrollWorkerEntry[];
 
     const totals = this.sumEntries(entries);
 
-    return delay(ok({
-      project_id: projectId,
-      project_name: project.name,
-      year,
-      month,
-      organization_name: "유니그린개발",
-      entries,
-      totals,
-    }));
+    return delay(
+      ok({
+        project_id: projectId,
+        project_name: project.name,
+        year,
+        month,
+        organization_name: "유니그린개발",
+        entries,
+        totals,
+      }),
+    );
   }
 
-  async generateConsolidatedReport(year: number, month: number): Promise<APIResponse<MonthlyConsolidatedReport>> {
+  async generateConsolidatedReport(
+    year: number,
+    month: number,
+  ): Promise<APIResponse<MonthlyConsolidatedReport>> {
     const workers = mockDb.get("dailyWorkers");
     const allRecords = mockDb.get("dailyWorkRecords");
     const rates = this.getRatesForYear(year);
@@ -6738,26 +7258,32 @@ export class MockAPIClient {
     const workerIds = [...new Set(monthRecords.map((r) => r.worker_id))];
     // buildWorkerEntry imported at top level
 
-    const entries: SitePayrollWorkerEntry[] = workerIds.map((wid) => {
-      const worker = workers.find((w) => w.id === wid);
-      if (!worker) return null;
-      const workerRecords = monthRecords.filter((r) => r.worker_id === wid);
-      return buildWorkerEntry(worker, workerRecords, rates, year, month);
-    }).filter(Boolean) as SitePayrollWorkerEntry[];
+    const entries: SitePayrollWorkerEntry[] = workerIds
+      .map((wid) => {
+        const worker = workers.find((w) => w.id === wid);
+        if (!worker) return null;
+        const workerRecords = monthRecords.filter((r) => r.worker_id === wid);
+        return buildWorkerEntry(worker, workerRecords, rates, year, month);
+      })
+      .filter(Boolean) as SitePayrollWorkerEntry[];
 
     const totals = this.sumEntries(entries);
 
-    return delay(ok({
-      year,
-      month,
-      organization_name: "유니그린개발",
-      projects: projectList,
-      entries,
-      totals,
-    }));
+    return delay(
+      ok({
+        year,
+        month,
+        organization_name: "유니그린개발",
+        projects: projectList,
+        entries,
+        totals,
+      }),
+    );
   }
 
-  async getInsuranceRates(year?: number): Promise<APIResponse<LaborInsuranceRates[]>> {
+  async getInsuranceRates(
+    year?: number,
+  ): Promise<APIResponse<LaborInsuranceRates[]>> {
     const rates = mockDb.get("insuranceRates");
     if (year) {
       const filtered = rates.filter((r) => r.effective_year === year);
@@ -6766,16 +7292,24 @@ export class MockAPIClient {
     return delay(ok(rates));
   }
 
-  async updateInsuranceRates(id: string, data: Partial<Omit<LaborInsuranceRates, "id">>): Promise<APIResponse<LaborInsuranceRates>> {
+  async updateInsuranceRates(
+    id: string,
+    data: Partial<Omit<LaborInsuranceRates, "id">>,
+  ): Promise<APIResponse<LaborInsuranceRates>> {
     const rates = mockDb.get("insuranceRates");
     const idx = rates.findIndex((r) => r.id === id);
-    if (idx === -1) return delay(fail("NOT_FOUND", "요율 설정을 찾을 수 없습니다"));
+    if (idx === -1)
+      return delay(fail("NOT_FOUND", "요율 설정을 찾을 수 없습니다"));
     const updated = { ...rates[idx], ...data };
-    mockDb.update("insuranceRates", (prev) => prev.map((r) => (r.id === id ? updated : r)));
+    mockDb.update("insuranceRates", (prev) =>
+      prev.map((r) => (r.id === id ? updated : r)),
+    );
     return delay(ok(updated));
   }
 
-  async createInsuranceRates(data: Omit<LaborInsuranceRates, "id">): Promise<APIResponse<LaborInsuranceRates>> {
+  async createInsuranceRates(
+    data: Omit<LaborInsuranceRates, "id">,
+  ): Promise<APIResponse<LaborInsuranceRates>> {
     const id = randomId("ir");
     const newRates: LaborInsuranceRates = { id, ...data };
     mockDb.update("insuranceRates", (prev) => [...prev, newRates]);
@@ -6814,7 +7348,10 @@ export class MockAPIClient {
     return delay(ok(active));
   }
 
-  async createSeason(data: { name: string; is_active?: boolean }): Promise<APIResponse<SeasonInfo>> {
+  async createSeason(data: {
+    name: string;
+    is_active?: boolean;
+  }): Promise<APIResponse<SeasonInfo>> {
     const id = nextSnowflake();
     const season: SeasonInfo = {
       id,
@@ -6830,13 +7367,21 @@ export class MockAPIClient {
     return delay(ok(season));
   }
 
-  async updateSeason(seasonId: number, data: { is_active: boolean }): Promise<APIResponse<SeasonInfo>> {
+  async updateSeason(
+    seasonId: number,
+    data: { is_active: boolean },
+  ): Promise<APIResponse<SeasonInfo>> {
     const target = this.seasons.find((s) => s.id === seasonId);
     if (!target) return delay(fail("NOT_FOUND", "시즌을 찾을 수 없습니다"));
     if (data.is_active) {
-      this.seasons = this.seasons.map((s) => ({ ...s, is_active: s.id === seasonId }));
+      this.seasons = this.seasons.map((s) => ({
+        ...s,
+        is_active: s.id === seasonId,
+      }));
     } else {
-      this.seasons = this.seasons.map((s) => (s.id === seasonId ? { ...s, is_active: false } : s));
+      this.seasons = this.seasons.map((s) =>
+        s.id === seasonId ? { ...s, is_active: false } : s,
+      );
     }
     this.ensureEstimationCategory(seasonId);
     const updated = this.seasons.find((s) => s.id === seasonId)!;
@@ -6899,7 +7444,8 @@ export class MockAPIClient {
     data: { name?: string; is_enabled?: boolean; sort_order?: number },
   ): Promise<APIResponse<SeasonCategoryInfo>> {
     const idx = this.seasonCategories.findIndex((row) => row.id === categoryId);
-    if (idx === -1) return delay(fail("NOT_FOUND", "카테고리를 찾을 수 없습니다"));
+    if (idx === -1)
+      return delay(fail("NOT_FOUND", "카테고리를 찾을 수 없습니다"));
     const next = { ...this.seasonCategories[idx], ...data };
     this.seasonCategories[idx] = next;
     return delay(ok(next));
@@ -6919,8 +7465,11 @@ export class MockAPIClient {
       rows = rows.filter((row) => row.season_id === params.season_id);
     }
     if (params?.category_id) {
-      const category = this.seasonCategories.find((row) => row.id === params.category_id);
-      if (!category) return delay(fail("NOT_FOUND", "카테고리를 찾을 수 없습니다"));
+      const category = this.seasonCategories.find(
+        (row) => row.id === params.category_id,
+      );
+      if (!category)
+        return delay(fail("NOT_FOUND", "카테고리를 찾을 수 없습니다"));
       rows = rows.filter(
         (row) =>
           row.season_id === category.season_id &&
@@ -6980,7 +7529,9 @@ export class MockAPIClient {
       }
     }
 
-    const mappedCategory = this.seasonCategories.find((row) => row.id === categoryId);
+    const mappedCategory = this.seasonCategories.find(
+      (row) => row.id === categoryId,
+    );
     const doc: SeasonDocumentInfo = {
       id,
       season_id: data.season_id,
@@ -7020,10 +7571,15 @@ export class MockAPIClient {
     });
   }
 
-  async ingestAdminDocument(documentId: number): Promise<APIResponse<SeasonDocumentStatusInfo>> {
+  async ingestAdminDocument(
+    documentId: number,
+  ): Promise<APIResponse<SeasonDocumentStatusInfo>> {
     const idx = this.seasonDocuments.findIndex((d) => d.id === documentId);
     if (idx === -1) return delay(fail("NOT_FOUND", "문서를 찾을 수 없습니다"));
-    this.seasonDocuments[idx] = { ...this.seasonDocuments[idx], status: "done" };
+    this.seasonDocuments[idx] = {
+      ...this.seasonDocuments[idx],
+      status: "done",
+    };
     return delay(
       ok({
         id: documentId,
@@ -7035,7 +7591,9 @@ export class MockAPIClient {
     );
   }
 
-  async getAdminDocumentStatus(documentId: number): Promise<APIResponse<SeasonDocumentStatusInfo>> {
+  async getAdminDocumentStatus(
+    documentId: number,
+  ): Promise<APIResponse<SeasonDocumentStatusInfo>> {
     const doc = this.seasonDocuments.find((d) => d.id === documentId);
     if (!doc) return delay(fail("NOT_FOUND", "문서를 찾을 수 없습니다"));
     return delay(
@@ -7063,8 +7621,11 @@ export class MockAPIClient {
     return delay(ok(next));
   }
 
-  async getEstimationGovernanceOverview(): Promise<APIResponse<EstimationGovernanceOverview>> {
-    const activeSeason = this.seasons.find((season) => season.is_active) ?? null;
+  async getEstimationGovernanceOverview(): Promise<
+    APIResponse<EstimationGovernanceOverview>
+  > {
+    const activeSeason =
+      this.seasons.find((season) => season.is_active) ?? null;
     const warnings: EstimationGovernanceOverview["health_warnings"] = [];
 
     if (!activeSeason) {
@@ -7104,7 +7665,9 @@ export class MockAPIClient {
       });
     }
 
-    const enabledCategoryNames = new Set(enabledCategories.map((category) => category.name));
+    const enabledCategoryNames = new Set(
+      enabledCategories.map((category) => category.name),
+    );
     const enabledDocuments = this.seasonDocuments
       .filter(
         (document) =>
@@ -7122,7 +7685,9 @@ export class MockAPIClient {
       });
     }
 
-    const doneDocumentCount = enabledDocuments.filter((document) => document.status === "done").length;
+    const doneDocumentCount = enabledDocuments.filter(
+      (document) => document.status === "done",
+    ).length;
     if (doneDocumentCount === 0) {
       warnings.push({
         code: "NO_DONE_ENABLED_DOCUMENT",
@@ -7155,9 +7720,13 @@ export class MockAPIClient {
     return delay(ok([...this.diagnosisCases].sort((a, b) => b.id - a.id)));
   }
 
-  async createCase(data?: { season_id?: number }): Promise<APIResponse<DiagnosisCase>> {
+  async createCase(data?: {
+    season_id?: number;
+  }): Promise<APIResponse<DiagnosisCase>> {
     const season =
-      (data?.season_id ? this.seasons.find((s) => s.id === data.season_id) : undefined) ||
+      (data?.season_id
+        ? this.seasons.find((s) => s.id === data.season_id)
+        : undefined) ||
       this.seasons.find((s) => s.is_active) ||
       this.seasons[0];
     if (!season) return delay(fail("NOT_FOUND", "시즌이 없습니다"));
@@ -7181,7 +7750,9 @@ export class MockAPIClient {
     return delay(ok(item));
   }
 
-  async getCaseImages(caseId: number): Promise<APIResponse<DiagnosisCaseImage[]>> {
+  async getCaseImages(
+    caseId: number,
+  ): Promise<APIResponse<DiagnosisCaseImage[]>> {
     return delay(ok(this.caseImagesByCaseId[caseId] || []));
   }
 
@@ -7199,7 +7770,10 @@ export class MockAPIClient {
       meta_json: metaJson,
       created_at: nowIso(),
     };
-    this.caseImagesByCaseId[caseId] = [...(this.caseImagesByCaseId[caseId] || []), item];
+    this.caseImagesByCaseId[caseId] = [
+      ...(this.caseImagesByCaseId[caseId] || []),
+      item,
+    ];
     return delay(ok(item));
   }
 
@@ -7223,10 +7797,26 @@ export class MockAPIClient {
             next_checks: ["우천 시 재촬영", "배관 관통부 추가 촬영"],
           },
         ],
-        work_items: [{ name: "우레탄 방수 보수", required: true, rationale: "균열 구간 방수 보강" }],
+        work_items: [
+          {
+            name: "우레탄 방수 보수",
+            required: true,
+            rationale: "균열 구간 방수 보강",
+          },
+        ],
         materials: [
-          { name: "우레탄 방수제", spec_hint: "2회 도포", unit_hint: "m2", qty_hint: "20" },
-          { name: "실리콘 실란트", spec_hint: "중성", unit_hint: "ea", qty_hint: "4" },
+          {
+            name: "우레탄 방수제",
+            spec_hint: "2회 도포",
+            unit_hint: "m2",
+            qty_hint: "20",
+          },
+          {
+            name: "실리콘 실란트",
+            spec_hint: "중성",
+            unit_hint: "ea",
+            qty_hint: "4",
+          },
         ],
         confidence: 0.76,
         questions_for_user: ["실내 누수 위치를 알려주세요."],
@@ -7237,14 +7827,19 @@ export class MockAPIClient {
     };
     this.visionByCaseId[caseId] = vision;
     this.diagnosisCases = this.diagnosisCases.map((c) =>
-      c.id === caseId ? { ...c, status: "vision_ready", updated_at: nowIso() } : c,
+      c.id === caseId
+        ? { ...c, status: "vision_ready", updated_at: nowIso() }
+        : c,
     );
     return delay(ok(vision));
   }
 
   async updateCaseVision(
     caseId: number,
-    data: { result_json: VisionResultDetail["result_json"]; confidence?: number },
+    data: {
+      result_json: VisionResultDetail["result_json"];
+      confidence?: number;
+    },
   ): Promise<APIResponse<VisionResultDetail>> {
     const prev = this.visionByCaseId[caseId];
     if (!prev) return delay(fail("NOT_FOUND", "진단 결과가 없습니다"));
@@ -7258,12 +7853,16 @@ export class MockAPIClient {
     return delay(ok(updated));
   }
 
-  async createCaseEstimate(caseId: number): Promise<APIResponse<DiagnosisCaseEstimate>> {
+  async createCaseEstimate(
+    caseId: number,
+  ): Promise<APIResponse<DiagnosisCaseEstimate>> {
     const target = this.diagnosisCases.find((c) => c.id === caseId);
     if (!target) return delay(fail("NOT_FOUND", "케이스를 찾을 수 없습니다"));
     const season = this.seasons.find((s) => s.id === target.season_id);
     if (!season || !season.is_active) {
-      return delay(fail("INVALID_STATE", "활성 시즌에서만 견적 생성할 수 있어요"));
+      return delay(
+        fail("INVALID_STATE", "활성 시즌에서만 견적 생성할 수 있어요"),
+      );
     }
 
     const enabledCategoryNames = new Set(
@@ -7332,7 +7931,9 @@ export class MockAPIClient {
     return delay(ok(estimate));
   }
 
-  async getCaseEstimate(caseId: number): Promise<APIResponse<DiagnosisCaseEstimate>> {
+  async getCaseEstimate(
+    caseId: number,
+  ): Promise<APIResponse<DiagnosisCaseEstimate>> {
     const estimate = this.estimateByCaseId[caseId];
     if (!estimate) return delay(fail("NOT_FOUND", "견적 결과가 없습니다"));
     return delay(ok(estimate));
@@ -7416,7 +8017,10 @@ export class MockAPIClient {
     const idx = this.fieldRepresentatives.findIndex((r) => r.id === repId);
     if (idx === -1)
       return delay(
-        fail<MockFieldRepresentative>("NOT_FOUND", "현장대리인을 찾을 수 없어요."),
+        fail<MockFieldRepresentative>(
+          "NOT_FOUND",
+          "현장대리인을 찾을 수 없어요.",
+        ),
       );
 
     const existing = this.fieldRepresentatives[idx];
@@ -7449,7 +8053,10 @@ export class MockAPIClient {
     );
     if (!assignment)
       return delay(
-        fail<MockRepresentativeAssignment>("NOT_FOUND", "배정된 현장대리인이 없습니다."),
+        fail<MockRepresentativeAssignment>(
+          "NOT_FOUND",
+          "배정된 현장대리인이 없습니다.",
+        ),
       );
     return delay(ok(assignment));
   }
@@ -7531,14 +8138,23 @@ export class MockAPIClient {
   }
 
   private seedFieldRepresentatives(projects: Project[]) {
-    if (this.fieldRepresentatives.length > 0 || this.repAssignments.length > 0) {
+    if (
+      this.fieldRepresentatives.length > 0 ||
+      this.repAssignments.length > 0
+    ) {
       return;
     }
 
     const now = Date.now();
-    const uploadedRecent = new Date(now - 1000 * 60 * 60 * 24 * 12).toISOString();
-    const uploadedSoonExpiry = new Date(now - 1000 * 60 * 60 * 24 * 83).toISOString();
-    const uploadedExpired = new Date(now - 1000 * 60 * 60 * 24 * 96).toISOString();
+    const uploadedRecent = new Date(
+      now - 1000 * 60 * 60 * 24 * 12,
+    ).toISOString();
+    const uploadedSoonExpiry = new Date(
+      now - 1000 * 60 * 60 * 24 * 83,
+    ).toISOString();
+    const uploadedExpired = new Date(
+      now - 1000 * 60 * 60 * 24 * 96,
+    ).toISOString();
 
     this.fieldRepresentatives = [
       {
@@ -7554,7 +8170,8 @@ export class MockAPIClient {
         employment_cert_filename: "재직증명서_김현수.pdf",
         created_at: uploadedRecent,
         updated_at: uploadedRecent,
-        career_cert_days_remaining: this.calcCareerDaysRemaining(uploadedRecent),
+        career_cert_days_remaining:
+          this.calcCareerDaysRemaining(uploadedRecent),
         assigned_project_ids: [],
       },
       {
@@ -7570,7 +8187,8 @@ export class MockAPIClient {
         employment_cert_filename: "재직증명서_박지훈.pdf",
         created_at: uploadedSoonExpiry,
         updated_at: uploadedSoonExpiry,
-        career_cert_days_remaining: this.calcCareerDaysRemaining(uploadedSoonExpiry),
+        career_cert_days_remaining:
+          this.calcCareerDaysRemaining(uploadedSoonExpiry),
         assigned_project_ids: [],
       },
       {
@@ -7586,14 +8204,16 @@ export class MockAPIClient {
         employment_cert_filename: "재직증명서_오민서.pdf",
         created_at: uploadedExpired,
         updated_at: uploadedExpired,
-        career_cert_days_remaining: this.calcCareerDaysRemaining(uploadedExpired),
+        career_cert_days_remaining:
+          this.calcCareerDaysRemaining(uploadedExpired),
         assigned_project_ids: [],
       },
     ];
     this.fieldRepNextId = 4;
 
     const projectIdPool = projects.map((project) => project.id);
-    const primaryProjectId = projectIdPool.find((id) => id === "p2") ?? projectIdPool[0];
+    const primaryProjectId =
+      projectIdPool.find((id) => id === "p2") ?? projectIdPool[0];
     const secondaryProjectId =
       projectIdPool.find((id) => id === "p3" && id !== primaryProjectId) ??
       projectIdPool.find((id) => id !== primaryProjectId);
@@ -7643,22 +8263,26 @@ export class MockAPIClient {
     const yearRates = rates.find((r) => r.effective_year === year);
     if (yearRates) return yearRates;
     // Fallback: latest year
-    const sorted = [...rates].sort((a, b) => b.effective_year - a.effective_year);
-    return sorted[0] || {
-      id: "ir_default",
-      effective_year: year,
-      income_deduction: 150000,
-      simplified_tax_rate: 0.027,
-      local_tax_rate: 0.1,
-      employment_insurance_rate: 0.009,
-      health_insurance_rate: 0.03595,
-      longterm_care_rate: 0.1314,
-      national_pension_rate: 0.045,
-      pension_upper_limit: 6170000,
-      pension_lower_limit: 390000,
-      health_premium_upper: 7822560,
-      health_premium_lower: 19780,
-    };
+    const sorted = [...rates].sort(
+      (a, b) => b.effective_year - a.effective_year,
+    );
+    return (
+      sorted[0] || {
+        id: "ir_default",
+        effective_year: year,
+        income_deduction: 150000,
+        simplified_tax_rate: 0.027,
+        local_tax_rate: 0.1,
+        employment_insurance_rate: 0.009,
+        health_insurance_rate: 0.03595,
+        longterm_care_rate: 0.1314,
+        national_pension_rate: 0.045,
+        pension_upper_limit: 6170000,
+        pension_lower_limit: 390000,
+        health_premium_upper: 7822560,
+        health_premium_lower: 19780,
+      }
+    );
   }
 
   // Helper: sum up entries for totals
@@ -7667,41 +8291,89 @@ export class MockAPIClient {
       total_labor_cost: entries.reduce((s, e) => s + e.total_labor_cost, 0),
       total_income_tax: entries.reduce((s, e) => s + e.income_tax, 0),
       total_resident_tax: entries.reduce((s, e) => s + e.resident_tax, 0),
-      total_health_insurance: entries.reduce((s, e) => s + e.health_insurance, 0),
+      total_health_insurance: entries.reduce(
+        (s, e) => s + e.health_insurance,
+        0,
+      ),
       total_longterm_care: entries.reduce((s, e) => s + e.longterm_care, 0),
-      total_national_pension: entries.reduce((s, e) => s + e.national_pension, 0),
-      total_employment_insurance: entries.reduce((s, e) => s + e.employment_insurance, 0),
+      total_national_pension: entries.reduce(
+        (s, e) => s + e.national_pension,
+        0,
+      ),
+      total_employment_insurance: entries.reduce(
+        (s, e) => s + e.employment_insurance,
+        0,
+      ),
       total_deductions: entries.reduce((s, e) => s + e.total_deductions, 0),
       total_net_pay: entries.reduce((s, e) => s + e.net_pay, 0),
     };
   }
 
-  async sendAlimTalk(payload: { phone: string; template_code: string; variables: Record<string, string> }) {
+  async sendAlimTalk(payload: {
+    phone: string;
+    template_code: string;
+    variables: Record<string, string>;
+  }) {
     console.log("[MockAPI] sendAlimTalk:", payload);
-    return delay({ success: true, data: { message_id: `mock_alimtalk_${Date.now()}`, success: true, message: "Mock 알림톡 발송" }, error: null });
+    return delay({
+      success: true,
+      data: {
+        message_id: `mock_alimtalk_${Date.now()}`,
+        success: true,
+        message: "Mock 알림톡 발송",
+      },
+      error: null,
+    });
   }
 
   async getAlimTalkStatus(messageId: string) {
-    return delay({ success: true, data: { message_id: messageId, status: "delivered" }, error: null });
+    return delay({
+      success: true,
+      data: { message_id: messageId, status: "delivered" },
+      error: null,
+    });
   }
 
-  async saveConsentRecords(payload: { records: Array<{ consent_type: string; consented: boolean }>; invite_token?: string }) {
+  async saveConsentRecords(payload: {
+    records: Array<{ consent_type: string; consented: boolean }>;
+    invite_token?: string;
+  }) {
     console.log("[MockAPI] saveConsentRecords:", payload);
-    return delay({ success: true, data: payload.records.map((r, i) => ({ id: i + 1, consent_type: r.consent_type, consented: r.consented, consented_at: new Date().toISOString() })), error: null });
+    return delay({
+      success: true,
+      data: payload.records.map((r, i) => ({
+        id: i + 1,
+        consent_type: r.consent_type,
+        consented: r.consented,
+        consented_at: new Date().toISOString(),
+      })),
+      error: null,
+    });
   }
 
-  async downloadLaborContractHwpx(laborContractId: number | string): Promise<Blob> {
+  async downloadLaborContractHwpx(
+    laborContractId: number | string,
+  ): Promise<Blob> {
     // Mock HWPX blob (returns empty blob for testing)
     console.log("[MockAPI] downloadLaborContractHwpx:", laborContractId);
-    return new Blob(["mock-hwpx-content"], { type: "application/vnd.hancom.hwpx" });
+    return new Blob(["mock-hwpx-content"], {
+      type: "application/vnd.hancom.hwpx",
+    });
   }
 
   // ============================================
   // Device Tokens (FCM 푸시 알림)
   // ============================================
 
-  async registerDeviceToken(data: { token: string; platform: "ios" | "android" }) {
-    console.log("[MockAPI] registerDeviceToken:", data.platform, data.token.slice(0, 8) + "...");
+  async registerDeviceToken(data: {
+    token: string;
+    platform: "ios" | "android";
+  }) {
+    console.log(
+      "[MockAPI] registerDeviceToken:",
+      data.platform,
+      data.token.slice(0, 8) + "...",
+    );
     return delay({
       success: true,
       data: { id: randomId("dt"), token: data.token, platform: data.platform },
@@ -7712,6 +8384,166 @@ export class MockAPIClient {
   async deleteDeviceToken(token: string) {
     console.log("[MockAPI] deleteDeviceToken:", token.slice(0, 8) + "...");
     return delay({ success: true, data: { deleted: true }, error: null });
+  }
+
+  // ============================================
+  // 원가계산서 API
+  // ============================================
+
+  async getConstructionRates() {
+    const db = mockDb.get("constructionCostRates");
+    return delay({ success: true, data: db || [], error: null });
+  }
+
+  async createConstructionRate(data: any) {
+    const rates = mockDb.get("constructionCostRates") || [];
+    const newRate = {
+      id: `rate-${Date.now()}`,
+      ...data,
+      status: "active",
+      created_at: new Date().toISOString(),
+    };
+    mockDb.set("constructionCostRates", [...rates, newRate]);
+    return delay({ success: true, data: newRate, error: null });
+  }
+
+  async activateConstructionRate(rateId: string) {
+    const rates = mockDb.get("constructionCostRates") || [];
+    const updated = rates.map((r: any) => ({
+      ...r,
+      status: r.id === rateId ? "active" : "deprecated",
+    }));
+    mockDb.set("constructionCostRates", updated);
+    return delay({ success: true, data: null, error: null });
+  }
+
+  async getCostCalculation(estimateId: string) {
+    const calcs = mockDb.get("costCalculations") || [];
+    const calc = calcs.find((c: any) => c.estimate_id === estimateId);
+    return delay({ success: true, data: calc || null, error: null });
+  }
+
+  async createCostCalculation(estimateId: string, data?: any) {
+    const calcs = mockDb.get("costCalculations") || [];
+
+    // Get estimate lines to calculate totals
+    const estimate = this.estimatesById[estimateId];
+    const lines = estimate?.lines || [];
+
+    const directMaterial = lines.reduce(
+      (s: number, l: any) => s + Number(l.material_amount || 0),
+      0,
+    );
+    const directLabor = lines.reduce(
+      (s: number, l: any) => s + Number(l.labor_amount || 0),
+      0,
+    );
+    const equipmentCost = lines.reduce(
+      (s: number, l: any) => s + Number(l.equipment_amount || 0),
+      0,
+    );
+
+    // Get active rate
+    const rates = mockDb.get("constructionCostRates") || [];
+    const activeRate =
+      rates.find((r: any) => r.status === "active") || rates[0];
+
+    const newCalc = {
+      id: `calc-${Date.now()}`,
+      estimate_id: estimateId,
+      rate_id: activeRate?.id || "rate-001",
+      direct_material_cost: String(directMaterial),
+      direct_labor_cost: String(directLabor),
+      equipment_cost: String(equipmentCost),
+      indirect_material_cost: "0",
+      material_scrap: "0",
+      waste_disposal_fee: "0",
+      override_indirect_labor_rate: null,
+      override_other_expense_rate: null,
+      override_general_admin_rate: null,
+      override_profit_rate: null,
+      construction_days: data?.construction_days || 30,
+      enable_subcontract_guarantee: false,
+      enable_equipment_guarantee: false,
+      profit_adjustment: "0",
+      target_contract_amount: null,
+      // Simplified calc results (mock only)
+      material_subtotal: String(directMaterial),
+      indirect_labor_amount: "0",
+      labor_subtotal: String(directLabor),
+      accident_insurance: "0",
+      employment_insurance: "0",
+      health_insurance: "0",
+      national_pension: "0",
+      longterm_care: "0",
+      safety_management: "0",
+      environmental_fee: "0",
+      other_expense: "0",
+      subcontract_guarantee: "0",
+      equipment_guarantee: "0",
+      expense_subtotal: "0",
+      net_construction_cost: String(
+        directMaterial + directLabor + equipmentCost,
+      ),
+      general_admin_fee: "0",
+      profit_amount: "0",
+      supply_amount: String(directMaterial + directLabor + equipmentCost),
+      vat_amount: String(
+        Math.round((directMaterial + directLabor + equipmentCost) * 0.1),
+      ),
+      contract_amount: String(
+        Math.round((directMaterial + directLabor + equipmentCost) * 1.1),
+      ),
+      is_visible: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      rate: activeRate,
+    };
+
+    mockDb.set("costCalculations", [...calcs, newCalc]);
+    return delay({ success: true, data: newCalc, error: null });
+  }
+
+  async updateCostCalculation(estimateId: string, data: any) {
+    const calcs = mockDb.get("costCalculations") || [];
+    const idx = calcs.findIndex((c: any) => c.estimate_id === estimateId);
+    if (idx < 0) {
+      return delay({ success: false, data: null, error: null });
+    }
+    const updated = [...calcs];
+    updated[idx] = {
+      ...updated[idx],
+      ...data,
+      updated_at: new Date().toISOString(),
+    };
+    mockDb.set("costCalculations", updated);
+    return delay({ success: true, data: updated[idx], error: null });
+  }
+
+  async recalculateCostCalculation(estimateId: string) {
+    const calcs = mockDb.get("costCalculations") || [];
+    const idx = calcs.findIndex((c: any) => c.estimate_id === estimateId);
+    if (idx < 0) {
+      return delay({ success: false, data: null, error: null });
+    }
+    const updated = [...calcs];
+    updated[idx] = {
+      ...updated[idx],
+      updated_at: new Date().toISOString(),
+    };
+    mockDb.set("costCalculations", updated);
+    return delay({ success: true, data: updated[idx], error: null });
+  }
+
+  async calculateTargetPrice(estimateId: string, targetAmount: string) {
+    // Mock: just return a simple adjustment
+    const target = Number(targetAmount);
+    const adjustment = Math.round((target / 1.1) * 0.01); // simplified mock
+    return delay({
+      success: true,
+      data: { profit_adjustment: String(adjustment) },
+      error: null,
+    });
   }
 }
 

@@ -1351,3 +1351,140 @@ export interface WorkerProfileUpdateRequest {
   bank_name?: string
   account_number?: string
 }
+
+// ============================================
+// 원가계산서 (Cost Calculation) Types
+// ============================================
+
+export type CostType = "material" | "labor" | "equipment"
+export type RateStatus = "active" | "deprecated"
+
+export interface CompositeComponent {
+  id: string
+  composite_id: string
+  catalog_item_id?: string
+  name: string
+  specification?: string
+  unit: string
+  cost_type: CostType
+  unit_price: string
+  quantity_per_unit: string
+  amount: string
+  sort_order: number
+  source_note?: string
+}
+
+export interface CompositeUnitPrice {
+  id: string
+  pricebook_revision_id: string
+  name: string
+  specification?: string
+  unit: string
+  source_reference?: string
+  source_pdf_page?: number
+  material_subtotal: string
+  labor_subtotal: string
+  equipment_subtotal: string
+  total_unit_price: string
+  category_path?: string
+  created_at: string
+  updated_at: string
+  components: CompositeComponent[]
+}
+
+export interface ConstructionCostRate {
+  id: string
+  label: string
+  effective_from: string
+  effective_to: string
+  status: RateStatus
+  // Law rates
+  industrial_accident_rate: string
+  employment_insurance_rate: string
+  health_insurance_rate: string
+  national_pension_rate: string
+  longterm_care_rate: string
+  safety_management_rate: string
+  environmental_rate: string
+  // Editable defaults
+  indirect_labor_rate: string
+  other_expense_rate: string
+  general_admin_rate: string
+  profit_rate_cap: string
+  subcontract_guarantee_rate: string
+  equipment_guarantee_rate: string
+  // Conditional rules
+  health_insurance_min_days: number
+  pension_min_days: number
+  longterm_care_min_days: number
+  created_at: string
+}
+
+export interface CostCalculation {
+  id: string
+  estimate_id: string
+  rate_id: string
+  // Aggregated from lines
+  direct_material_cost: string
+  direct_labor_cost: string
+  equipment_cost: string
+  // Manual inputs
+  indirect_material_cost: string
+  material_scrap: string
+  waste_disposal_fee: string
+  // Rate overrides
+  override_indirect_labor_rate?: string
+  override_other_expense_rate?: string
+  override_general_admin_rate?: string
+  override_profit_rate?: string
+  // Conditions
+  construction_days: number
+  enable_subcontract_guarantee: boolean
+  enable_equipment_guarantee: boolean
+  // Profit adjustment
+  profit_adjustment: string
+  target_contract_amount?: string
+  // Calculated results
+  material_subtotal: string
+  indirect_labor_amount: string
+  labor_subtotal: string
+  accident_insurance: string
+  employment_insurance: string
+  health_insurance: string
+  national_pension: string
+  longterm_care: string
+  safety_management: string
+  environmental_fee: string
+  other_expense: string
+  subcontract_guarantee: string
+  equipment_guarantee: string
+  expense_subtotal: string
+  net_construction_cost: string
+  general_admin_fee: string
+  profit_amount: string
+  supply_amount: string
+  vat_amount: string
+  contract_amount: string
+  // Visibility
+  is_visible: boolean
+  created_at: string
+  updated_at: string
+  // Nested rate info
+  rate?: ConstructionCostRate
+}
+
+export interface CostCalculationUpdate {
+  indirect_material_cost?: string
+  material_scrap?: string
+  waste_disposal_fee?: string
+  override_indirect_labor_rate?: string | null
+  override_other_expense_rate?: string | null
+  override_general_admin_rate?: string | null
+  override_profit_rate?: string | null
+  construction_days?: number
+  enable_subcontract_guarantee?: boolean
+  enable_equipment_guarantee?: boolean
+  profit_adjustment?: string
+  target_contract_amount?: string | null
+  is_visible?: boolean
+}

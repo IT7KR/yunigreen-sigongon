@@ -1,7 +1,14 @@
-import type { ProjectStatus, UserRole, ProjectCategory, LaborInsuranceRates, DailyWorker, DailyWorkRecord } from "@sigongon/types";
+import type {
+  ProjectStatus,
+  UserRole,
+  ProjectCategory,
+  LaborInsuranceRates,
+  DailyWorker,
+  DailyWorkRecord,
+} from "@sigongcore/types";
 
 // Invitation status types
-export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+export type InvitationStatus = "pending" | "accepted" | "expired" | "revoked";
 
 export interface Invitation {
   id: string;
@@ -10,10 +17,10 @@ export interface Invitation {
   role: UserRole;
   organization_id: string;
   status: InvitationStatus;
-  token: string;           // 초대 링크용 고유 토큰
-  invited_by: string;      // 초대한 사용자 ID
+  token: string; // 초대 링크용 고유 토큰
+  invited_by: string; // 초대한 사용자 ID
   created_at: string;
-  expires_at: string;      // 7일 후 만료
+  expires_at: string; // 7일 후 만료
   accepted_at?: string;
 }
 
@@ -155,9 +162,11 @@ export interface MockSchema {
   dailyWorkers: DailyWorker[];
   dailyWorkRecords: DailyWorkRecord[];
   insuranceRates: LaborInsuranceRates[];
+  constructionCostRates: any[];
+  costCalculations: any[];
 }
 
-const STORAGE_KEY = "sigongon_mock_v4";
+const STORAGE_KEY = "sigongcore_mock_v4";
 
 const nowIso = () => new Date().toISOString();
 
@@ -232,8 +241,8 @@ const normalizeProject = (raw: any): Project => {
     customerMasterId: raw?.customerMasterId
       ? String(raw.customerMasterId)
       : raw?.customer_master_id
-      ? String(raw.customer_master_id)
-      : undefined,
+        ? String(raw.customer_master_id)
+        : undefined,
     clientName: String(raw?.clientName || raw?.client_name || ""),
     clientPhone: String(raw?.clientPhone || raw?.client_phone || ""),
     notes: raw?.notes ? String(raw.notes) : undefined,
@@ -287,7 +296,7 @@ const INITIAL_DATA: MockSchema = {
       id: "u3",
       username: "worker_hong",
       name: "홍길동",
-      email: "worker_01012345678@sigongon.local",
+      email: "worker_01012345678@sigongcore.local",
       phone: "010-1234-5678",
       role: "worker",
       organization_id: null, // System-level role, linked via LaborContract
@@ -458,94 +467,302 @@ const INITIAL_DATA: MockSchema = {
     },
   ],
   activityLogs: [
-    { id: "al_1", user_id: "u1", action: "login", description: "로그인", ip_address: "192.168.1.100", device_info: "Chrome / Windows", created_at: new Date(Date.now() - 3600000).toISOString() },
-    { id: "al_2", user_id: "u1", action: "project_create", description: "프로젝트 '서울 강남구 삼성동 누수 공사' 생성", ip_address: "192.168.1.100", device_info: "Chrome / Windows", created_at: new Date(Date.now() - 7200000).toISOString() },
-    { id: "al_3", user_id: "u1", action: "estimate_create", description: "견적서 v1 작성", ip_address: "192.168.1.100", device_info: "Chrome / Windows", created_at: new Date(Date.now() - 86400000).toISOString() },
-    { id: "al_4", user_id: "u1", action: "profile_update", description: "프로필 정보 수정", ip_address: "192.168.1.101", device_info: "Safari / macOS", created_at: new Date(Date.now() - 86400000 * 2).toISOString() },
-    { id: "al_5", user_id: "u1", action: "password_change", description: "비밀번호 변경", ip_address: "192.168.1.101", device_info: "Safari / macOS", created_at: new Date(Date.now() - 86400000 * 3).toISOString() },
-    { id: "al_6", user_id: "u1", action: "contract_sign", description: "계약서 서명 완료", ip_address: "192.168.1.100", device_info: "Chrome / Windows", created_at: new Date(Date.now() - 86400000 * 4).toISOString() },
-    { id: "al_7", user_id: "u1", action: "settings_change", description: "알림 설정 변경", ip_address: "192.168.1.100", device_info: "Chrome / Windows", created_at: new Date(Date.now() - 86400000 * 5).toISOString() },
-    { id: "al_8", user_id: "u1", action: "login", description: "로그인", ip_address: "10.0.0.5", device_info: "Mobile Safari / iOS", created_at: new Date(Date.now() - 86400000 * 6).toISOString() },
-    { id: "al_9", user_id: "u1", action: "project_update", description: "프로젝트 상태 변경: 진행 중", ip_address: "10.0.0.5", device_info: "Mobile Safari / iOS", created_at: new Date(Date.now() - 86400000 * 7).toISOString() },
-    { id: "al_10", user_id: "u1", action: "logout", description: "로그아웃", ip_address: "10.0.0.5", device_info: "Mobile Safari / iOS", created_at: new Date(Date.now() - 86400000 * 7).toISOString() },
+    {
+      id: "al_1",
+      user_id: "u1",
+      action: "login",
+      description: "로그인",
+      ip_address: "192.168.1.100",
+      device_info: "Chrome / Windows",
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+    },
+    {
+      id: "al_2",
+      user_id: "u1",
+      action: "project_create",
+      description: "프로젝트 '서울 강남구 삼성동 누수 공사' 생성",
+      ip_address: "192.168.1.100",
+      device_info: "Chrome / Windows",
+      created_at: new Date(Date.now() - 7200000).toISOString(),
+    },
+    {
+      id: "al_3",
+      user_id: "u1",
+      action: "estimate_create",
+      description: "견적서 v1 작성",
+      ip_address: "192.168.1.100",
+      device_info: "Chrome / Windows",
+      created_at: new Date(Date.now() - 86400000).toISOString(),
+    },
+    {
+      id: "al_4",
+      user_id: "u1",
+      action: "profile_update",
+      description: "프로필 정보 수정",
+      ip_address: "192.168.1.101",
+      device_info: "Safari / macOS",
+      created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    },
+    {
+      id: "al_5",
+      user_id: "u1",
+      action: "password_change",
+      description: "비밀번호 변경",
+      ip_address: "192.168.1.101",
+      device_info: "Safari / macOS",
+      created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    },
+    {
+      id: "al_6",
+      user_id: "u1",
+      action: "contract_sign",
+      description: "계약서 서명 완료",
+      ip_address: "192.168.1.100",
+      device_info: "Chrome / Windows",
+      created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
+    },
+    {
+      id: "al_7",
+      user_id: "u1",
+      action: "settings_change",
+      description: "알림 설정 변경",
+      ip_address: "192.168.1.100",
+      device_info: "Chrome / Windows",
+      created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+    },
+    {
+      id: "al_8",
+      user_id: "u1",
+      action: "login",
+      description: "로그인",
+      ip_address: "10.0.0.5",
+      device_info: "Mobile Safari / iOS",
+      created_at: new Date(Date.now() - 86400000 * 6).toISOString(),
+    },
+    {
+      id: "al_9",
+      user_id: "u1",
+      action: "project_update",
+      description: "프로젝트 상태 변경: 진행 중",
+      ip_address: "10.0.0.5",
+      device_info: "Mobile Safari / iOS",
+      created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+    },
+    {
+      id: "al_10",
+      user_id: "u1",
+      action: "logout",
+      description: "로그아웃",
+      ip_address: "10.0.0.5",
+      device_info: "Mobile Safari / iOS",
+      created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+    },
   ],
   dailyWorkers: [
     {
-      id: "dw_1", name: "김철수", job_type: "보통인부", job_type_code: "010", team: "1반",
-      hire_date: "2025-03-01", birth_date: "750315", gender: 1 as const, address: "서울시 강남구 역삼동 123",
-      daily_rate: 200000, account_number: "110-123-456789", bank_name: "신한은행",
-      phone: "010-1111-2222", is_foreign: false, organization_id: "org_1",
+      id: "dw_1",
+      name: "김철수",
+      job_type: "보통인부",
+      job_type_code: "010",
+      team: "1반",
+      hire_date: "2025-03-01",
+      birth_date: "750315",
+      gender: 1 as const,
+      address: "서울시 강남구 역삼동 123",
+      daily_rate: 200000,
+      account_number: "110-123-456789",
+      bank_name: "신한은행",
+      phone: "010-1111-2222",
+      is_foreign: false,
+      organization_id: "org_1",
     },
     {
-      id: "dw_2", name: "박영수", job_type: "특별인부", job_type_code: "020", team: "1반",
-      hire_date: "2025-06-15", birth_date: "820720", gender: 1 as const, address: "경기도 성남시 분당구 정자동 456",
-      daily_rate: 220000, account_number: "352-0123-4567-89", bank_name: "농협은행",
-      phone: "010-3333-4444", is_foreign: false, organization_id: "org_1",
+      id: "dw_2",
+      name: "박영수",
+      job_type: "특별인부",
+      job_type_code: "020",
+      team: "1반",
+      hire_date: "2025-06-15",
+      birth_date: "820720",
+      gender: 1 as const,
+      address: "경기도 성남시 분당구 정자동 456",
+      daily_rate: 220000,
+      account_number: "352-0123-4567-89",
+      bank_name: "농협은행",
+      phone: "010-3333-4444",
+      is_foreign: false,
+      organization_id: "org_1",
     },
     {
-      id: "dw_3", name: "이순자", job_type: "보통인부", job_type_code: "010", team: "2반",
-      hire_date: "2025-01-10", birth_date: "680812", gender: 2 as const, address: "서울시 서초구 서초동 789",
-      daily_rate: 200000, account_number: "3333-01-1234567", bank_name: "우리은행",
-      phone: "010-5555-6666", is_foreign: false, organization_id: "org_1",
+      id: "dw_3",
+      name: "이순자",
+      job_type: "보통인부",
+      job_type_code: "010",
+      team: "2반",
+      hire_date: "2025-01-10",
+      birth_date: "680812",
+      gender: 2 as const,
+      address: "서울시 서초구 서초동 789",
+      daily_rate: 200000,
+      account_number: "3333-01-1234567",
+      bank_name: "우리은행",
+      phone: "010-5555-6666",
+      is_foreign: false,
+      organization_id: "org_1",
     },
     {
-      id: "dw_4", name: "최만복", job_type: "기능공", job_type_code: "030", team: "1반",
-      hire_date: "2024-11-01", birth_date: "590105", gender: 1 as const, address: "인천시 남동구 구월동 321",
-      daily_rate: 250000, account_number: "100-123-456789", bank_name: "국민은행",
-      phone: "010-7777-8888", is_foreign: false, organization_id: "org_1",
+      id: "dw_4",
+      name: "최만복",
+      job_type: "기능공",
+      job_type_code: "030",
+      team: "1반",
+      hire_date: "2024-11-01",
+      birth_date: "590105",
+      gender: 1 as const,
+      address: "인천시 남동구 구월동 321",
+      daily_rate: 250000,
+      account_number: "100-123-456789",
+      bank_name: "국민은행",
+      phone: "010-7777-8888",
+      is_foreign: false,
+      organization_id: "org_1",
     },
     {
-      id: "dw_5", name: "정미영", job_type: "보통인부", job_type_code: "010", team: "2반",
-      hire_date: "2025-09-01", birth_date: "610425", gender: 2 as const, address: "서울시 마포구 합정동 654",
-      daily_rate: 200000, account_number: "110-987-654321", bank_name: "신한은행",
-      phone: "010-9999-0000", is_foreign: false, organization_id: "org_1",
+      id: "dw_5",
+      name: "정미영",
+      job_type: "보통인부",
+      job_type_code: "010",
+      team: "2반",
+      hire_date: "2025-09-01",
+      birth_date: "610425",
+      gender: 2 as const,
+      address: "서울시 마포구 합정동 654",
+      daily_rate: 200000,
+      account_number: "110-987-654321",
+      bank_name: "신한은행",
+      phone: "010-9999-0000",
+      is_foreign: false,
+      organization_id: "org_1",
     },
     {
-      id: "dw_6", name: "NGUYEN VAN A", job_type: "보통인부", job_type_code: "010", team: "1반",
-      hire_date: "2025-08-01", birth_date: "950610", gender: 3 as const, address: "경기도 안산시 단원구 원곡동 111",
-      daily_rate: 200000, account_number: "352-0987-6543-21", bank_name: "농협은행",
-      phone: "010-1234-5678", is_foreign: true, visa_status: "E-9", nationality_code: "VN",
-      english_name: "NGUYEN VAN A", organization_id: "org_1",
+      id: "dw_6",
+      name: "NGUYEN VAN A",
+      job_type: "보통인부",
+      job_type_code: "010",
+      team: "1반",
+      hire_date: "2025-08-01",
+      birth_date: "950610",
+      gender: 3 as const,
+      address: "경기도 안산시 단원구 원곡동 111",
+      daily_rate: 200000,
+      account_number: "352-0987-6543-21",
+      bank_name: "농협은행",
+      phone: "010-1234-5678",
+      is_foreign: true,
+      visa_status: "E-9",
+      nationality_code: "VN",
+      english_name: "NGUYEN VAN A",
+      organization_id: "org_1",
     },
     {
-      id: "dw_7", name: "한상수", job_type: "특별인부", job_type_code: "020", team: "2반",
-      hire_date: "2025-04-15", birth_date: "880930", gender: 1 as const, address: "부산시 해운대구 좌동 222",
-      daily_rate: 230000, account_number: "3333-02-9876543", bank_name: "우리은행",
-      phone: "010-2468-1357", is_foreign: false, organization_id: "org_1",
+      id: "dw_7",
+      name: "한상수",
+      job_type: "특별인부",
+      job_type_code: "020",
+      team: "2반",
+      hire_date: "2025-04-15",
+      birth_date: "880930",
+      gender: 1 as const,
+      address: "부산시 해운대구 좌동 222",
+      daily_rate: 230000,
+      account_number: "3333-02-9876543",
+      bank_name: "우리은행",
+      phone: "010-2468-1357",
+      is_foreign: false,
+      organization_id: "org_1",
     },
   ],
   dailyWorkRecords: (() => {
     const records: DailyWorkRecord[] = [];
     let idx = 0;
     const workerDailyRates: Record<string, number> = {
-      "dw_1": 200000, "dw_2": 220000, "dw_3": 200000, "dw_4": 250000,
-      "dw_5": 200000, "dw_6": 200000, "dw_7": 230000,
+      dw_1: 200000,
+      dw_2: 220000,
+      dw_3: 200000,
+      dw_4: 250000,
+      dw_5: 200000,
+      dw_6: 200000,
+      dw_7: 230000,
     };
     // 2025년 12월 근무기록 - p2 현장 (연도 경계 테스트)
     const dec2025Workers = [
-      { wid: "dw_1", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26, 29, 30, 31] },
-      { wid: "dw_2", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24] },
-      { wid: "dw_3", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19] },
-      { wid: "dw_4", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26, 29, 30, 31] },
+      {
+        wid: "dw_1",
+        days: [
+          1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26,
+          29, 30, 31,
+        ],
+      },
+      {
+        wid: "dw_2",
+        days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24],
+      },
+      {
+        wid: "dw_3",
+        days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19],
+      },
+      {
+        wid: "dw_4",
+        days: [
+          1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26,
+          29, 30, 31,
+        ],
+      },
     ];
     for (const w of dec2025Workers) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p2", work_date: `2025-12-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+        records.push({
+          id: `dwr_${++idx}`,
+          worker_id: w.wid,
+          project_id: "p2",
+          work_date: `2025-12-${String(day).padStart(2, "0")}`,
+          man_days: 1,
+          daily_rate: workerDailyRates[w.wid],
+        });
       }
     }
     // 2026년 1월 근무기록 - p2 현장
     const jan2026Workers = [
-      { wid: "dw_1", days: [13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31] },
-      { wid: "dw_2", days: [13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30] },
+      {
+        wid: "dw_1",
+        days: [13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31],
+      },
+      {
+        wid: "dw_2",
+        days: [13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30],
+      },
       { wid: "dw_3", days: [13, 14, 15, 16, 20, 21, 22, 23, 27, 28, 29, 30] },
-      { wid: "dw_4", days: [13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31] },
+      {
+        wid: "dw_4",
+        days: [13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31],
+      },
       { wid: "dw_5", days: [14, 15, 16, 17, 21, 22, 23, 24, 28, 29, 30] },
       { wid: "dw_6", days: [13, 14, 15, 16, 17, 20, 21, 22, 23, 24] },
-      { wid: "dw_7", days: [15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31] },
+      {
+        wid: "dw_7",
+        days: [15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31],
+      },
     ];
     for (const w of jan2026Workers) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p2", work_date: `2026-01-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+        records.push({
+          id: `dwr_${++idx}`,
+          worker_id: w.wid,
+          project_id: "p2",
+          work_date: `2026-01-${String(day).padStart(2, "0")}`,
+          man_days: 1,
+          daily_rate: workerDailyRates[w.wid],
+        });
       }
     }
     // 2026년 1월 근무기록 - p5 현장 (일부 근로자)
@@ -555,22 +772,48 @@ const INITIAL_DATA: MockSchema = {
     ];
     for (const w of jan2026P5) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p5", work_date: `2026-01-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+        records.push({
+          id: `dwr_${++idx}`,
+          worker_id: w.wid,
+          project_id: "p5",
+          work_date: `2026-01-${String(day).padStart(2, "0")}`,
+          man_days: 1,
+          daily_rate: workerDailyRates[w.wid],
+        });
       }
     }
     // 2026년 2월 근무기록 - p2 현장
     const feb2026Workers = [
-      { wid: "dw_1", days: [2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20] },
-      { wid: "dw_2", days: [2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20] },
+      {
+        wid: "dw_1",
+        days: [2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20],
+      },
+      {
+        wid: "dw_2",
+        days: [2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20],
+      },
       { wid: "dw_3", days: [3, 4, 5, 6, 9, 10, 11, 12, 16, 17, 18, 19] },
-      { wid: "dw_4", days: [2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20] },
+      {
+        wid: "dw_4",
+        days: [2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20],
+      },
       { wid: "dw_5", days: [3, 4, 5, 6, 10, 11, 12, 13, 17, 18, 19, 20] },
       { wid: "dw_6", days: [2, 3, 4, 5, 6, 9, 10, 11, 12, 13] },
-      { wid: "dw_7", days: [2, 3, 4, 5, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20] },
+      {
+        wid: "dw_7",
+        days: [2, 3, 4, 5, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20],
+      },
     ];
     for (const w of feb2026Workers) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p2", work_date: `2026-02-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+        records.push({
+          id: `dwr_${++idx}`,
+          worker_id: w.wid,
+          project_id: "p2",
+          work_date: `2026-02-${String(day).padStart(2, "0")}`,
+          man_days: 1,
+          daily_rate: workerDailyRates[w.wid],
+        });
       }
     }
     // 2026년 2월 근무기록 - p5 현장
@@ -582,19 +825,50 @@ const INITIAL_DATA: MockSchema = {
     ];
     for (const w of feb2026P5) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p5", work_date: `2026-02-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+        records.push({
+          id: `dwr_${++idx}`,
+          worker_id: w.wid,
+          project_id: "p5",
+          work_date: `2026-02-${String(day).padStart(2, "0")}`,
+          man_days: 1,
+          daily_rate: workerDailyRates[w.wid],
+        });
       }
     }
     // 2025년 12월 근무기록 - p4 현장 (완료 프로젝트, 2026-01-15 종료)
     const dec2025P4 = [
-      { wid: "dw_2", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26] },
-      { wid: "dw_4", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26, 29, 30, 31] },
-      { wid: "dw_6", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23] },
-      { wid: "dw_7", days: [3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26] },
+      {
+        wid: "dw_2",
+        days: [
+          1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26,
+        ],
+      },
+      {
+        wid: "dw_4",
+        days: [
+          1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26,
+          29, 30, 31,
+        ],
+      },
+      {
+        wid: "dw_6",
+        days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23],
+      },
+      {
+        wid: "dw_7",
+        days: [3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26],
+      },
     ];
     for (const w of dec2025P4) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p4", work_date: `2025-12-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+        records.push({
+          id: `dwr_${++idx}`,
+          worker_id: w.wid,
+          project_id: "p4",
+          work_date: `2025-12-${String(day).padStart(2, "0")}`,
+          man_days: 1,
+          daily_rate: workerDailyRates[w.wid],
+        });
       }
     }
     // 2026년 1월 근무기록 - p4 현장 (1월 15일까지 공사)
@@ -606,7 +880,14 @@ const INITIAL_DATA: MockSchema = {
     ];
     for (const w of jan2026P4) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p4", work_date: `2026-01-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+        records.push({
+          id: `dwr_${++idx}`,
+          worker_id: w.wid,
+          project_id: "p4",
+          work_date: `2026-01-${String(day).padStart(2, "0")}`,
+          man_days: 1,
+          daily_rate: workerDailyRates[w.wid],
+        });
       }
     }
     // 2026년 1월 근무기록 - p8 현장 (하자보수)
@@ -617,7 +898,14 @@ const INITIAL_DATA: MockSchema = {
     ];
     for (const w of jan2026P8) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p8", work_date: `2026-01-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+        records.push({
+          id: `dwr_${++idx}`,
+          worker_id: w.wid,
+          project_id: "p8",
+          work_date: `2026-01-${String(day).padStart(2, "0")}`,
+          man_days: 1,
+          daily_rate: workerDailyRates[w.wid],
+        });
       }
     }
     // 2026년 2월 근무기록 - p8 현장 (하자보수 계속)
@@ -629,7 +917,14 @@ const INITIAL_DATA: MockSchema = {
     ];
     for (const w of feb2026P8) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p8", work_date: `2026-02-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+        records.push({
+          id: `dwr_${++idx}`,
+          worker_id: w.wid,
+          project_id: "p8",
+          work_date: `2026-02-${String(day).padStart(2, "0")}`,
+          man_days: 1,
+          daily_rate: workerDailyRates[w.wid],
+        });
       }
     }
     return records;
@@ -666,6 +961,35 @@ const INITIAL_DATA: MockSchema = {
       health_premium_lower: 19500,
     },
   ],
+  // Construction Cost Rates (건설 원가 요율) - SA managed
+  constructionCostRates: [
+    {
+      id: "rate-001",
+      label: "2025년 하반기",
+      effective_from: "2025-07-01",
+      effective_to: "2025-12-31",
+      status: "active",
+      industrial_accident_rate: "3.56",
+      employment_insurance_rate: "1.01",
+      health_insurance_rate: "3.545",
+      national_pension_rate: "4.50",
+      longterm_care_rate: "12.95",
+      safety_management_rate: "3.11",
+      environmental_rate: "0.30",
+      indirect_labor_rate: "15.00",
+      other_expense_rate: "4.60",
+      general_admin_rate: "5.50",
+      profit_rate_cap: "12.00",
+      subcontract_guarantee_rate: "0.081",
+      equipment_guarantee_rate: "0.10",
+      health_insurance_min_days: 31,
+      pension_min_days: 31,
+      longterm_care_min_days: 31,
+      created_at: "2025-07-01T00:00:00Z",
+    },
+  ],
+  // Cost Calculations (원가계산서) - one per estimate
+  costCalculations: [] as any[],
 };
 
 class MockDB {
@@ -706,14 +1030,28 @@ class MockDB {
       tenants: Array.isArray(parsed?.tenants)
         ? parsed.tenants
         : INITIAL_DATA.tenants,
-      invitations: Array.isArray(parsed?.invitations)
-        ? parsed.invitations
-        : [],
-      notificationPrefs: Array.isArray(parsed?.notificationPrefs) ? parsed.notificationPrefs : INITIAL_DATA.notificationPrefs,
-      activityLogs: Array.isArray(parsed?.activityLogs) ? parsed.activityLogs : INITIAL_DATA.activityLogs,
-      dailyWorkers: Array.isArray(parsed?.dailyWorkers) ? parsed.dailyWorkers : INITIAL_DATA.dailyWorkers,
-      dailyWorkRecords: Array.isArray(parsed?.dailyWorkRecords) ? parsed.dailyWorkRecords : INITIAL_DATA.dailyWorkRecords,
-      insuranceRates: Array.isArray(parsed?.insuranceRates) ? parsed.insuranceRates : INITIAL_DATA.insuranceRates,
+      invitations: Array.isArray(parsed?.invitations) ? parsed.invitations : [],
+      notificationPrefs: Array.isArray(parsed?.notificationPrefs)
+        ? parsed.notificationPrefs
+        : INITIAL_DATA.notificationPrefs,
+      activityLogs: Array.isArray(parsed?.activityLogs)
+        ? parsed.activityLogs
+        : INITIAL_DATA.activityLogs,
+      dailyWorkers: Array.isArray(parsed?.dailyWorkers)
+        ? parsed.dailyWorkers
+        : INITIAL_DATA.dailyWorkers,
+      dailyWorkRecords: Array.isArray(parsed?.dailyWorkRecords)
+        ? parsed.dailyWorkRecords
+        : INITIAL_DATA.dailyWorkRecords,
+      insuranceRates: Array.isArray(parsed?.insuranceRates)
+        ? parsed.insuranceRates
+        : INITIAL_DATA.insuranceRates,
+      constructionCostRates: Array.isArray(parsed?.constructionCostRates)
+        ? parsed.constructionCostRates
+        : INITIAL_DATA.constructionCostRates,
+      costCalculations: Array.isArray(parsed?.costCalculations)
+        ? parsed.costCalculations
+        : INITIAL_DATA.costCalculations,
     };
 
     return normalized;
