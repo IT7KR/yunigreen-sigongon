@@ -11,6 +11,7 @@ import {
 } from "@sigongon/ui";
 import { Plus, FileDown } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
+import { MobileListCard } from "@/components/MobileListCard";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
@@ -99,9 +100,9 @@ export default function LaborContractsPage() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>전체 근로계약 목록</CardTitle>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={filter === "all" ? "primary" : "secondary"}
                   size="sm"
@@ -141,113 +142,163 @@ export default function LaborContractsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                    <th className="pb-3 font-medium">근로자명</th>
-                    <th className="pb-3 font-medium">프로젝트</th>
-                    <th className="pb-3 font-medium">근무일자</th>
-                    <th className="pb-3 font-medium">일당</th>
-                    <th className="pb-3 font-medium">상태</th>
-                    <th className="pb-3 font-medium">작성일</th>
-                    <th className="pb-3 font-medium">작업</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="py-6 text-center text-sm text-slate-400"
-                      >
-                        불러오는 중...
-                      </td>
-                    </tr>
-                  ) : filteredContracts.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="py-6 text-center text-sm text-slate-400"
-                      >
-                        {filter === "all"
-                          ? "등록된 계약이 없습니다."
-                          : `${getStatusBadge(filter).label} 상태의 계약이 없습니다.`}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredContracts.map((contract) => {
-                      const statusInfo = getStatusBadge(contract.status);
-                      return (
-                        <tr
-                          key={contract.id}
-                          className="border-b border-slate-100 last:border-0"
-                        >
-                          <td className="py-4 font-medium text-slate-900">
-                            {contract.worker_name}
-                          </td>
-                          <td className="py-4 text-slate-500">
-                            {contract.project_name}
-                          </td>
-                          <td className="py-4 text-slate-500">
-                            {contract.work_date}
-                          </td>
-                          <td className="py-4 text-slate-500">
-                            {contract.daily_rate.toLocaleString()}원
-                          </td>
-                          <td className="py-4">
-                            <Badge variant={statusInfo.variant}>
-                              {statusInfo.label}
-                            </Badge>
-                          </td>
-                          <td className="py-4 text-slate-500">
-                            {contract.created_at}
-                          </td>
-                          <td className="py-4">
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="secondary">
-                                보기
-                              </Button>
-                              {contract.status === "draft" && (
-                                <Button size="sm">발송</Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={async () => {
-                                  try {
-                                    const blob =
-                                      await api.downloadLaborContractHwpx(
-                                        contract.id,
-                                      );
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement("a");
-                                    a.href = url;
-                                    a.download = `표준근로계약서_${contract.worker_name}.hwpx`;
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                    URL.revokeObjectURL(url);
-                                  } catch (e) {
-                                    console.error("HWPX 다운로드 실패:", e);
-                                    toast.error(
-                                      "근로계약서 다운로드에 실패했어요.",
+            {isLoading ? (
+              <div className="py-6 text-center text-sm text-slate-400">
+                불러오는 중...
+              </div>
+            ) : filteredContracts.length === 0 ? (
+              <div className="py-6 text-center text-sm text-slate-400">
+                {filter === "all"
+                  ? "등록된 계약이 없습니다."
+                  : `${getStatusBadge(filter).label} 상태의 계약이 없습니다.`}
+              </div>
+            ) : (
+              <>
+                {/* 모바일: 카드 리스트 */}
+                <div className="space-y-3 md:hidden">
+                  {filteredContracts.map((contract) => {
+                    const statusInfo = getStatusBadge(contract.status);
+                    return (
+                      <MobileListCard
+                        key={contract.id}
+                        title={contract.worker_name}
+                        subtitle={contract.project_name}
+                        badge={<Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>}
+                        metadata={[
+                          { label: "일당", value: `${contract.daily_rate.toLocaleString()}원` },
+                          { label: "근무일", value: contract.work_date },
+                          { label: "작성일", value: contract.created_at },
+                        ]}
+                        actions={
+                          <>
+                            <Button size="sm" variant="secondary">
+                              보기
+                            </Button>
+                            {contract.status === "draft" && (
+                              <Button size="sm">발송</Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  const blob =
+                                    await api.downloadLaborContractHwpx(
+                                      contract.id,
                                     );
-                                  }
-                                }}
-                              >
-                                <FileDown className="mr-1 h-3 w-3" />
-                                다운로드
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = `표준근로계약서_${contract.worker_name}.hwpx`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  URL.revokeObjectURL(url);
+                                } catch (e) {
+                                  console.error("HWPX 다운로드 실패:", e);
+                                  toast.error(
+                                    "근로계약서 다운로드에 실패했어요.",
+                                  );
+                                }
+                              }}
+                            >
+                              <FileDown className="mr-1 h-3 w-3" />
+                              다운로드
+                            </Button>
+                          </>
+                        }
+                      />
+                    );
+                  })}
+                </div>
+                {/* 데스크톱: 기존 테이블 */}
+                <div className="overflow-x-auto hidden md:block">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                        <th className="pb-3 font-medium">근로자명</th>
+                        <th className="pb-3 font-medium">프로젝트</th>
+                        <th className="pb-3 font-medium">근무일자</th>
+                        <th className="pb-3 font-medium">일당</th>
+                        <th className="pb-3 font-medium">상태</th>
+                        <th className="pb-3 font-medium">작성일</th>
+                        <th className="pb-3 font-medium">작업</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredContracts.map((contract) => {
+                        const statusInfo = getStatusBadge(contract.status);
+                        return (
+                          <tr
+                            key={contract.id}
+                            className="border-b border-slate-100 last:border-0"
+                          >
+                            <td className="py-4 font-medium text-slate-900">
+                              {contract.worker_name}
+                            </td>
+                            <td className="py-4 text-slate-500">
+                              {contract.project_name}
+                            </td>
+                            <td className="py-4 text-slate-500">
+                              {contract.work_date}
+                            </td>
+                            <td className="py-4 text-slate-500">
+                              {contract.daily_rate.toLocaleString()}원
+                            </td>
+                            <td className="py-4">
+                              <Badge variant={statusInfo.variant}>
+                                {statusInfo.label}
+                              </Badge>
+                            </td>
+                            <td className="py-4 text-slate-500">
+                              {contract.created_at}
+                            </td>
+                            <td className="py-4">
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="secondary">
+                                  보기
+                                </Button>
+                                {contract.status === "draft" && (
+                                  <Button size="sm">발송</Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={async () => {
+                                    try {
+                                      const blob =
+                                        await api.downloadLaborContractHwpx(
+                                          contract.id,
+                                        );
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement("a");
+                                      a.href = url;
+                                      a.download = `표준근로계약서_${contract.worker_name}.hwpx`;
+                                      document.body.appendChild(a);
+                                      a.click();
+                                      document.body.removeChild(a);
+                                      URL.revokeObjectURL(url);
+                                    } catch (e) {
+                                      console.error("HWPX 다운로드 실패:", e);
+                                      toast.error(
+                                        "근로계약서 다운로드에 실패했어요.",
+                                      );
+                                    }
+                                  }}
+                                >
+                                  <FileDown className="mr-1 h-3 w-3" />
+                                  다운로드
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

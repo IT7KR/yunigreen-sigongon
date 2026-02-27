@@ -105,7 +105,7 @@ export function EstimateLineModal({
       isOpen={isOpen}
       onClose={onClose}
       title={isEditMode ? "항목 수정" : "항목 추가"}
-      size="md"
+      size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

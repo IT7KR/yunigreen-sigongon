@@ -17,6 +17,7 @@ import {
 } from "@sigongon/ui";
 import type { EstimateStatus } from "@sigongon/types";
 import { api } from "@/lib/api";
+import { MobileListCard } from "@/components/MobileListCard";
 
 interface EstimateListItem {
   id: string;
@@ -157,67 +158,110 @@ export default function EstimatesPage({
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                    <th className="pb-3 font-medium">버전</th>
-                    <th className="pb-3 font-medium">상태</th>
-                    <th className="pb-3 font-medium">금액</th>
-                    <th className="pb-3 font-medium">생성일</th>
-                    <th className="pb-3 font-medium">발송일</th>
-                    <th className="pb-3 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredEstimates.map((estimate) => (
-                    <tr
-                      key={estimate.id}
-                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                    >
-                      <td className="py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-slate-900">
-                            v{estimate.version}
-                          </span>
-                          {estimate.id === latestEstimate?.id && (
-                            <Badge className="bg-brand-point-100 text-brand-point-700">
-                              최신
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4">
-                        <StatusBadge status={estimate.status} />
-                      </td>
-                      <td className="py-4 font-medium text-slate-900">
-                        {Number(estimate.total_amount).toLocaleString()}원
-                      </td>
-                      <td className="py-4 text-slate-500">
-                        {estimate.created_at
+            <>
+              {/* Mobile list */}
+              <div className="space-y-3 md:hidden">
+                {filteredEstimates.map((estimate) => (
+                  <MobileListCard
+                    key={estimate.id}
+                    title={
+                      <span className="flex items-center gap-2">
+                        v{estimate.version}
+                        {estimate.id === latestEstimate?.id && (
+                          <Badge className="bg-brand-point-100 text-brand-point-700">
+                            최신
+                          </Badge>
+                        )}
+                      </span>
+                    }
+                    badge={<StatusBadge status={estimate.status} />}
+                    metadata={[
+                      {
+                        label: "금액",
+                        value: `${Number(estimate.total_amount).toLocaleString()}원`,
+                      },
+                      {
+                        label: "생성일",
+                        value: estimate.created_at
                           ? formatDate(estimate.created_at)
-                          : "-"}
-                      </td>
-                      <td className="py-4 text-slate-500">
-                        {estimate.issued_at
-                          ? formatDate(estimate.issued_at)
-                          : "-"}
-                      </td>
-                      <td className="py-4">
-                        <Button size="sm" variant="secondary" asChild><Link href={`/estimates/${estimate.id}`}>
-                            상세보기
-                          </Link></Button>
-                      </td>
+                          : "-",
+                      },
+                    ]}
+                    onClick={() => router.push(`/estimates/${estimate.id}`)}
+                  />
+                ))}
+                {filteredEstimates.length === 0 && (
+                  <p className="py-6 text-center text-sm text-slate-500">
+                    선택한 상태의 견적서가 없습니다.
+                  </p>
+                )}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                      <th className="pb-3 font-medium">버전</th>
+                      <th className="pb-3 font-medium">상태</th>
+                      <th className="pb-3 font-medium">금액</th>
+                      <th className="pb-3 font-medium">생성일</th>
+                      <th className="pb-3 font-medium">발송일</th>
+                      <th className="pb-3 font-medium"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              {filteredEstimates.length === 0 && (
-                <p className="py-6 text-center text-sm text-slate-500">
-                  선택한 상태의 견적서가 없습니다.
-                </p>
-              )}
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredEstimates.map((estimate) => (
+                      <tr
+                        key={estimate.id}
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                      >
+                        <td className="py-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-slate-900">
+                              v{estimate.version}
+                            </span>
+                            {estimate.id === latestEstimate?.id && (
+                              <Badge className="bg-brand-point-100 text-brand-point-700">
+                                최신
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4">
+                          <StatusBadge status={estimate.status} />
+                        </td>
+                        <td className="py-4 font-medium text-slate-900">
+                          {Number(estimate.total_amount).toLocaleString()}원
+                        </td>
+                        <td className="py-4 text-slate-500">
+                          {estimate.created_at
+                            ? formatDate(estimate.created_at)
+                            : "-"}
+                        </td>
+                        <td className="py-4 text-slate-500">
+                          {estimate.issued_at
+                            ? formatDate(estimate.issued_at)
+                            : "-"}
+                        </td>
+                        <td className="py-4">
+                          <Button size="sm" variant="secondary" asChild>
+                            <Link href={`/estimates/${estimate.id}`}>
+                              상세보기
+                            </Link>
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {filteredEstimates.length === 0 && (
+                  <p className="py-6 text-center text-sm text-slate-500">
+                    선택한 상태의 견적서가 없습니다.
+                  </p>
+                )}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

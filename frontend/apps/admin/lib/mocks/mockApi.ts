@@ -346,6 +346,18 @@ export class MockAPIClient {
     }
   > = {};
 
+  private workerContractsByWorker: Record<
+    string,
+    Array<{
+      id: string;
+      project_name: string;
+      work_date: string;
+      role: string;
+      daily_rate: number;
+      status: "pending" | "signed";
+    }>
+  > = {};
+
   private workerPaystubsByWorker: Record<
     string,
     Array<{
@@ -364,10 +376,11 @@ export class MockAPIClient {
       {
         id: string;
         title: string;
+        date?: string;
         total_amount: number;
         deductions: number;
         net_amount: number;
-        items: Array<{ label: string; amount: number }>;
+        items: Array<{ label: string; amount: number; type?: "income" | "deduction" }>;
         status: "sent" | "confirmed";
       }
     >
@@ -393,6 +406,10 @@ export class MockAPIClient {
   }> = [];
 
   private workerAccessRequests: Record<string, string> = {};
+  private workerInvitations: Record<
+    string,
+    { worker_id: string; name: string; phone: string; created_at: string }
+  > = {};
   private seasons: SeasonInfo[] = [
     { id: 202601010001, name: "2026H1", is_active: true, created_at: "2026-01-01T00:00:00Z" },
   ];
@@ -502,6 +519,47 @@ export class MockAPIClient {
     };
   }
 
+  private ensureWorkerContracts(workerId: string) {
+    if (this.workerContractsByWorker[workerId]) return;
+
+    const seededContracts = [
+      {
+        id: "wc_1",
+        project_name: "논현동 주택 리모델링",
+        work_date: "2026.01.22",
+        role: "목공",
+        daily_rate: 250000,
+        status: "pending" as const,
+        content: "(논현동 현장 계약 내용 생략)",
+      },
+      {
+        id: "wc_2",
+        project_name: "역삼중 옥상 방수 공사",
+        work_date: "2026.01.15",
+        role: "방수",
+        daily_rate: 230000,
+        status: "signed" as const,
+        content: "(역삼중 현장 계약 내용 생략)",
+      },
+    ];
+
+    for (const contract of seededContracts) {
+      this.workerContractsById[contract.id] = {
+        id: contract.id,
+        project_name: contract.project_name,
+        work_date: contract.work_date,
+        role: contract.role,
+        daily_rate: contract.daily_rate,
+        status: contract.status,
+        content: contract.content,
+      };
+    }
+
+    this.workerContractsByWorker[workerId] = seededContracts.map(
+      ({ content: _content, ...contract }) => contract,
+    );
+  }
+
   private ensureWorkerPaystubs(workerId: string) {
     if (this.workerPaystubsByWorker[workerId]) return;
 
@@ -525,26 +583,29 @@ export class MockAPIClient {
       ps_1: {
         id: "ps_1",
         title: "2026년 1월 급여지급명세서",
+        date: "2026.01.20",
         total_amount: 2500000,
         deductions: 89000,
         net_amount: 2411000,
         items: [
-          { label: "기본급", amount: 2500000 },
-          { label: "소득세", amount: -78000 },
-          { label: "주민세", amount: -7800 },
+          { label: "기본급", amount: 2500000, type: "income" as const },
+          { label: "소득세", amount: 78000, type: "deduction" as const },
+          { label: "주민세", amount: 7800, type: "deduction" as const },
+          { label: "고용보험", amount: 3200, type: "deduction" as const },
         ],
         status: "sent",
       },
       ps_2: {
         id: "ps_2",
         title: "2025년 12월 급여지급명세서",
+        date: "2025.12.20",
         total_amount: 1800000,
         deductions: 70000,
         net_amount: 1730000,
         items: [
-          { label: "기본급", amount: 1800000 },
-          { label: "소득세", amount: -62000 },
-          { label: "주민세", amount: -8000 },
+          { label: "기본급", amount: 1800000, type: "income" as const },
+          { label: "소득세", amount: 62000, type: "deduction" as const },
+          { label: "주민세", amount: 8000, type: "deduction" as const },
         ],
         status: "confirmed",
       },
@@ -4004,6 +4065,21 @@ export class MockAPIClient {
     return delay(ok({ worker_id: workerId }));
   }
 
+  async verifyWorkerInvite(inviteToken: string) {
+    const target = this.workerInvitations[inviteToken];
+    if (!target) {
+      return delay(
+        fail<{ worker_id: string }>("INVALID_INVITE", "초대 링크가 유효하지 않아요"),
+      );
+    }
+    return delay(ok({ worker_id: target.worker_id }));
+  }
+
+  async getWorkerContracts(workerId: string) {
+    this.ensureWorkerContracts(workerId);
+    return delay(ok(this.workerContractsByWorker[workerId]));
+  }
+
   async getWorkerContract(contractId: string) {
     this.ensureWorkerContract(contractId);
     return delay(ok(this.workerContractsById[contractId]));
@@ -4043,17 +4119,189 @@ export class MockAPIClient {
   }
 
   async getWorkerProfile(workerId: string) {
+    const users = mockDb.get("users") as Array<{ id: string; name: string; phone?: string; role: string }>;
+    const user = users.find((u) => u.id === workerId);
+    const workers = mockDb.get("dailyWorkers") as any[];
+    const worker = workers.find((w) => w.id === workerId);
+
+    if (!user) {
+      return delay(fail("NOT_FOUND", "근로자를 찾을 수 없습니다"));
+    }
+
+    const docs = this.ensureWorkerDocuments(workerId);
+    const sortedDocs = [...docs].sort((a, b) => {
+      if (a.document_type === b.document_type) return 0;
+      return a.document_type === "id_card" ? -1 : 1;
+    });
+
     return delay(
       ok({
         id: workerId,
-        name: "홍길동",
-        role: "목공 반장",
-        documents: [
-          { id: "doc_1", name: "신분증", status: "submitted" as const },
-          { id: "doc_2", name: "안전교육이수증", status: "submitted" as const },
-        ],
+        name: user.name,
+        phone: worker?.phone || user.phone || "010-0000-0000",
+        address: worker?.address || "서울시 강남구",
+        bank_name: worker?.bank_name || "신한은행",
+        account_number: worker?.account_number || "110-123-456789",
+        job_type: worker?.job_type || "근로자",
+        hire_date: worker?.hire_date || "2025-01-01",
+        birth_date: worker?.birth_date || "900101",
+        gender: worker?.gender || 1,
+        documents: sortedDocs.map((doc) => ({
+          id: doc.id || doc.document_id,
+          document_type: doc.document_type,
+          name: doc.name,
+          status: doc.status,
+          review_status: doc.review_status,
+          review_reason: doc.review_reason || null,
+          original_filename: doc.original_filename || null,
+          uploaded_at: doc.reviewed_at || null,
+        })),
       }),
     );
+  }
+
+  async uploadWorkerDocument(
+    _workerId: string,
+    documentId: string,
+    file: File,
+  ) {
+    return delay(
+      ok({
+        id: documentId,
+        status: "submitted",
+        file_name: file.name,
+      })
+    );
+  }
+
+  async updateWorkerProfile(workerId: string, data: { phone?: string; address?: string; bank_name?: string; account_number?: string }) {
+    const workers = mockDb.get("dailyWorkers") as any[];
+    const workerIndex = workers.findIndex((w) => w.id === workerId);
+
+    if (workerIndex === -1) {
+      return delay(fail("NOT_FOUND", "근로자를 찾을 수 없습니다"));
+    }
+
+    const updated = { ...workers[workerIndex] };
+    if (data.phone !== undefined) updated.phone = data.phone;
+    if (data.address !== undefined) updated.address = data.address;
+    if (data.bank_name !== undefined) updated.bank_name = data.bank_name;
+    if (data.account_number !== undefined) updated.account_number = data.account_number;
+
+    mockDb.update("dailyWorkers", (prev: any[]) =>
+      prev.map((w, i) => (i === workerIndex ? updated : w))
+    );
+
+    return delay(ok({ updated: true }));
+  }
+
+  async changeWorkerPassword(_workerId: string, data: { current_password: string; new_password: string }) {
+    if (!data.current_password || data.current_password.length < 1) {
+      return delay(fail("INVALID_PASSWORD", "현재 비밀번호를 입력하세요."));
+    }
+    if (!data.new_password || data.new_password.length < 8) {
+      return delay(fail("WEAK_PASSWORD", "새 비밀번호는 8자 이상이어야 합니다."));
+    }
+    // Mock: always succeeds (current password not verified in mock mode)
+    return delay(ok({ updated: true }));
+  }
+
+  async createWorkerInvitation(data: { name: string; phone: string; organization_id: string; invited_by: string; token: string }) {
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const invitation: Invitation = {
+      id: randomId("inv"),
+      phone: data.phone,
+      name: data.name,
+      role: "worker" as const,
+      organization_id: data.organization_id,
+      status: "pending" as InvitationStatus,
+      token: data.token,
+      invited_by: data.invited_by,
+      created_at: nowIso(),
+      expires_at: expiresAt,
+    };
+
+    mockDb.update("invitations", (prev: Invitation[]) => [...prev, invitation]);
+
+    return delay(ok({ id: invitation.id, token: data.token, expires_at: expiresAt }));
+  }
+
+  async verifyWorkerInviteToken(token: string) {
+    const invitations = mockDb.get("invitations") as Invitation[];
+    const invitation = invitations.find((inv) => inv.token === token);
+
+    if (!invitation) {
+      return delay(fail("INVALID_TOKEN", "유효하지 않은 초대 링크입니다."));
+    }
+
+    if (invitation.status === "revoked") {
+      return delay(fail("REVOKED", "취소된 초대 링크입니다."));
+    }
+
+    if (invitation.status === "accepted") {
+      return delay(fail("ALREADY_USED", "이미 사용된 초대 링크입니다."));
+    }
+
+    const now = new Date();
+    if (new Date(invitation.expires_at) < now) {
+      return delay(fail("EXPIRED", "만료된 초대 링크입니다."));
+    }
+
+    // Find organization name
+    const orgId = invitation.organization_id;
+    const org = orgId ? { name: "(주)유니그린" } : null;
+
+    return delay(ok({
+      valid: true,
+      name: invitation.name,
+      phone: invitation.phone,
+      companyName: org?.name || "(주)유니그린",
+      invitation_id: invitation.id,
+    }));
+  }
+
+  async getPendingWorkerInvitations(organization_id: string) {
+    const invitations = mockDb.get("invitations") as Invitation[];
+    const pending = invitations.filter(
+      (inv) => inv.organization_id === organization_id && inv.role === "worker" && inv.status === "pending"
+    );
+    return delay(ok(pending));
+  }
+
+  async resendWorkerInvitation(invitationId: string, inviteUrl: string) {
+    const invitations = mockDb.get("invitations") as Invitation[];
+    const invitation = invitations.find((inv) => inv.id === invitationId);
+
+    if (!invitation) {
+      return delay(fail("NOT_FOUND", "초대를 찾을 수 없습니다."));
+    }
+
+    // Extend expiry
+    const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    mockDb.update("invitations", (prev: Invitation[]) =>
+      prev.map((inv) =>
+        inv.id === invitationId ? { ...inv, expires_at: newExpiresAt, created_at: nowIso() } : inv
+      )
+    );
+
+    return delay(ok({ resent: true, expires_at: newExpiresAt, invite_url: inviteUrl }));
+  }
+
+  async revokeWorkerInvitation(invitationId: string) {
+    const invitations = mockDb.get("invitations") as Invitation[];
+    const invitation = invitations.find((inv) => inv.id === invitationId);
+
+    if (!invitation) {
+      return delay(fail("NOT_FOUND", "초대를 찾을 수 없습니다."));
+    }
+
+    mockDb.update("invitations", (prev: Invitation[]) =>
+      prev.map((inv) =>
+        inv.id === invitationId ? { ...inv, status: "revoked" as InvitationStatus } : inv
+      )
+    );
+
+    return delay(ok({ revoked: true }));
   }
 
   async getNotifications() {
@@ -7446,6 +7694,24 @@ export class MockAPIClient {
     // Mock HWPX blob (returns empty blob for testing)
     console.log("[MockAPI] downloadLaborContractHwpx:", laborContractId);
     return new Blob(["mock-hwpx-content"], { type: "application/vnd.hancom.hwpx" });
+  }
+
+  // ============================================
+  // Device Tokens (FCM 푸시 알림)
+  // ============================================
+
+  async registerDeviceToken(data: { token: string; platform: "ios" | "android" }) {
+    console.log("[MockAPI] registerDeviceToken:", data.platform, data.token.slice(0, 8) + "...");
+    return delay({
+      success: true,
+      data: { id: randomId("dt"), token: data.token, platform: data.platform },
+      error: null,
+    });
+  }
+
+  async deleteDeviceToken(token: string) {
+    console.log("[MockAPI] deleteDeviceToken:", token.slice(0, 8) + "...");
+    return delay({ success: true, data: { deleted: true }, error: null });
   }
 }
 

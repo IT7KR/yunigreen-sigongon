@@ -12,6 +12,7 @@ import {
 } from "@sigongon/ui";
 import { FileText, Plus, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { MobileListCard } from "@/components/MobileListCard";
 
 interface TaxInvoiceListItem {
   id: string;
@@ -113,86 +114,130 @@ export default function TaxInvoicePage({
           <CardTitle>발행 이력</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                  <th className="pb-3 font-medium">발행일</th>
-                  <th className="pb-3 font-medium">공급받는자</th>
-                  <th className="pb-3 font-medium">공급가액</th>
-                  <th className="pb-3 font-medium">세액</th>
-                  <th className="pb-3 font-medium">합계금액</th>
-                  <th className="pb-3 font-medium">상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="py-6 text-center text-sm text-slate-400"
-                    >
-                      <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                    </td>
+          {/* Mobile view */}
+          <div className="space-y-3 md:hidden">
+            {isLoading ? (
+              <div className="py-6 text-center text-sm text-slate-400">
+                <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+              </div>
+            ) : invoices.length === 0 ? (
+              <div className="py-12 text-center">
+                <FileText className="mx-auto h-12 w-12 text-slate-300" />
+                <p className="mt-4 text-slate-500">발행 이력이 없습니다.</p>
+                <p className="mt-1 text-sm text-slate-400">
+                  새 세금계산서를 발행해 보세요.
+                </p>
+              </div>
+            ) : (
+              invoices.map((invoice) => (
+                <MobileListCard
+                  key={invoice.id}
+                  title={invoice.buyer_name}
+                  subtitle={invoice.issue_date}
+                  badge={
+                    <Badge variant={statusVariants[invoice.status]}>
+                      {statusLabels[invoice.status]}
+                    </Badge>
+                  }
+                  metadata={[
+                    {
+                      label: "공급가",
+                      value: `${invoice.supply_amount.toLocaleString()}원`,
+                    },
+                    {
+                      label: "합계",
+                      value: `${invoice.total_amount.toLocaleString()}원`,
+                    },
+                  ]}
+                  onClick={() => handleRowClick(invoice.id)}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Desktop view */}
+          <div className="hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                    <th className="pb-3 font-medium">발행일</th>
+                    <th className="pb-3 font-medium">공급받는자</th>
+                    <th className="pb-3 font-medium">공급가액</th>
+                    <th className="pb-3 font-medium">세액</th>
+                    <th className="pb-3 font-medium">합계금액</th>
+                    <th className="pb-3 font-medium">상태</th>
                   </tr>
-                ) : invoices.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="py-12 text-center"
-                    >
-                      <FileText className="mx-auto h-12 w-12 text-slate-300" />
-                      <p className="mt-4 text-slate-500">
-                        발행 이력이 없습니다.
-                      </p>
-                      <p className="mt-1 text-sm text-slate-400">
-                        새 세금계산서를 발행해 보세요.
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  invoices.map((invoice) => (
-                    <tr
-                      key={invoice.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleRowClick(invoice.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          handleRowClick(invoice.id);
-                        }
-                      }}
-                      className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                    >
-                      <td className="py-4 text-slate-900">{invoice.issue_date}</td>
-                      <td className="py-4 text-slate-900">
-                        {invoice.buyer_name}
-                      </td>
-                      <td className="py-4 text-slate-900">
-                        {invoice.supply_amount.toLocaleString()}원
-                      </td>
-                      <td className="py-4 text-slate-900">
-                        {invoice.tax_amount.toLocaleString()}원
-                      </td>
-                      <td className="py-4 font-medium text-slate-900">
-                        {invoice.total_amount.toLocaleString()}원
-                      </td>
-                      <td className="py-4">
-                        <Badge variant={statusVariants[invoice.status]}>
-                          {statusLabels[invoice.status]}
-                        </Badge>
-                        {invoice.status === "failed" && invoice.failure_reason && (
-                          <p className="mt-1 text-xs text-red-500">
-                            {invoice.failure_reason}
-                          </p>
-                        )}
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="py-6 text-center text-sm text-slate-400"
+                      >
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : invoices.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="py-12 text-center"
+                      >
+                        <FileText className="mx-auto h-12 w-12 text-slate-300" />
+                        <p className="mt-4 text-slate-500">
+                          발행 이력이 없습니다.
+                        </p>
+                        <p className="mt-1 text-sm text-slate-400">
+                          새 세금계산서를 발행해 보세요.
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    invoices.map((invoice) => (
+                      <tr
+                        key={invoice.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleRowClick(invoice.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleRowClick(invoice.id);
+                          }
+                        }}
+                        className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                      >
+                        <td className="py-4 text-slate-900">{invoice.issue_date}</td>
+                        <td className="py-4 text-slate-900">
+                          {invoice.buyer_name}
+                        </td>
+                        <td className="py-4 text-slate-900">
+                          {invoice.supply_amount.toLocaleString()}원
+                        </td>
+                        <td className="py-4 text-slate-900">
+                          {invoice.tax_amount.toLocaleString()}원
+                        </td>
+                        <td className="py-4 font-medium text-slate-900">
+                          {invoice.total_amount.toLocaleString()}원
+                        </td>
+                        <td className="py-4">
+                          <Badge variant={statusVariants[invoice.status]}>
+                            {statusLabels[invoice.status]}
+                          </Badge>
+                          {invoice.status === "failed" && invoice.failure_reason && (
+                            <p className="mt-1 text-xs text-red-500">
+                              {invoice.failure_reason}
+                            </p>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </CardContent>
       </Card>

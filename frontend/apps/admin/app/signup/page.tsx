@@ -36,13 +36,17 @@ export default function SignupPage() {
     const stored = getSignupData();
     setData(stored);
     if (stored.phoneVerified) setPhoneCodeSent(true);
-    if (stored.phoneOtpRequestId) setPhoneOtpRequestId(stored.phoneOtpRequestId);
+    if (stored.phoneOtpRequestId)
+      setPhoneOtpRequestId(stored.phoneOtpRequestId);
   }, []);
 
   // Username check handler
   const handleCheckUsername = async () => {
     if (!data.username || !validateUsername(data.username)) {
-      setErrors({ ...errors, username: "4-20자, 영문으로 시작, 영문/숫자/밑줄만 가능" });
+      setErrors({
+        ...errors,
+        username: "4-20자, 영문으로 시작, 영문/숫자/밑줄만 가능",
+      });
       return;
     }
 
@@ -107,7 +111,10 @@ export default function SignupPage() {
         setErrors({ ...errors, phoneCode: "인증번호가 올바르지 않습니다" });
       }
     } catch {
-      setErrors({ ...errors, phoneCode: "인증번호가 올바르지 않거나 만료되었습니다" });
+      setErrors({
+        ...errors,
+        phoneCode: "인증번호가 올바르지 않거나 만료되었습니다",
+      });
     }
     setPhoneVerifying(false);
   };
@@ -182,7 +189,7 @@ export default function SignupPage() {
         <div className="space-y-4">
           {/* Username with Check */}
           <div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-end">
               <div className="flex-1">
                 <Input
                   label="아이디"
@@ -190,7 +197,12 @@ export default function SignupPage() {
                   placeholder="영문으로 시작, 4-20자"
                   value={data.username || ""}
                   onChange={(e) => {
-                    setData({ ...data, username: e.target.value, usernameChecked: false, usernameAvailable: false });
+                    setData({
+                      ...data,
+                      username: e.target.value,
+                      usernameChecked: false,
+                      usernameAvailable: false,
+                    });
                   }}
                   error={errors.username}
                   disabled={data.usernameChecked && data.usernameAvailable}
@@ -200,7 +212,6 @@ export default function SignupPage() {
                 <Button
                   onClick={handleCheckUsername}
                   disabled={usernameChecking}
-                  className="mt-6"
                 >
                   {usernameChecking ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -250,7 +261,7 @@ export default function SignupPage() {
 
           {/* Phone with Verification */}
           <div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-end">
               <div className="flex-1">
                 <Input
                   label="휴대폰 번호"
@@ -258,7 +269,11 @@ export default function SignupPage() {
                   value={data.phone || ""}
                   onChange={(e) => {
                     const formatted = handlePhoneFormat(e.target.value);
-                    setData({ ...data, phone: formatted, phoneVerified: false });
+                    setData({
+                      ...data,
+                      phone: formatted,
+                      phoneVerified: false,
+                    });
                     setPhoneCodeSent(false);
                     setPhoneCode("");
                   }}
@@ -267,11 +282,7 @@ export default function SignupPage() {
                 />
               </div>
               {!data.phoneVerified && (
-                <Button
-                  onClick={handleSendPhoneCode}
-                  disabled={phoneSending}
-                  className="mt-6"
-                >
+                <Button onClick={handleSendPhoneCode} disabled={phoneSending}>
                   {phoneSending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : phoneCodeSent ? (
@@ -294,8 +305,8 @@ export default function SignupPage() {
           {phoneCodeSent && !data.phoneVerified && (
             <div className="rounded-lg border border-green-200 bg-green-50 p-4">
               <p className="mb-3 text-sm text-slate-600">
-                <span className="font-medium text-slate-900">{data.phone}</span>으로
-                인증번호가 발송되었습니다.
+                <span className="font-medium text-slate-900">{data.phone}</span>
+                으로 인증번호가 발송되었습니다.
               </p>
               <div className="flex gap-2">
                 <div className="flex-1">
@@ -304,7 +315,9 @@ export default function SignupPage() {
                     placeholder="6자리 숫자 입력"
                     value={phoneCode}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      const value = e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 6);
                       setPhoneCode(value);
                     }}
                     error={errors.phoneCode}
@@ -369,9 +382,11 @@ export default function SignupPage() {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button variant="secondary" fullWidth size="lg" asChild><Link href="/login" className="flex-1">
+            <Button variant="secondary" fullWidth size="lg" asChild>
+              <Link href="/login" className="flex-1">
                 취소
-              </Link></Button>
+              </Link>
+            </Button>
             <Button onClick={handleNext} fullWidth size="lg" className="flex-1">
               다음
             </Button>

@@ -12,6 +12,7 @@ import {
   toast,
 } from "@sigongon/ui";
 import { AdminLayout } from "@/components/AdminLayout";
+import { MobileListCard } from "@/components/MobileListCard";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import {
@@ -391,69 +392,122 @@ export default function SALaborPage() {
             <CardTitle>최근 등록 근로자</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                    <th className="pb-3 font-medium">이름</th>
-                    <th className="pb-3 font-medium">직종</th>
-                    <th className="pb-3 font-medium">소속 고객사</th>
-                    <th className="pb-3 font-medium">상태</th>
-                    <th className="pb-3 font-medium">계약상태</th>
-                    <th className="pb-3 font-medium">최근 출역일</th>
-                    <th className="pb-3 font-medium">통제</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={7} className="py-6 text-center text-sm text-slate-400">
-                        불러오는 중...
-                      </td>
-                    </tr>
-                  ) : workers.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-6 text-center text-sm text-slate-400">
-                        등록된 근로자가 없습니다.
-                      </td>
-                    </tr>
-                  ) : (
-                    workers.map((worker) => (
-                      <tr key={worker.id} className="border-b border-slate-100 last:border-0">
-                        <td className="py-4 font-medium text-slate-900">{worker.name}</td>
-                        <td className="py-4 text-slate-500">{worker.role}</td>
-                        <td className="py-4 text-slate-500">{worker.organization_name}</td>
-                        <td className="py-4">
-                          <Badge variant={worker.status === "active" ? "success" : "default"}>
-                            {worker.status === "active" ? "재직" : "대기"}
-                          </Badge>
-                        </td>
-                        <td className="py-4">
+            {/* Mobile view */}
+            <div className="space-y-3 md:hidden">
+              {isLoading ? (
+                <p className="py-6 text-center text-sm text-slate-400">불러오는 중...</p>
+              ) : workers.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-400">등록된 근로자가 없습니다.</p>
+              ) : (
+                workers.map((worker) => (
+                  <MobileListCard
+                    key={worker.id}
+                    title={worker.name}
+                    subtitle={worker.organization_name}
+                    badge={
+                      <Badge variant={worker.status === "active" ? "success" : "default"}>
+                        {worker.status === "active" ? "재직" : "대기"}
+                      </Badge>
+                    }
+                    metadata={[
+                      { label: "직종", value: worker.role },
+                      {
+                        label: "계약상태",
+                        value: (
                           <Badge
-                            variant={
-                              worker.contract_status === "signed" ? "success" : "warning"
-                            }
+                            variant={worker.contract_status === "signed" ? "success" : "warning"}
                           >
                             {worker.contract_status === "signed" ? "서명 완료" : "서명 대기"}
                           </Badge>
-                        </td>
-                        <td className="py-4 text-slate-500">{worker.last_work_date}</td>
-                        <td className="py-4">
-                          <Button
-                            size="sm"
-                            variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
-                            onClick={() => handleWorkerControl(worker)}
-                            disabled={workerActionKey === `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`}
-                          >
-                            <Ban className="h-3.5 w-3.5" />
-                            {worker.is_blocked_for_labor ? "차단해제" : "차단"}
-                          </Button>
+                        ),
+                      },
+                      { label: "최근출역", value: worker.last_work_date },
+                    ]}
+                    actions={
+                      <Button
+                        size="sm"
+                        variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
+                        onClick={() => handleWorkerControl(worker)}
+                        disabled={
+                          workerActionKey ===
+                          `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`
+                        }
+                      >
+                        <Ban className="h-3.5 w-3.5" />
+                        {worker.is_blocked_for_labor ? "차단해제" : "차단"}
+                      </Button>
+                    }
+                  />
+                ))
+              )}
+            </div>
+
+            {/* Desktop view */}
+            <div className="hidden md:block">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                      <th className="pb-3 font-medium">이름</th>
+                      <th className="pb-3 font-medium">직종</th>
+                      <th className="pb-3 font-medium">소속 고객사</th>
+                      <th className="pb-3 font-medium">상태</th>
+                      <th className="pb-3 font-medium">계약상태</th>
+                      <th className="pb-3 font-medium">최근 출역일</th>
+                      <th className="pb-3 font-medium">통제</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={7} className="py-6 text-center text-sm text-slate-400">
+                          불러오는 중...
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : workers.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-6 text-center text-sm text-slate-400">
+                          등록된 근로자가 없습니다.
+                        </td>
+                      </tr>
+                    ) : (
+                      workers.map((worker) => (
+                        <tr key={worker.id} className="border-b border-slate-100 last:border-0">
+                          <td className="py-4 font-medium text-slate-900">{worker.name}</td>
+                          <td className="py-4 text-slate-500">{worker.role}</td>
+                          <td className="py-4 text-slate-500">{worker.organization_name}</td>
+                          <td className="py-4">
+                            <Badge variant={worker.status === "active" ? "success" : "default"}>
+                              {worker.status === "active" ? "재직" : "대기"}
+                            </Badge>
+                          </td>
+                          <td className="py-4">
+                            <Badge
+                              variant={
+                                worker.contract_status === "signed" ? "success" : "warning"
+                              }
+                            >
+                              {worker.contract_status === "signed" ? "서명 완료" : "서명 대기"}
+                            </Badge>
+                          </td>
+                          <td className="py-4 text-slate-500">{worker.last_work_date}</td>
+                          <td className="py-4">
+                            <Button
+                              size="sm"
+                              variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
+                              onClick={() => handleWorkerControl(worker)}
+                              disabled={workerActionKey === `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`}
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                              {worker.is_blocked_for_labor ? "차단해제" : "차단"}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -25,6 +25,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
+import { MobileListCard } from "@/components/MobileListCard";
 import { api } from "@/lib/api";
 
 type Partner = {
@@ -543,108 +544,174 @@ export default function PartnersPage() {
           />
         </div>
 
-        <Card>
-          <CardContent className="p-0">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-sm text-slate-500">
-                  <th className="px-6 py-3 font-medium">업체명</th>
-                  <th className="px-6 py-3 font-medium">대표자</th>
-                  <th className="px-6 py-3 font-medium">실무자</th>
-                  <th className="px-6 py-3 font-medium">사업자번호</th>
-                  <th className="px-6 py-3 font-medium">면허</th>
-                  <th className="px-6 py-3 font-medium">여성기업</th>
-                  <th className="px-6 py-3 font-medium">상태</th>
-                  <th className="px-6 py-3 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-6 py-6 text-center text-sm text-slate-400"
-                    >
-                      불러오는 중...
-                    </td>
-                  </tr>
-                ) : filteredPartners.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-6 py-6 text-center text-sm text-slate-400"
-                    >
-                      {searchTerm
-                        ? "검색 결과가 없습니다."
-                        : "등록된 협력사가 없습니다."}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredPartners.map((partner) => (
-                    <tr
-                      key={partner.id}
-                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                    >
-                      <td className="px-6 py-4 font-medium text-slate-900">
-                        {partner.name}
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        <p>{partner.representative_name}</p>
-                        <p className="text-xs text-slate-400">
-                          {partner.representative_phone || "-"}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        <p>{partner.contact_name || "-"}</p>
-                        <p className="text-xs text-slate-400">
-                          {partner.contact_phone || "-"}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        {partner.business_number}
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">
+        {/* Mobile card list */}
+        <div className="space-y-3 md:hidden">
+          {isLoading ? (
+            <p className="py-6 text-center text-sm text-slate-400">
+              불러오는 중...
+            </p>
+          ) : filteredPartners.length === 0 ? (
+            <p className="py-6 text-center text-sm text-slate-400">
+              {searchTerm
+                ? "검색 결과가 없습니다."
+                : "등록된 협력사가 없습니다."}
+            </p>
+          ) : (
+            filteredPartners.map((partner) => (
+              <MobileListCard
+                key={partner.id}
+                title={partner.name}
+                subtitle={`대표 ${partner.representative_name}${partner.representative_phone ? ` · ${partner.representative_phone}` : ""}`}
+                badge={
+                  <Badge
+                    variant={
+                      partner.status === "active" ? "success" : "default"
+                    }
+                  >
+                    {partner.status === "active" ? "정상" : "정지"}
+                  </Badge>
+                }
+                metadata={[
+                  {
+                    label: "사업자번호",
+                    value: partner.business_number || "-",
+                  },
+                  {
+                    label: "면허",
+                    value: (
+                      <>
                         {partner.license_type || "-"}
-                      </td>
-                      <td className="px-6 py-4">
                         {partner.is_women_owned && (
-                          <span className="inline-flex items-center rounded-full bg-pink-100 px-2.5 py-0.5 text-xs font-medium text-pink-800">
+                          <span className="ml-1.5 inline-flex items-center rounded-full bg-pink-100 px-1.5 py-0.5 text-xs font-medium text-pink-800">
                             여성기업
                           </span>
                         )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge
-                          variant={
-                            partner.status === "active" ? "success" : "default"
-                          }
-                        >
-                          {partner.status === "active" ? "정상" : "정지"}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEditModal(partner)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          수정
-                        </Button>
+                      </>
+                    ),
+                  },
+                ]}
+                onClick={() => openEditModal(partner)}
+                actions={
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => openEditModal(partner)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    수정
+                  </Button>
+                }
+              />
+            ))
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block">
+          <Card>
+            <CardContent className="p-0">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-sm text-slate-500">
+                    <th className="px-6 py-3 font-medium">업체명</th>
+                    <th className="px-6 py-3 font-medium">대표자</th>
+                    <th className="px-6 py-3 font-medium">실무자</th>
+                    <th className="px-6 py-3 font-medium">사업자번호</th>
+                    <th className="px-6 py-3 font-medium">면허</th>
+                    <th className="px-6 py-3 font-medium">여성기업</th>
+                    <th className="px-6 py-3 font-medium">상태</th>
+                    <th className="px-6 py-3 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="px-6 py-6 text-center text-sm text-slate-400"
+                      >
+                        불러오는 중...
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+                  ) : filteredPartners.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="px-6 py-6 text-center text-sm text-slate-400"
+                      >
+                        {searchTerm
+                          ? "검색 결과가 없습니다."
+                          : "등록된 협력사가 없습니다."}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPartners.map((partner) => (
+                      <tr
+                        key={partner.id}
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                      >
+                        <td className="px-6 py-4 font-medium text-slate-900">
+                          {partner.name}
+                        </td>
+                        <td className="px-6 py-4 text-slate-500">
+                          <p>{partner.representative_name}</p>
+                          <p className="text-xs text-slate-400">
+                            {partner.representative_phone || "-"}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4 text-slate-500">
+                          <p>{partner.contact_name || "-"}</p>
+                          <p className="text-xs text-slate-400">
+                            {partner.contact_phone || "-"}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4 text-slate-500">
+                          {partner.business_number}
+                        </td>
+                        <td className="px-6 py-4 text-slate-500">
+                          {partner.license_type || "-"}
+                        </td>
+                        <td className="px-6 py-4">
+                          {partner.is_women_owned && (
+                            <span className="inline-flex items-center rounded-full bg-pink-100 px-2.5 py-0.5 text-xs font-medium text-pink-800">
+                              여성기업
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge
+                            variant={
+                              partner.status === "active" ? "success" : "default"
+                            }
+                          >
+                            {partner.status === "active" ? "정상" : "정지"}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditModal(partner)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            수정
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Modal
         isOpen={showModal}
         onClose={closeModal}
         title={editingPartner ? "협력사 수정" : "협력사 등록"}
+        size="xl"
       >
         {saveSuccess ? (
           <div className="py-8 text-center">

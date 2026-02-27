@@ -16,8 +16,8 @@ type PaystubItem = {
 type PaystubDetail = {
   id: string;
   title: string;
-  month: string;
-  date: string;
+  month?: string;
+  date?: string;
   total_amount: number;
   deductions: number;
   net_amount: number;
@@ -73,7 +73,7 @@ function PaystubDetailContent({ id }: { id: string }) {
 
   return (
     <WorkerLayout title="지급명세서 상세" showBack>
-      <div className="pb-24 p-4 space-y-4">
+      <div className="pb-40 p-4 space-y-4 lg:pb-24">
         {isLoading ? (
           <div className="space-y-4">
             <Card>
@@ -100,9 +100,11 @@ function PaystubDetailContent({ id }: { id: string }) {
               <h2 className="text-xl font-bold text-slate-900">
                 {paystub.title || `${paystub.month}월 급여`}
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                지급일: {paystub.date}
-              </p>
+              {paystub.date && (
+                <p className="mt-1 text-sm text-slate-500">
+                  지급일: {paystub.date}
+                </p>
+              )}
             </div>
 
             {/* 금액 요약 */}
@@ -205,11 +207,11 @@ function PaystubDetailContent({ id }: { id: string }) {
 
       {/* 하단 고정 수령 확인 */}
       {!isLoading && paystub && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white px-4 pb-safe pt-3">
+        <div className="fixed bottom-above-nav left-0 right-0 z-40 border-t border-slate-200 bg-white px-4 pt-3 pb-2 lg:bottom-0 lg:pb-3">
           {confirmed ? (
-            <div className="flex items-center justify-center gap-2 py-3">
+            <div className="flex h-12 items-center justify-center gap-2 rounded-xl bg-green-50 ring-1 ring-green-200">
               <CheckCircle className="h-5 w-5 text-green-500" />
-              <span className="font-medium text-green-600">
+              <span className="font-semibold text-green-700">
                 수령 확인되었습니다
               </span>
             </div>

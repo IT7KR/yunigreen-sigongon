@@ -19,6 +19,7 @@ import {
   Check,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { MobileListCard } from "@/components/MobileListCard";
 
 
 interface TenantDetail {
@@ -452,7 +453,26 @@ export default function TenantDetailPage() {
             <CardTitle>사용자 목록</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* 모바일 뷰 */}
+            <div className="space-y-3 md:hidden">
+              {tenant.users.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-400">사용자가 없어요</p>
+              ) : (
+                tenant.users.map((user) => (
+                  <MobileListCard
+                    key={user.id}
+                    title={user.name}
+                    subtitle={user.email}
+                    metadata={[
+                      { label: "역할", value: roleLabels[user.role] || user.role },
+                      { label: "전화", value: user.phone },
+                    ]}
+                  />
+                ))
+              )}
+            </div>
+            {/* 데스크탑 뷰 */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
@@ -497,7 +517,35 @@ export default function TenantDetailPage() {
             <CardTitle>결제 이력</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* 모바일 뷰 */}
+            <div className="space-y-3 md:hidden">
+              {tenant.payment_history.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-400">결제 이력이 없어요</p>
+              ) : (
+                tenant.payment_history.map((payment) => (
+                  <MobileListCard
+                    key={payment.id}
+                    title={payment.date}
+                    metadata={[
+                      { label: "금액", value: `${payment.amount.toLocaleString()}원` },
+                    ]}
+                    badge={
+                      payment.status === "paid" ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                          <CheckCircle className="h-3 w-3" />결제 성공
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700">
+                          <XCircle className="h-3 w-3" />결제 실패
+                        </span>
+                      )
+                    }
+                  />
+                ))
+              )}
+            </div>
+            {/* 데스크탑 뷰 */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-sm text-slate-500">

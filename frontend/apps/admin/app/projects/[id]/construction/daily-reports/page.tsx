@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FileText,
   Plus,
@@ -20,6 +21,7 @@ import {
   toast,
 } from "@sigongon/ui";
 import { api } from "@/lib/api";
+import { MobileListCard } from "@/components/MobileListCard";
 
 interface DailyReport {
   id: string;
@@ -67,6 +69,7 @@ export default function DailyReportsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id: projectId } = use(params);
+  const router = useRouter();
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -165,95 +168,127 @@ export default function DailyReportsPage({
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                    <th className="pb-3 font-medium">작업일자</th>
-                    <th className="pb-3 font-medium">날씨</th>
-                    <th className="pb-3 font-medium">작업내용</th>
-                    <th className="pb-3 font-medium text-center">사진</th>
-                    <th className="pb-3 font-medium">작성일</th>
-                    <th className="pb-3 font-medium text-right">문서</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reports.map((report) => {
-                    const previewSrc = getPhotoPreviewSrc(report.photos);
+            <>
+              {/* Mobile list */}
+              <div className="space-y-3 md:hidden">
+                {reports.map((report) => (
+                  <MobileListCard
+                    key={report.id}
+                    title={formatDate(report.work_date)}
+                    subtitle={getWeatherText(report.weather)}
+                    metadata={[
+                      {
+                        label: "작업내용",
+                        value:
+                          report.work_description.length > 40
+                            ? `${report.work_description.slice(0, 40)}...`
+                            : report.work_description,
+                      },
+                      {
+                        label: "사진수",
+                        value: `${report.photo_count}장`,
+                      },
+                    ]}
+                    onClick={() =>
+                      router.push(
+                        `/projects/${projectId}/construction/daily-reports/${report.id}`,
+                      )
+                    }
+                  />
+                ))}
+              </div>
 
-                    return (
-                      <tr
-                        key={report.id}
-                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                      >
-                        <td className="py-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-slate-400" />
-                            <span className="font-medium text-slate-900">
-                              {formatDate(report.work_date)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-4">
-                          <span className="text-sm text-slate-700">
-                            {getWeatherText(report.weather)}
-                          </span>
-                        </td>
-                        <td className="py-4">
-                          <div className="max-w-md">
-                            <p className="line-clamp-2 text-sm text-slate-700">
-                              {report.work_description}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="py-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md border border-dashed border-slate-300 bg-slate-50">
-                              {previewSrc ? (
-                                <div
-                                  role="img"
-                                  aria-label={`${formatDate(report.work_date)} 작업사진`}
-                                  className="h-full w-full bg-cover bg-center"
-                                  style={{
-                                    backgroundImage: `url("${previewSrc}")`,
-                                  }}
-                                />
-                              ) : (
-                                <ImageIcon
-                                  className="h-4 w-4 text-slate-400"
-                                  aria-hidden
-                                />
-                              )}
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                      <th className="pb-3 font-medium">작업일자</th>
+                      <th className="pb-3 font-medium">날씨</th>
+                      <th className="pb-3 font-medium">작업내용</th>
+                      <th className="pb-3 font-medium text-center">사진</th>
+                      <th className="pb-3 font-medium">작성일</th>
+                      <th className="pb-3 font-medium text-right">문서</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reports.map((report) => {
+                      const previewSrc = getPhotoPreviewSrc(report.photos);
+
+                      return (
+                        <tr
+                          key={report.id}
+                          className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                        >
+                          <td className="py-4">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-slate-400" />
+                              <span className="font-medium text-slate-900">
+                                {formatDate(report.work_date)}
+                              </span>
                             </div>
+                          </td>
+                          <td className="py-4">
                             <span className="text-sm text-slate-700">
-                              {report.photo_count}장
+                              {getWeatherText(report.weather)}
                             </span>
-                          </div>
-                        </td>
-                        <td className="py-4 text-sm text-slate-500">
-                          {formatDate(report.created_at)}
-                        </td>
-                        <td className="py-4 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDownloadHwpx(report)}
-                            disabled={downloadingReportId === report.id}
-                          >
-                            {downloadingReportId === report.id ? (
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                            ) : (
-                              <FileDown className="mr-1 h-3 w-3" />
-                            )}
-                            다운로드
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                          <td className="py-4">
+                            <div className="max-w-md">
+                              <p className="line-clamp-2 text-sm text-slate-700">
+                                {report.work_description}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md border border-dashed border-slate-300 bg-slate-50">
+                                {previewSrc ? (
+                                  <div
+                                    role="img"
+                                    aria-label={`${formatDate(report.work_date)} 작업사진`}
+                                    className="h-full w-full bg-cover bg-center"
+                                    style={{
+                                      backgroundImage: `url("${previewSrc}")`,
+                                    }}
+                                  />
+                                ) : (
+                                  <ImageIcon
+                                    className="h-4 w-4 text-slate-400"
+                                    aria-hidden
+                                  />
+                                )}
+                              </div>
+                              <span className="text-sm text-slate-700">
+                                {report.photo_count}장
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-4 text-sm text-slate-500">
+                            {formatDate(report.created_at)}
+                          </td>
+                          <td className="py-4 text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDownloadHwpx(report)}
+                              disabled={downloadingReportId === report.id}
+                            >
+                              {downloadingReportId === report.id ? (
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              ) : (
+                                <FileDown className="mr-1 h-3 w-3" />
+                              )}
+                              다운로드
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

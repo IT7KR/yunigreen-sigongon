@@ -25,6 +25,7 @@ import {
   ToggleRight,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
+import { MobileListCard } from "@/components/MobileListCard";
 import { api } from "@/lib/api";
 import type { CustomerKind } from "@sigongon/types";
 
@@ -522,112 +523,171 @@ export default function CustomersPage() {
           />
         </div>
 
-        <Card>
-          <CardContent className="p-0">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-sm text-slate-500">
-                  <th className="px-6 py-3 font-medium">발주처명</th>
-                  <th className="px-6 py-3 font-medium">구분</th>
-                  <th className="px-6 py-3 font-medium">대표자</th>
-                  <th className="px-6 py-3 font-medium">실무자</th>
-                  <th className="px-6 py-3 font-medium">사업자번호</th>
-                  <th className="px-6 py-3 font-medium">면허</th>
-                  <th className="px-6 py-3 font-medium">여성기업</th>
-                  <th className="px-6 py-3 font-medium">상태</th>
-                  <th className="px-6 py-3 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td
-                      colSpan={9}
-                      className="px-6 py-6 text-center text-sm text-slate-400"
-                    >
-                      불러오는 중...
-                    </td>
+        {/* Mobile card list */}
+        <div className="space-y-3 md:hidden">
+          {isLoading ? (
+            <p className="py-6 text-center text-sm text-slate-400">
+              불러오는 중...
+            </p>
+          ) : filteredCustomers.length === 0 ? (
+            <p className="py-6 text-center text-sm text-slate-400">
+              {searchTerm
+                ? "검색 결과가 없습니다."
+                : "등록된 발주처가 없습니다."}
+            </p>
+          ) : (
+            filteredCustomers.map((customer) => (
+              <MobileListCard
+                key={customer.id}
+                title={customer.name}
+                subtitle={
+                  customer.customer_kind === "individual" ? "개인" : "기업"
+                }
+                badge={
+                  <Badge variant={customer.is_active ? "success" : "default"}>
+                    {customer.is_active ? "활성" : "비활성"}
+                  </Badge>
+                }
+                metadata={[
+                  {
+                    label: "대표",
+                    value: customer.representative_name || "-",
+                  },
+                  {
+                    label: "사업자번호",
+                    value: customer.business_number || "-",
+                  },
+                  {
+                    label: "면허",
+                    value: customer.license_type || "-",
+                  },
+                ]}
+                onClick={() => openEditModal(customer)}
+                actions={
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => openEditModal(customer)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    수정
+                  </Button>
+                }
+              />
+            ))
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block">
+          <Card>
+            <CardContent className="p-0">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-sm text-slate-500">
+                    <th className="px-6 py-3 font-medium">발주처명</th>
+                    <th className="px-6 py-3 font-medium">구분</th>
+                    <th className="px-6 py-3 font-medium">대표자</th>
+                    <th className="px-6 py-3 font-medium">실무자</th>
+                    <th className="px-6 py-3 font-medium">사업자번호</th>
+                    <th className="px-6 py-3 font-medium">면허</th>
+                    <th className="px-6 py-3 font-medium">여성기업</th>
+                    <th className="px-6 py-3 font-medium">상태</th>
+                    <th className="px-6 py-3 font-medium"></th>
                   </tr>
-                ) : filteredCustomers.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={9}
-                      className="px-6 py-6 text-center text-sm text-slate-400"
-                    >
-                      {searchTerm
-                        ? "검색 결과가 없습니다."
-                        : "등록된 발주처가 없습니다."}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredCustomers.map((customer) => (
-                    <tr
-                      key={customer.id}
-                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                    >
-                      <td className="px-6 py-4 font-medium text-slate-900">
-                        {customer.name}
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        {customer.customer_kind === "individual"
-                          ? "개인"
-                          : "기업"}
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        <p>{customer.representative_name || "-"}</p>
-                        <p className="text-xs text-slate-400">
-                          {customer.representative_phone || "-"}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        <p>{customer.contact_name || "-"}</p>
-                        <p className="text-xs text-slate-400">
-                          {customer.contact_phone || "-"}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        {customer.business_number || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        {customer.license_type || "-"}
-                      </td>
-                      <td className="px-6 py-4">
-                        {customer.is_women_owned && (
-                          <span className="inline-flex items-center rounded-full bg-pink-100 px-2.5 py-0.5 text-xs font-medium text-pink-800">
-                            여성기업
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge
-                          variant={customer.is_active ? "success" : "default"}
-                        >
-                          {customer.is_active ? "활성" : "비활성"}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEditModal(customer)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          수정
-                        </Button>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="px-6 py-6 text-center text-sm text-slate-400"
+                      >
+                        불러오는 중...
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+                  ) : filteredCustomers.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="px-6 py-6 text-center text-sm text-slate-400"
+                      >
+                        {searchTerm
+                          ? "검색 결과가 없습니다."
+                          : "등록된 발주처가 없습니다."}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredCustomers.map((customer) => (
+                      <tr
+                        key={customer.id}
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                      >
+                        <td className="px-6 py-4 font-medium text-slate-900">
+                          {customer.name}
+                        </td>
+                        <td className="px-6 py-4 text-slate-500">
+                          {customer.customer_kind === "individual"
+                            ? "개인"
+                            : "기업"}
+                        </td>
+                        <td className="px-6 py-4 text-slate-500">
+                          <p>{customer.representative_name || "-"}</p>
+                          <p className="text-xs text-slate-400">
+                            {customer.representative_phone || "-"}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4 text-slate-500">
+                          <p>{customer.contact_name || "-"}</p>
+                          <p className="text-xs text-slate-400">
+                            {customer.contact_phone || "-"}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4 text-slate-500">
+                          {customer.business_number || "-"}
+                        </td>
+                        <td className="px-6 py-4 text-slate-500">
+                          {customer.license_type || "-"}
+                        </td>
+                        <td className="px-6 py-4">
+                          {customer.is_women_owned && (
+                            <span className="inline-flex items-center rounded-full bg-pink-100 px-2.5 py-0.5 text-xs font-medium text-pink-800">
+                              여성기업
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge
+                            variant={customer.is_active ? "success" : "default"}
+                          >
+                            {customer.is_active ? "활성" : "비활성"}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditModal(customer)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            수정
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Modal
         isOpen={showModal}
         onClose={closeModal}
         title={editingCustomer ? "발주처 수정" : "발주처 등록"}
+        size="xl"
       >
         {saveSuccess ? (
           <div className="py-8 text-center">
@@ -643,7 +703,7 @@ export default function CustomersPage() {
         ) : (
           <div className="space-y-5">
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                 <Select
                   label="구분"
                   value={formData.customer_kind}

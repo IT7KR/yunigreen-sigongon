@@ -161,8 +161,8 @@ export default function WorkerContractDetailPage({
         </div>
       </header>
 
-      {/* Content — pb-28 to clear fixed bottom button */}
-      <main className="flex-1 space-y-4 p-4 pb-28">
+      {/* Content — pb-48 to clear fixed sign button + bottom nav */}
+      <main className="flex-1 space-y-4 p-4 pb-48 lg:pb-28">
         {/* Contract info grid */}
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <h2 className="mb-3 text-sm font-semibold text-slate-700">
@@ -235,9 +235,9 @@ export default function WorkerContractDetailPage({
         )}
       </main>
 
-      {/* Fixed bottom sign button */}
+      {/* Fixed bottom sign button — positioned above the bottom nav bar */}
       {!isSigned && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4 pb-safe">
+        <div className="fixed bottom-above-nav left-0 right-0 z-40 border-t border-slate-200 bg-white p-4 lg:bottom-0 lg:pb-safe">
           <Button
             fullWidth
             size="lg"
@@ -263,9 +263,9 @@ export default function WorkerContractDetailPage({
         size="md"
         closeOnBackdropClick={!isSigning}
       >
-        <div className="space-y-4">
+        <div className="space-y-5">
           <SignaturePad
-            height={180}
+            height={220}
             onSign={(dataUrl) => setSignatureData(dataUrl)}
             onClear={() => setSignatureData(null)}
             disabled={isSigning}

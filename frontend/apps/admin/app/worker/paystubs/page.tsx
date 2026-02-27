@@ -41,7 +41,7 @@ function PaystubsContent() {
 
   return (
     <WorkerLayout title="지급명세서함">
-      <div className="space-y-3 p-4">
+      <div className="flex flex-col space-y-3 p-4">
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (

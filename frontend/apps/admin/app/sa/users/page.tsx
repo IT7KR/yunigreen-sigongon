@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { MobileListCard } from "@/components/MobileListCard";
 
 import type { UserRole } from "@sigongon/types";
 
@@ -169,128 +170,195 @@ export default function SAUsersPage() {
           <LoadingOverlay variant="inline" text="사용자 목록을 불러오는 중..." />
         ) : (
           <>
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>사용자</TableHead>
-                      <TableHead>역할</TableHead>
-                      <TableHead>소속 고객사</TableHead>
-                      <TableHead>마지막 로그인</TableHead>
-                      <TableHead>가입일</TableHead>
-                      <TableHead>상태</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.length === 0 ? (
+            {/* 모바일 카드 뷰 */}
+            <div className="space-y-3 md:hidden">
+              {filteredUsers.length === 0 ? (
+                <div className="py-12 text-center text-slate-500">
+                  {searchQuery ? "검색 결과가 없어요" : "사용자가 없어요"}
+                </div>
+              ) : (
+                filteredUsers.map((user) => {
+                  const roleInfo = ROLE_CONFIG[user.role] || { label: user.role, color: "bg-slate-100 text-slate-700" };
+                  return (
+                    <MobileListCard
+                      key={user.id}
+                      title={user.name}
+                      subtitle={user.email}
+                      badge={
+                        <Badge variant={user.is_active ? "success" : "default"}>
+                          {user.is_active ? "활성" : "비활성"}
+                        </Badge>
+                      }
+                      metadata={[
+                        {
+                          label: "역할",
+                          value: (
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${roleInfo.color}`}>
+                              <Shield className="h-3 w-3" />
+                              {roleInfo.label}
+                            </span>
+                          ),
+                        },
+                        { label: "소속", value: user.tenant_name },
+                        { label: "가입일", value: formatDate(user.created_at) },
+                      ]}
+                      onClick={() => openDetailModal(user)}
+                      actions={
+                        <>
+                          <PrimitiveButton
+                            onClick={() => openDetailModal(user)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
+                            title="상세정보"
+                          >
+                            <Eye className="h-4 w-4 text-slate-400" />
+                          </PrimitiveButton>
+                          <PrimitiveButton
+                            onClick={() => handleResetPassword(user.id, user.name)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
+                            title="비밀번호 초기화"
+                          >
+                            <Key className="h-4 w-4 text-slate-400" />
+                          </PrimitiveButton>
+                          <PrimitiveButton
+                            onClick={() => handleToggleActive(user.id, user.is_active)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
+                            title={user.is_active ? "비활성화" : "활성화"}
+                          >
+                            <Ban className="h-4 w-4 text-red-400" />
+                          </PrimitiveButton>
+                        </>
+                      }
+                    />
+                  );
+                })
+              )}
+            </div>
+
+            {/* 데스크톱 테이블 뷰 */}
+            <div className="hidden md:block">
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">
-                          <div className="py-12 text-slate-500">
-                            {searchQuery ? "검색 결과가 없어요" : "사용자가 없어요"}
-                          </div>
-                        </TableCell>
+                        <TableHead>사용자</TableHead>
+                        <TableHead>역할</TableHead>
+                        <TableHead>소속 고객사</TableHead>
+                        <TableHead>마지막 로그인</TableHead>
+                        <TableHead>가입일</TableHead>
+                        <TableHead>상태</TableHead>
+                        <TableHead></TableHead>
                       </TableRow>
-                    ) : (
-                      filteredUsers.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 font-medium text-slate-600">
-                                {user.name[0]}
-                              </div>
-                              <div>
-                                <p className="font-medium text-slate-900">
-                                  {user.name}
-                                </p>
-                                <div className="mt-0.5 flex items-center gap-3 text-sm text-slate-500">
-                                  <span className="flex items-center gap-1">
-                                    <Mail className="h-3.5 w-3.5" />
-                                    {user.email}
-                                  </span>
-                                  {user.phone && (
-                                    <span className="flex items-center gap-1">
-                                      <Phone className="h-3.5 w-3.5" />
-                                      {user.phone}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {(() => {
-                              const roleInfo = ROLE_CONFIG[user.role] || { label: user.role, color: "bg-slate-100 text-slate-700" };
-                              return (
-                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${roleInfo.color}`}>
-                                  <Shield className="h-3.5 w-3.5" />
-                                  {roleInfo.label}
-                                </span>
-                              );
-                            })()}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-slate-400" />
-                              <span className="text-slate-900">
-                                {user.tenant_name}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-slate-500">
-                            {user.last_login_at
-                              ? formatDate(user.last_login_at)
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-slate-500">
-                            {formatDate(user.created_at)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={user.is_active ? "success" : "default"}
-                            >
-                              {user.is_active ? "활성" : "비활성"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <PrimitiveButton
-                                onClick={() => openDetailModal(user)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
-                                title="상세정보"
-                              >
-                                <Eye className="h-4 w-4 text-slate-400" />
-                              </PrimitiveButton>
-                              <PrimitiveButton
-                                onClick={() =>
-                                  handleResetPassword(user.id, user.name)
-                                }
-                                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
-                                title="비밀번호 초기화"
-                              >
-                                <Key className="h-4 w-4 text-slate-400" />
-                              </PrimitiveButton>
-                              <PrimitiveButton
-                                onClick={() =>
-                                  handleToggleActive(user.id, user.is_active)
-                                }
-                                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
-                                title={
-                                  user.is_active ? "비활성화" : "활성화"
-                                }
-                              >
-                                <Ban className="h-4 w-4 text-red-400" />
-                              </PrimitiveButton>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center">
+                            <div className="py-12 text-slate-500">
+                              {searchQuery ? "검색 결과가 없어요" : "사용자가 없어요"}
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                      ) : (
+                        filteredUsers.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 font-medium text-slate-600">
+                                  {user.name[0]}
+                                </div>
+                                <div>
+                                  <p className="font-medium text-slate-900">
+                                    {user.name}
+                                  </p>
+                                  <div className="mt-0.5 flex items-center gap-3 text-sm text-slate-500">
+                                    <span className="flex items-center gap-1">
+                                      <Mail className="h-3.5 w-3.5" />
+                                      {user.email}
+                                    </span>
+                                    {user.phone && (
+                                      <span className="flex items-center gap-1">
+                                        <Phone className="h-3.5 w-3.5" />
+                                        {user.phone}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {(() => {
+                                const roleInfo = ROLE_CONFIG[user.role] || { label: user.role, color: "bg-slate-100 text-slate-700" };
+                                return (
+                                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${roleInfo.color}`}>
+                                    <Shield className="h-3.5 w-3.5" />
+                                    {roleInfo.label}
+                                  </span>
+                                );
+                              })()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-slate-400" />
+                                <span className="text-slate-900">
+                                  {user.tenant_name}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-slate-500">
+                              {user.last_login_at
+                                ? formatDate(user.last_login_at)
+                                : "-"}
+                            </TableCell>
+                            <TableCell className="text-slate-500">
+                              {formatDate(user.created_at)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={user.is_active ? "success" : "default"}
+                              >
+                                {user.is_active ? "활성" : "비활성"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <PrimitiveButton
+                                  onClick={() => openDetailModal(user)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
+                                  title="상세정보"
+                                >
+                                  <Eye className="h-4 w-4 text-slate-400" />
+                                </PrimitiveButton>
+                                <PrimitiveButton
+                                  onClick={() =>
+                                    handleResetPassword(user.id, user.name)
+                                  }
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
+                                  title="비밀번호 초기화"
+                                >
+                                  <Key className="h-4 w-4 text-slate-400" />
+                                </PrimitiveButton>
+                                <PrimitiveButton
+                                  onClick={() =>
+                                    handleToggleActive(user.id, user.is_active)
+                                  }
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
+                                  title={
+                                    user.is_active ? "비활성화" : "활성화"
+                                  }
+                                >
+                                  <Ban className="h-4 w-4 text-red-400" />
+                                </PrimitiveButton>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
 
             {totalPages > 1 && (
               <div className="flex justify-center">
@@ -311,7 +379,7 @@ export default function SAUsersPage() {
           isOpen={detailModalOpen}
           onClose={closeDetailModal}
           title="사용자 상세정보"
-          size="md"
+          size="lg"
         >
           <div className="space-y-6">
             {/* 프로필 헤더 */}

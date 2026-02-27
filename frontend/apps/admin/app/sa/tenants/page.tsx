@@ -6,6 +6,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { Badge, Button, Card, CardContent, Pagination, PrimitiveInput, PrimitiveSelect, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
 import { Search, Building2, Users, FolderKanban, Loader2, Eye } from "lucide-react";
 import { api } from "@/lib/api";
+import { MobileListCard } from "@/components/MobileListCard";
 
 
 interface TenantItem {
@@ -144,97 +145,147 @@ export default function TenantsPage() {
           </div>
         ) : (
           <>
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>회사명</TableHead>
-                      <TableHead>요금제</TableHead>
-                      <TableHead>요금 금액</TableHead>
-                      <TableHead>사용자 수</TableHead>
-                      <TableHead>프로젝트 수</TableHead>
-                      <TableHead>가입일</TableHead>
-                      <TableHead>상태</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTenants.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center">
-                          <div className="py-12 text-slate-500">
-                            고객사가 없어요
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredTenants.map((tenant) => {
-                        const plan = planConfig[tenant.plan];
+            {/* Mobile card view */}
+            <div className="space-y-3 md:hidden">
+              {filteredTenants.length === 0 ? (
+                <div className="py-12 text-center text-slate-500">
+                  고객사가 없어요
+                </div>
+              ) : (
+                filteredTenants.map((tenant) => {
+                  const plan = planConfig[tenant.plan];
+                  return (
+                    <MobileListCard
+                      key={tenant.id}
+                      title={tenant.name}
+                      badge={
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${plan.color}`}
+                        >
+                          {plan.label}
+                        </span>
+                      }
+                      metadata={[
+                        { label: "사용자수", value: tenant.users_count },
+                        { label: "프로젝트수", value: tenant.projects_count },
+                        {
+                          label: "요금",
+                          value: tenant.billing_amount
+                            ? `${tenant.billing_amount.toLocaleString()}원`
+                            : "무료",
+                        },
+                        { label: "가입일", value: formatDate(tenant.created_at) },
+                      ]}
+                      onClick={() => {
+                        window.location.href = `/sa/tenants/${tenant.id}`;
+                      }}
+                      actions={
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link href={`/sa/tenants/${tenant.id}`}>
+                            <Eye className="h-3.5 w-3.5" />상세보기
+                          </Link>
+                        </Button>
+                      }
+                    />
+                  );
+                })
+              )}
+            </div>
 
-                        return (
-                          <TableRow key={tenant.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
-                                  <Building2 className="h-5 w-5 text-slate-600" />
+            {/* Desktop table view */}
+            <div className="hidden md:block">
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>회사명</TableHead>
+                        <TableHead>요금제</TableHead>
+                        <TableHead>요금 금액</TableHead>
+                        <TableHead>사용자 수</TableHead>
+                        <TableHead>프로젝트 수</TableHead>
+                        <TableHead>가입일</TableHead>
+                        <TableHead>상태</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTenants.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center">
+                            <div className="py-12 text-slate-500">
+                              고객사가 없어요
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredTenants.map((tenant) => {
+                          const plan = planConfig[tenant.plan];
+
+                          return (
+                            <TableRow key={tenant.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
+                                    <Building2 className="h-5 w-5 text-slate-600" />
+                                  </div>
+                                  <span className="font-medium text-slate-900">
+                                    {tenant.name}
+                                  </span>
                                 </div>
-                                <span className="font-medium text-slate-900">
-                                  {tenant.name}
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${plan.color}`}
+                                >
+                                  {plan.label}
                                 </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span
-                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${plan.color}`}
-                              >
-                                {plan.label}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-slate-700">
-                              {tenant.billing_amount
-                                ? `${tenant.billing_amount.toLocaleString()}원`
-                                : "무료"}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1.5 text-slate-600">
-                                <Users className="h-4 w-4" />
-                                {tenant.users_count}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1.5 text-slate-600">
-                                <FolderKanban className="h-4 w-4" />
-                                {tenant.projects_count}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-slate-500">
-                              {formatDate(tenant.created_at)}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  tenant.status === "active"
-                                    ? "success"
-                                    : "default"
-                                }
-                              >
-                                {tenant.status === "active" ? "활성" : "비활성"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button size="sm" variant="ghost" asChild><Link href={`/sa/tenants/${tenant.id}`}>
-                                  <Eye className="h-3.5 w-3.5" />상세보기
-                                </Link></Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                              </TableCell>
+                              <TableCell className="text-slate-700">
+                                {tenant.billing_amount
+                                  ? `${tenant.billing_amount.toLocaleString()}원`
+                                  : "무료"}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5 text-slate-600">
+                                  <Users className="h-4 w-4" />
+                                  {tenant.users_count}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5 text-slate-600">
+                                  <FolderKanban className="h-4 w-4" />
+                                  {tenant.projects_count}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-slate-500">
+                                {formatDate(tenant.created_at)}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    tenant.status === "active"
+                                      ? "success"
+                                      : "default"
+                                  }
+                                >
+                                  {tenant.status === "active" ? "활성" : "비활성"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button size="sm" variant="ghost" asChild><Link href={`/sa/tenants/${tenant.id}`}>
+                                    <Eye className="h-3.5 w-3.5" />상세보기
+                                  </Link></Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
 
             {totalPages > 1 && (
               <div className="flex justify-center">

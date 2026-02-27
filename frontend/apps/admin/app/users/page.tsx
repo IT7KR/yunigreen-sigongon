@@ -16,6 +16,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
+import { MobileListCard } from "@/components/MobileListCard";
 import { UserModal } from "@/components/UserModal";
 import { InviteUserModal } from "@/components/InviteUserModal";
 import { useAuth } from "@/lib/auth";
@@ -349,173 +350,215 @@ export default function UsersPage() {
 
         {activeTab === "users" ? (
           // Users Tab
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>사용자</TableHead>
-                    <TableHead>역할</TableHead>
-                    <TableHead>마지막 로그인</TableHead>
-                    <TableHead>가입일</TableHead>
-                    <TableHead>상태</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => {
-                    const role = roleConfig[user.role];
-
-                    return (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 font-medium text-slate-600">
-                              {user.name[0]}
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-900">
-                                {user.name}
-                              </p>
-                              <div className="flex items-center gap-3 text-sm text-slate-500">
-                                <span className="flex items-center gap-1">
-                                  <Mail className="h-3.5 w-3.5" />
-                                  {user.email}
-                                </span>
-                                {user.phone && (
-                                  <span className="flex items-center gap-1">
-                                    <Phone className="h-3.5 w-3.5" />
-                                    {user.phone}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
+          <>
+            {/* Mobile view */}
+            <div className="space-y-3 md:hidden">
+              {filteredUsers.length === 0 ? (
+                <div className="py-12 text-center text-slate-500">
+                  {searchQuery ? "검색 결과가 없어요" : "등록된 사용자가 없어요"}
+                </div>
+              ) : (
+                filteredUsers.map((user) => {
+                  const role = roleConfig[user.role];
+                  return (
+                    <MobileListCard
+                      key={user.id}
+                      title={user.name}
+                      subtitle={user.email}
+                      badge={
+                        <Badge variant={user.is_active ? "success" : "default"}>
+                          {user.is_active ? "활성" : "비활성"}
+                        </Badge>
+                      }
+                      metadata={[
+                        {
+                          label: "역할",
+                          value: (
                             <span
-                              className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${role.color}`}
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${role.color}`}
                             >
-                              <Shield className="h-3.5 w-3.5" />
+                              <Shield className="h-3 w-3" />
                               {role.label}
                             </span>
-                            <span className="text-xs text-slate-400">
-                              {role.belongsTo}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-slate-500">
-                          {user.last_login_at
-                            ? formatDate(user.last_login_at)
-                            : "-"}
-                        </TableCell>
-                        <TableCell className="text-slate-500">
-                          {formatDate(user.created_at)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={user.is_active ? "success" : "default"}>
-                            {user.is_active ? "활성" : "비활성"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <PrimitiveButton
-                              onClick={() => openEditModal(user)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
-                            >
-                              <Edit2 className="h-4 w-4 text-slate-400" />
-                            </PrimitiveButton>
-                            <PrimitiveButton
-                              onClick={() => handleDelete(user.id)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-400" />
-                            </PrimitiveButton>
-                          </div>
-                        </TableCell>
+                          ),
+                        },
+                        {
+                          label: "가입일",
+                          value: formatDate(user.created_at),
+                        },
+                      ]}
+                      onClick={() => openEditModal(user)}
+                      actions={
+                        <>
+                          <PrimitiveButton
+                            onClick={() => openEditModal(user)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
+                          >
+                            <Edit2 className="h-4 w-4 text-slate-400" />
+                          </PrimitiveButton>
+                          <PrimitiveButton
+                            onClick={() => handleDelete(user.id)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-400" />
+                          </PrimitiveButton>
+                        </>
+                      }
+                    />
+                  );
+                })
+              )}
+            </div>
+
+            {/* Desktop view */}
+            <div className="hidden md:block">
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>사용자</TableHead>
+                        <TableHead>역할</TableHead>
+                        <TableHead>마지막 로그인</TableHead>
+                        <TableHead>가입일</TableHead>
+                        <TableHead>상태</TableHead>
+                        <TableHead></TableHead>
                       </TableRow>
-                    );
-                  })}
-                  {filteredUsers.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center">
-                        <div className="py-12 text-slate-500">
-                          {searchQuery ? "검색 결과가 없어요" : "등록된 사용자가 없어요"}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.map((user) => {
+                        const role = roleConfig[user.role];
+
+                        return (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 font-medium text-slate-600">
+                                  {user.name[0]}
+                                </div>
+                                <div>
+                                  <p className="font-medium text-slate-900">
+                                    {user.name}
+                                  </p>
+                                  <div className="flex items-center gap-3 text-sm text-slate-500">
+                                    <span className="flex items-center gap-1">
+                                      <Mail className="h-3.5 w-3.5" />
+                                      {user.email}
+                                    </span>
+                                    {user.phone && (
+                                      <span className="flex items-center gap-1">
+                                        <Phone className="h-3.5 w-3.5" />
+                                        {user.phone}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <span
+                                  className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${role.color}`}
+                                >
+                                  <Shield className="h-3.5 w-3.5" />
+                                  {role.label}
+                                </span>
+                                <span className="text-xs text-slate-400">
+                                  {role.belongsTo}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-slate-500">
+                              {user.last_login_at
+                                ? formatDate(user.last_login_at)
+                                : "-"}
+                            </TableCell>
+                            <TableCell className="text-slate-500">
+                              {formatDate(user.created_at)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={user.is_active ? "success" : "default"}>
+                                {user.is_active ? "활성" : "비활성"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <PrimitiveButton
+                                  onClick={() => openEditModal(user)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
+                                >
+                                  <Edit2 className="h-4 w-4 text-slate-400" />
+                                </PrimitiveButton>
+                                <PrimitiveButton
+                                  onClick={() => handleDelete(user.id)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-400" />
+                                </PrimitiveButton>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {filteredUsers.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center">
+                            <div className="py-12 text-slate-500">
+                              {searchQuery ? "검색 결과가 없어요" : "등록된 사용자가 없어요"}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          </>
         ) : (
           // Invitations Tab
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>초대 대상</TableHead>
-                    <TableHead>역할</TableHead>
-                    <TableHead>상태</TableHead>
-                    <TableHead>초대일</TableHead>
-                    <TableHead>만료일</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInvitations.map((invitation) => {
-                    const role = roleConfig[invitation.role];
-                    const status = invitationStatusConfig[invitation.status];
-                    const isExpired = new Date(invitation.expires_at) < new Date();
-                    const canResend = invitation.status === "pending" || invitation.status === "expired";
-                    const canRevoke = invitation.status === "pending";
-
-                    return (
-                      <TableRow key={invitation.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 font-medium text-slate-400">
-                              <MessageSquare className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-900">
-                                {invitation.name}
-                              </p>
-                              <p className="text-sm text-slate-500">
-                                {invitation.phone}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${role.color}`}
-                          >
-                            <Shield className="h-3.5 w-3.5" />
-                            {role.label}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={status.color}>
-                            {isExpired && invitation.status === "pending"
-                              ? "만료됨"
-                              : status.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-slate-500">
-                          {formatDate(invitation.created_at)}
-                        </TableCell>
-                        <TableCell className="text-slate-500">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {formatDate(invitation.expires_at)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
+          <>
+            {/* Mobile view */}
+            <div className="space-y-3 md:hidden">
+              {filteredInvitations.length === 0 ? (
+                <div className="py-12 text-center text-slate-500">
+                  {searchQuery ? "검색 결과가 없어요" : "대기중인 초대가 없어요"}
+                </div>
+              ) : (
+                filteredInvitations.map((invitation) => {
+                  const role = roleConfig[invitation.role];
+                  const status = invitationStatusConfig[invitation.status];
+                  const isExpired = new Date(invitation.expires_at) < new Date();
+                  const canResend = invitation.status === "pending" || invitation.status === "expired";
+                  const canRevoke = invitation.status === "pending";
+                  return (
+                    <MobileListCard
+                      key={invitation.id}
+                      title={invitation.name}
+                      subtitle={
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${role.color}`}
+                        >
+                          <Shield className="h-3 w-3" />
+                          {role.label}
+                        </span>
+                      }
+                      badge={
+                        <Badge variant={status.color}>
+                          {isExpired && invitation.status === "pending"
+                            ? "만료됨"
+                            : status.label}
+                        </Badge>
+                      }
+                      metadata={[
+                        {
+                          label: "초대일",
+                          value: formatDate(invitation.created_at),
+                        },
+                      ]}
+                      actions={
+                        (canResend || canRevoke) ? (
+                          <>
                             {canResend && (
                               <PrimitiveButton
                                 onClick={() => handleResendInvitation(invitation.id)}
@@ -534,22 +577,117 @@ export default function UsersPage() {
                                 <X className="h-4 w-4 text-red-400" />
                               </PrimitiveButton>
                             )}
-                          </div>
-                        </TableCell>
+                          </>
+                        ) : undefined
+                      }
+                    />
+                  );
+                })
+              )}
+            </div>
+
+            {/* Desktop view */}
+            <div className="hidden md:block">
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>초대 대상</TableHead>
+                        <TableHead>역할</TableHead>
+                        <TableHead>상태</TableHead>
+                        <TableHead>초대일</TableHead>
+                        <TableHead>만료일</TableHead>
+                        <TableHead></TableHead>
                       </TableRow>
-                    );
-                  })}
-                  {filteredInvitations.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-8 text-center text-slate-500">
-                        {searchQuery ? "검색 결과가 없어요" : "대기중인 초대가 없어요"}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredInvitations.map((invitation) => {
+                        const role = roleConfig[invitation.role];
+                        const status = invitationStatusConfig[invitation.status];
+                        const isExpired = new Date(invitation.expires_at) < new Date();
+                        const canResend = invitation.status === "pending" || invitation.status === "expired";
+                        const canRevoke = invitation.status === "pending";
+
+                        return (
+                          <TableRow key={invitation.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 font-medium text-slate-400">
+                                  <MessageSquare className="h-5 w-5" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-slate-900">
+                                    {invitation.name}
+                                  </p>
+                                  <p className="text-sm text-slate-500">
+                                    {invitation.phone}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span
+                                className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${role.color}`}
+                              >
+                                <Shield className="h-3.5 w-3.5" />
+                                {role.label}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={status.color}>
+                                {isExpired && invitation.status === "pending"
+                                  ? "만료됨"
+                                  : status.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-slate-500">
+                              {formatDate(invitation.created_at)}
+                            </TableCell>
+                            <TableCell className="text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3.5 w-3.5" />
+                                {formatDate(invitation.expires_at)}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {canResend && (
+                                  <PrimitiveButton
+                                    onClick={() => handleResendInvitation(invitation.id)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
+                                    title="재발송"
+                                  >
+                                    <RotateCcw className="h-4 w-4 text-slate-400" />
+                                  </PrimitiveButton>
+                                )}
+                                {canRevoke && (
+                                  <PrimitiveButton
+                                    onClick={() => handleRevokeInvitation(invitation.id)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
+                                    title="취소"
+                                  >
+                                    <X className="h-4 w-4 text-red-400" />
+                                  </PrimitiveButton>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {filteredInvitations.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="py-8 text-center text-slate-500">
+                            {searchQuery ? "검색 결과가 없어요" : "대기중인 초대가 없어요"}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          </>
         )}
       </div>
 

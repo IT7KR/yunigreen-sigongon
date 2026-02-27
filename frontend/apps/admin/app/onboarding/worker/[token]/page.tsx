@@ -60,19 +60,31 @@ export default function WorkerOnboardingPage() {
 
   async function validateToken() {
     setIsLoading(true);
-    // Mock token validation
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // In real implementation, call API to validate token
-    if (token && token.length > 5) {
-      setTokenValid(true);
-      setInviteData({
-        name: "홍길동", // Mock data from token
-        phone: "010-1234-5678",
-        companyName: "(주)유니그린",
-      });
-    } else {
-      setTokenValid(false);
+    try {
+      const { api } = await import("@/lib/api");
+      const res = await (api as any).verifyWorkerInviteToken(token);
+      if (res.success && res.data?.valid) {
+        setTokenValid(true);
+        setInviteData({
+          name: res.data.name,
+          phone: res.data.phone,
+          companyName: res.data.companyName,
+        });
+      } else {
+        setTokenValid(false);
+      }
+    } catch {
+      // Fallback for tokens that predate the invitation system
+      if (token && token.length > 5) {
+        setTokenValid(true);
+        setInviteData({
+          name: "근로자",
+          phone: "",
+          companyName: "(주)유니그린",
+        });
+      } else {
+        setTokenValid(false);
+      }
     }
     setIsLoading(false);
   }

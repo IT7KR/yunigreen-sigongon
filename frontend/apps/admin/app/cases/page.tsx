@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge, formatDate } from "@sigongon/ui";
 import type { DiagnosisCase, SeasonInfo } from "@sigongon/types";
 import { Plus, Sparkles } from "lucide-react";
+import { MobileListCard } from "@/components/MobileListCard";
 
 export default function CasesPage() {
   const router = useRouter();
@@ -91,38 +92,63 @@ export default function CasesPage() {
             ) : cases.length === 0 ? (
               <p className="text-sm text-slate-500">등록된 케이스가 없습니다.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                      <th className="pb-3 font-medium">케이스 ID</th>
-                      <th className="pb-3 font-medium">시즌 ID</th>
-                      <th className="pb-3 font-medium">상태</th>
-                      <th className="pb-3 font-medium">생성일</th>
-                      <th className="pb-3 font-medium" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cases.map((item) => (
-                      <tr key={item.id} className="border-b border-slate-100 last:border-0">
-                        <td className="py-3 font-medium">{item.id}</td>
-                        <td className="py-3">{item.season_id}</td>
-                        <td className="py-3">
-                          <Badge variant={item.status === "estimated" ? "success" : "info"}>
-                            {item.status}
-                          </Badge>
-                        </td>
-                        <td className="py-3 text-sm text-slate-600">{formatDate(item.created_at)}</td>
-                        <td className="py-3 text-right">
-                          <Link href={`/cases/${item.id}`} className="text-sm text-brand-point-600 hover:underline">
-                            열기
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                {/* 모바일 카드 뷰 */}
+                <div className="space-y-3 md:hidden">
+                  {cases.map((item) => (
+                    <MobileListCard
+                      key={item.id}
+                      title={`케이스#${item.id}`}
+                      badge={
+                        <Badge variant={item.status === "estimated" ? "success" : "info"}>
+                          {item.status}
+                        </Badge>
+                      }
+                      metadata={[
+                        { label: "시즌", value: item.season_id },
+                        { label: "생성일", value: formatDate(item.created_at) },
+                      ]}
+                      onClick={() => router.push(`/cases/${item.id}`)}
+                    />
+                  ))}
+                </div>
+
+                {/* 데스크톱 테이블 뷰 */}
+                <div className="hidden md:block">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                          <th className="pb-3 font-medium">케이스 ID</th>
+                          <th className="pb-3 font-medium">시즌 ID</th>
+                          <th className="pb-3 font-medium">상태</th>
+                          <th className="pb-3 font-medium">생성일</th>
+                          <th className="pb-3 font-medium" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cases.map((item) => (
+                          <tr key={item.id} className="border-b border-slate-100 last:border-0">
+                            <td className="py-3 font-medium">{item.id}</td>
+                            <td className="py-3">{item.season_id}</td>
+                            <td className="py-3">
+                              <Badge variant={item.status === "estimated" ? "success" : "info"}>
+                                {item.status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 text-sm text-slate-600">{formatDate(item.created_at)}</td>
+                            <td className="py-3 text-right">
+                              <Link href={`/cases/${item.id}`} className="text-sm text-brand-point-600 hover:underline">
+                                열기
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

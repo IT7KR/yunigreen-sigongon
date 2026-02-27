@@ -2,12 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { WorkerLayout } from "@/components/WorkerLayout";
-import {
-  AppLink,
-  Badge,
-  Card,
-  CardContent,
-} from "@sigongon/ui";
+import { AppLink, Badge, Card, CardContent } from "@sigongon/ui";
 import { FileText } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -67,7 +62,7 @@ function WorkerContractsContent() {
 
   return (
     <WorkerLayout title="근로계약서">
-      <div className="space-y-3 p-4">
+      <div className="flex flex-col space-y-3 p-4">
         {isLoading ? (
           <>
             <ContractSkeleton />

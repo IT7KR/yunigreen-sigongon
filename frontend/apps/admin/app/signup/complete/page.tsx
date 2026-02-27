@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Card } from "@sigongon/ui";
 import { Droplets, CheckCircle, Sparkles, ArrowRight, Loader2 } from "lucide-react";
-import { getSignupData, clearSignupData, PLANS } from "../types";
+import { getSignupData, clearSignupData, saveSignupData, PLANS } from "../types";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 
@@ -21,7 +21,7 @@ export default function CompletePage() {
     const data = getSignupData();
 
     // Redirect if signup not completed
-    if (!data.email || !data.businessVerified || !data.planType) {
+    if (!data.username || !data.businessVerified || !data.planType) {
       router.push("/signup");
       return;
     }
@@ -30,10 +30,41 @@ export default function CompletePage() {
     const plan = PLANS.find((p) => p.id === data.planType);
     setPlanName(plan?.name || "");
 
-    // Store access token for auto-login
+    // Store access token for auto-login if already set (유료 플랜 완료 후)
     if (data.accessToken) {
       setAccessToken(data.accessToken);
+      return;
     }
+
+    // Trial 또는 accessToken 없는 경우: 등록 진행
+    const registerUser = async () => {
+      try {
+        const res = await api.register({
+          username: data.username,
+          email: data.email,
+          password: data.password,
+          phone: data.phone,
+          company_name: data.companyName,
+          business_number: data.businessNumber.replace(/-/g, ""),
+          representative_name: data.representativeName,
+          rep_phone: data.repPhone,
+          rep_email: data.repEmail,
+          contact_name: data.contactName || undefined,
+          contact_phone: data.contactPhone || undefined,
+          contact_position: data.contactPosition || undefined,
+          plan: data.planType,
+        });
+
+        if (res.success && res.data) {
+          setAccessToken(res.data.access_token);
+          saveSignupData({ accessToken: res.data.access_token });
+        }
+      } catch (err) {
+        console.error("Registration failed:", err);
+      }
+    };
+
+    registerUser();
   }, [router]);
 
   // Redirect if already authenticated

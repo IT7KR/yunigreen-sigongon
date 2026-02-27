@@ -6,7 +6,9 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/AdminLayout";
+import { MobileListCard } from "@/components/MobileListCard";
 import {
   AppLink,
   Card,
@@ -25,6 +27,7 @@ import { useDashboardStats } from "@/hooks";
 import type { ProjectStatus } from "@sigongon/types";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { stats, recentProjects, isLoading, error } = useDashboardStats();
 
   const statCards = [
@@ -113,46 +116,69 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 {recentProjects.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                          <th className="pb-3 font-medium">프로젝트명</th>
-                          <th className="pb-3 font-medium">상태</th>
-                          <th className="pb-3 font-medium">고객</th>
-                          <th className="pb-3 font-medium">등록일</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentProjects.map((project) => (
-                          <tr
-                            key={project.id}
-                            className="border-b border-slate-100 last:border-0"
-                          >
-                            <td className="py-4">
-                              <AppLink
-                                href={`/projects/${project.id}`}
-                                className="font-medium text-slate-900 hover:text-brand-point-600"
-                              >
-                                {project.name}
-                              </AppLink>
-                            </td>
-                            <td className="py-4">
-                              <StatusBadge
-                                status={project.status as ProjectStatus}
-                              />
-                            </td>
-                            <td className="py-4 text-slate-600">
-                              {project.client_name || "-"}
-                            </td>
-                            <td className="py-4 text-slate-500">
-                              {formatDate(project.created_at)}
-                            </td>
+                  <>
+                    {/* Mobile card list */}
+                    <div className="space-y-3 md:hidden">
+                      {recentProjects.map((project) => (
+                        <MobileListCard
+                          key={project.id}
+                          title={project.name}
+                          badge={
+                            <StatusBadge
+                              status={project.status as ProjectStatus}
+                            />
+                          }
+                          metadata={[
+                            { label: "고객", value: project.client_name || "-" },
+                            { label: "등록일", value: formatDate(project.created_at) },
+                          ]}
+                          onClick={() => router.push(`/projects/${project.id}`)}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Desktop table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                            <th className="pb-3 font-medium">프로젝트명</th>
+                            <th className="pb-3 font-medium">상태</th>
+                            <th className="pb-3 font-medium">고객</th>
+                            <th className="pb-3 font-medium">등록일</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {recentProjects.map((project) => (
+                            <tr
+                              key={project.id}
+                              className="border-b border-slate-100 last:border-0"
+                            >
+                              <td className="py-4">
+                                <AppLink
+                                  href={`/projects/${project.id}`}
+                                  className="font-medium text-slate-900 hover:text-brand-point-600"
+                                >
+                                  {project.name}
+                                </AppLink>
+                              </td>
+                              <td className="py-4">
+                                <StatusBadge
+                                  status={project.status as ProjectStatus}
+                                />
+                              </td>
+                              <td className="py-4 text-slate-600">
+                                {project.client_name || "-"}
+                              </td>
+                              <td className="py-4 text-slate-500">
+                                {formatDate(project.created_at)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 ) : (
                   <EmptyState
                     icon={FolderKanban}

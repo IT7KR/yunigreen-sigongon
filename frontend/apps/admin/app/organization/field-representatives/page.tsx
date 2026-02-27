@@ -18,6 +18,7 @@ import {
 } from "@sigongon/ui";
 import { Edit2, Plus, Trash2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
+import { MobileListCard } from "@/components/MobileListCard";
 import { useAuth } from "@/lib/auth";
 import type { FieldRepresentative } from "@/lib/fieldRepresentatives";
 import {
@@ -314,81 +315,140 @@ export default function OrganizationFieldRepresentativesPage() {
                 등록된 현장대리인이 없습니다.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                      <th className="pb-3 font-medium">이름</th>
-                      <th className="pb-3 font-medium">연락처</th>
-                      <th className="pb-3 font-medium">기술수첩</th>
-                      <th className="pb-3 font-medium">경력증명서(90일)</th>
-                      <th className="pb-3 font-medium">재직증명서</th>
-                      <th className="pb-3 font-medium">배정 건수</th>
-                      <th className="pb-3 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {representatives.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="border-b border-slate-100 last:border-0"
-                      >
-                        <td className="py-3">
-                          <div className="font-medium text-slate-900">
-                            {item.name}
-                          </div>
+              <>
+                {/* 모바일 카드 뷰 */}
+                <div className="space-y-3 md:hidden">
+                  {representatives.map((item) => (
+                    <MobileListCard
+                      key={item.id}
+                      title={
+                        <span>
+                          {item.name}
                           {item.grade && (
-                            <p className="text-xs text-slate-500">{item.grade}</p>
+                            <span className="ml-1.5 text-xs font-normal text-slate-500">
+                              {item.grade}
+                            </span>
                           )}
-                        </td>
-                        <td className="py-3 text-slate-700">{item.phone}</td>
-                        <td className="py-3">
-                          {item.booklet_filename ? (
+                        </span>
+                      }
+                      subtitle={item.phone}
+                      badge={getCareerBadge(item)}
+                      metadata={[
+                        {
+                          label: "기술수첩",
+                          value: item.booklet_filename ? (
                             <Badge variant="success">{item.booklet_filename}</Badge>
                           ) : (
                             <Badge variant="default">미등록</Badge>
-                          )}
-                        </td>
-                        <td className="py-3">{getCareerBadge(item)}</td>
-                        <td className="py-3">
-                          {item.employment_cert_filename ? (
-                            <Badge variant="success">
-                              {item.employment_cert_filename}
-                            </Badge>
-                          ) : (
-                            <Badge variant="default">미등록</Badge>
-                          )}
-                        </td>
-                        <td className="py-3 text-sm text-slate-600">
-                          {item.assigned_project_ids?.length ?? 0}건
-                        </td>
-                        <td className="py-3">
-                          {canManageRegistry ? (
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openEditModal(item)}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteRepresentative(item)}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400">조회 전용</span>
-                          )}
-                        </td>
+                          ),
+                        },
+                        {
+                          label: "배정건수",
+                          value: `${item.assigned_project_ids?.length ?? 0}건`,
+                        },
+                      ]}
+                      onClick={() => canManageRegistry ? openEditModal(item) : undefined}
+                      actions={
+                        canManageRegistry ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditModal(item)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteRepresentative(item)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </>
+                        ) : undefined
+                      }
+                    />
+                  ))}
+                </div>
+
+                {/* 데스크탑 테이블 뷰 */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                        <th className="pb-3 font-medium">이름</th>
+                        <th className="pb-3 font-medium">연락처</th>
+                        <th className="pb-3 font-medium">기술수첩</th>
+                        <th className="pb-3 font-medium">경력증명서(90일)</th>
+                        <th className="pb-3 font-medium">재직증명서</th>
+                        <th className="pb-3 font-medium">배정 건수</th>
+                        <th className="pb-3 font-medium"></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {representatives.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="border-b border-slate-100 last:border-0"
+                        >
+                          <td className="py-3">
+                            <div className="font-medium text-slate-900">
+                              {item.name}
+                            </div>
+                            {item.grade && (
+                              <p className="text-xs text-slate-500">{item.grade}</p>
+                            )}
+                          </td>
+                          <td className="py-3 text-slate-700">{item.phone}</td>
+                          <td className="py-3">
+                            {item.booklet_filename ? (
+                              <Badge variant="success">{item.booklet_filename}</Badge>
+                            ) : (
+                              <Badge variant="default">미등록</Badge>
+                            )}
+                          </td>
+                          <td className="py-3">{getCareerBadge(item)}</td>
+                          <td className="py-3">
+                            {item.employment_cert_filename ? (
+                              <Badge variant="success">
+                                {item.employment_cert_filename}
+                              </Badge>
+                            ) : (
+                              <Badge variant="default">미등록</Badge>
+                            )}
+                          </td>
+                          <td className="py-3 text-sm text-slate-600">
+                            {item.assigned_project_ids?.length ?? 0}건
+                          </td>
+                          <td className="py-3">
+                            {canManageRegistry ? (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditModal(item)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteRepresentative(item)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400">조회 전용</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -398,6 +458,7 @@ export default function OrganizationFieldRepresentativesPage() {
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         title={formState.id ? "현장대리인 수정" : "현장대리인 등록"}
+        size="lg"
       >
         <div className="space-y-3">
           <Input

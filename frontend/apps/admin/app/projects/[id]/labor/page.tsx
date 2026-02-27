@@ -1,41 +1,18 @@
 "use client";
 
-import { use, useEffect, useState, type ReactNode } from "react";
-import Link from "next/link";
+import { use, useEffect, useState } from "react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  Button,
-  StatusBadge,
 } from "@sigongon/ui";
-import {
-  Users,
-  FileSpreadsheet,
-  FileSignature,
-  Loader2,
-  ArrowRight,
-} from "lucide-react";
+import { Users, Loader2, Download } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
-import type { LaborContractStatus } from "@sigongon/types";
-
-interface LaborSummary {
-  total_workers: number;
-  total_amount: string;
-  by_status: Record<LaborContractStatus, number>;
-}
-
-const initialSummary: LaborSummary = {
-  total_workers: 0,
-  total_amount: "0",
-  by_status: {
-    draft: 0,
-    sent: 0,
-    signed: 0,
-    paid: 0,
-  },
-};
+import { generateSitePayrollExcel } from "@/lib/labor/excelExport";
+import type { SitePayrollReport } from "@sigongon/types";
+import { MobileListCard } from "@/components/MobileListCard";
 
 export default function ProjectLaborPage({
   params,
@@ -43,23 +20,28 @@ export default function ProjectLaborPage({
   params: Promise<{ id: string }>;
 }) {
   const { id: projectId } = use(params);
-  const [summary, setSummary] = useState<LaborSummary>(initialSummary);
+  const { user } = useAuth();
+  const canViewAmount = user?.role !== "site_manager";
+
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [siteReport, setSiteReport] = useState<SitePayrollReport | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
-    loadSummary();
-  }, [projectId]);
+    loadData();
+  }, [projectId, year, month]);
 
-  async function loadSummary() {
+  async function loadData() {
     try {
       setLoading(true);
-      const response = await api.getLaborContractsSummary(projectId);
-      if (response.success && response.data) {
-        setSummary({
-          total_workers: response.data.total_workers,
-          total_amount: response.data.total_amount,
-          by_status: response.data.by_status,
-        });
+      const reportRes = await api.generateSiteReport(projectId, year, month);
+      if (reportRes.success && reportRes.data) {
+        setSiteReport(reportRes.data);
+      } else {
+        setSiteReport(null);
       }
     } catch (error) {
       console.error(error);
@@ -67,6 +49,29 @@ export default function ProjectLaborPage({
       setLoading(false);
     }
   }
+
+  async function handleExcelDownload() {
+    if (!siteReport) return;
+    setDownloading(true);
+    try {
+      await generateSitePayrollExcel(siteReport);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  const sortedEntries = siteReport
+    ? [...siteReport.entries].sort((a, b) =>
+        canViewAmount
+          ? b.total_labor_cost - a.total_labor_cost
+          : b.total_man_days - a.total_man_days
+      )
+    : [];
+
+  const currentYear = now.getFullYear();
+  const yearOptions = [currentYear, currentYear - 1];
 
   if (loading) {
     return (
@@ -78,65 +83,206 @@ export default function ProjectLaborPage({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="투입 근로자" value={`${summary.total_workers}명`} />
-        <MetricCard title="계약 초안" value={`${summary.by_status.draft}건`} />
-        <MetricCard title="서명 대기" value={`${summary.by_status.sent}건`} />
-        <MetricCard title="서명 완료" value={`${summary.by_status.signed}건`} />
+      {/* Month selector */}
+      <div className="flex items-center gap-2 text-sm text-slate-600">
+        <span className="font-medium">조회 기준월:</span>
+        <select
+          value={year}
+          onChange={(e) => setYear(Number(e.target.value))}
+          className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+        >
+          {yearOptions.map((y) => (
+            <option key={y} value={y}>
+              {y}년
+            </option>
+          ))}
+        </select>
+        <select
+          value={month}
+          onChange={(e) => setMonth(Number(e.target.value))}
+          className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+        >
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+            <option key={m} value={m}>
+              {m}월
+            </option>
+          ))}
+        </select>
       </div>
 
+      {/* KPI Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          title="투입 인원"
+          value={`${siteReport?.entries.length ?? 0}명`}
+        />
+        <MetricCard
+          title="총 공수"
+          value={`${siteReport ? siteReport.entries.reduce((s, e) => s + e.total_man_days, 0) : 0}인일`}
+        />
+        <MetricCard
+          title="노무비"
+          value={canViewAmount ? `${(siteReport?.totals.total_labor_cost ?? 0).toLocaleString()}원` : "비공개"}
+        />
+        <MetricCard
+          title="차감지급액"
+          value={canViewAmount ? `${(siteReport?.totals.total_net_pay ?? 0).toLocaleString()}원` : "비공개"}
+        />
+      </div>
+
+      {/* Worker Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-slate-400" />
-            프로젝트 노무 액션
+            투입 근로자 현황
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-3">
-          <ActionLinkCard
-            href={`/labor/contracts`}
-            icon={<FileSignature className="h-5 w-5 text-blue-600" />}
-            title="근로계약 관리"
-            description="계약서 발송, 서명 상태 확인"
-          />
-          <ActionLinkCard
-            href={`/labor/payroll`}
-            icon={<FileSpreadsheet className="h-5 w-5 text-emerald-600" />}
-            title="신고 엑셀 생성"
-            description="근로복지공단/국세청 양식 다운로드"
-          />
-          <ActionLinkCard
-            href={`/labor/workers`}
-            icon={<Users className="h-5 w-5 text-violet-600" />}
-            title="근로자 관리"
-            description="근로자 등록/정보 수정/상태 관리"
-          />
+        <CardContent>
+          {sortedEntries.length === 0 ? (
+            <p className="py-8 text-center text-sm text-slate-400">
+              이번 달 출역 기록이 없습니다
+            </p>
+          ) : (
+            <>
+              {/* Mobile card list */}
+              <div className="space-y-3 md:hidden">
+                {sortedEntries.map((entry) => (
+                  <MobileListCard
+                    key={entry.worker_id}
+                    title={entry.worker_name}
+                    subtitle={entry.job_type}
+                    metadata={[
+                      { label: "근무일수", value: `${entry.total_days}일` },
+                      { label: "공수", value: String(entry.total_man_days) },
+                      {
+                        label: "노무비",
+                        value: canViewAmount
+                          ? `${entry.total_labor_cost.toLocaleString()}원`
+                          : "비공개",
+                      },
+                      {
+                        label: "지급액",
+                        value: canViewAmount
+                          ? `${entry.net_pay.toLocaleString()}원`
+                          : "비공개",
+                      },
+                    ]}
+                    onClick={undefined}
+                  />
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      <th className="pb-2 text-left font-medium text-slate-500">
+                        성명
+                      </th>
+                      <th className="pb-2 text-right font-medium text-slate-500">
+                        직종
+                      </th>
+                      <th className="pb-2 text-right font-medium text-slate-500">
+                        근무일수
+                      </th>
+                      <th className="pb-2 text-right font-medium text-slate-500">
+                        공수
+                      </th>
+                      <th className="pb-2 text-right font-medium text-slate-500">
+                        일당
+                      </th>
+                      <th className="pb-2 text-right font-medium text-slate-500">
+                        노무비
+                      </th>
+                      <th className="pb-2 text-right font-medium text-slate-500">
+                        차감지급액
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedEntries.map((entry, i) => (
+                      <tr
+                        key={entry.worker_id}
+                        className={
+                          i % 2 === 0 ? "bg-white" : "bg-slate-50/60"
+                        }
+                      >
+                        <td className="py-2 font-medium text-slate-800">
+                          {entry.worker_name}
+                        </td>
+                        <td className="py-2 text-right text-slate-600">
+                          {entry.job_type}
+                        </td>
+                        <td className="py-2 text-right text-slate-600">
+                          {entry.total_days}일
+                        </td>
+                        <td className="py-2 text-right text-slate-600">
+                          {entry.total_man_days}
+                        </td>
+                        <td className="py-2 text-right text-slate-600">
+                          {canViewAmount ? `${entry.daily_rate.toLocaleString()}원` : "비공개"}
+                        </td>
+                        <td className="py-2 text-right text-slate-800">
+                          {canViewAmount ? `${entry.total_labor_cost.toLocaleString()}원` : "비공개"}
+                        </td>
+                        <td className="py-2 text-right font-medium text-slate-900">
+                          {canViewAmount ? `${entry.net_pay.toLocaleString()}원` : "비공개"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-slate-200 font-semibold">
+                      <td className="pt-2 text-slate-900">합계</td>
+                      <td />
+                      <td className="pt-2 text-right text-slate-900">
+                        {sortedEntries.reduce((s, e) => s + e.total_days, 0)}일
+                      </td>
+                      <td className="pt-2 text-right text-slate-900">
+                        {sortedEntries.reduce(
+                          (s, e) => s + e.total_man_days,
+                          0
+                        )}
+                      </td>
+                      <td />
+                      <td className="pt-2 text-right text-slate-900">
+                        {canViewAmount
+                          ? `${(siteReport?.totals.total_labor_cost ?? 0).toLocaleString()}원`
+                          : "비공개"}
+                      </td>
+                      <td className="pt-2 text-right text-slate-900">
+                        {canViewAmount
+                          ? `${(siteReport?.totals.total_net_pay ?? 0).toLocaleString()}원`
+                          : "비공개"}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <CardTitle>프로젝트 상태 참고</CardTitle>
-          <StatusBadge
-            status={summary.by_status.signed > 0 ? "in_progress" : "draft"}
-          />
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-slate-600">
-          <p>
-            프로젝트 금액 합계(목업):{" "}
-            <span className="font-semibold text-slate-900">
-              {Number(summary.total_amount).toLocaleString()}원
-            </span>
-          </p>
-          <p>
-            실제 정산은 백엔드 연동 이후 프로젝트별 계약/근무 데이터로 계산됩니다.
-          </p>
-          <Button size="sm" variant="secondary" className="mt-1" asChild><Link href={`/labor/payroll`}>
-              노무 정산 화면으로 이동
-              <ArrowRight className="h-4 w-4" />
-            </Link></Button>
-        </CardContent>
-      </Card>
+      {/* Excel Download */}
+      {canViewAmount && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleExcelDownload}
+            disabled={!siteReport || downloading}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-emerald-200 hover:bg-emerald-50/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {downloading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+            ) : (
+              <Download className="h-4 w-4 text-emerald-600" />
+            )}
+            노무비 엑셀 다운로드
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -152,26 +298,3 @@ function MetricCard({ title, value }: { title: string; value: string }) {
   );
 }
 
-function ActionLinkCard({
-  href,
-  icon,
-  title,
-  description,
-}: {
-  href: string;
-  icon: ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link href={href}>
-      <div className="h-full rounded-lg border border-slate-200 p-4 transition-colors hover:border-brand-point-200 hover:bg-brand-point-50/40">
-        <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
-          {icon}
-        </div>
-        <p className="font-semibold text-slate-900">{title}</p>
-        <p className="mt-1 text-xs text-slate-500">{description}</p>
-      </div>
-    </Link>
-  );
-}

@@ -11,6 +11,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
+import { MobileListCard } from "@/components/MobileListCard";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { api } from "@/lib/api";
 import { APIError } from "@sigongon/api";
@@ -63,6 +64,9 @@ export default function PayrollPage() {
 
   // Work records: workerId -> day -> manDays
   const [workRecords, setWorkRecords] = useState<Map<string, Map<number, number>>>(new Map());
+
+  // Worker rates: workerId -> daily_rate (override from records or user edit)
+  const [workerRates, setWorkerRates] = useState<Map<string, number>>(new Map());
 
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
@@ -145,6 +149,7 @@ export default function PayrollPage() {
         if (res.success && res.data) {
           const records = res.data as DailyWorkRecord[];
           const map = new Map<string, Map<number, number>>();
+          const ratesMap = new Map<string, number>();
           for (const rec of records) {
             const d = new Date(rec.work_date);
             const day = d.getDate();
@@ -152,8 +157,13 @@ export default function PayrollPage() {
               map.set(rec.worker_id, new Map());
             }
             map.get(rec.worker_id)!.set(day, rec.man_days);
+            // Use daily_rate from record if it's set
+            if (rec.daily_rate && rec.daily_rate > 0) {
+              ratesMap.set(rec.worker_id, rec.daily_rate);
+            }
           }
           setWorkRecords(map);
+          setWorkerRates(ratesMap);
         }
       } catch {
         toast.error("근무 기록을 불러오지 못했습니다.");
@@ -188,10 +198,12 @@ export default function PayrollPage() {
         const next = new Map(prev);
         const workerMap = new Map(next.get(workerId) || new Map());
         const current = workerMap.get(day) || 0;
-        if (current > 0) {
-          workerMap.delete(day);
-        } else {
+        if (current === 0) {
           workerMap.set(day, 1);
+        } else if (current === 1) {
+          workerMap.set(day, 0.5);
+        } else {
+          workerMap.delete(day);
         }
         next.set(workerId, workerMap);
         return next;
@@ -246,7 +258,8 @@ export default function PayrollPage() {
         uniqueDays.add(day);
       });
       const totalDays = uniqueDays.size;
-      const totalLaborCost = worker.daily_rate * totalManDays;
+      const effectiveDailyRate = workerRates.get(worker.id) ?? worker.daily_rate;
+      const totalLaborCost = effectiveDailyRate * totalManDays;
 
       const referenceDate = new Date(selectedYear, selectedMonth - 1, 15);
       const deductions = calculateWorkerDeductions(
@@ -255,6 +268,7 @@ export default function PayrollPage() {
         totalDays,
         rates,
         referenceDate,
+        effectiveDailyRate,
       );
 
       return {
@@ -264,7 +278,7 @@ export default function PayrollPage() {
         ...deductions,
       };
     },
-    [workRecords, rates, selectedYear, selectedMonth],
+    [workRecords, workerRates, rates, selectedYear, selectedMonth],
   );
 
   // ============================================
@@ -302,9 +316,11 @@ export default function PayrollPage() {
         project_id: string;
         work_date: string;
         man_days: number;
+        daily_rate: number;
       }> = [];
 
       workRecords.forEach((dayMap, workerId) => {
+        const effectiveRate = workerRates.get(workerId) ?? workers.find((w) => w.id === workerId)?.daily_rate ?? 0;
         dayMap.forEach((manDays, day) => {
           const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           records.push({
@@ -312,6 +328,7 @@ export default function PayrollPage() {
             project_id: selectedProject,
             work_date: dateStr,
             man_days: manDays,
+            daily_rate: effectiveRate,
           });
         });
       });
@@ -356,7 +373,7 @@ export default function PayrollPage() {
   // Excel Downloads
   // ============================================
 
-  const handleExcelDownload = async (type: "site" | "consolidated") => {
+  const handleExcelDownload = async (type: "site" | "consolidated" | "kwdi" | "national_tax") => {
     if (!selectedProject && type !== "consolidated") {
       toast.error("프로젝트를 선택하세요.");
       return;
@@ -377,6 +394,18 @@ export default function PayrollPage() {
         if (res.success && res.data) {
           await excelModule.generateConsolidatedExcel(res.data);
           toast.success("월별 통합본이 다운로드되었습니다.");
+        }
+      } else if (type === "kwdi") {
+        const res = await api.generateSiteReport(selectedProject, selectedYear, selectedMonth);
+        if (res.success && res.data) {
+          await excelModule.generateKWDIReportExcel(res.data as SitePayrollReport);
+          toast.success("근로복지공단 근로내용확인신고서가 다운로드되었습니다.");
+        }
+      } else if (type === "national_tax") {
+        const res = await api.generateSiteReport(selectedProject, selectedYear, selectedMonth);
+        if (res.success && res.data) {
+          await excelModule.generateNationalTaxExcel(res.data as SitePayrollReport);
+          toast.success("국세청 일용소득 지급명세서가 다운로드되었습니다.");
         }
       }
     } catch {
@@ -451,8 +480,9 @@ export default function PayrollPage() {
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
                   className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  <option value={2025}>2025</option>
-                  <option value={2026}>2026</option>
+                  {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
                 </PrimitiveSelect>
               </div>
 
@@ -504,7 +534,7 @@ export default function PayrollPage() {
                   <Download className="ml-2 h-3 w-3" />
                 </Button>
                 {showExcelMenu && (
-                  <div className="absolute right-0 top-full mt-1 w-56 rounded-lg border border-slate-200 bg-white py-1 shadow-lg z-50">
+                  <div className="absolute right-0 top-full mt-1 w-60 rounded-lg border border-slate-200 bg-white py-1 shadow-lg z-50">
                     <PrimitiveButton
                       onClick={() => handleExcelDownload("site")}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
@@ -517,6 +547,18 @@ export default function PayrollPage() {
                     >
                       월별 통합본
                     </PrimitiveButton>
+                    <PrimitiveButton
+                      onClick={() => handleExcelDownload("kwdi")}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      근로복지공단 신고서
+                    </PrimitiveButton>
+                    <PrimitiveButton
+                      onClick={() => handleExcelDownload("national_tax")}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      국세청 지급명세서
+                    </PrimitiveButton>
                   </div>
                 )}
               </div>
@@ -524,7 +566,39 @@ export default function PayrollPage() {
           </CardContent>
         </Card>
 
-        {/* Work Grid Table */}
+        {/* Mobile summary cards — shown on small screens only */}
+        <div className="md:hidden space-y-3">
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+            일별 출역 기록 입력은 PC에서 이용하세요
+          </div>
+          {workers.length === 0 ? (
+            <div className="py-8 text-center text-sm text-slate-400">
+              등록된 일용 근로자가 없습니다.
+            </div>
+          ) : (
+            workers.map((worker) => {
+              const calc = getWorkerCalc(worker);
+              const effectiveDailyRate = workerRates.get(worker.id) ?? worker.daily_rate;
+              return (
+                <MobileListCard
+                  key={worker.id}
+                  title={worker.name}
+                  subtitle={worker.job_type}
+                  metadata={[
+                    { label: "공수", value: `${calc.totalManDays}일` },
+                    { label: "단가", value: formatCurrency(effectiveDailyRate) },
+                    { label: "노무비", value: formatCurrency(calc.totalLaborCost) },
+                    { label: "공제", value: formatCurrency(calc.total_deductions) },
+                    { label: "지급액", value: formatCurrency(calc.net_pay) },
+                  ]}
+                />
+              );
+            })
+          )}
+        </div>
+
+        {/* Work Grid Table — desktop only */}
+        <div className="hidden md:block">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -619,9 +693,9 @@ export default function PayrollPage() {
                                 onClick={() => toggleDay(worker.id, day)}
                                 className={`border-r border-slate-100 px-1 py-2 text-center cursor-pointer select-none transition-colors ${
                                   weekend ? "bg-blue-50/50" : ""
-                                } ${manDays > 0 ? "text-blue-700 font-bold" : "text-slate-300"} hover:bg-blue-100`}
+                                } ${manDays === 1 ? "text-blue-700 font-bold" : manDays === 0.5 ? "text-orange-600 font-semibold" : "text-slate-300"} hover:bg-blue-100`}
                               >
-                                {manDays > 0 ? "1" : ""}
+                                {manDays === 1 ? "1" : manDays === 0.5 ? "½" : ""}
                               </td>
                             );
                           })}
@@ -632,8 +706,16 @@ export default function PayrollPage() {
                           <td className="border-r border-slate-200 px-2 py-2 text-center font-medium text-slate-700">
                             {calc.totalManDays || ""}
                           </td>
-                          <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-slate-700 whitespace-nowrap">
-                            {formatCurrency(worker.daily_rate)}
+                          <td className="border-r border-slate-200 px-1 py-1">
+                            <input
+                              type="number"
+                              value={workerRates.get(worker.id) ?? worker.daily_rate}
+                              onChange={(e) => {
+                                const newRate = parseInt(e.target.value) || 0;
+                                setWorkerRates((prev) => new Map(prev).set(worker.id, newRate));
+                              }}
+                              className="w-24 text-right font-mono text-slate-700 border border-slate-200 rounded px-1 py-0.5 text-sm focus:outline-none focus:border-blue-400"
+                            />
                           </td>
                           <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-slate-900 font-medium whitespace-nowrap">
                             {calc.totalLaborCost > 0 ? formatCurrency(calc.totalLaborCost) : ""}
@@ -743,6 +825,7 @@ export default function PayrollPage() {
             )}
           </CardContent>
         </Card>
+        </div>
 
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-3">

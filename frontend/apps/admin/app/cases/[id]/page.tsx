@@ -12,6 +12,7 @@ import type {
   VisionResultDetail,
 } from "@sigongon/types";
 import { Download, Play, Save } from "lucide-react";
+import { MobileListCard } from "@/components/MobileListCard";
 import { saveAs } from "file-saver";
 
 interface CaseDetailPageProps {
@@ -240,37 +241,56 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
               <p className="text-sm text-slate-500">견적을 아직 생성하지 않았습니다.</p>
             ) : (
               <div className="space-y-4">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                        <th className="pb-2 font-medium">품목</th>
-                        <th className="pb-2 font-medium">단위</th>
-                        <th className="pb-2 font-medium">수량</th>
-                        <th className="pb-2 font-medium">단가</th>
-                        <th className="pb-2 font-medium">금액</th>
-                        <th className="pb-2 font-medium">근거</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {estimate.items.map((line, idx) => {
-                        const evidence = line.evidence[0];
-                        return (
-                          <tr key={`${line.item_name}-${idx}`} className="border-b border-slate-100">
-                            <td className="py-2">{line.item_name}</td>
-                            <td className="py-2">{line.unit}</td>
-                            <td className="py-2">{line.quantity}</td>
-                            <td className="py-2">{line.unit_price.toLocaleString()}</td>
-                            <td className="py-2">{line.amount.toLocaleString()}</td>
-                            <td className="py-2 text-xs text-slate-600">
-                              {evidence?.doc_title} / p.{evidence?.page} / {evidence?.table_id} / {evidence?.row_id}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                {/* 모바일 카드 뷰 */}
+                <div className="space-y-3 md:hidden">
+                  {estimate.items.map((line, idx) => (
+                    <MobileListCard
+                      key={`${line.item_name}-${idx}`}
+                      title={line.item_name}
+                      metadata={[
+                        { label: "수량", value: `${line.quantity} ${line.unit}` },
+                        { label: "단가", value: `${line.unit_price.toLocaleString()}원` },
+                        { label: "금액", value: `${line.amount.toLocaleString()}원` },
+                      ]}
+                    />
+                  ))}
                 </div>
+
+                {/* 데스크톱 테이블 뷰 */}
+                <div className="hidden md:block">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                          <th className="pb-2 font-medium">품목</th>
+                          <th className="pb-2 font-medium">단위</th>
+                          <th className="pb-2 font-medium">수량</th>
+                          <th className="pb-2 font-medium">단가</th>
+                          <th className="pb-2 font-medium">금액</th>
+                          <th className="pb-2 font-medium">근거</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {estimate.items.map((line, idx) => {
+                          const evidence = line.evidence[0];
+                          return (
+                            <tr key={`${line.item_name}-${idx}`} className="border-b border-slate-100">
+                              <td className="py-2">{line.item_name}</td>
+                              <td className="py-2">{line.unit}</td>
+                              <td className="py-2">{line.quantity}</td>
+                              <td className="py-2">{line.unit_price.toLocaleString()}</td>
+                              <td className="py-2">{line.amount.toLocaleString()}</td>
+                              <td className="py-2 text-xs text-slate-600">
+                                {evidence?.doc_title} / p.{evidence?.page} / {evidence?.table_id} / {evidence?.row_id}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
                 <div className="rounded-lg bg-slate-50 p-3 text-sm">
                   공급가액 {estimate.totals.subtotal.toLocaleString()}원 / 부가세{" "}
                   {estimate.totals.vat_amount.toLocaleString()}원 / 합계{" "}

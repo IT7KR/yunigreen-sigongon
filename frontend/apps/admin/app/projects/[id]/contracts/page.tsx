@@ -508,6 +508,7 @@ export default function ContractsPage({
           resetCreateForm();
         }}
         title="계약서 생성"
+        size="xl"
       >
         {availableEstimates.length === 0 ? (
           <div className="py-8 text-center">

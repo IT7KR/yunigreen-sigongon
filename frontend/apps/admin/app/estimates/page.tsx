@@ -11,6 +11,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
+import { MobileListCard } from "@/components/MobileListCard";
 import { Badge, Button, Card, CardContent, PrimitiveButton, PrimitiveInput, PrimitiveSelect, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatCurrency, formatDate } from "@sigongon/ui";
 import { useEstimates } from "@/hooks";
 import type { EstimateStatus } from "@sigongon/types";
@@ -149,74 +150,98 @@ export default function EstimatesPage() {
                 견적서가 없어요
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>견적서</TableHead>
-                    <TableHead>프로젝트</TableHead>
-                    <TableHead>고객</TableHead>
-                    <TableHead>상태</TableHead>
-                    <TableHead className="text-right">금액</TableHead>
-                    <TableHead>생성일</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* 모바일: 카드 리스트 */}
+                <div className="space-y-3 p-4 md:hidden">
                   {filteredEstimates.map((estimate) => {
                     const config = statusConfig[estimate.status];
                     return (
-                      <TableRow
+                      <MobileListCard
                         key={estimate.id}
-                        clickable
+                        title={`${estimate.project_name} v${estimate.version}`}
+                        subtitle={estimate.client_name || undefined}
+                        badge={<Badge variant={config.variant}>{config.label}</Badge>}
+                        metadata={[
+                          { value: formatCurrency(estimate.total_amount) },
+                          { value: formatDate(estimate.created_at) },
+                        ]}
                         onClick={() => router.push(`/estimates/${estimate.id}`)}
-                      >
-                        <TableCell>
-                          <Link
-                            href={`/estimates/${estimate.id}`}
-                            className="flex items-center gap-2 text-slate-900 hover:text-brand-point-600"
-                          >
-                            <FileText className="h-4 w-4 text-slate-400" />
-                            <span className="font-medium">
-                              v{estimate.version}
-                            </span>
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <Link
-                            href={`/projects/${estimate.project_id}`}
-                            className="text-slate-900 hover:text-brand-point-600"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {estimate.project_name}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-slate-600">
-                          {estimate.client_name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={config.variant}>
-                            {config.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-slate-900">
-                          {formatCurrency(estimate.total_amount)}
-                        </TableCell>
-                        <TableCell className="text-slate-500">
-                          {formatDate(estimate.created_at)}
-                        </TableCell>
-                        <TableCell>
-                          <PrimitiveButton
-                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreHorizontal className="h-4 w-4 text-slate-400" />
-                          </PrimitiveButton>
-                        </TableCell>
-                      </TableRow>
+                      />
                     );
                   })}
-                </TableBody>
-              </Table>
+                </div>
+                {/* 데스크톱: 기존 테이블 */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>견적서</TableHead>
+                        <TableHead>프로젝트</TableHead>
+                        <TableHead>고객</TableHead>
+                        <TableHead>상태</TableHead>
+                        <TableHead className="text-right">금액</TableHead>
+                        <TableHead>생성일</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredEstimates.map((estimate) => {
+                        const config = statusConfig[estimate.status];
+                        return (
+                          <TableRow
+                            key={estimate.id}
+                            clickable
+                            onClick={() => router.push(`/estimates/${estimate.id}`)}
+                          >
+                            <TableCell>
+                              <Link
+                                href={`/estimates/${estimate.id}`}
+                                className="flex items-center gap-2 text-slate-900 hover:text-brand-point-600"
+                              >
+                                <FileText className="h-4 w-4 text-slate-400" />
+                                <span className="font-medium">
+                                  v{estimate.version}
+                                </span>
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              <Link
+                                href={`/projects/${estimate.project_id}`}
+                                className="text-slate-900 hover:text-brand-point-600"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {estimate.project_name}
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-slate-600">
+                              {estimate.client_name || "-"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={config.variant}>
+                                {config.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-slate-900">
+                              {formatCurrency(estimate.total_amount)}
+                            </TableCell>
+                            <TableCell className="text-slate-500">
+                              {formatDate(estimate.created_at)}
+                            </TableCell>
+                            <TableCell>
+                              <PrimitiveButton
+                                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-4 w-4 text-slate-400" />
+                              </PrimitiveButton>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

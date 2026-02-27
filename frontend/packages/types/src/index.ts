@@ -72,7 +72,7 @@ export type ReportStatus = "draft" | "submitted" | "approved" | "rejected"
 export type WeatherType = "sunny" | "cloudy" | "rain" | "snow" | "wind"
 
 // Subscription & Billing (토스페이먼츠)
-export type SubscriptionPlan = "starter" | "standard" | "premium"
+export type SubscriptionPlan = "trial" | "basic" | "pro"
 export type SubscriptionStatus = "active" | "cancelled" | "expired" | "past_due"
 export type PaymentStatus = "pending" | "paid" | "failed" | "refunded"
 
@@ -1240,6 +1240,7 @@ export interface DailyWorkRecord {
   project_id: string
   work_date: string             // YYYY-MM-DD
   man_days: number              // 공수 (0.5 = 반일, 1 = 1일)
+  daily_rate?: number           // 적용 일당 (0이면 근로자 기본 단가 사용)
 }
 
 /** 근로자별 월간 급여 항목 */
@@ -1318,4 +1319,35 @@ export interface MonthlyConsolidatedReport {
     total_deductions: number
     total_net_pay: number
   }
+}
+
+// Worker Profile (근로자 프로필)
+export interface WorkerProfileResponse {
+  id: string
+  name: string
+  phone: string
+  address: string
+  bank_name: string
+  account_number: string
+  job_type: string
+  hire_date: string
+  birth_date: string
+  gender: 1 | 2 | 3 | 4
+  documents: Array<{
+    id: string
+    document_type: WorkerDocumentType
+    name: string
+    status: string
+    review_status: WorkerDocumentReviewStatus
+    review_reason?: string | null
+    original_filename?: string | null
+    uploaded_at?: string | null
+  }>
+}
+
+export interface WorkerProfileUpdateRequest {
+  phone?: string
+  address?: string
+  bank_name?: string
+  account_number?: string
 }

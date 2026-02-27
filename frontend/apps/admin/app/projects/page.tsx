@@ -1,19 +1,59 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Plus, Search, MoreHorizontal, X, FolderKanban, AlertCircle, Loader2, Pencil, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  X,
+  FolderKanban,
+  AlertCircle,
+  Loader2,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { AppLink, Button, Card, CardContent, ConfirmModal, EmptyState, Input, LoadingOverlay, Modal, PageHeader, PrimitiveButton, PrimitiveInput, Select, StatusBadge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate, useAppNavigation } from "@sigongon/ui";
+import { MobileListCard } from "@/components/MobileListCard";
+import {
+  AppLink,
+  Button,
+  Card,
+  CardContent,
+  ConfirmModal,
+  EmptyState,
+  Input,
+  LoadingOverlay,
+  Modal,
+  PageHeader,
+  PrimitiveButton,
+  PrimitiveInput,
+  Select,
+  StatusBadge,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  formatDate,
+  useAppNavigation,
+} from "@sigongon/ui";
 import { useProjects } from "@/hooks";
 import { api } from "@/lib/api";
-import type { CustomerMaster, ProjectCategory, ProjectStatus } from "@sigongon/types";
+import type {
+  CustomerMaster,
+  ProjectCategory,
+  ProjectStatus,
+} from "@sigongon/types";
 import { PROJECT_CATEGORIES } from "@sigongon/types";
 
 export default function ProjectsPage() {
   const navigation = useAppNavigation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "">("");
-  const [categoryFilter, setCategoryFilter] = useState<ProjectCategory | "">("");
+  const [categoryFilter, setCategoryFilter] = useState<ProjectCategory | "">(
+    "",
+  );
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -32,7 +72,10 @@ export default function ProjectsPage() {
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [customerError, setCustomerError] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -49,17 +92,23 @@ export default function ProjectsPage() {
     : allProjects;
   const total = projects.length;
 
-  const categoryMap = Object.fromEntries(PROJECT_CATEGORIES.map((c) => [c.id, c.label]));
+  const categoryMap = Object.fromEntries(
+    PROJECT_CATEGORIES.map((c) => [c.id, c.label]),
+  );
 
   const formatPhone = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
     if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    if (cleaned.length <= 7)
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
   };
 
   const getCustomerPrimaryPhone = (customer: CustomerMaster) =>
-    customer.representative_phone || customer.contact_phone || customer.phone || "";
+    customer.representative_phone ||
+    customer.contact_phone ||
+    customer.phone ||
+    "";
 
   const loadCustomers = async () => {
     try {
@@ -84,7 +133,8 @@ export default function ProjectsPage() {
     }
     if (openMenuId) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [openMenuId]);
 
@@ -98,7 +148,8 @@ export default function ProjectsPage() {
         name: formData.get("name") as string,
         address: formData.get("address") as string,
         category: (formData.get("category") as string) || undefined,
-        customer_master_id: (formData.get("customer_master_id") as string) || undefined,
+        customer_master_id:
+          (formData.get("customer_master_id") as string) || undefined,
         client_name: (formData.get("client_name") as string) || undefined,
         client_phone: (formData.get("client_phone") as string) || undefined,
       });
@@ -135,7 +186,8 @@ export default function ProjectsPage() {
         name: formData.get("name") as string,
         address: formData.get("address") as string,
         category: (formData.get("category") as string) || undefined,
-        customer_master_id: (formData.get("customer_master_id") as string) || undefined,
+        customer_master_id:
+          (formData.get("customer_master_id") as string) || undefined,
         client_name: (formData.get("client_name") as string) || undefined,
         client_phone: (formData.get("client_phone") as string) || undefined,
       });
@@ -199,8 +251,8 @@ export default function ProjectsPage() {
 
         <Card>
           <CardContent className="p-4">
-            <div className="flex flex-wrap gap-4">
-              <div className="relative flex-1 min-w-[200px]">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+              <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <PrimitiveInput
                   type="search"
@@ -210,28 +262,37 @@ export default function ProjectsPage() {
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-4 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 />
               </div>
-              <Select
-                value={categoryFilter}
-                onChange={(value) => setCategoryFilter(value as ProjectCategory | "")}
-                options={[
-                  { value: "", label: "모든 카테고리" },
-                  ...PROJECT_CATEGORIES.map((cat) => ({ value: cat.id, label: cat.label })),
-                ]}
-              />
-              <Select
-                value={statusFilter}
-                onChange={(value) => setStatusFilter(value as ProjectStatus | "")}
-                options={[
-                  { value: "", label: "모든 상태" },
-                  { value: "draft", label: "초안" },
-                  { value: "diagnosing", label: "진단중" },
-                  { value: "estimating", label: "견적중" },
-                  { value: "quoted", label: "견적발송" },
-                  { value: "contracted", label: "계약완료" },
-                  { value: "in_progress", label: "공사중" },
-                  { value: "completed", label: "준공" },
-                ]}
-              />
+              <div className="flex gap-2 sm:contents">
+                <Select
+                  value={categoryFilter}
+                  onChange={(value) =>
+                    setCategoryFilter(value as ProjectCategory | "")
+                  }
+                  options={[
+                    { value: "", label: "모든 카테고리" },
+                    ...PROJECT_CATEGORIES.map((cat) => ({
+                      value: cat.id,
+                      label: cat.label,
+                    })),
+                  ]}
+                />
+                <Select
+                  value={statusFilter}
+                  onChange={(value) =>
+                    setStatusFilter(value as ProjectStatus | "")
+                  }
+                  options={[
+                    { value: "", label: "모든 상태" },
+                    { value: "draft", label: "초안" },
+                    { value: "diagnosing", label: "진단중" },
+                    { value: "estimating", label: "견적중" },
+                    { value: "quoted", label: "견적발송" },
+                    { value: "contracted", label: "계약완료" },
+                    { value: "in_progress", label: "공사중" },
+                    { value: "completed", label: "준공" },
+                  ]}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -257,110 +318,156 @@ export default function ProjectsPage() {
                 }}
               />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>프로젝트</TableHead>
-                    <TableHead>카테고리</TableHead>
-                    <TableHead>상태</TableHead>
-                    <TableHead>고객</TableHead>
-                    <TableHead>방문</TableHead>
-                    <TableHead>견적</TableHead>
-                    <TableHead>등록일</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* 모바일: 카드 리스트 */}
+                <div className="space-y-3 p-4 md:hidden">
                   {projects.map((project) => (
-                    <TableRow
+                    <MobileListCard
                       key={project.id}
-                      clickable
+                      title={project.name}
+                      subtitle={project.address}
+                      badge={<StatusBadge status={project.status} />}
+                      metadata={[
+                        {
+                          value: project.category
+                            ? categoryMap[project.category] || "-"
+                            : "-",
+                        },
+                        { label: "고객", value: project.client_name || "-" },
+                        {
+                          value: `방문 ${project.site_visit_count}회 · 견적 ${project.estimate_count}건 · ${formatDate(project.created_at)}`,
+                        },
+                      ]}
                       onClick={() => navigation.push(`/projects/${project.id}`)}
-                    >
-                      <TableCell>
-                        <AppLink
-                          href={`/projects/${project.id}`}
-                          className="block"
-                        >
-                          <p className="font-medium text-slate-900 hover:text-brand-point-600">
-                            {project.name}
-                          </p>
-                          <p className="mt-0.5 text-sm text-slate-500">
-                            {project.address}
-                          </p>
-                        </AppLink>
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600">
-                        {project.category ? categoryMap[project.category] || "-" : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={project.status} />
-                      </TableCell>
-                      <TableCell>
-                        <p className="text-slate-900">
-                          {project.client_name || "-"}
-                        </p>
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {project.site_visit_count}회
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {project.estimate_count}건
-                      </TableCell>
-                      <TableCell className="text-slate-500">
-                        {formatDate(project.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="relative" ref={openMenuId === project.id ? menuRef : undefined}>
-                          <PrimitiveButton
-                            className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(openMenuId === project.id ? null : project.id);
-                            }}
-                          >
-                            <MoreHorizontal className="h-4 w-4 text-slate-400" />
-                          </PrimitiveButton>
-                          {openMenuId === project.id && (
-                            <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                              <PrimitiveButton
-                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenMenuId(null);
-                                  setEditProject({
-                                    id: project.id,
-                                    name: project.name,
-                                    address: project.address,
-                                    client_name: project.client_name || "",
-                                    client_phone: project.client_phone || "",
-                                    category: project.category || "",
-                                    customer_master_id: project.customer_master_id || "",
-                                  });
-                                }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                                수정
-                              </PrimitiveButton>
-                              <PrimitiveButton
-                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenMenuId(null);
-                                  setDeleteTarget({ id: project.id, name: project.name });
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                삭제
-                              </PrimitiveButton>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    />
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+                {/* 데스크톱: 기존 테이블 */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>프로젝트</TableHead>
+                        <TableHead>카테고리</TableHead>
+                        <TableHead>상태</TableHead>
+                        <TableHead>고객</TableHead>
+                        <TableHead>방문</TableHead>
+                        <TableHead>견적</TableHead>
+                        <TableHead>등록일</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {projects.map((project) => (
+                        <TableRow
+                          key={project.id}
+                          clickable
+                          onClick={() =>
+                            navigation.push(`/projects/${project.id}`)
+                          }
+                        >
+                          <TableCell>
+                            <AppLink
+                              href={`/projects/${project.id}`}
+                              className="block"
+                            >
+                              <p className="font-medium text-slate-900 hover:text-brand-point-600">
+                                {project.name}
+                              </p>
+                              <p className="mt-0.5 text-sm text-slate-500">
+                                {project.address}
+                              </p>
+                            </AppLink>
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            {project.category
+                              ? categoryMap[project.category] || "-"
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={project.status} />
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-slate-900">
+                              {project.client_name || "-"}
+                            </p>
+                          </TableCell>
+                          <TableCell className="text-slate-600">
+                            {project.site_visit_count}회
+                          </TableCell>
+                          <TableCell className="text-slate-600">
+                            {project.estimate_count}건
+                          </TableCell>
+                          <TableCell className="text-slate-500">
+                            {formatDate(project.created_at)}
+                          </TableCell>
+                          <TableCell>
+                            <div
+                              className="relative"
+                              ref={
+                                openMenuId === project.id ? menuRef : undefined
+                              }
+                            >
+                              <PrimitiveButton
+                                className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(
+                                    openMenuId === project.id
+                                      ? null
+                                      : project.id,
+                                  );
+                                }}
+                              >
+                                <MoreHorizontal className="h-4 w-4 text-slate-400" />
+                              </PrimitiveButton>
+                              {openMenuId === project.id && (
+                                <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                                  <PrimitiveButton
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenMenuId(null);
+                                      setEditProject({
+                                        id: project.id,
+                                        name: project.name,
+                                        address: project.address,
+                                        client_name: project.client_name || "",
+                                        client_phone:
+                                          project.client_phone || "",
+                                        category: project.category || "",
+                                        customer_master_id:
+                                          project.customer_master_id || "",
+                                      });
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                    수정
+                                  </PrimitiveButton>
+                                  <PrimitiveButton
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenMenuId(null);
+                                      setDeleteTarget({
+                                        id: project.id,
+                                        name: project.name,
+                                      });
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    삭제
+                                  </PrimitiveButton>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -370,7 +477,7 @@ export default function ProjectsPage() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         title="새 프로젝트"
-        size="md"
+        size="lg"
       >
         <form onSubmit={handleCreateProject} className="space-y-4">
           <Input
@@ -387,10 +494,13 @@ export default function ProjectsPage() {
           />
           <Select
             name="category"
-            label="카테고리"
-            placeholder="카테고리 선택"
+            label="건물 구분"
+            placeholder="건물 구분 선택"
             required
-            options={PROJECT_CATEGORIES.map((cat) => ({ value: cat.id, label: cat.label }))}
+            options={PROJECT_CATEGORIES.map((cat) => ({
+              value: cat.id,
+              label: cat.label,
+            }))}
           />
           <Select
             name="customer_master_id"
@@ -415,7 +525,11 @@ export default function ProjectsPage() {
               발주처 신규 등록
             </Button>
           </div>
-          <Input name="client_name" label="고객명 (스냅샷)" placeholder="홍길동" />
+          <Input
+            name="client_name"
+            label="고객명 (스냅샷)"
+            placeholder="홍길동"
+          />
           <Input
             name="client_phone"
             label="고객 연락처 (스냅샷)"
@@ -431,13 +545,17 @@ export default function ProjectsPage() {
               className="flex-1"
               onClick={() => setShowCreateModal(false)}
             >
-              <X className="h-4 w-4" />취소
+              <X className="h-4 w-4" />
+              취소
             </Button>
             <Button type="submit" className="flex-1" disabled={creating}>
               {creating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <><Plus className="h-4 w-4" />생성</>
+                <>
+                  <Plus className="h-4 w-4" />
+                  생성
+                </>
               )}
             </Button>
           </div>
@@ -449,7 +567,7 @@ export default function ProjectsPage() {
         isOpen={!!editProject}
         onClose={() => setEditProject(null)}
         title="프로젝트 수정"
-        size="md"
+        size="lg"
       >
         {editProject && (
           <form onSubmit={handleUpdateProject} className="space-y-4">
@@ -467,14 +585,17 @@ export default function ProjectsPage() {
             />
             <Select
               name="category"
-              label="카테고리"
-              placeholder="카테고리 선택"
+              label="건물 구분"
+              placeholder="건물 구분 선택"
               value={editProject.category}
               onChange={(value) =>
                 setEditProject({ ...editProject, category: value })
               }
               required
-              options={PROJECT_CATEGORIES.map((cat) => ({ value: cat.id, label: cat.label }))}
+              options={PROJECT_CATEGORIES.map((cat) => ({
+                value: cat.id,
+                label: cat.label,
+              }))}
             />
             <Select
               name="customer_master_id"

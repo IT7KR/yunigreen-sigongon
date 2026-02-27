@@ -392,6 +392,7 @@ export default function MaterialOrdersPage({
           isOpen={!!selectedOrderId}
           onClose={() => setSelectedOrderId(null)}
           title={`발주 상세: ${selectedOrder.order_number}`}
+          size="lg"
         >
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -645,7 +646,7 @@ function CreateOrderModal({
   const canSubmit = items.length > 0 && items.every(isItemSubmittable);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="새 발주 만들기">
+    <Modal isOpen={isOpen} onClose={onClose} title="새 발주 만들기" size="xl">
       <div className="space-y-6">
         <Input
           label="협력사 ID (선택)"

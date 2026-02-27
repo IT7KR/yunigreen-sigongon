@@ -1,7 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Brain, FileText, Users, Receipt, CheckCircle2, X } from "lucide-react";
+import {
+  ArrowRight,
+  Brain,
+  FileText,
+  Users,
+  Receipt,
+  CheckCircle2,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@sigongon/ui";
@@ -42,15 +50,18 @@ export default function LandingPage() {
                 height={36}
                 className="object-contain"
               />
-              <span className="text-xl font-bold tracking-tight text-white">
-                시공ON
-              </span>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="ghost" className="text-white hover:bg-white/10" asChild><Link href="/login">
-                  로그인
-                </Link></Button>
-              <Button asChild><Link href="/signup">무료 체험</Link></Button>
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white/10"
+                asChild
+              >
+                <Link href="/login">로그인</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/signup">무료 체험</Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -79,7 +90,7 @@ export default function LandingPage() {
 
             <motion.h1
               variants={staggerItem}
-              className="mb-6 max-w-4xl text-6xl font-bold leading-tight tracking-tight text-white md:text-7xl lg:text-8xl"
+              className="mb-6 max-w-4xl text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl"
             >
               AI가 진단하고,
               <br />
@@ -101,17 +112,20 @@ export default function LandingPage() {
               variants={staggerItem}
               className="flex flex-col gap-4 sm:flex-row"
             >
-              <Button size="lg" className="group gap-3 text-lg" asChild><Link href="/signup">
+              <Button size="lg" className="group gap-3 text-lg" asChild>
+                <Link href="/signup">
                   무료 체험 시작하기
                   <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </Link></Button>
+                </Link>
+              </Button>
               <Button
-                  size="lg"
-                  variant="secondary"
-                  className="border-white/20 bg-white/5 text-lg text-white hover:bg-white/10"
-                 asChild><Link href="/login">
-                  이미 계정이 있으신가요?
-                </Link></Button>
+                size="lg"
+                variant="secondary"
+                className="border-white/20 bg-white/5 text-lg text-white hover:bg-white/10"
+                asChild
+              >
+                <Link href="/login">이미 계정이 있으신가요?</Link>
+              </Button>
             </motion.div>
 
             {/* Trust indicators */}
@@ -196,9 +210,13 @@ export default function LandingPage() {
                 variants={staggerItem}
                 className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 transition-opacity group-hover:opacity-100`} />
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 transition-opacity group-hover:opacity-100`}
+                />
                 <div className="relative">
-                  <feature.icon className={`mb-6 h-12 w-12 ${feature.iconColor}`} />
+                  <feature.icon
+                    className={`mb-6 h-12 w-12 ${feature.iconColor}`}
+                  />
                   <h3 className="mb-3 text-2xl font-bold text-white">
                     {feature.title}
                   </h3>
@@ -256,7 +274,9 @@ export default function LandingPage() {
                   </h3>
                   <div className="flex items-baseline gap-2">
                     <span className="text-5xl font-bold text-white">
-                      {plan.id === "trial" ? "무료" : `₩${plan.price.toLocaleString()}`}
+                      {plan.id === "trial"
+                        ? "무료"
+                        : `₩${plan.price.toLocaleString()}`}
                     </span>
                     {plan.id !== "trial" && (
                       <span className="text-slate-400">/ 년</span>
@@ -274,17 +294,20 @@ export default function LandingPage() {
                 </ul>
 
                 <Button
-                    fullWidth
-                    size="lg"
-                    variant={plan.id === "pro" ? "primary" : "secondary"}
-                    className={
-                      plan.id !== "pro"
-                        ? "border-white/20 bg-white/5 text-white hover:bg-white/10"
-                        : ""
-                    }
-                   asChild><Link href="/signup">
+                  fullWidth
+                  size="lg"
+                  variant={plan.id === "pro" ? "primary" : "secondary"}
+                  className={
+                    plan.id !== "pro"
+                      ? "border-white/20 bg-white/5 text-white hover:bg-white/10"
+                      : ""
+                  }
+                  asChild
+                >
+                  <Link href="/signup">
                     {plan.id === "trial" ? "체험 시작하기" : "선택하기"}
-                  </Link></Button>
+                  </Link>
+                </Button>
               </motion.div>
             ))}
           </motion.div>
@@ -307,10 +330,12 @@ export default function LandingPage() {
             <p className="mb-10 text-xl text-slate-300">
               1개월 무료 체험으로 시공ON의 모든 기능을 경험해보세요
             </p>
-            <Button size="lg" className="text-lg" asChild><Link href="/signup">
+            <Button size="lg" className="text-lg" asChild>
+              <Link href="/signup">
                 무료 체험 시작하기
                 <ArrowRight className="ml-2 h-5 w-5" />
-              </Link></Button>
+              </Link>
+            </Button>
           </motion.div>
         </div>
       </section>
@@ -340,9 +365,7 @@ export default function LandingPage() {
           </div>
           <div className="border-t border-white/10 pt-8 text-center text-sm text-slate-500">
             <p className="mb-2">© 2026 (주)유니그린. All rights reserved.</p>
-            <p className="text-xs">
-              AI 기반 방수/누수 시공 관리 SaaS - 시공ON
-            </p>
+            <p className="text-xs">AI 기반 방수/누수 시공 관리 SaaS - 시공ON</p>
           </div>
         </div>
       </footer>

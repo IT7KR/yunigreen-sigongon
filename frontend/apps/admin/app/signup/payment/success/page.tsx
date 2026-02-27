@@ -15,7 +15,7 @@ function PaymentSuccessContent() {
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
-    const confirmPayment = async () => {
+    const processSignup = async () => {
       const paymentKey = searchParams.get("paymentKey");
       const orderId = searchParams.get("orderId");
       const amount = searchParams.get("amount");
@@ -26,66 +26,66 @@ function PaymentSuccessContent() {
         return;
       }
 
+      const signupData = getSignupData();
+      if (!signupData.username || !signupData.companyName || !signupData.businessNumber) {
+        setStatus("error");
+        setErrorMessage("회원가입 정보가 누락되었습니다.");
+        return;
+      }
+
       try {
-        // Confirm payment with backend
-        const response = await api.confirmPayment({
+        // Step 1: 회원가입 (계정 + 구독 생성, JWT 반환)
+        const registerResponse = await api.register({
+          username: signupData.username,
+          email: signupData.email,
+          password: signupData.password,
+          phone: signupData.phone,
+          company_name: signupData.companyName,
+          business_number: signupData.businessNumber.replace(/-/g, ""),
+          representative_name: signupData.representativeName,
+          rep_phone: signupData.repPhone,
+          rep_email: signupData.repEmail,
+          contact_name: signupData.contactName || undefined,
+          contact_phone: signupData.contactPhone || undefined,
+          contact_position: signupData.contactPosition || undefined,
+          plan: signupData.planType,
+        });
+
+        if (!registerResponse.success || !registerResponse.data) {
+          setStatus("error");
+          setErrorMessage("회원가입 처리 중 오류가 발생했습니다.");
+          return;
+        }
+
+        // Step 2: 결제 확인 (register가 자동으로 setAccessToken 호출함)
+        const confirmResponse = await api.confirmPayment({
           payment_key: paymentKey,
           order_id: orderId,
           amount: parseInt(amount, 10),
         });
 
-        if (response.success) {
-          // Get signup data and complete registration
-          const signupData = getSignupData();
-
-          if (signupData.email && signupData.companyName && signupData.businessNumber) {
-            const registerResponse = await api.register({
-              username: signupData.email,
-              email: signupData.email,
-              password: signupData.password,
-              phone: signupData.phone,
-              company_name: signupData.companyName,
-              business_number: signupData.businessNumber.replace(/-/g, ""),
-              representative_name: signupData.companyName,
-              rep_phone: signupData.phone,
-              rep_email: signupData.email,
-              plan: signupData.planType,
-            });
-
-            if (registerResponse.success && registerResponse.data) {
-              // Save access token to signup data for auto-login on complete page
-              saveSignupData({
-                accessToken: registerResponse.data.access_token,
-                paymentCompleted: true
-              });
-              setStatus("success");
-              // Redirect to complete page after short delay
-              setTimeout(() => {
-                router.push("/signup/complete");
-              }, 2000);
-            } else {
-              setStatus("error");
-              setErrorMessage("회원가입 처리 중 오류가 발생했습니다.");
-            }
-          } else {
-            // If signup data is missing, still mark as success but redirect to complete
-            setStatus("success");
-            setTimeout(() => {
-              router.push("/signup/complete");
-            }, 2000);
-          }
+        if (confirmResponse.success) {
+          saveSignupData({
+            accessToken: registerResponse.data.access_token,
+            paymentCompleted: true,
+          });
+          setStatus("success");
+          setTimeout(() => {
+            router.push("/signup/complete");
+          }, 2000);
         } else {
+          // 결제 확인 실패 — 계정은 생성됨, 결제만 재시도 필요
           setStatus("error");
-          setErrorMessage("결제 확인 중 오류가 발생했습니다.");
+          setErrorMessage("결제 확인에 실패했습니다. 로그인 후 다시 시도해주세요.");
         }
       } catch (err) {
-        console.error("Payment confirmation failed:", err);
+        console.error("Signup process failed:", err);
         setStatus("error");
-        setErrorMessage("결제 처리 중 오류가 발생했습니다.");
+        setErrorMessage("처리 중 오류가 발생했습니다.");
       }
     };
 
-    confirmPayment();
+    processSignup();
   }, [searchParams, router]);
 
   if (status === "loading") {

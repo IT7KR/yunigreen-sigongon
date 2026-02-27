@@ -21,6 +21,7 @@ import {
   Eye,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
+import { MobileListCard } from "@/components/MobileListCard";
 import { Badge, Button, Card, CardContent, Input, Modal, PrimitiveInput, PrimitiveSelect, toast } from "@sigongon/ui";
 import { api } from "@/lib/api";
 import type {
@@ -83,6 +84,14 @@ export default function DailyWorkersPage() {
   const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
   const [inviteSuccess, setInviteSuccess] = useState<{ inviteUrl: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [pendingInvitations, setPendingInvitations] = useState<Array<{
+    id: string;
+    name: string;
+    phone: string;
+    created_at: string;
+    expires_at: string;
+    status: string;
+  }>>([]);
 
   // Report download modal state
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -167,6 +176,7 @@ export default function DailyWorkersPage() {
     fetchProjects();
     fetchReviewQueue("pending_review");
     fetchReviewSummary();
+    fetchPendingInvitations();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -228,6 +238,19 @@ export default function DailyWorkersPage() {
       }
     } catch {
       toast.error("현장 목록을 불러오지 못했습니다.");
+    }
+  };
+
+  const fetchPendingInvitations = async () => {
+    try {
+      const currentUser = (await api.getMe()) as any;
+      const orgId = currentUser?.data?.organization_id || "org_1";
+      const res = await (api as any).getPendingWorkerInvitations(orgId);
+      if (res.success && res.data) {
+        setPendingInvitations(res.data);
+      }
+    } catch {
+      // Silently ignore
     }
   };
 
@@ -518,10 +541,6 @@ export default function DailyWorkersPage() {
       toast.error("일당을 입력하세요.");
       return;
     }
-    if (!editIdCardFile || !editSafetyCertFile) {
-      toast.error("신분증과 안전교육 이수증 파일을 모두 업로드하세요.");
-      return;
-    }
 
     setIsUpdating(true);
     try {
@@ -533,8 +552,12 @@ export default function DailyWorkersPage() {
 
       const response = await api.updateDailyWorker(editingWorker.id, payload);
       if (response.success) {
-        await api.uploadDailyWorkerDocument(editingWorker.id, "id_card", editIdCardFile);
-        await api.uploadDailyWorkerDocument(editingWorker.id, "safety_cert", editSafetyCertFile);
+        if (editIdCardFile) {
+          await api.uploadDailyWorkerDocument(editingWorker.id, "id_card", editIdCardFile);
+        }
+        if (editSafetyCertFile) {
+          await api.uploadDailyWorkerDocument(editingWorker.id, "safety_cert", editSafetyCertFile);
+        }
         toast.success("근로자 정보가 수정되었습니다.");
         setShowEditModal(false);
         setEditingWorker(null);
@@ -623,6 +646,21 @@ export default function DailyWorkersPage() {
       if (result.success) {
         setInviteSuccess({ inviteUrl });
         toast.success(`${workerName}님에게 알림톡을 발송했습니다.`);
+        // Save invitation to DB for tracking
+        try {
+          const currentUser = (await api.getMe()) as any;
+          const orgId = currentUser?.data?.organization_id || "org_1";
+          await (api as any).createWorkerInvitation({
+            name: workerName.trim(),
+            phone: workerPhone,
+            organization_id: orgId,
+            invited_by: currentUser?.data?.id || "u1",
+            token,
+          });
+          await fetchPendingInvitations();
+        } catch {
+          // Invitation tracking failed silently - main flow already succeeded
+        }
       } else {
         setInviteErrors({
           submit: result.error_message || "알림톡 발송에 실패했습니다.",
@@ -861,93 +899,44 @@ export default function DailyWorkersPage() {
                 {search ? "검색 결과가 없습니다." : "등록된 근로자가 없습니다."}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                      <th className="px-4 py-3 font-medium">No.</th>
-                      <th className="px-4 py-3 font-medium">성명</th>
-                      <th className="px-4 py-3 font-medium">직종</th>
-                      <th className="px-4 py-3 font-medium">소속반</th>
-                      <th className="px-4 py-3 font-medium">일당</th>
-                      <th className="px-4 py-3 font-medium">연락처</th>
-                      <th className="px-4 py-3 font-medium">외국인</th>
-                      <th className="px-4 py-3 font-medium">계좌정보</th>
-                      <th className="px-4 py-3 font-medium">통제</th>
-                      <th className="px-4 py-3 font-medium">작업</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredWorkers.map((worker, index) => (
-                      <tr
+              <>
+                {/* 모바일: 카드 리스트 */}
+                <div className="space-y-3 p-4 md:hidden">
+                  {filteredWorkers.map((worker) => {
+                    const nationalityLabel = worker.nationality_code
+                      ? (nationalityCodes[worker.nationality_code] ?? worker.nationality_code)
+                      : undefined;
+                    const workerBadge = worker.is_blocked_for_labor ? (
+                      <Badge variant="error">투입 차단</Badge>
+                    ) : isWorkerDocumentIncomplete(worker) ? (
+                      <Badge variant="warning">서류 미완</Badge>
+                    ) : worker.is_foreign ? (
+                      <Badge variant="info">외국인</Badge>
+                    ) : null;
+                    return (
+                      <MobileListCard
                         key={worker.id}
-                        className="border-b border-slate-100 last:border-0"
-                      >
-                        <td className="px-4 py-4 text-slate-500">{index + 1}</td>
-                        <td className="px-4 py-4">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-slate-900">{worker.name}</p>
-                            {isWorkerDocumentIncomplete(worker) && (
-                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                                서류 미완
-                              </span>
-                            )}
-                            {worker.is_blocked_for_labor && (
-                              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                                투입 차단
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-500">
-                            {formatMaskedSSN(worker.birth_date, worker.gender)}
-                          </p>
-                          {worker.block_reason && (
-                            <p className="mt-1 text-xs text-red-600">
-                              사유: {worker.block_reason}
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-slate-600">
-                          {worker.job_type}
-                        </td>
-                        <td className="px-4 py-4 text-slate-600">{worker.team}</td>
-                        <td className="px-4 py-4 text-slate-900 font-medium">
-                          {formatCurrency(worker.daily_rate)}
-                        </td>
-                        <td className="px-4 py-4 text-slate-600">{worker.phone}</td>
-                        <td className="px-4 py-4">
-                          {worker.is_foreign ? (
-                            <div>
-                              <Badge variant="info">외국인</Badge>
-                              {worker.visa_status && (
-                                <p className="mt-1 text-xs text-slate-500">
-                                  {worker.visa_status}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-4">
-                          <p className="text-sm text-slate-900">{worker.bank_name}</p>
-                          <p className="text-xs text-slate-500">
-                            {worker.account_number}
-                          </p>
-                        </td>
-                        <td className="px-4 py-4">
-                          <Button
-                            size="sm"
-                            variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
-                            onClick={() => handleWorkerControl(worker)}
-                            disabled={workerActionKey === `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`}
-                          >
-                            <Ban className="h-3.5 w-3.5" />
-                            {worker.is_blocked_for_labor ? "차단해제" : "차단"}
-                          </Button>
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="flex gap-2">
+                        title={worker.name}
+                        subtitle={worker.phone || undefined}
+                        badge={workerBadge ?? undefined}
+                        metadata={[
+                          { label: "직종", value: worker.job_type || "-" },
+                          { label: "일당", value: formatCurrency(worker.daily_rate) },
+                          ...(nationalityLabel ? [{ label: "국적", value: nationalityLabel }] : []),
+                          ...(worker.hire_date ? [{ label: "입사일", value: worker.hire_date }] : []),
+                          ...(worker.block_reason ? [{ label: "차단사유", value: <span className="text-red-600">{worker.block_reason}</span> }] : []),
+                        ]}
+                        actions={
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
+                              onClick={() => handleWorkerControl(worker)}
+                              disabled={workerActionKey === `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`}
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                              {worker.is_blocked_for_labor ? "차단해제" : "차단"}
+                            </Button>
                             <Button
                               size="sm"
                               variant="secondary"
@@ -965,15 +954,179 @@ export default function DailyWorkersPage() {
                               삭제
                             </Button>
                           </div>
-                        </td>
+                        }
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* 데스크톱: 기존 테이블 */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                        <th className="px-4 py-3 font-medium">No.</th>
+                        <th className="px-4 py-3 font-medium">성명</th>
+                        <th className="px-4 py-3 font-medium">직종</th>
+                        <th className="px-4 py-3 font-medium">소속반</th>
+                        <th className="px-4 py-3 font-medium">일당</th>
+                        <th className="px-4 py-3 font-medium">연락처</th>
+                        <th className="px-4 py-3 font-medium">외국인</th>
+                        <th className="px-4 py-3 font-medium">계좌정보</th>
+                        <th className="px-4 py-3 font-medium">통제</th>
+                        <th className="px-4 py-3 font-medium">작업</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filteredWorkers.map((worker, index) => (
+                        <tr
+                          key={worker.id}
+                          className="border-b border-slate-100 last:border-0"
+                        >
+                          <td className="px-4 py-4 text-slate-500">{index + 1}</td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-slate-900">{worker.name}</p>
+                              {isWorkerDocumentIncomplete(worker) && (
+                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                  서류 미완
+                                </span>
+                              )}
+                              {worker.is_blocked_for_labor && (
+                                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                                  투입 차단
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500">
+                              {formatMaskedSSN(worker.birth_date, worker.gender)}
+                            </p>
+                            {worker.block_reason && (
+                              <p className="mt-1 text-xs text-red-600">
+                                사유: {worker.block_reason}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 text-slate-600">
+                            {worker.job_type}
+                          </td>
+                          <td className="px-4 py-4 text-slate-600">{worker.team}</td>
+                          <td className="px-4 py-4 text-slate-900 font-medium">
+                            {formatCurrency(worker.daily_rate)}
+                          </td>
+                          <td className="px-4 py-4 text-slate-600">{worker.phone}</td>
+                          <td className="px-4 py-4">
+                            {worker.is_foreign ? (
+                              <div>
+                                <Badge variant="info">외국인</Badge>
+                                {worker.visa_status && (
+                                  <p className="mt-1 text-xs text-slate-500">
+                                    {worker.visa_status}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">
+                            <p className="text-sm text-slate-900">{worker.bank_name}</p>
+                            <p className="text-xs text-slate-500">
+                              {worker.account_number}
+                            </p>
+                          </td>
+                          <td className="px-4 py-4">
+                            <Button
+                              size="sm"
+                              variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
+                              onClick={() => handleWorkerControl(worker)}
+                              disabled={workerActionKey === `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`}
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                              {worker.is_blocked_for_labor ? "차단해제" : "차단"}
+                            </Button>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => void handleEdit(worker)}
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                                수정
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDelete(worker)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                삭제
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
+
+        {/* 대기중 초대 */}
+        {pendingInvitations.length > 0 && (
+          <div className="mt-6">
+            <h2 className="mb-3 text-sm font-semibold text-slate-700">대기중 초대 ({pendingInvitations.length}명)</h2>
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+              {pendingInvitations.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between border-b border-slate-100 px-4 py-3 last:border-b-0">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{inv.name}</p>
+                    <p className="text-xs text-slate-500">{inv.phone}</p>
+                    <p className="text-xs text-slate-400">
+                      만료: {new Date(inv.expires_at).toLocaleDateString("ko-KR")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const invToken = inv.id;
+                          const inviteUrl = `${window.location.origin}/onboarding/worker/consent?token=${invToken}`;
+                          await (api as any).resendWorkerInvitation(inv.id, inviteUrl);
+                          toast.success(`${inv.name}님에게 재발송했습니다.`);
+                          await fetchPendingInvitations();
+                        } catch {
+                          toast.error("재발송에 실패했습니다.");
+                        }
+                      }}
+                      className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                    >
+                      재발송
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await (api as any).revokeWorkerInvitation(inv.id);
+                          toast.success(`${inv.name}님의 초대를 취소했습니다.`);
+                          await fetchPendingInvitations();
+                        } catch {
+                          toast.error("초대 취소에 실패했습니다.");
+                        }
+                      }}
+                      className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
 
@@ -1250,9 +1403,9 @@ export default function DailyWorkersPage() {
           resetForm();
         }}
         title="근로자 등록"
-        size="lg"
+        size="2xl"
       >
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+        <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <Input
               label="성명 *"
@@ -1533,9 +1686,9 @@ export default function DailyWorkersPage() {
           resetForm();
         }}
         title="근로자 정보 수정"
-        size="lg"
+        size="2xl"
       >
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+        <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <Input
               label="성명 *"

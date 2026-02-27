@@ -67,7 +67,14 @@ export default function CompletionReportPage({
             return;
           }
 
-          setReportData(startReport);
+          setReportData({
+            construction_name: startReport.construction_name,
+            site_address: startReport.site_address,
+            start_date: startReport.start_date,
+            expected_end_date: startReport.expected_end_date,
+            supervisor_name: startReport.supervisor_name,
+            supervisor_phone: startReport.supervisor_phone,
+          });
         }
       }
     } catch (err) {
@@ -140,7 +147,9 @@ export default function CompletionReportPage({
     );
   }
 
-  const isReadOnly = reportData?.status === "submitted" || reportData?.status === "approved";
+  const isReadOnly =
+    !!reportId &&
+    (reportData?.status === "submitted" || reportData?.status === "approved");
 
   return (
     <div className="space-y-6">

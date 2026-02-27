@@ -4,7 +4,16 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
-import { BlurText, Button, Card, CardContent, Input, PageTransition, PrimitiveButton, Reveal } from "@sigongon/ui";
+import {
+  BlurText,
+  Button,
+  Card,
+  CardContent,
+  Input,
+  PageTransition,
+  PrimitiveButton,
+  Reveal,
+} from "@sigongon/ui";
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
 
@@ -66,11 +75,11 @@ function LoginForm() {
         />
         <Reveal className="mt-4" delay={0.04}>
           <h1 className="text-2xl font-bold text-slate-900">
-            <BlurText text="시공ON 관리자" />
+            <BlurText text="시공ON" />
           </h1>
         </Reveal>
         <Reveal className="mt-1 text-sm text-slate-500" delay={0.1}>
-          관리자 계정으로 로그인하세요
+          계정으로 로그인하세요
         </Reveal>
       </div>
 
@@ -82,7 +91,6 @@ function LoginForm() {
                 {error}
               </div>
             )}
-
             <Input
               type="text"
               label="아이디"
@@ -93,7 +101,6 @@ function LoginForm() {
               autoComplete="username"
               autoFocus
             />
-
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
@@ -117,7 +124,6 @@ function LoginForm() {
                 )}
               </PrimitiveButton>
             </div>
-
             <div className="flex justify-end">
               <Link
                 href="/forgot-password"
@@ -126,7 +132,6 @@ function LoginForm() {
                 비밀번호를 잊으셨나요?
               </Link>
             </div>
-
             <Button
               type="submit"
               fullWidth
@@ -135,18 +140,23 @@ function LoginForm() {
             >
               로그인
             </Button>
-
             <div className="mt-4 text-center text-sm text-slate-600">
-              아직 계정이 없으신가요?{" "}
-              <Link href="/signup" className="font-medium text-brand-primary-600 hover:text-brand-primary-700">
+              아직 사업자 계정이 없으신가요?{" "}
+              <Link
+                href="/signup"
+                className="font-bold text-brand-primary-600 hover:text-brand-primary-700"
+              >
                 회원가입
               </Link>
+            </div>
+            <div className="mt-4 text-center text-sm text-slate-400">
+              근로자 계정은 초대를 통해서만 가입할 수 있습니다.
             </div>
           </form>
         </CardContent>
       </Card>
 
-      {process.env.NODE_ENV !== 'production' && (
+      {process.env.NODE_ENV !== "production" && (
         <div className="mt-6 w-full max-w-sm">
           <div className="mb-3 flex items-center gap-2">
             <div className="h-px flex-1 bg-slate-200" />
@@ -222,12 +232,7 @@ function LoginPageSkeleton() {
             className="object-contain"
           />
         </div>
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">
-          시공ON 관리자
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          관리자 계정으로 로그인하세요
-        </p>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">시공ON</h1>
       </div>
       <Card className="w-full max-w-sm">
         <CardContent className="p-6">

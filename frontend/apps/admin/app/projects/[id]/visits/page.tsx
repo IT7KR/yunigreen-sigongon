@@ -14,6 +14,7 @@ import {
 } from "@sigongon/ui";
 import type { SiteVisitDetail, VisitType } from "@sigongon/types";
 import { api } from "@/lib/api";
+import { MobileListCard } from "@/components/MobileListCard";
 
 const MOBILE_APP_URL =
   process.env.NEXT_PUBLIC_MOBILE_APP_URL || "http://localhost:3034";
@@ -128,71 +129,102 @@ export default function VisitsPage({
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                    <th className="pb-3 font-medium">방문일시</th>
-                    <th className="pb-3 font-medium">방문유형</th>
-                    <th className="pb-3 font-medium">면적(㎡)</th>
-                    <th className="pb-3 font-medium">사진 수</th>
-                    <th className="pb-3 font-medium">메모</th>
-                    <th className="pb-3 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visits.map((visit) => (
-                    <tr
-                      key={visit.id}
-                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                    >
-                      <td className="py-4 font-medium text-slate-900">
-                        {formatDate(visit.visited_at)}
-                      </td>
-                      <td className="py-4">
-                        <Badge
-                          className={visitTypeBadgeColors[visit.visit_type]}
-                        >
-                          {visitTypeLabels[visit.visit_type]}
-                        </Badge>
-                      </td>
-                      <td className="py-4 text-slate-600">
-                        {visit.estimated_area_m2 || "-"}
-                      </td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <Camera className="h-4 w-4" />
-                          {visit.photo_count}장
-                        </div>
-                      </td>
-                      <td className="py-4 text-slate-500">
-                        {visit.notes ? (
-                          <div className="flex items-center gap-1 text-sm">
-                            <FileText className="h-4 w-4" />
-                            {visit.notes.length > 30
-                              ? `${visit.notes.slice(0, 30)}...`
-                              : visit.notes}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleViewVisit(visit.id)}
-                          >
-                            상세보기
-                          </Button>
-                        </div>
-                      </td>
+            <>
+              {/* Mobile list */}
+              <div className="space-y-3 md:hidden">
+                {visits.map((visit) => (
+                  <MobileListCard
+                    key={visit.id}
+                    title={formatDate(visit.visited_at)}
+                    badge={
+                      <Badge className={visitTypeBadgeColors[visit.visit_type]}>
+                        {visitTypeLabels[visit.visit_type]}
+                      </Badge>
+                    }
+                    metadata={[
+                      {
+                        label: "면적",
+                        value: visit.estimated_area_m2
+                          ? `${visit.estimated_area_m2}㎡`
+                          : "-",
+                      },
+                      {
+                        label: "사진수",
+                        value: `${visit.photo_count}장`,
+                      },
+                    ]}
+                    onClick={() => handleViewVisit(visit.id)}
+                  />
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                      <th className="pb-3 font-medium">방문일시</th>
+                      <th className="pb-3 font-medium">방문유형</th>
+                      <th className="pb-3 font-medium">면적(㎡)</th>
+                      <th className="pb-3 font-medium">사진 수</th>
+                      <th className="pb-3 font-medium">메모</th>
+                      <th className="pb-3 font-medium"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {visits.map((visit) => (
+                      <tr
+                        key={visit.id}
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                      >
+                        <td className="py-4 font-medium text-slate-900">
+                          {formatDate(visit.visited_at)}
+                        </td>
+                        <td className="py-4">
+                          <Badge
+                            className={visitTypeBadgeColors[visit.visit_type]}
+                          >
+                            {visitTypeLabels[visit.visit_type]}
+                          </Badge>
+                        </td>
+                        <td className="py-4 text-slate-600">
+                          {visit.estimated_area_m2 || "-"}
+                        </td>
+                        <td className="py-4">
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Camera className="h-4 w-4" />
+                            {visit.photo_count}장
+                          </div>
+                        </td>
+                        <td className="py-4 text-slate-500">
+                          {visit.notes ? (
+                            <div className="flex items-center gap-1 text-sm">
+                              <FileText className="h-4 w-4" />
+                              {visit.notes.length > 30
+                                ? `${visit.notes.slice(0, 30)}...`
+                                : visit.notes}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="py-4">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleViewVisit(visit.id)}
+                            >
+                              상세보기
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
