@@ -5,13 +5,13 @@
  * Pre-dev script to check and clean up stale processes on dev ports.
  * Prevents EADDRINUSE errors by ensuring ports are free before starting.
  *
- * Only kills processes that match our sigongOn project path.
+ * Only kills processes that match our SigongCore project path.
  */
 
 import { execSync } from "child_process";
 
 const DEV_PORTS = [3033]; // admin
-const PROJECT_IDENTIFIER = "sigongOn-dev/frontend";
+const PROJECT_IDENTIFIER = "SigongCore-dev/frontend";
 
 /**
  * Get process info using a port
@@ -134,7 +134,7 @@ for (const port of DEV_PORTS) {
 
   if (isOurProcess(processInfo)) {
     console.log(
-      `  \x1b[33m[CLEANING]\x1b[0m Port ${port} has stale sigongon process (PID ${processInfo.pid})`,
+      `  \x1b[33m[CLEANING]\x1b[0m Port ${port} has stale sigongcore process (PID ${processInfo.pid})`,
     );
     if (killProcess(processInfo.pid)) {
       console.log(

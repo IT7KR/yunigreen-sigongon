@@ -37,7 +37,7 @@
 2. 회원가입 또는 로그인
 3. 좌측 메뉴에서 "API Keys" 클릭
 4. "Create new secret key" 클릭
-5. 키 이름 입력 (예: sigongon-production)
+5. 키 이름 입력 (예: sigongcore-production)
 6. 생성된 키 복사 (sk-xxxxx 형태)
 
 **주의사항**
@@ -84,7 +84,7 @@
 | 항목 | 예시 | 입력값 |
 |-----|-----|-------|
 | 정식 서비스명 | 유니그린 | |
-| 영문 서비스명 | SigongOn | |
+| 영문 서비스명 | SigongCore | |
 | 슬로건/설명 | AI 누수진단 시스템 | |
 
 ---

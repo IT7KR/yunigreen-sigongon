@@ -1,10 +1,10 @@
-# Technical Design Document (TDD): SigongOn SaaS
+# Technical Design Document (TDD): SigongCore SaaS
 
 ## 1. Project Overview
 
 ### Goal
 
-SigongOn SaaS is a comprehensive platform designed to streamline leak diagnosis and construction management for SigongOn. It automates the complex process of site diagnosis, cost estimation, and contract management.
+SigongCore SaaS is a comprehensive platform designed to streamline leak diagnosis and construction management for SigongCore. It automates the complex process of site diagnosis, cost estimation, and contract management.
 
 ### Target Users
 
@@ -38,7 +38,7 @@ SigongOn SaaS is a comprehensive platform designed to streamline leak diagnosis 
 
 ## 3. Core Data Strategy (The Hybrid Approach)
 
-To ensure both mathematical precision and intelligent information retrieval, SigongOn uses a hybrid data strategy.
+To ensure both mathematical precision and intelligent information retrieval, SigongCore uses a hybrid data strategy.
 
 ### A. Estimation (Relational Database)
 

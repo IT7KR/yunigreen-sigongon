@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { loginAsSuperAdmin, loginAsCeo, loginAsSiteManager } from "../helpers/auth";
+import {
+  loginAsSuperAdmin,
+  loginAsCeo,
+  loginAsSiteManager,
+} from "../helpers/auth";
 
 test.describe("권한 및 접근 제어", () => {
   test.describe("비인증 접근 리다이렉트", () => {
@@ -50,7 +54,7 @@ test.describe("권한 및 접근 제어", () => {
 
       await expect(page).toHaveURL(/\/login/);
       await expect(
-        page.getByRole("heading", { name: /시공ON 관리자/ }),
+        page.getByRole("heading", { name: /시공코어 관리자/ }),
       ).toBeVisible({ timeout: 5000 });
     });
 
@@ -80,9 +84,9 @@ test.describe("권한 및 접근 제어", () => {
       await page.goto("/projects");
 
       await expect(page).toHaveURL(/\/projects/);
-      await expect(
-        page.getByRole("heading", { name: /프로젝트/ }),
-      ).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole("heading", { name: /프로젝트/ })).toBeVisible(
+        { timeout: 5000 },
+      );
     });
 
     test("SA 계정으로 사용자 관리 페이지에 접근 가능하다", async ({ page }) => {
@@ -131,9 +135,9 @@ test.describe("권한 및 접근 제어", () => {
       await page.goto("/projects");
 
       await expect(page).not.toHaveURL(/\/login/);
-      await expect(
-        page.getByRole("heading", { name: /프로젝트/ }),
-      ).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole("heading", { name: /프로젝트/ })).toBeVisible(
+        { timeout: 5000 },
+      );
     });
 
     test("대표 계정으로 노무 관리에 접근 가능하다", async ({ page }) => {
@@ -183,9 +187,9 @@ test.describe("권한 및 접근 제어", () => {
       await loginAsSuperAdmin(page);
       await page.goto("/dashboard");
 
-      await expect(
-        page.getByText(/전체 프로젝트/),
-      ).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/전체 프로젝트/)).toBeVisible({
+        timeout: 5000,
+      });
     });
 
     test("CEO 계정 로그인 시 대시보드가 정상 렌더링된다", async ({ page }) => {

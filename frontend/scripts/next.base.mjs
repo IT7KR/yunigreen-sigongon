@@ -4,7 +4,7 @@ const nextBaseConfig = {
   },
   turbopack: {},
   output: "standalone",
-  transpilePackages: ["@sigongon/ui", "@sigongon/features"],
+  transpilePackages: ["@sigongcore/ui", "@sigongcore/features"],
 };
 
 export default nextBaseConfig;

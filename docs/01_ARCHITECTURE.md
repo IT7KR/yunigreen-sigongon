@@ -4,11 +4,11 @@
 
 ### 1.1 프로젝트명
 
-**유니그린(SigongOn)** - AI 기반 누수 진단 및 건설 관리 SaaS
+**유니그린(SigongCore)** - AI 기반 누수 진단 및 건설 관리 SaaS
 
 ### 1.2 고객사
 
-유니그린개발 (SigongOn Development Co.)
+유니그린개발 (SigongCore Development Co.)
 
 - 업종: 하자방수/누수 전문 건설업
 - 목표: 현장-사무실 간 유기적 소통, 견적 자동화, SaaS로 확장 판매
@@ -437,7 +437,7 @@ services:
 ## 9. 디렉토리 구조
 
 ```
-sigongon-dev/
+sigongcore-dev/
 ├── docker-compose.yml
 ├── .env.example
 ├── AGENTS.md                   # AI 에이전트 가이드 (프로젝트 규칙)

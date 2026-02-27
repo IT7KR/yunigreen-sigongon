@@ -1,4 +1,4 @@
-# Capacitor 설정 가이드 — 시공ON Admin App
+# Capacitor 설정 가이드 — 시공코어 Admin App
 
 ## 완료된 작업 (코드베이스)
 
@@ -27,25 +27,29 @@ pnpm install
 
 ```bash
 cd frontend/apps/admin
-npx cap init "시공ON" "com.yunigreen.sigongon" --web-dir=public
+npx cap init "시공코어" "com.yunigreen.sigongcore" --web-dir=public
 ```
 
 > `capacitor.config.ts`가 이미 있으므로 이 명령은 `package.json`에 Capacitor 메타 추가만 수행합니다.
-> 물어보는 경우 `com.yunigreen.sigongon` 입력.
+> 물어보는 경우 `com.yunigreen.sigongcore` 입력.
 
 ### Step 3: 네이티브 프로젝트 생성
 
 #### iOS (macOS + Xcode 필요)
+
 ```bash
 cd frontend/apps/admin
 npx cap add ios
 ```
 
 생성 후 iOS 권한 설정:
+
 ```
 ios/App/App/Info.plist
 ```
+
 다음 항목 추가:
+
 ```xml
 <key>NSCameraUsageDescription</key>
 <string>현장 사진 촬영을 위해 카메라 접근이 필요합니다</string>
@@ -56,12 +60,14 @@ ios/App/App/Info.plist
 ```
 
 #### Android (Android Studio 필요)
+
 ```bash
 cd frontend/apps/admin
 npx cap add android
 ```
 
 `android/app/src/main/AndroidManifest.xml` 확인:
+
 ```xml
 <uses-permission android:name="android.permission.CAMERA" />
 <uses-permission android:name="android.permission.INTERNET" />
@@ -71,22 +77,25 @@ npx cap add android
 ### Step 4: Firebase 설정 (푸시 알림)
 
 1. [Firebase Console](https://console.firebase.google.com)에서 프로젝트 생성
-2. iOS 앱 등록: Bundle ID = `com.yunigreen.sigongon`
-3. Android 앱 등록: Package = `com.yunigreen.sigongon`
+2. iOS 앱 등록: Bundle ID = `com.yunigreen.sigongcore`
+3. Android 앱 등록: Package = `com.yunigreen.sigongcore`
 
 **iOS:**
+
 ```bash
 # GoogleService-Info.plist 다운로드 후
 cp ~/Downloads/GoogleService-Info.plist ios/App/App/
 ```
 
 **Android:**
+
 ```bash
 # google-services.json 다운로드 후
 cp ~/Downloads/google-services.json android/app/
 ```
 
 **Android build.gradle 설정:**
+
 ```groovy
 // android/build.gradle (project level)
 classpath 'com.google.gms:google-services:4.4.0'
@@ -96,11 +105,13 @@ apply plugin: 'com.google.gms.google-services'
 ```
 
 **iOS APNs:**
+
 1. Apple Developer Console → Certificates → Keys → New Key
 2. "Apple Push Notifications service (APNs)" 선택
 3. Firebase Console → Project Settings → Cloud Messaging → APNs Authentication Key 업로드
 
 **백엔드 환경변수 설정:**
+
 ```bash
 # backend/.env
 FIREBASE_CREDENTIALS_PATH=/path/to/serviceAccountKey.json
@@ -151,6 +162,7 @@ npx @capacitor/assets generate --iconBackgroundColor '#0d9488' --splashBackgroun
 ## 앱스토어 배포
 
 ### iOS TestFlight
+
 ```bash
 cd frontend/apps/admin
 npx cap open ios
@@ -158,6 +170,7 @@ npx cap open ios
 ```
 
 ### Android Internal Testing
+
 ```bash
 cd frontend/apps/admin/android
 ./gradlew bundleRelease
@@ -169,6 +182,7 @@ cd frontend/apps/admin/android
 ## Apple Guideline 4.2 체크리스트
 
 WebView 앱 리젝 방지:
+
 - ✅ 네이티브 카메라 (`useNativeCamera` 훅 연동 필요)
 - ✅ FCM 푸시 알림 (Firebase 설정 완료 시)
 - ✅ 스플래시 스크린 (`@capacitor/splash-screen`)
@@ -179,17 +193,20 @@ WebView 앱 리젝 방지:
 ## 문제 해결
 
 ### "server.url is blocked"
+
 - Capacitor v7부터 cleartext HTTP 기본 차단
 - 개발 환경: `CAPACITOR_DEV=true` 환경변수 사용
 - `capacitor.config.ts`에서 `cleartext: true` 설정됨
 
 ### iOS 빌드 실패
+
 ```bash
 cd ios/App
 pod install --repo-update
 ```
 
 ### Android 빌드 실패
+
 ```bash
 cd android
 ./gradlew clean

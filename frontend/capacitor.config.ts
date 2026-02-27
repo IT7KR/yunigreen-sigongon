@@ -5,8 +5,8 @@ const devHost = process.env.CAPACITOR_DEV_HOST ?? "192.168.1.100";
 const devPort = process.env.CAPACITOR_DEV_PORT ?? "3033";
 
 const config: CapacitorConfig = {
-  appId: "com.yunigreen.sigongon",
-  appName: "시공ON",
+  appId: "com.yunigreen.sigongcore",
+  appName: "시공코어",
   // server.url 방식: 네이티브 쉘이 원격 서버의 웹앱을 로드
   // 기존 Next.js 코드 변경 없이 동작
   webDir: "public",
@@ -16,12 +16,12 @@ const config: CapacitorConfig = {
         cleartext: true, // 개발 환경 HTTP 허용
       }
     : {
-        url: "https://admin.sigongon.com",
+        url: "https://admin.sigongcore.com",
         cleartext: false, // 프로덕션 HTTPS only
       },
   ios: {
     contentInset: "automatic",
-    scheme: "sigongon",
+    scheme: "sigongcore",
     // 상태바 영역 safe area 처리
     backgroundColor: "#0d9488",
   },

@@ -5,6 +5,7 @@
 **Goal:** `frontend/apps/mobile` 삭제, `frontend/apps/admin`을 `frontend/` 루트로 평탄화, 관련 설정 파일 정리
 
 **Architecture:**
+
 - `frontend/` 자체가 Next.js 앱 (admin)이 되며, `packages/`는 그대로 워크스페이스 패키지로 유지
 - `pnpm-workspace.yaml`은 `packages/*`만 선언, 루트가 암묵적으로 앱이 됨
 - turbo는 패키지 빌드 순서 보장 용도로만 유지 (`prebuild`에서 호출)
@@ -16,9 +17,10 @@
 ## 사전 확인
 
 현재 구조:
+
 ```
 frontend/
-  package.json        ← workspace root (name: sigongon-frontend)
+  package.json        ← workspace root (name: sigongcore-frontend)
   pnpm-workspace.yaml ← apps/* + packages/*
   turbo.json
   playwright.config.ts
@@ -26,16 +28,17 @@ frontend/
   scripts/dev-guard.mjs
   e2e/admin/, e2e/mobile/, e2e/helpers/
   apps/
-    admin/            ← Next.js 앱 (@sigongon/admin, port 3033)
-    mobile/           ← Next.js 앱 (@sigongon/mobile, port 3034) ← 삭제 대상
-  packages/           ← 공유 패키지들 (@sigongon/api, ui, types, ...)
+    admin/            ← Next.js 앱 (@sigongcore/admin, port 3033)
+    mobile/           ← Next.js 앱 (@sigongcore/mobile, port 3034) ← 삭제 대상
+  packages/           ← 공유 패키지들 (@sigongcore/api, ui, types, ...)
   lib/                ← CLAUDE.md만 있음 (admin lib와 병합)
 ```
 
 목표 구조:
+
 ```
 frontend/
-  package.json        ← admin 앱 + workspace root 병합 (@sigongon/admin)
+  package.json        ← admin 앱 + workspace root 병합 (@sigongcore/admin)
   pnpm-workspace.yaml ← packages/*만
   turbo.json          ← 유지
   playwright.config.ts ← admin 프로젝트만
@@ -61,6 +64,7 @@ frontend/
 ## Task 1: `frontend/apps/mobile` 삭제
 
 **Files:**
+
 - Delete: `frontend/apps/mobile/` (전체 디렉토리)
 
 **Step 1: 삭제**
@@ -89,6 +93,7 @@ git commit -m "🗑️ chore: mobile 앱 제거"
 ## Task 2: `frontend/e2e/mobile` 삭제
 
 **Files:**
+
 - Delete: `frontend/e2e/mobile/` (전체 디렉토리)
 
 **Step 1: 삭제**
@@ -119,6 +124,7 @@ git commit -m "🗑️ chore: mobile E2E 테스트 제거"
 단순 이동 가능한 파일/디렉토리 (충돌 없음):
 
 **Files:**
+
 - Move: `frontend/apps/admin/app/` → `frontend/app/`
 - Move: `frontend/apps/admin/components/` → `frontend/components/`
 - Move: `frontend/apps/admin/hooks/` → `frontend/hooks/`
@@ -207,13 +213,14 @@ git commit -m "🔄 refactor: admin 앱을 frontend 루트로 평탄화"
 workspace root의 `package.json`을 admin 앱의 의존성과 병합.
 
 **Files:**
+
 - Modify: `frontend/package.json`
 
 **Step 1: 새 `frontend/package.json` 작성**
 
 ```json
 {
-  "name": "@sigongon/admin",
+  "name": "@sigongcore/admin",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.14.0",
@@ -221,7 +228,7 @@ workspace root의 `package.json`을 admin 앱의 의존성과 병합.
     "predev": "node scripts/dev-guard.mjs",
     "dev": "next dev --port 3033",
     "start": "next start --port 3033",
-    "prebuild": "turbo build --filter='@sigongon/*'",
+    "prebuild": "turbo build --filter='@sigongcore/*'",
     "build": "next build",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
@@ -233,12 +240,12 @@ workspace root의 `package.json`을 admin 앱의 의존성과 병합.
     "@capacitor-firebase/messaging": "^7.3.0",
     "@capacitor/camera": "^7.0.0",
     "@capacitor/core": "^7.0.0",
-    "@sigongon/api": "workspace:*",
-    "@sigongon/features": "workspace:*",
-    "@sigongon/mocks": "workspace:*",
-    "@sigongon/platform": "workspace:*",
-    "@sigongon/types": "workspace:*",
-    "@sigongon/ui": "workspace:*",
+    "@sigongcore/api": "workspace:*",
+    "@sigongcore/features": "workspace:*",
+    "@sigongcore/mocks": "workspace:*",
+    "@sigongcore/platform": "workspace:*",
+    "@sigongcore/types": "workspace:*",
+    "@sigongcore/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.16",
     "@tosspayments/payment-widget-sdk": "^0.12.1",
     "exceljs": "^4.4.0",
@@ -275,6 +282,7 @@ workspace root의 `package.json`을 admin 앱의 의존성과 병합.
 ## Task 5: `pnpm-workspace.yaml` 업데이트
 
 **Files:**
+
 - Modify: `frontend/pnpm-workspace.yaml`
 
 **Step 1: 수정**
@@ -291,9 +299,10 @@ packages:
 ## Task 6: `turbo.json` 확인 및 업데이트
 
 **Files:**
+
 - Modify: `frontend/turbo.json`
 
-현재 turbo.json은 모든 워크스페이스 패키지에 적용. 루트가 앱이 된 후에도 `turbo build --filter='@sigongon/*'`는 정상 작동함. turbo.json 자체는 변경 불필요.
+현재 turbo.json은 모든 워크스페이스 패키지에 적용. 루트가 앱이 된 후에도 `turbo build --filter='@sigongcore/*'`는 정상 작동함. turbo.json 자체는 변경 불필요.
 
 단, `ui` 키가 `tui`로 설정되어 있으면 터미널 출력 관련 이슈가 있을 수 있음. 확인 후 유지.
 
@@ -310,6 +319,7 @@ cat /workspace/yunigreen-dev/frontend/turbo.json
 port 3034 (mobile) 참조 제거.
 
 **Files:**
+
 - Modify: `frontend/scripts/dev-guard.mjs`
 
 **Step 1: 수정**
@@ -328,6 +338,7 @@ port 3034 (mobile) 참조 제거.
 mobile 프로젝트 및 webServer 제거.
 
 **Files:**
+
 - Modify: `frontend/playwright.config.ts`
 
 **Step 1: 수정 후 내용**
@@ -371,7 +382,7 @@ export default defineConfig({
 });
 ```
 
-주의: `webServer.command`를 `pnpm --filter @sigongon/admin dev`에서 `pnpm dev`로 변경 (루트에서 직접 실행).
+주의: `webServer.command`를 `pnpm --filter @sigongcore/admin dev`에서 `pnpm dev`로 변경 (루트에서 직접 실행).
 
 ---
 
@@ -380,6 +391,7 @@ export default defineConfig({
 mobile 스테이지 제거, admin 스테이지 경로 수정 (apps/admin → 루트).
 
 **Files:**
+
 - Modify: `frontend/Dockerfile`
 
 **Step 1: 수정 후 내용**
@@ -441,6 +453,7 @@ CMD ["pnpm", "dev"]
 ```
 
 주의:
+
 - `COPY apps ./apps` → 제거 (앱이 루트이므로)
 - admin 스테이지: `apps/admin/.next/standalone` → `.next/standalone`
 - `CMD ["node", "apps/admin/server.js"]` → `CMD ["node", "server.js"]`
@@ -452,6 +465,7 @@ CMD ["pnpm", "dev"]
 `frontend-mobile` 서비스 제거, `NEXT_PUBLIC_MOBILE_APP_URL` env 제거.
 
 **Files:**
+
 - Modify: `docker-compose.yml` (repo root)
 
 **Step 1: `frontend-mobile` 서비스 전체 제거**
@@ -465,7 +479,7 @@ CMD ["pnpm", "dev"]
     build:
       context: ./frontend
       target: admin
-    container_name: sigongon-admin
+    container_name: sigongcore-admin
     ports:
       - "3133:3033"
     environment:
@@ -485,6 +499,7 @@ CMD ["pnpm", "dev"]
 `NEXT_PUBLIC_MOBILE_APP_URL` env 제거.
 
 **Files:**
+
 - Modify: `.github/workflows/ci.yml`
 
 **Step 1: 해당 env 제거**

@@ -1,6 +1,6 @@
 # Modusign Electronic Contract Integration
 
-This document summarizes the Modusign (모두싸인) electronic contract integration for the SigongOn admin app.
+This document summarizes the Modusign (모두싸인) electronic contract integration for the SigongCore admin app.
 
 ## Overview
 
@@ -13,21 +13,27 @@ The integration adds electronic signature functionality using the Modusign servi
 Added new types for Modusign integration:
 
 ```typescript
-export type SignatureMethod = "self" | "modusign"
-export type ModusignStatus = "pending" | "sent" | "viewed" | "signed" | "rejected" | "expired"
+export type SignatureMethod = "self" | "modusign";
+export type ModusignStatus =
+  | "pending"
+  | "sent"
+  | "viewed"
+  | "signed"
+  | "rejected"
+  | "expired";
 
 export interface ModusignRequest {
-  id: string
-  contract_id: string
-  document_id: string
-  status: ModusignStatus
-  signer_name: string
-  signer_email: string
-  signer_phone?: string
-  sent_at: string
-  signed_at?: string
-  expired_at?: string
-  document_url?: string
+  id: string;
+  contract_id: string;
+  document_id: string;
+  status: ModusignStatus;
+  signer_name: string;
+  signer_email: string;
+  signer_phone?: string;
+  sent_at: string;
+  signed_at?: string;
+  expired_at?: string;
+  document_url?: string;
 }
 ```
 
@@ -53,18 +59,21 @@ Implemented mock versions of all Modusign methods for development and testing:
 Created a new modal component with the following features:
 
 **Request Form:**
+
 - Signer name input (required)
 - Email input with validation (required)
 - Phone number input (optional)
 - Send electronic signature request
 
 **Status Display:**
+
 - Visual status indicators with icons and colors
 - Detailed request information (signer, email, phone, dates)
 - Status-specific messages and guidance
 - Action buttons based on status
 
 **Workflow States:**
+
 - `pending` - Initial state
 - `sent` - Email sent to signer
 - `viewed` - Signer opened the document
@@ -73,6 +82,7 @@ Created a new modal component with the following features:
 - `expired` - Request expired
 
 **Features:**
+
 - Auto-loads existing request status on open
 - Inline error handling
 - Loading states for async operations
@@ -122,8 +132,8 @@ GET    /contracts/:contractId/modusign/download
 
 ## UI/UX Design
 
-- Uses existing @sigongon/ui components (Modal, Input, Button, Badge)
-- Consistent with SigongOn design system
+- Uses existing @sigongcore/ui components (Modal, Input, Button, Badge)
+- Consistent with SigongCore design system
 - Korean language throughout
 - Color-coded status indicators
 - Clear error messages
@@ -132,6 +142,7 @@ GET    /contracts/:contractId/modusign/download
 ## Testing
 
 Mock API is fully functional for testing all workflows:
+
 - Create electronic signature request
 - Check status updates
 - Cancel requests
@@ -152,18 +163,20 @@ Potential improvements for future iterations:
 ## Related Files
 
 ### Modified Files:
+
 - `/frontend/packages/types/src/index.ts`
 - `/frontend/packages/api/src/client.ts`
 - `/frontend/apps/admin/lib/mocks/mockApi.ts`
 - `/frontend/apps/admin/app/projects/[id]/contracts/page.tsx`
 
 ### New Files:
+
 - `/frontend/apps/admin/components/ModusignModal.tsx`
 
 ## Notes
 
 - All UI text is in Korean as per project requirements
 - Follows existing code patterns and conventions
-- Uses @sigongon/ui component library
+- Uses @sigongcore/ui component library
 - Mock API simulates realistic workflows for development
 - Ready for backend integration

@@ -41,7 +41,7 @@
 ## 프로젝트 구조
 
 ```
-sigongon-dev/
+sigongcore-dev/
 ├── AGENTS.md                 # 본 문서 (에이전트 가이드)
 ├── docs/
 │   ├── 01_ARCHITECTURE.md    # 시스템 아키텍처
@@ -119,7 +119,7 @@ pnpm dev
 
 `pnpm dev` 실행 시 `EADDRINUSE` 에러가 발생하면:
 
-- `predev` 스크립트가 자동으로 sigongon 프로젝트의 잔류 프로세스를 정리합니다
+- `predev` 스크립트가 자동으로 sigongcore 프로젝트의 잔류 프로세스를 정리합니다
 - 다른 앱이 포트를 점유 중이면 PID와 명령어가 출력됩니다
 
 ### 무한 리로드 문제 (CRITICAL)

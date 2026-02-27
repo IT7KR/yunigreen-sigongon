@@ -4,10 +4,14 @@ test.describe("Admin UX Smoke", () => {
   test("login form should be clear and interactive", async ({ page }) => {
     await page.goto("/login");
 
-    await expect(page.getByRole("heading", { name: /시공ON 관리자/ })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /시공코어 관리자/ }),
+    ).toBeVisible();
     await expect(page.getByLabel(/아이디/)).toBeVisible();
 
-    const passwordInput = page.locator('input[autocomplete="current-password"]');
+    const passwordInput = page.locator(
+      'input[autocomplete="current-password"]',
+    );
     await expect(passwordInput).toBeVisible();
     await expect(passwordInput).toHaveAttribute("type", "password");
 
@@ -29,7 +33,9 @@ test.describe("Admin UX Smoke", () => {
 
     await expect(page.getByText(/테스트 계정/)).toBeVisible();
 
-    const quickButtons = page.locator("button").filter({ hasText: /(최고관리자|대표|현장소장|근로자)/ });
+    const quickButtons = page
+      .locator("button")
+      .filter({ hasText: /(최고관리자|대표|현장소장|근로자)/ });
     await expect(quickButtons).toHaveCount(4);
 
     const firstButton = quickButtons.first();

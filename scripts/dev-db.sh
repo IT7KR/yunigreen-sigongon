@@ -24,7 +24,7 @@ case "${1:-up}" in
     docker compose -f docker-compose.dev.yml logs -f db
     ;;
   psql)
-    docker exec -it sigongon-db psql -U postgres -d sigongon
+    docker exec -it sigongcore-db psql -U postgres -d sigongcore
     ;;
   *)
     echo "Usage: $0 {up|down|reset|logs|psql}"

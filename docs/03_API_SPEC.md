@@ -5,7 +5,7 @@
 ### 1.1 기본 URL
 
 - 개발 환경: `http://localhost:8000/api/v1`
-- 운영 환경: `https://api.sigongon.com/api/v1`
+- 운영 환경: `https://api.sigongcore.com/api/v1`
 
 ### 1.2 인증
 
@@ -87,7 +87,7 @@ DB FK 제약 대신 애플리케이션 레벨에서 정합성을 검증합니다
 ```json
 // 요청
 {
-  "email": "tech@sigongon.com",
+  "email": "tech@sigongcore.com",
   "password": "password123"
 }
 
@@ -101,7 +101,7 @@ DB FK 제약 대신 애플리케이션 레벨에서 정합성을 검증합니다
     "expires_in": 3600,
     "user": {
       "id": "uuid",
-  "email": "tech@sigongon.com",
+  "email": "tech@sigongcore.com",
       "name": "홍길동",
       "role": "technician"
     }
@@ -139,7 +139,7 @@ DB FK 제약 대신 애플리케이션 레벨에서 정합성을 검증합니다
   "success": true,
   "data": {
     "id": "uuid",
-  "email": "tech@sigongon.com",
+    "email": "tech@sigongcore.com",
     "name": "홍길동",
     "phone": "010-1234-5678",
     "role": "technician",
@@ -711,7 +711,7 @@ Content-Type: `multipart/form-data`
   "data": {
     "status": "sent",
     "sent_at": "2026-01-04T14:00:00Z",
-  "sign_link": "https://sigongon.com/sign/abc123"
+    "sign_link": "https://sigongcore.com/sign/abc123"
   }
 }
 ```
