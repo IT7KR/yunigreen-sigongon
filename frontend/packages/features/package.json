@@ -1,5 +1,5 @@
 {
-  "name": "@sigongon/features",
+  "name": "@sigongcore/features",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
@@ -19,9 +19,9 @@
     "dist"
   ],
   "dependencies": {
-    "@sigongon/mocks": "workspace:*",
-    "@sigongon/platform": "workspace:*",
-    "@sigongon/ui": "workspace:*",
+    "@sigongcore/mocks": "workspace:*",
+    "@sigongcore/platform": "workspace:*",
+    "@sigongcore/ui": "workspace:*",
     "lucide-react": "^0.562.0"
   },
   "devDependencies": {

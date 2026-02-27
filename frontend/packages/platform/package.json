@@ -1,5 +1,5 @@
 {
-  "name": "@sigongon/platform",
+  "name": "@sigongcore/platform",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
@@ -19,8 +19,8 @@
     "dist"
   ],
   "dependencies": {
-    "@sigongon/api": "workspace:*",
-    "@sigongon/types": "workspace:*",
+    "@sigongcore/api": "workspace:*",
+    "@sigongcore/types": "workspace:*",
     "@tanstack/react-query": "^5.90.16"
   },
   "devDependencies": {

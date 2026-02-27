@@ -1,5 +1,5 @@
 {
-  "name": "@sigongon/api",
+  "name": "@sigongcore/api",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
@@ -19,7 +19,7 @@
     "dist"
   ],
   "dependencies": {
-    "@sigongon/types": "workspace:*",
+    "@sigongcore/types": "workspace:*",
     "axios": "^1.13.2"
   },
   "devDependencies": {
