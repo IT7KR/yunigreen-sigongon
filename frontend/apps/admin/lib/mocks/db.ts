@@ -157,7 +157,7 @@ export interface MockSchema {
   insuranceRates: LaborInsuranceRates[];
 }
 
-const STORAGE_KEY = "sigongon_mock_v3";
+const STORAGE_KEY = "sigongon_mock_v4";
 
 const nowIso = () => new Date().toISOString();
 
@@ -517,6 +517,10 @@ const INITIAL_DATA: MockSchema = {
   dailyWorkRecords: (() => {
     const records: DailyWorkRecord[] = [];
     let idx = 0;
+    const workerDailyRates: Record<string, number> = {
+      "dw_1": 200000, "dw_2": 220000, "dw_3": 200000, "dw_4": 250000,
+      "dw_5": 200000, "dw_6": 200000, "dw_7": 230000,
+    };
     // 2025년 12월 근무기록 - p2 현장 (연도 경계 테스트)
     const dec2025Workers = [
       { wid: "dw_1", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26, 29, 30, 31] },
@@ -526,7 +530,7 @@ const INITIAL_DATA: MockSchema = {
     ];
     for (const w of dec2025Workers) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p2", work_date: `2025-12-${String(day).padStart(2, "0")}`, man_days: 1 });
+        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p2", work_date: `2025-12-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
       }
     }
     // 2026년 1월 근무기록 - p2 현장
@@ -541,7 +545,7 @@ const INITIAL_DATA: MockSchema = {
     ];
     for (const w of jan2026Workers) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p2", work_date: `2026-01-${String(day).padStart(2, "0")}`, man_days: 1 });
+        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p2", work_date: `2026-01-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
       }
     }
     // 2026년 1월 근무기록 - p5 현장 (일부 근로자)
@@ -551,7 +555,7 @@ const INITIAL_DATA: MockSchema = {
     ];
     for (const w of jan2026P5) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p5", work_date: `2026-01-${String(day).padStart(2, "0")}`, man_days: 1 });
+        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p5", work_date: `2026-01-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
       }
     }
     // 2026년 2월 근무기록 - p2 현장
@@ -566,7 +570,7 @@ const INITIAL_DATA: MockSchema = {
     ];
     for (const w of feb2026Workers) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p2", work_date: `2026-02-${String(day).padStart(2, "0")}`, man_days: 1 });
+        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p2", work_date: `2026-02-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
       }
     }
     // 2026년 2월 근무기록 - p5 현장
@@ -578,7 +582,54 @@ const INITIAL_DATA: MockSchema = {
     ];
     for (const w of feb2026P5) {
       for (const day of w.days) {
-        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p5", work_date: `2026-02-${String(day).padStart(2, "0")}`, man_days: 1 });
+        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p5", work_date: `2026-02-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+      }
+    }
+    // 2025년 12월 근무기록 - p4 현장 (완료 프로젝트, 2026-01-15 종료)
+    const dec2025P4 = [
+      { wid: "dw_2", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26] },
+      { wid: "dw_4", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26, 29, 30, 31] },
+      { wid: "dw_6", days: [1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23] },
+      { wid: "dw_7", days: [3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 26] },
+    ];
+    for (const w of dec2025P4) {
+      for (const day of w.days) {
+        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p4", work_date: `2025-12-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+      }
+    }
+    // 2026년 1월 근무기록 - p4 현장 (1월 15일까지 공사)
+    const jan2026P4 = [
+      { wid: "dw_2", days: [2, 5, 6, 7, 8, 9, 12, 13, 14, 15] },
+      { wid: "dw_4", days: [2, 5, 6, 7, 8, 9, 12, 13, 14, 15] },
+      { wid: "dw_6", days: [5, 6, 7, 8, 9, 12, 13, 14] },
+      { wid: "dw_7", days: [6, 7, 8, 9, 12, 13, 14, 15] },
+    ];
+    for (const w of jan2026P4) {
+      for (const day of w.days) {
+        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p4", work_date: `2026-01-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+      }
+    }
+    // 2026년 1월 근무기록 - p8 현장 (하자보수)
+    const jan2026P8 = [
+      { wid: "dw_1", days: [19, 20, 21, 22, 23, 26, 27, 28, 29, 30] },
+      { wid: "dw_3", days: [20, 21, 22, 23, 26, 27, 28] },
+      { wid: "dw_5", days: [21, 22, 23, 26, 27, 28, 29, 30] },
+    ];
+    for (const w of jan2026P8) {
+      for (const day of w.days) {
+        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p8", work_date: `2026-01-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
+      }
+    }
+    // 2026년 2월 근무기록 - p8 현장 (하자보수 계속)
+    const feb2026P8 = [
+      { wid: "dw_1", days: [2, 3, 4, 5, 6, 9, 10, 11, 12] },
+      { wid: "dw_3", days: [3, 4, 5, 6, 9, 10, 11] },
+      { wid: "dw_5", days: [2, 3, 4, 5, 9, 10, 11, 12] },
+      { wid: "dw_7", days: [4, 5, 6, 9, 10, 11, 12, 13] },
+    ];
+    for (const w of feb2026P8) {
+      for (const day of w.days) {
+        records.push({ id: `dwr_${++idx}`, worker_id: w.wid, project_id: "p8", work_date: `2026-02-${String(day).padStart(2, "0")}`, man_days: 1, daily_rate: workerDailyRates[w.wid] });
       }
     }
     return records;

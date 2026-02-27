@@ -3415,6 +3415,7 @@ class WorkRecordInput(BaseModel):
     project_id: str
     work_date: str
     man_days: Decimal
+    daily_rate: Optional[Decimal] = None
 
 
 class WorkRecordBatchRequest(BaseModel):
@@ -3450,6 +3451,7 @@ async def get_work_records(
             "project_id": str(r.project_id),
             "work_date": r.work_date.isoformat(),
             "man_days": float(r.man_days),
+            "daily_rate": int(r.daily_rate),
         }
         for r in rows
     ])
@@ -3514,11 +3516,25 @@ async def upsert_work_records(
                 },
             )
 
+    # Pre-fetch daily rates for workers that don't provide one
+    worker_ids_needing_rate = {
+        _to_int(rec.worker_id) for rec in payload.records
+        if rec.daily_rate is None
+    }
+    rate_by_worker: dict[int, Decimal] = {}
+    if worker_ids_needing_rate:
+        rate_rows = (await db.execute(
+            select(DailyWorker.id, DailyWorker.daily_rate)
+            .where(DailyWorker.id.in_(worker_ids_needing_rate))
+        )).all()
+        rate_by_worker = {row.id: row.daily_rate for row in rate_rows}
+
     updated = 0
 
     for record in payload.records:
         worker_id = _to_int(record.worker_id)
         project_id = _to_int(record.project_id)
+        effective_rate = record.daily_rate if record.daily_rate is not None else rate_by_worker.get(worker_id, Decimal("0"))
 
         await _get_project_for_user(db, project_id, current_user)
 
@@ -3533,6 +3549,7 @@ async def upsert_work_records(
 
         if row:
             row.man_days = record.man_days
+            row.daily_rate = effective_rate
             row.updated_at = datetime.utcnow()
         else:
             db.add(
@@ -3541,6 +3558,7 @@ async def upsert_work_records(
                     project_id=project_id,
                     work_date=work_date,
                     man_days=record.man_days,
+                    daily_rate=effective_rate,
                 )
             )
         updated += 1
@@ -3628,13 +3646,28 @@ def _build_worker_entry(
     rates: InsuranceRate,
     year: int,
     month: int,
+    records: Optional[list] = None,
 ) -> Optional[dict]:
     total_man_days = sum(v for v in work_days.values() if v > 0)
     if total_man_days <= 0:
         return None
 
     total_days = len([v for v in work_days.values() if v > 0])
-    labor_cost = int((Decimal(worker.daily_rate) * Decimal(str(total_man_days))).quantize(Decimal("1"), rounding=ROUND_DOWN))
+
+    # Use per-record daily_rate if available (records have daily_rate > 0)
+    if records and any(r.daily_rate > 0 for r in records):
+        labor_cost = int(sum(
+            (Decimal(str(r.daily_rate)) * Decimal(str(float(r.man_days)))).quantize(Decimal("1"), rounding=ROUND_DOWN)
+            for r in records
+        ))
+        # Effective daily_rate for display: weighted average
+        effective_daily_rate = int(
+            (Decimal(str(labor_cost)) / Decimal(str(total_man_days))).quantize(Decimal("1"), rounding=ROUND_DOWN)
+        ) if total_man_days > 0 else int(worker.daily_rate)
+    else:
+        labor_cost = int((Decimal(worker.daily_rate) * Decimal(str(total_man_days))).quantize(Decimal("1"), rounding=ROUND_DOWN))
+        effective_daily_rate = int(worker.daily_rate)
+
     deductions = _calc_worker_deductions(labor_cost, rates)
 
     last_work_day = 0
@@ -3654,7 +3687,7 @@ def _build_worker_entry(
         "team": worker.team,
         "ssn_masked": _mask_worker_identifier(worker),
         "ssn_full": "",
-        "daily_rate": int(worker.daily_rate),
+        "daily_rate": effective_daily_rate,
         "is_foreign": worker.is_foreign,
         "nationality_code": worker.nationality_code or "",
         "visa_status": worker.visa_status or "",
@@ -3741,8 +3774,9 @@ async def _build_site_report(
         worker = workers_by_id.get(worker_id)
         if not worker:
             continue
-        work_days = _build_work_days(by_worker[worker_id])
-        entry = _build_worker_entry(worker, work_days, rates, year, month)
+        worker_records = by_worker[worker_id]
+        work_days = _build_work_days(worker_records)
+        entry = _build_worker_entry(worker, work_days, rates, year, month, records=worker_records)
         if not entry:
             continue
         entries.append(entry)
@@ -3816,9 +3850,10 @@ async def _build_monthly_consolidated_report(
         worker = workers_by_id.get(worker_id)
         if not worker:
             continue
+        worker_records = by_worker[worker_id]
         # Consolidated monthly report merges duplicate working days across sites.
-        work_days = _build_work_days(by_worker[worker_id], cap_per_day=1.0)
-        entry = _build_worker_entry(worker, work_days, rates, year, month)
+        work_days = _build_work_days(worker_records, cap_per_day=1.0)
+        entry = _build_worker_entry(worker, work_days, rates, year, month, records=worker_records)
         if not entry:
             continue
         entries.append(entry)
@@ -4740,21 +4775,109 @@ async def get_worker_profile(
 
     docs = await _seed_worker_documents(db, worker_user_id)
 
+    # Fetch DailyWorker record if exists
+    daily_worker = (await db.execute(
+        select(DailyWorker).where(DailyWorker.id == worker_user_id)
+    )).scalar_one_or_none()
+
     return APIResponse.ok(
         {
             "id": str(user.id),
             "name": user.name,
-            "role": "근로자",
+            "phone": daily_worker.phone if daily_worker else (user.phone or ""),
+            "address": daily_worker.address if daily_worker else "",
+            "bank_name": daily_worker.bank_name if daily_worker else "",
+            "account_number": daily_worker.account_number if daily_worker else "",
+            "job_type": daily_worker.job_type if daily_worker else "근로자",
+            "hire_date": daily_worker.hire_date if daily_worker else "",
+            "birth_date": daily_worker.birth_date if daily_worker else "",
+            "gender": daily_worker.gender if daily_worker else 1,
             "documents": [
                 {
                     "id": d.document_id,
+                    "document_type": d.document_type or d.document_id,
                     "name": d.name,
-                    "status": "submitted" if d.status == "submitted" else "pending",
+                    "status": d.status,
+                    "review_status": d.review_status,
+                    "review_reason": d.review_reason,
+                    "original_filename": d.original_filename,
+                    "uploaded_at": d.updated_at.isoformat() if getattr(d, "updated_at", None) else None,
                 }
                 for d in docs
             ],
         }
     )
+
+
+class WorkerProfileUpdateRequest(BaseModel):
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+
+
+@router.put("/workers/{worker_id}/profile", response_model=APIResponse[dict])
+async def update_worker_profile(
+    worker_id: str,
+    data: WorkerProfileUpdateRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    worker_user_id = await _require_worker_self(db, current_user, worker_id)
+
+    daily_worker = (await db.execute(
+        select(DailyWorker).where(DailyWorker.id == worker_user_id)
+    )).scalar_one_or_none()
+
+    if not daily_worker:
+        raise NotFoundException("daily_worker", worker_id)
+
+    if data.phone is not None:
+        daily_worker.phone = data.phone
+    if data.address is not None:
+        daily_worker.address = data.address
+    if data.bank_name is not None:
+        daily_worker.bank_name = data.bank_name
+    if data.account_number is not None:
+        daily_worker.account_number = data.account_number
+
+    await db.commit()
+    return APIResponse.ok({"updated": True})
+
+
+class WorkerPasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/workers/{worker_id}/change-password", response_model=APIResponse[dict])
+async def change_worker_password(
+    worker_id: str,
+    data: WorkerPasswordChangeRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    worker_user_id = await _require_worker_self(db, current_user, worker_id)
+
+    user = (await db.execute(select(User).where(User.id == worker_user_id))).scalar_one_or_none()
+    if not user:
+        raise NotFoundException("user", worker_id)
+
+    if not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="현재 비밀번호가 올바르지 않습니다.",
+        )
+
+    if len(data.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="새 비밀번호는 8자 이상이어야 합니다.",
+        )
+
+    user.password_hash = get_password_hash(data.new_password)
+    await db.commit()
+    return APIResponse.ok({"updated": True})
 
 
 @router.post("/workers/{worker_id}/documents/{doc_id}", response_model=APIResponse[dict])

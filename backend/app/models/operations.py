@@ -269,6 +269,7 @@ class WorkRecord(SQLModel, table=True):
     project_id: int = Field(sa_column=Column(BigInteger, nullable=False, index=True))
     work_date: date = Field(index=True)
     man_days: Decimal = Field(default=Decimal("1"), max_digits=4, decimal_places=1)
+    daily_rate: Decimal = Field(default=Decimal("0"), max_digits=12, decimal_places=2)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

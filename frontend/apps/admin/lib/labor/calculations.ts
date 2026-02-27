@@ -186,8 +186,9 @@ export function calculateWorkerDeductions(
   totalWorkDays: number,
   rates: LaborInsuranceRates,
   referenceDate: Date = new Date(),
+  dailyRateOverride?: number,
 ): DeductionResult {
-  const dailyRate = worker.daily_rate;
+  const dailyRate = dailyRateOverride ?? worker.daily_rate;
   const totalLaborCost = dailyRate * totalManDays;
   const age = calculateAge(worker.birth_date, worker.gender, referenceDate);
 
@@ -258,6 +259,7 @@ export function buildWorkerEntry(
   rates: LaborInsuranceRates,
   year: number,
   month: number,
+  dailyRateOverride?: number,
 ): SitePayrollWorkerEntry {
   // 일자별 공수 집계
   const workDays: Record<number, number> = {};
@@ -275,7 +277,8 @@ export function buildWorkerEntry(
   }
 
   const totalDays = uniqueDays.size;
-  const totalLaborCost = worker.daily_rate * totalManDays;
+  const effectiveDailyRate = dailyRateOverride ?? worker.daily_rate;
+  const totalLaborCost = effectiveDailyRate * totalManDays;
 
   const referenceDate = new Date(year, month - 1, 15);
   const deductions = calculateWorkerDeductions(
@@ -284,6 +287,7 @@ export function buildWorkerEntry(
     totalDays,
     rates,
     referenceDate,
+    effectiveDailyRate,
   );
 
   const ssnMasked = formatMaskedSSN(worker.birth_date, worker.gender);
@@ -294,7 +298,7 @@ export function buildWorkerEntry(
     job_type: worker.job_type,
     team: worker.team,
     ssn_masked: ssnMasked,
-    daily_rate: worker.daily_rate,
+    daily_rate: effectiveDailyRate,
     work_days: workDays,
     total_days: totalDays,
     total_man_days: totalManDays,
