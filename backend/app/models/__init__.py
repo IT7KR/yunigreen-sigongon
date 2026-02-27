@@ -121,6 +121,11 @@ from app.models.consent import (
     ConsentRecordRead,
     BulkConsentRequest,
 )
+from app.models.device_token import (
+    DeviceToken,
+    DeviceTokenCreate,
+    DeviceTokenRead,
+)
 
 __all__ = [
     # Base
@@ -281,4 +286,8 @@ __all__ = [
     "ConsentRecordCreate",
     "ConsentRecordRead",
     "BulkConsentRequest",
+    # Device Token (FCM)
+    "DeviceToken",
+    "DeviceTokenCreate",
+    "DeviceTokenRead",
 ]

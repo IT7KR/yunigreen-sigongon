@@ -45,7 +45,15 @@ class Settings(BaseSettings):
         "http://localhost:3034",
         "http://localhost:3133",
         "http://localhost:3134",
+        # Capacitor WebView origins (네이티브 앱)
+        "capacitor://localhost",  # iOS Capacitor WebView
+        "http://localhost",        # Android Capacitor WebView
     ]
+
+    # Firebase / FCM 푸시 알림
+    firebase_is_mock: bool = True
+    firebase_credentials_path: Optional[str] = None
+    firebase_credentials_json: Optional[str] = None
 
     # Snowflake ID
     snowflake_worker_id: int = 1
