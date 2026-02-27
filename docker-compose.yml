@@ -3,11 +3,11 @@ version: "3.8"
 services:
   db:
     image: pgvector/pgvector:pg16
-    container_name: sigongon-db
+    container_name: sigongcore-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: sigongon
+      POSTGRES_DB: sigongcore
     ports:
       - "5437:5432"
     volumes:
@@ -20,7 +20,7 @@ services:
 
   backend:
     build: ./backend
-    container_name: sigongon-backend
+    container_name: sigongcore-backend
     volumes:
       - ./backend:/app
       - ./종합적산정보건축부문(견적서근거자료).pdf:/app/data/estimate_arch.pdf
@@ -28,10 +28,7 @@ services:
       - backend_uploads:/app/uploads
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/sigongon
-      - UPLOAD_DIR=/app/uploads
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    env_file: ./backend/.env
     depends_on:
       db:
         condition: service_healthy
@@ -40,15 +37,10 @@ services:
     build:
       context: ./frontend
       target: admin
-    container_name: sigongon-admin
+    container_name: sigongcore-admin
     ports:
       - "3133:3033"
-    environment:
-      # 컨테이너 내부에서 backend 서비스 이름으로 접근
-      - NEXT_PUBLIC_API_URL=http://backend:8000/api/v1
-      - NEXT_PUBLIC_USE_MOCKS=false
-      - NEXT_PUBLIC_REAL_DOMAINS=
-      - NEXT_PUBLIC_TOSS_CLIENT_KEY=${NEXT_PUBLIC_TOSS_CLIENT_KEY:-test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq}
+    env_file: ./frontend/.env
     depends_on:
       - backend
 

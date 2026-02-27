@@ -3,11 +3,11 @@ version: "3.8"
 services:
   db:
     image: pgvector/pgvector:pg16
-    container_name: sigongon-db
+    container_name: sigongcore-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: sigongon
+      POSTGRES_DB: sigongcore
     ports:
       - "5444:5432"
     volumes:
