@@ -3561,4 +3561,25 @@ export class APIClient {
     );
     return response.data;
   }
+
+  // ============================================
+  // Device Tokens (FCM 푸시 알림)
+  // ============================================
+
+  async registerDeviceToken(data: {
+    token: string;
+    platform: "ios" | "android";
+  }) {
+    const response = await this.client.post<
+      APIResponse<{ id: string; token: string; platform: string }>
+    >("/device-tokens", data);
+    return response.data;
+  }
+
+  async deleteDeviceToken(token: string) {
+    const response = await this.client.delete<APIResponse<{ deleted: boolean }>>(
+      `/device-tokens/${encodeURIComponent(token)}`,
+    );
+    return response.data;
+  }
 }
