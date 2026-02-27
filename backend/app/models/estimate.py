@@ -141,7 +141,17 @@ class EstimateLine(EstimateLineBase, table=True):
     # Pricing snapshot (frozen at time of creation/issue)
     unit_price_snapshot: Decimal = Field(max_digits=15, decimal_places=2)
     amount: Decimal = Field(max_digits=15, decimal_places=2)  # quantity * unit_price_snapshot
-    
+
+    # 일위대가 참조 (일위대가에서 단가를 가져온 경우)
+    composite_unit_price_id: Optional[int] = Field(
+        default=None, sa_type=BigInteger, index=True
+    )
+
+    # 비용 분리 (재료비/노무비/경비)
+    material_amount: Decimal = Field(default=Decimal("0"), max_digits=15, decimal_places=2)
+    labor_amount: Decimal = Field(default=Decimal("0"), max_digits=15, decimal_places=2)
+    equipment_amount: Decimal = Field(default=Decimal("0"), max_digits=15, decimal_places=2)
+
     # Source tracking
     source: LineSource = Field(default=LineSource.MANUAL)
     ai_suggestion_id: Optional[int] = Field(
@@ -169,6 +179,10 @@ class EstimateLineCreate(EstimateLineBase):
     unit_price_snapshot: Decimal
     sort_order: int = 0
     source: LineSource = LineSource.MANUAL
+    composite_unit_price_id: Optional[int] = None
+    material_amount: Decimal = Decimal("0")
+    labor_amount: Decimal = Decimal("0")
+    equipment_amount: Decimal = Decimal("0")
 
 
 class EstimateLineRead(EstimateLineBase):
@@ -181,6 +195,10 @@ class EstimateLineRead(EstimateLineBase):
     amount: Decimal
     source: LineSource
     created_at: datetime
+    composite_unit_price_id: Optional[int]
+    material_amount: Decimal
+    labor_amount: Decimal
+    equipment_amount: Decimal
 
 
 class EstimateLineUpdate(SQLModel):
@@ -191,3 +209,7 @@ class EstimateLineUpdate(SQLModel):
     quantity: Optional[Decimal] = None
     unit_price_snapshot: Optional[Decimal] = None
     sort_order: Optional[int] = None
+    composite_unit_price_id: Optional[int] = None
+    material_amount: Optional[Decimal] = None
+    labor_amount: Optional[Decimal] = None
+    equipment_amount: Optional[Decimal] = None
