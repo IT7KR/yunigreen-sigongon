@@ -1,1 +1,1 @@
-export { default } from "../../scripts/postcss.base.mjs";
+export { default } from "./scripts/postcss.base.mjs";

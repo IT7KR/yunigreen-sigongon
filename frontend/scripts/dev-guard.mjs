@@ -10,7 +10,7 @@
 
 import { execSync } from "child_process";
 
-const DEV_PORTS = [3033, 3034]; // admin, mobile
+const DEV_PORTS = [3033]; // admin
 const PROJECT_IDENTIFIER = "sigongOn-dev/frontend";
 
 /**

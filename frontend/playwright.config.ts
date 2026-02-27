@@ -23,26 +23,12 @@ export default defineConfig({
       },
       testMatch: /admin\/.*.spec.ts/,
     },
-    {
-      name: "mobile",
-      use: {
-        ...devices["iPhone 13"],
-        baseURL: "http://localhost:3034",
-      },
-      testMatch: /mobile\/.*.spec.ts/,
-    },
   ],
 
   webServer: [
     {
-      command: "pnpm --filter @sigongon/admin dev",
+      command: "pnpm dev",
       url: "http://localhost:3033",
-      reuseExistingServer: !process.env.CI,
-      timeout: 120 * 1000,
-    },
-    {
-      command: "pnpm --filter @sigongon/mobile dev",
-      url: "http://localhost:3034",
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },
