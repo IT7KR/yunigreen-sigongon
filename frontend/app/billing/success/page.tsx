@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, Button } from "@sigongon/ui";
+import { Card, CardContent, Button } from "@sigongcore/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -126,9 +126,7 @@ function SuccessContent() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">결제수단</span>
-                <span className="font-medium text-slate-900">
-                  토스페이먼츠
-                </span>
+                <span className="font-medium text-slate-900">토스페이먼츠</span>
               </div>
             </div>
 

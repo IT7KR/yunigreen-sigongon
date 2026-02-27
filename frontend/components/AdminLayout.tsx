@@ -29,7 +29,7 @@ import {
   PrimitiveButton,
   cn,
   useNavigationProgress,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
 import { AdminContentLoadingOverlay } from "./AdminContentLoadingOverlay";
@@ -159,12 +159,14 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
           <AppLink href="/dashboard" className="flex items-center gap-2">
             <Image
               src="/logo-sq.png"
-              alt="시공ON 로고"
+              alt="시공코어 로고"
               width={40}
               height={40}
               className="object-contain"
             />
-            <span className="font-semibold text-slate-900">시공ON 관리자</span>
+            <span className="font-semibold text-slate-900">
+              시공코어 관리자
+            </span>
           </AppLink>
 
           <PrimitiveButton

@@ -1,12 +1,22 @@
 "use client";
 
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveButton, PrimitiveInput, PrimitiveSelect } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  PrimitiveButton,
+  PrimitiveInput,
+  PrimitiveSelect,
+} from "@sigongcore/ui";
 import { ArrowLeft, Send, Save } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
-import { toast } from "@sigongon/ui";
+import { toast } from "@sigongcore/ui";
 import { useRouter } from "next/navigation";
 
 type Project = {
@@ -45,9 +55,24 @@ export default function NewLaborContractPage() {
   ];
 
   const workers: Worker[] = [
-    { id: "worker_1", name: "김철수", role: "목수", daily_rate_default: 150000 },
-    { id: "worker_2", name: "이영희", role: "도배공", daily_rate_default: 140000 },
-    { id: "worker_3", name: "박민수", role: "타일공", daily_rate_default: 160000 },
+    {
+      id: "worker_1",
+      name: "김철수",
+      role: "목수",
+      daily_rate_default: 150000,
+    },
+    {
+      id: "worker_2",
+      name: "이영희",
+      role: "도배공",
+      daily_rate_default: 140000,
+    },
+    {
+      id: "worker_3",
+      name: "박민수",
+      role: "타일공",
+      daily_rate_default: 160000,
+    },
   ];
 
   const handleAddWorker = (worker: Worker) => {
@@ -73,18 +98,20 @@ export default function NewLaborContractPage() {
   const handleUpdateDailyRate = (workerId: string, rate: number) => {
     setSelectedWorkers(
       selectedWorkers.map((w) =>
-        w.id === workerId ? { ...w, daily_rate: rate } : w
-      )
+        w.id === workerId ? { ...w, daily_rate: rate } : w,
+      ),
     );
   };
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
     const exists = workDates.some(
-      (d) => d.toDateString() === date.toDateString()
+      (d) => d.toDateString() === date.toDateString(),
     );
     if (exists) {
-      setWorkDates(workDates.filter((d) => d.toDateString() !== date.toDateString()));
+      setWorkDates(
+        workDates.filter((d) => d.toDateString() !== date.toDateString()),
+      );
     } else {
       setWorkDates([...workDates, date]);
     }
@@ -109,9 +136,7 @@ export default function NewLaborContractPage() {
       // Mock API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
       toast.success(
-        status === "draft"
-          ? "임시저장되었습니다."
-          : "계약서가 발송되었습니다."
+        status === "draft" ? "임시저장되었습니다." : "계약서가 발송되었습니다.",
       );
       // Redirect to contracts list
       router.push("/labor/contracts");
@@ -132,9 +157,7 @@ export default function NewLaborContractPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900">
-            근로계약서 작성
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900">근로계약서 작성</h1>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -186,7 +209,7 @@ export default function NewLaborContractPage() {
                           variant="secondary"
                           onClick={() => handleAddWorker(worker)}
                           disabled={selectedWorkers.some(
-                            (w) => w.id === worker.id
+                            (w) => w.id === worker.id,
                           )}
                         >
                           {selectedWorkers.some((w) => w.id === worker.id)
@@ -223,7 +246,7 @@ export default function NewLaborContractPage() {
                                 onChange={(e) =>
                                   handleUpdateDailyRate(
                                     worker.id,
-                                    parseInt(e.target.value) || 0
+                                    parseInt(e.target.value) || 0,
                                   )
                                 }
                                 className="w-32"
@@ -345,7 +368,9 @@ export default function NewLaborContractPage() {
                       checked={sendMethod === "kakao"}
                       onChange={(e) => setSendMethod(e.target.value as "kakao")}
                     />
-                    <span className="text-sm text-slate-700">카카오 알림톡</span>
+                    <span className="text-sm text-slate-700">
+                      카카오 알림톡
+                    </span>
                   </label>
                 </div>
               </CardContent>

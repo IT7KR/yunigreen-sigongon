@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { FieldRepresentativeRead } from "@sigongon/api";
+import type { FieldRepresentativeRead } from "@sigongcore/api";
 
 // Keep type aliases for backward compatibility
 export type FieldRepresentative = FieldRepresentativeRead;
@@ -12,24 +12,24 @@ export type ProjectRepresentativeAssignment = {
 
 // ─── Async API-based functions ────────────────────────────
 
-export async function getFieldRepresentatives(): Promise<FieldRepresentative[]> {
+export async function getFieldRepresentatives(): Promise<
+  FieldRepresentative[]
+> {
   const response = await api.listFieldRepresentatives();
   return response.success && response.data ? response.data : [];
 }
 
-export async function upsertFieldRepresentative(
-  payload: {
-    id?: number;
-    name: string;
-    phone: string;
-    grade?: string;
-    notes?: string;
-    booklet_filename?: string;
-    career_cert_filename?: string;
-    career_cert_uploaded_at?: string;
-    employment_cert_filename?: string;
-  },
-): Promise<number> {
+export async function upsertFieldRepresentative(payload: {
+  id?: number;
+  name: string;
+  phone: string;
+  grade?: string;
+  notes?: string;
+  booklet_filename?: string;
+  career_cert_filename?: string;
+  career_cert_uploaded_at?: string;
+  employment_cert_filename?: string;
+}): Promise<number> {
   const createData = {
     name: payload.name,
     phone: payload.phone,
@@ -42,7 +42,10 @@ export async function upsertFieldRepresentative(
   };
 
   if (payload.id) {
-    const response = await api.updateFieldRepresentative(payload.id, createData);
+    const response = await api.updateFieldRepresentative(
+      payload.id,
+      createData,
+    );
     if (!response.success || !response.data) throw new Error("수정 실패");
     return response.data.id;
   } else {

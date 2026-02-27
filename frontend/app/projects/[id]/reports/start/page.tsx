@@ -4,7 +4,16 @@ import { use, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle, LoadingOverlay, PrimitiveInput, toast } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingOverlay,
+  PrimitiveInput,
+  toast,
+} from "@sigongcore/ui";
 import { ConstructionReportForm } from "@/components/ConstructionReportForm";
 import { api } from "@/lib/api";
 import {
@@ -36,7 +45,8 @@ export default function StartReportPage({
 
   const [reportData, setReportData] = useState<StartReportData | null>(null);
   const [loading, setLoading] = useState(!!reportId);
-  const [autoLinkRepresentativeDocs, setAutoLinkRepresentativeDocs] = useState(true);
+  const [autoLinkRepresentativeDocs, setAutoLinkRepresentativeDocs] =
+    useState(true);
   const [assignedRepresentative, setAssignedRepresentative] = useState<{
     name: string;
     phone: string;
@@ -50,7 +60,9 @@ export default function StartReportPage({
         setAssignedRepresentative(null);
         return;
       }
-      const representative = await getRepresentativeById(assignment.representativeId);
+      const representative = await getRepresentativeById(
+        assignment.representativeId,
+      );
       if (!representative) {
         setAssignedRepresentative(null);
         return;
@@ -73,7 +85,9 @@ export default function StartReportPage({
       if (response.success && response.data) {
         setReportData(response.data);
         if (typeof response.data.auto_link_representative_docs === "boolean") {
-          setAutoLinkRepresentativeDocs(response.data.auto_link_representative_docs);
+          setAutoLinkRepresentativeDocs(
+            response.data.auto_link_representative_docs,
+          );
         }
       }
     } catch (err) {
@@ -99,8 +113,12 @@ export default function StartReportPage({
     return {
       ...data,
       auto_link_representative_docs: autoLinkRepresentativeDocs,
-      ...(data.supervisor_name ? {} : { supervisor_name: assignedRepresentative.name }),
-      ...(data.supervisor_phone ? {} : { supervisor_phone: assignedRepresentative.phone }),
+      ...(data.supervisor_name
+        ? {}
+        : { supervisor_name: assignedRepresentative.name }),
+      ...(data.supervisor_phone
+        ? {}
+        : { supervisor_phone: assignedRepresentative.phone }),
     };
   }
 
@@ -144,20 +162,21 @@ export default function StartReportPage({
   }
 
   if (loading) {
-    return (
-      <LoadingOverlay variant="inline" text="착공계를 불러오는 중..." />
-    );
+    return <LoadingOverlay variant="inline" text="착공계를 불러오는 중..." />;
   }
 
-  const isReadOnly = reportData?.status === "submitted" || reportData?.status === "approved";
+  const isReadOnly =
+    reportData?.status === "submitted" || reportData?.status === "approved";
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="secondary" size="sm" asChild><Link href={`/projects/${id}/reports`}>
+        <Button variant="secondary" size="sm" asChild>
+          <Link href={`/projects/${id}/reports`}>
             <ArrowLeft className="h-4 w-4" />
             뒤로
-          </Link></Button>
+          </Link>
+        </Button>
         <h1 className="text-2xl font-bold text-slate-900">
           {reportId ? "착공계 보기" : "착공계 작성"}
         </h1>
@@ -193,8 +212,8 @@ export default function StartReportPage({
                 </>
               ) : (
                 <p className="text-sm text-amber-900">
-                  아직 배정된 현장대리인이 없습니다. 착공계 제출 전에 배정을 완료해
-                  주세요.
+                  아직 배정된 현장대리인이 없습니다. 착공계 제출 전에 배정을
+                  완료해 주세요.
                 </p>
               )}
               <div className="mt-3">

@@ -8,7 +8,7 @@ import {
   CardTitle,
   Button,
   Badge,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import {
   Upload,
   FileText,
@@ -88,7 +88,9 @@ export default function UtilitiesPage({
             <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
               <AlertCircle className="mt-0.5 h-5 w-5 text-amber-600" />
               <div>
-                <p className="font-medium text-amber-900">현재 단계에서는 비활성</p>
+                <p className="font-medium text-amber-900">
+                  현재 단계에서는 비활성
+                </p>
                 <p className="mt-1 text-sm text-amber-800">
                   {disabledMessage ||
                     "수도광열비는 학교 프로젝트의 준공 이후 단계에서만 진행합니다."}

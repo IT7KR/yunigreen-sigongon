@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveInput } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  PrimitiveInput,
+} from "@sigongcore/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Save } from "lucide-react";
@@ -49,7 +56,7 @@ const items: NotificationItem[] = [
   {
     key: "platform_announcements",
     label: "플랫폼 공지사항 알림",
-    description: "시공ON 플랫폼 공지사항을 받습니다",
+    description: "시공코어 플랫폼 공지사항을 받습니다",
     roles: "all",
   },
 ];
@@ -107,9 +114,7 @@ export function NotificationPrefsSection() {
       return true;
     }
     // Show tenant items only for company_admin and site_manager
-    return (
-      user?.role === "company_admin" || user?.role === "site_manager"
-    );
+    return user?.role === "company_admin" || user?.role === "site_manager";
   };
 
   if (!loaded) {

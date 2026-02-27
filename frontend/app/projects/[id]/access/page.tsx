@@ -11,7 +11,7 @@ import {
   PrimitiveButton,
   PrimitiveInput,
   toast,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import {
   Eye,
   EyeOff,

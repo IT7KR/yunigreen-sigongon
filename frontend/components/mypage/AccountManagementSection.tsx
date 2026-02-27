@@ -10,11 +10,11 @@ import {
   Input,
   Textarea,
   useConfirmDialog,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { LogOut, UserX, Trash2, AlertTriangle } from "lucide-react";
-import { toast } from "@sigongon/ui";
+import { toast } from "@sigongcore/ui";
 
 export function AccountManagementSection() {
   const { user, logout } = useAuth();
@@ -25,8 +25,10 @@ export function AccountManagementSection() {
   const { confirm } = useConfirmDialog();
 
   const isSuperAdmin = user?.role === "super_admin";
-  const canDeactivate = user?.role === "company_admin" || user?.role === "site_manager";
-  const canDelete = user?.role === "company_admin" || user?.role === "site_manager";
+  const canDeactivate =
+    user?.role === "company_admin" || user?.role === "site_manager";
+  const canDelete =
+    user?.role === "company_admin" || user?.role === "site_manager";
 
   const handleLogoutAll = async () => {
     const confirmed = await confirm({
@@ -40,7 +42,6 @@ export function AccountManagementSection() {
 
     setProcessing(true);
     try {
-
       await api.logoutAllDevices();
       toast.success("모든 기기에서 로그아웃되었습니다");
       logout();
@@ -66,7 +67,6 @@ export function AccountManagementSection() {
 
     setProcessing(true);
     try {
-
       await api.requestAccountDeactivation();
       toast.success("계정이 비활성화되었습니다");
       logout();
@@ -99,7 +99,6 @@ export function AccountManagementSection() {
 
     setProcessing(true);
     try {
-
       await api.requestAccountDeletion({
         password: deletePassword,
         reason: deleteReason,
@@ -152,8 +151,8 @@ export function AccountManagementSection() {
               <div>
                 <h3 className="font-medium text-slate-900">계정 비활성화</h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  계정을 비활성화하면 로그인할 수 없습니다. 관리자에게 문의하여 다시
-                  활성화할 수 있습니다.
+                  계정을 비활성화하면 로그인할 수 없습니다. 관리자에게 문의하여
+                  다시 활성화할 수 있습니다.
                 </p>
               </div>
               <Button
@@ -233,9 +232,7 @@ export function AccountManagementSection() {
                     <Button
                       variant="destructive"
                       onClick={handleDeleteAccount}
-                      disabled={
-                        !deletePassword || !deleteReason || processing
-                      }
+                      disabled={!deletePassword || !deleteReason || processing}
                     >
                       <Trash2 className="h-4 w-4" />
                       탈퇴하기

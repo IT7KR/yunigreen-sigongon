@@ -13,7 +13,7 @@ import {
   PageTransition,
   PrimitiveButton,
   Reveal,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
 
@@ -68,14 +68,14 @@ function LoginForm() {
       <div className="mb-8 flex flex-col items-center">
         <Image
           src="/logo-sq.png"
-          alt="시공ON 로고"
+          alt="시공코어 로고"
           width={80}
           height={80}
           className="object-contain"
         />
         <Reveal className="mt-4" delay={0.04}>
           <h1 className="text-2xl font-bold text-slate-900">
-            <BlurText text="시공ON" />
+            <BlurText text="시공코어" />
           </h1>
         </Reveal>
         <Reveal className="mt-1 text-sm text-slate-500" delay={0.1}>
@@ -205,7 +205,7 @@ function LoginForm() {
       )}
 
       <p className="mt-8 text-xs text-slate-400">
-        © 2026 시공ON. All rights reserved.
+        © 2026 시공코어. All rights reserved.
       </p>
     </PageTransition>
   );
@@ -226,13 +226,13 @@ function LoginPageSkeleton() {
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-primary-500 text-white shadow-lg">
           <Image
             src="/logo.png"
-            alt="시공ON 로고"
+            alt="시공코어 로고"
             width={40}
             height={40}
             className="object-contain"
           />
         </div>
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">시공ON</h1>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">시공코어</h1>
       </div>
       <Card className="w-full max-w-sm">
         <CardContent className="p-6">

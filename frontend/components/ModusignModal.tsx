@@ -1,9 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, CheckCircle2, XCircle, Clock, Send, Download, X as XIcon } from "lucide-react";
-import { Modal, Input, Button, Badge, useConfirmDialog } from "@sigongon/ui";
-import type { ModusignStatus } from "@sigongon/types";
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Send,
+  Download,
+  X as XIcon,
+} from "lucide-react";
+import { Modal, Input, Button, Badge, useConfirmDialog } from "@sigongcore/ui";
+import type { ModusignStatus } from "@sigongcore/types";
 import { api } from "@/lib/api";
 
 interface ModusignModalProps {
@@ -29,7 +37,10 @@ interface ModusignRequestData {
   created_at?: string;
 }
 
-const modusignStatusConfig: Record<ModusignStatus, { label: string; icon: any; color: string }> = {
+const modusignStatusConfig: Record<
+  ModusignStatus,
+  { label: string; icon: any; color: string }
+> = {
   pending: { label: "대기중", icon: Clock, color: "text-slate-500" },
   sent: { label: "발송됨", icon: Send, color: "text-blue-500" },
   viewed: { label: "열람됨", icon: CheckCircle2, color: "text-purple-500" },
@@ -38,13 +49,19 @@ const modusignStatusConfig: Record<ModusignStatus, { label: string; icon: any; c
   expired: { label: "만료됨", icon: XCircle, color: "text-slate-400" },
 };
 
-export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: ModusignModalProps) {
+export function ModusignModal({
+  isOpen,
+  onClose,
+  contractId,
+  onSuccess,
+}: ModusignModalProps) {
   const [signerName, setSignerName] = useState("");
   const [signerEmail, setSignerEmail] = useState("");
   const [signerPhone, setSignerPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modusignRequest, setModusignRequest] = useState<ModusignRequestData | null>(null);
+  const [modusignRequest, setModusignRequest] =
+    useState<ModusignRequestData | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const { confirm } = useConfirmDialog();
 
@@ -201,9 +218,13 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
               <div className="space-y-3 flex-1">
                 <div className="flex items-center gap-2">
                   {(() => {
-                    const statusConfig = getStatusConfig(modusignRequest.status);
+                    const statusConfig = getStatusConfig(
+                      modusignRequest.status,
+                    );
                     const StatusIcon = statusConfig.icon;
-                    return <StatusIcon className={`h-5 w-5 ${statusConfig.color}`} />;
+                    return (
+                      <StatusIcon className={`h-5 w-5 ${statusConfig.color}`} />
+                    );
                   })()}
                   <span className="font-medium text-slate-900">
                     {getStatusConfig(modusignRequest.status).label}
@@ -213,16 +234,22 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-500">서명자</span>
-                    <span className="font-medium text-slate-900">{modusignRequest.signer_name || "-"}</span>
+                    <span className="font-medium text-slate-900">
+                      {modusignRequest.signer_name || "-"}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">이메일</span>
-                    <span className="text-slate-900">{modusignRequest.signer_email || "-"}</span>
+                    <span className="text-slate-900">
+                      {modusignRequest.signer_email || "-"}
+                    </span>
                   </div>
                   {modusignRequest.signer_phone && (
                     <div className="flex justify-between">
                       <span className="text-slate-500">전화번호</span>
-                      <span className="text-slate-900">{modusignRequest.signer_phone}</span>
+                      <span className="text-slate-900">
+                        {modusignRequest.signer_phone}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between">
@@ -254,7 +281,10 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
 
           {modusignRequest.status === "sent" && (
             <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700">
-              <p>서명자에게 이메일이 발송되었습니다. 이메일의 링크를 통해 서명을 진행할 수 있습니다.</p>
+              <p>
+                서명자에게 이메일이 발송되었습니다. 이메일의 링크를 통해 서명을
+                진행할 수 있습니다.
+              </p>
             </div>
           )}
 
@@ -266,7 +296,9 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
 
           {modusignRequest.status === "signed" && (
             <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700">
-              <p>서명이 완료되었습니다. 서명된 문서를 다운로드할 수 있습니다.</p>
+              <p>
+                서명이 완료되었습니다. 서명된 문서를 다운로드할 수 있습니다.
+              </p>
             </div>
           )}
 
@@ -295,13 +327,18 @@ export function ModusignModal({ isOpen, onClose, contractId, onSuccess }: Modusi
                 서명된 문서 다운로드
               </Button>
             )}
-            {(modusignRequest.status === "sent" || modusignRequest.status === "viewed") && (
+            {(modusignRequest.status === "sent" ||
+              modusignRequest.status === "viewed") && (
               <Button
                 variant="secondary"
                 onClick={handleCancelRequest}
                 disabled={loading}
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "요청 취소"}
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "요청 취소"
+                )}
               </Button>
             )}
             <Button variant="secondary" onClick={handleClose}>

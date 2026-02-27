@@ -27,11 +27,11 @@ import {
   Textarea,
   cn,
   toast,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
-import type { MaterialOrder, MaterialOrderStatus } from "@sigongon/types";
+import type { MaterialOrder, MaterialOrderStatus } from "@sigongcore/types";
 
 type StatusBadgeMeta = {
   icon: ComponentType<{ className?: string }>;
@@ -56,7 +56,11 @@ const STATUS_META: Record<string, StatusBadgeMeta> = {
     color: "bg-violet-100 text-violet-700",
     label: "입금 완료",
   },
-  shipped: { icon: Truck, color: "bg-cyan-100 text-cyan-700", label: "배송 중" },
+  shipped: {
+    icon: Truck,
+    color: "bg-cyan-100 text-cyan-700",
+    label: "배송 중",
+  },
   delivered: {
     icon: CheckCircle,
     color: "bg-emerald-100 text-emerald-700",
@@ -67,7 +71,11 @@ const STATUS_META: Record<string, StatusBadgeMeta> = {
     color: "bg-green-100 text-green-700",
     label: "종료",
   },
-  cancelled: { icon: AlertCircle, color: "bg-red-100 text-red-700", label: "취소" },
+  cancelled: {
+    icon: AlertCircle,
+    color: "bg-red-100 text-red-700",
+    label: "취소",
+  },
   confirmed: {
     icon: Receipt,
     color: "bg-amber-100 text-amber-700",
@@ -75,7 +83,9 @@ const STATUS_META: Record<string, StatusBadgeMeta> = {
   },
 };
 
-const NEXT_STATUS_BY_CURRENT: Partial<Record<MaterialOrderStatus, MaterialOrderStatus>> = {
+const NEXT_STATUS_BY_CURRENT: Partial<
+  Record<MaterialOrderStatus, MaterialOrderStatus>
+> = {
   draft: "requested",
   requested: "invoice_received",
   invoice_received: "payment_completed",
@@ -117,7 +127,9 @@ function statusBadge(status: MaterialOrderStatus) {
   );
 }
 
-function nextStatusFor(status: MaterialOrderStatus): MaterialOrderStatus | null {
+function nextStatusFor(
+  status: MaterialOrderStatus,
+): MaterialOrderStatus | null {
   return NEXT_STATUS_BY_CURRENT[normalizeStatus(status)] || null;
 }
 
@@ -125,10 +137,7 @@ function nextLabelFor(status: MaterialOrderStatus): string {
   return NEXT_LABEL_BY_STATUS[normalizeStatus(status)] || "다음 단계";
 }
 
-function canAdvanceByRole(
-  status: MaterialOrderStatus,
-  role?: string,
-): boolean {
+function canAdvanceByRole(status: MaterialOrderStatus, role?: string): boolean {
   const next = nextStatusFor(status);
   if (!next) return false;
   if (role === "site_manager") {
@@ -157,7 +166,9 @@ export default function MaterialOrdersPage({
     queryFn: () => api.getMaterialOrders(projectId),
   });
 
-  const orders = (ordersResponse?.success ? ordersResponse.data : []) as MaterialOrder[];
+  const orders = (
+    ordersResponse?.success ? ordersResponse.data : []
+  ) as MaterialOrder[];
 
   const { data: selectedOrderResponse } = useQuery({
     queryKey: ["material-order", selectedOrderId],
@@ -165,9 +176,9 @@ export default function MaterialOrdersPage({
     enabled: !!selectedOrderId,
   });
 
-  const selectedOrder = (selectedOrderResponse?.success
-    ? selectedOrderResponse.data
-    : null) as MaterialOrder | null;
+  const selectedOrder = (
+    selectedOrderResponse?.success ? selectedOrderResponse.data : null
+  ) as MaterialOrder | null;
 
   useEffect(() => {
     if (!selectedOrder) return;
@@ -193,21 +204,31 @@ export default function MaterialOrdersPage({
         invoice_file_url: payload.invoice_file_url,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["material-orders", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["material-order", selectedOrderId] });
+      queryClient.invalidateQueries({
+        queryKey: ["material-orders", projectId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["material-order", selectedOrderId],
+      });
       toast.success("발주 상태를 업데이트했습니다.");
     },
     onError: (error: unknown) => {
       const message =
-        error instanceof Error ? error.message : "발주 상태 업데이트에 실패했습니다.";
+        error instanceof Error
+          ? error.message
+          : "발주 상태 업데이트에 실패했습니다.";
       toast.error(message);
     },
   });
 
   const orderedCounts = useMemo(() => {
     return {
-      active: orders.filter((o) => !["closed", "cancelled"].includes(normalizeStatus(o.status))).length,
-      done: orders.filter((o) => ["closed", "cancelled"].includes(normalizeStatus(o.status))).length,
+      active: orders.filter(
+        (o) => !["closed", "cancelled"].includes(normalizeStatus(o.status)),
+      ).length,
+      done: orders.filter((o) =>
+        ["closed", "cancelled"].includes(normalizeStatus(o.status)),
+      ).length,
     };
   }, [orders]);
 
@@ -234,11 +255,13 @@ export default function MaterialOrdersPage({
     };
 
     if (next === "invoice_received" || next === "payment_completed") {
-      if (invoiceNumberDraft.trim()) payload.invoice_number = invoiceNumberDraft.trim();
+      if (invoiceNumberDraft.trim())
+        payload.invoice_number = invoiceNumberDraft.trim();
       if (typeof invoiceAmountDraft === "number" && invoiceAmountDraft > 0) {
         payload.invoice_amount = invoiceAmountDraft;
       }
-      if (invoiceFileUrlDraft.trim()) payload.invoice_file_url = invoiceFileUrlDraft.trim();
+      if (invoiceFileUrlDraft.trim())
+        payload.invoice_file_url = invoiceFileUrlDraft.trim();
     }
 
     updateStatusMutation.mutate(payload);
@@ -277,19 +300,22 @@ export default function MaterialOrdersPage({
           </p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          새 발주
+          <Plus className="mr-2 h-4 w-4" />새 발주
         </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:w-[320px]">
         <Card className="p-3">
           <p className="text-xs text-slate-500">진행 중</p>
-          <p className="mt-1 text-xl font-bold text-slate-900">{orderedCounts.active}</p>
+          <p className="mt-1 text-xl font-bold text-slate-900">
+            {orderedCounts.active}
+          </p>
         </Card>
         <Card className="p-3">
           <p className="text-xs text-slate-500">종결</p>
-          <p className="mt-1 text-xl font-bold text-slate-900">{orderedCounts.done}</p>
+          <p className="mt-1 text-xl font-bold text-slate-900">
+            {orderedCounts.done}
+          </p>
         </Card>
       </div>
 
@@ -304,12 +330,16 @@ export default function MaterialOrdersPage({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{order.order_number}</p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {order.order_number}
+                    </p>
                     <p className="mt-1 text-xs text-slate-500">
                       품목 {order.items?.length || 0}개
                     </p>
                     <p className="mt-1 text-sm font-medium text-slate-700">
-                      {canViewAmount ? `${(order.total_amount || 0).toLocaleString()}원` : "비공개"}
+                      {canViewAmount
+                        ? `${(order.total_amount || 0).toLocaleString()}원`
+                        : "비공개"}
                     </p>
                   </div>
                   {statusBadge(order.status)}
@@ -342,7 +372,9 @@ export default function MaterialOrdersPage({
                     className="cursor-pointer hover:bg-slate-50"
                     onClick={() => setSelectedOrderId(order.id)}
                   >
-                    <TableCell className="font-medium">{order.order_number}</TableCell>
+                    <TableCell className="font-medium">
+                      {order.order_number}
+                    </TableCell>
                     <TableCell>{statusBadge(order.status)}</TableCell>
                     <TableCell>{order.items?.length || 0}개</TableCell>
                     <TableCell>
@@ -378,11 +410,14 @@ export default function MaterialOrdersPage({
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
             <Package className="h-8 w-8 text-slate-400" />
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-slate-900">발주 내역이 없습니다</h3>
-          <p className="mt-2 text-sm text-slate-600">새 발주를 생성하여 자재를 주문하세요.</p>
+          <h3 className="mt-4 text-lg font-semibold text-slate-900">
+            발주 내역이 없습니다
+          </h3>
+          <p className="mt-2 text-sm text-slate-600">
+            새 발주를 생성하여 자재를 주문하세요.
+          </p>
           <Button onClick={() => setIsCreateModalOpen(true)} className="mt-6">
-            <Plus className="mr-2 h-4 w-4" />
-            새 발주
+            <Plus className="mr-2 h-4 w-4" />새 발주
           </Button>
         </Card>
       )}
@@ -401,15 +436,21 @@ export default function MaterialOrdersPage({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700">발주 품목</label>
+              <label className="text-sm font-medium text-slate-700">
+                발주 품목
+              </label>
               <div className="mt-2 space-y-2">
                 {selectedOrder.items.map((item) => (
                   <Card key={item.id} className="p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h4 className="font-medium text-slate-900">{item.description}</h4>
+                        <h4 className="font-medium text-slate-900">
+                          {item.description}
+                        </h4>
                         {item.specification && (
-                          <p className="text-sm text-slate-600">{item.specification}</p>
+                          <p className="text-sm text-slate-600">
+                            {item.specification}
+                          </p>
                         )}
                         <p className="mt-1 text-sm text-slate-500">
                           {item.quantity} {item.unit}
@@ -417,12 +458,17 @@ export default function MaterialOrdersPage({
                             ? ` × ${(item.unit_price || 0).toLocaleString()}원`
                             : ""}
                         </p>
-                        {item.price_source === "manual_override" && item.override_reason && (
-                          <p className="mt-1 text-xs text-amber-600">수동 사유: {item.override_reason}</p>
-                        )}
+                        {item.price_source === "manual_override" &&
+                          item.override_reason && (
+                            <p className="mt-1 text-xs text-amber-600">
+                              수동 사유: {item.override_reason}
+                            </p>
+                          )}
                       </div>
                       <p className="font-semibold text-slate-900">
-                        {canViewAmount ? `${(item.amount || 0).toLocaleString()}원` : "비공개"}
+                        {canViewAmount
+                          ? `${(item.amount || 0).toLocaleString()}원`
+                          : "비공개"}
                       </p>
                     </div>
                   </Card>
@@ -443,7 +489,9 @@ export default function MaterialOrdersPage({
                 min="0"
                 value={invoiceAmountDraft}
                 onChange={(e) =>
-                  setInvoiceAmountDraft(e.target.value ? Number(e.target.value) : "")
+                  setInvoiceAmountDraft(
+                    e.target.value ? Number(e.target.value) : "",
+                  )
                 }
               />
               <div className="sm:col-span-2">
@@ -466,30 +514,74 @@ export default function MaterialOrdersPage({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700">진행 상황</label>
+              <label className="text-sm font-medium text-slate-700">
+                진행 상황
+              </label>
               <div className="mt-2 space-y-2 text-sm text-slate-600">
-                {selectedOrder.created_at && <p>생성: {new Date(selectedOrder.created_at).toLocaleString()}</p>}
-                {selectedOrder.requested_at && <p>발주 요청: {new Date(selectedOrder.requested_at).toLocaleString()}</p>}
-                {selectedOrder.confirmed_at && <p>계산서 접수: {new Date(selectedOrder.confirmed_at).toLocaleString()}</p>}
-                {selectedOrder.payment_at && <p>입금 완료: {new Date(selectedOrder.payment_at).toLocaleString()}</p>}
-                {selectedOrder.shipped_at && <p>배송 시작: {new Date(selectedOrder.shipped_at).toLocaleString()}</p>}
-                {selectedOrder.delivered_at && <p>수령 완료: {new Date(selectedOrder.delivered_at).toLocaleString()}</p>}
-                {selectedOrder.closed_at && <p>종료: {new Date(selectedOrder.closed_at).toLocaleString()}</p>}
+                {selectedOrder.created_at && (
+                  <p>
+                    생성: {new Date(selectedOrder.created_at).toLocaleString()}
+                  </p>
+                )}
+                {selectedOrder.requested_at && (
+                  <p>
+                    발주 요청:{" "}
+                    {new Date(selectedOrder.requested_at).toLocaleString()}
+                  </p>
+                )}
+                {selectedOrder.confirmed_at && (
+                  <p>
+                    계산서 접수:{" "}
+                    {new Date(selectedOrder.confirmed_at).toLocaleString()}
+                  </p>
+                )}
+                {selectedOrder.payment_at && (
+                  <p>
+                    입금 완료:{" "}
+                    {new Date(selectedOrder.payment_at).toLocaleString()}
+                  </p>
+                )}
+                {selectedOrder.shipped_at && (
+                  <p>
+                    배송 시작:{" "}
+                    {new Date(selectedOrder.shipped_at).toLocaleString()}
+                  </p>
+                )}
+                {selectedOrder.delivered_at && (
+                  <p>
+                    수령 완료:{" "}
+                    {new Date(selectedOrder.delivered_at).toLocaleString()}
+                  </p>
+                )}
+                {selectedOrder.closed_at && (
+                  <p>
+                    종료: {new Date(selectedOrder.closed_at).toLocaleString()}
+                  </p>
+                )}
               </div>
             </div>
 
             {selectedOrder.notes && (
               <div>
-                <label className="text-sm font-medium text-slate-700">메모</label>
-                <p className="mt-2 whitespace-pre-line text-sm text-slate-600">{selectedOrder.notes}</p>
+                <label className="text-sm font-medium text-slate-700">
+                  메모
+                </label>
+                <p className="mt-2 whitespace-pre-line text-sm text-slate-600">
+                  {selectedOrder.notes}
+                </p>
               </div>
             )}
 
             <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4">
-              <Button variant="secondary" onClick={() => setSelectedOrderId(null)}>
+              <Button
+                variant="secondary"
+                onClick={() => setSelectedOrderId(null)}
+              >
                 닫기
               </Button>
-              {!(["closed", "cancelled"].includes(normalizeStatus(selectedOrder.status))) && (
+              {!["closed", "cancelled"].includes(
+                normalizeStatus(selectedOrder.status),
+              ) && (
                 <Button
                   variant="secondary"
                   onClick={() => handleCancel(selectedOrder)}
@@ -528,7 +620,9 @@ export default function MaterialOrdersPage({
         projectId={projectId}
         onSuccess={() => {
           setIsCreateModalOpen(false);
-          queryClient.invalidateQueries({ queryKey: ["material-orders", projectId] });
+          queryClient.invalidateQueries({
+            queryKey: ["material-orders", projectId],
+          });
           toast.success("발주를 생성했습니다.");
         }}
       />
@@ -553,10 +647,10 @@ function isItemSubmittable(item: CreateItem): boolean {
   }
   return Boolean(
     item.description &&
-      item.unit &&
-      item.quantity > 0 &&
-      item.unit_price > 0 &&
-      item.override_reason,
+    item.unit &&
+    item.quantity > 0 &&
+    item.unit_price > 0 &&
+    item.override_reason,
   );
 }
 
@@ -630,7 +724,11 @@ function CreateOrderModal({
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateItem = (index: number, field: keyof CreateItem, value: string | number) => {
+  const updateItem = (
+    index: number,
+    field: keyof CreateItem,
+    value: string | number,
+  ) => {
     setItems((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], [field]: value };
@@ -660,9 +758,15 @@ function CreateOrderModal({
             <Card key={index} className="p-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-slate-900">품목 {index + 1}</h4>
+                  <h4 className="font-medium text-slate-900">
+                    품목 {index + 1}
+                  </h4>
                   {items.length > 1 && (
-                    <Button variant="ghost" size="sm" onClick={() => removeItem(index)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeItem(index)}
+                    >
                       삭제
                     </Button>
                   )}
@@ -673,7 +777,9 @@ function CreateOrderModal({
                     label="카탈로그 품목 ID"
                     placeholder="선택 시 자동단가"
                     value={item.catalog_item_id}
-                    onChange={(e) => updateItem(index, "catalog_item_id", e.target.value)}
+                    onChange={(e) =>
+                      updateItem(index, "catalog_item_id", e.target.value)
+                    }
                   />
                   <Input
                     label="단가표 Revision ID"
@@ -689,14 +795,18 @@ function CreateOrderModal({
                   label="품목명 (수동 입력 시 필수)"
                   placeholder="예: 방수 시트"
                   value={item.description}
-                  onChange={(e) => updateItem(index, "description", e.target.value)}
+                  onChange={(e) =>
+                    updateItem(index, "description", e.target.value)
+                  }
                 />
 
                 <Input
                   label="규격 (선택)"
                   placeholder="예: 1.5mm 두께"
                   value={item.specification}
-                  onChange={(e) => updateItem(index, "specification", e.target.value)}
+                  onChange={(e) =>
+                    updateItem(index, "specification", e.target.value)
+                  }
                 />
 
                 <div className="grid grid-cols-3 gap-3">
@@ -721,7 +831,11 @@ function CreateOrderModal({
                     min="0"
                     value={item.unit_price}
                     onChange={(e) =>
-                      updateItem(index, "unit_price", Number(e.target.value) || 0)
+                      updateItem(
+                        index,
+                        "unit_price",
+                        Number(e.target.value) || 0,
+                      )
                     }
                   />
                 </div>
@@ -730,13 +844,16 @@ function CreateOrderModal({
                   label="수동 입력 사유"
                   placeholder="카탈로그 외 품목/긴급 대체 등"
                   value={item.override_reason}
-                  onChange={(e) => updateItem(index, "override_reason", e.target.value)}
+                  onChange={(e) =>
+                    updateItem(index, "override_reason", e.target.value)
+                  }
                 />
 
                 <div className="text-right text-sm">
                   <span className="text-slate-600">금액: </span>
                   <span className="font-semibold text-slate-900">
-                    {(item.quantity * (item.unit_price || 0)).toLocaleString()}원
+                    {(item.quantity * (item.unit_price || 0)).toLocaleString()}
+                    원
                   </span>
                 </div>
               </div>

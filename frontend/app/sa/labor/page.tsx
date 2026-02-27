@@ -10,7 +10,7 @@ import {
   Modal,
   PrimitiveSelect,
   toast,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { MobileListCard } from "@/components/MobileListCard";
 import { useEffect, useState } from "react";
@@ -28,7 +28,7 @@ import type {
   WorkerDocument,
   WorkerDocumentReviewAction,
   WorkerDocumentReviewQueueItem,
-} from "@sigongon/types";
+} from "@sigongcore/types";
 
 type SALaborWorker = {
   id: string;
@@ -68,8 +68,12 @@ export default function SALaborPage() {
     TenantWorkerDistribution[]
   >([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [reviewQueue, setReviewQueue] = useState<WorkerDocumentReviewQueueItem[]>([]);
-  const [reviewFilter, setReviewFilter] = useState<WorkerDocument["review_status"] | "all">("pending_review");
+  const [reviewQueue, setReviewQueue] = useState<
+    WorkerDocumentReviewQueueItem[]
+  >([]);
+  const [reviewFilter, setReviewFilter] = useState<
+    WorkerDocument["review_status"] | "all"
+  >("pending_review");
   const [isReviewQueueOpen, setIsReviewQueueOpen] = useState(false);
   const [isReviewLoading, setIsReviewLoading] = useState(false);
   const [reviewActionKey, setReviewActionKey] = useState<string | null>(null);
@@ -141,7 +145,11 @@ export default function SALaborPage() {
       }
     };
 
-    void Promise.all([fetchData(), fetchReviewQueue("pending_review"), fetchReviewSummary()]);
+    void Promise.all([
+      fetchData(),
+      fetchReviewQueue("pending_review"),
+      fetchReviewSummary(),
+    ]);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatFileSize = (size: number) => {
@@ -185,7 +193,9 @@ export default function SALaborPage() {
     );
   };
 
-  const handleDownloadDocument = async (item: WorkerDocumentReviewQueueItem) => {
+  const handleDownloadDocument = async (
+    item: WorkerDocumentReviewQueueItem,
+  ) => {
     try {
       const blob = await api.downloadWorkerDocument(item.id);
       const url = URL.createObjectURL(blob);
@@ -204,7 +214,11 @@ export default function SALaborPage() {
     setReviewActionKey(key);
     try {
       let reason: string | undefined;
-      if (action === "reject" || action === "quarantine" || action === "request_reupload") {
+      if (
+        action === "reject" ||
+        action === "quarantine" ||
+        action === "request_reupload"
+      ) {
         const input = window.prompt("사유를 입력하세요.", "");
         if (!input || !input.trim()) {
           toast.error("사유를 입력해야 합니다.");
@@ -212,13 +226,22 @@ export default function SALaborPage() {
         }
         reason = input.trim();
       }
-      const response = await api.reviewWorkerDocument(item.id, { action, reason });
+      const response = await api.reviewWorkerDocument(item.id, {
+        action,
+        reason,
+      });
       if (response.success) {
         toast.success("검토 결과를 반영했습니다.");
-        await Promise.all([fetchReviewQueue(reviewFilter), refreshWorkerOverview(), fetchReviewSummary()]);
+        await Promise.all([
+          fetchReviewQueue(reviewFilter),
+          refreshWorkerOverview(),
+          fetchReviewSummary(),
+        ]);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "서류 검토에 실패했습니다.");
+      toast.error(
+        error instanceof Error ? error.message : "서류 검토에 실패했습니다.",
+      );
     } finally {
       setReviewActionKey(null);
     }
@@ -237,7 +260,10 @@ export default function SALaborPage() {
     const action = worker.is_blocked_for_labor ? "unblock" : "block";
     let reason: string | undefined;
     if (action === "block") {
-      const input = window.prompt("노무 투입 차단 사유를 입력하세요.", worker.block_reason || "");
+      const input = window.prompt(
+        "노무 투입 차단 사유를 입력하세요.",
+        worker.block_reason || "",
+      );
       if (!input || !input.trim()) {
         toast.error("차단 사유를 입력해야 합니다.");
         return;
@@ -247,13 +273,28 @@ export default function SALaborPage() {
 
     setWorkerActionKey(`${worker.id}:${action}`);
     try {
-      const response = await api.setDailyWorkerControl(worker.id, { action, reason });
+      const response = await api.setDailyWorkerControl(worker.id, {
+        action,
+        reason,
+      });
       if (response.success) {
-        toast.success(action === "block" ? "근로자를 차단했습니다." : "근로자 차단을 해제했습니다.");
-        await Promise.all([refreshWorkerOverview(), fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
+        toast.success(
+          action === "block"
+            ? "근로자를 차단했습니다."
+            : "근로자 차단을 해제했습니다.",
+        );
+        await Promise.all([
+          refreshWorkerOverview(),
+          fetchReviewQueue(reviewFilter),
+          fetchReviewSummary(),
+        ]);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "근로자 통제 변경에 실패했습니다.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "근로자 통제 변경에 실패했습니다.",
+      );
     } finally {
       setWorkerActionKey(null);
     }
@@ -287,7 +328,8 @@ export default function SALaborPage() {
         </div>
 
         <div className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          최고관리자는 이상 서류 검토/격리/강제 반려 및 노무 투입 차단·해제를 수행할 수 있습니다.
+          최고관리자는 이상 서류 검토/격리/강제 반려 및 노무 투입 차단·해제를
+          수행할 수 있습니다.
         </div>
 
         <div className="grid gap-6 md:grid-cols-4">
@@ -298,7 +340,9 @@ export default function SALaborPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{summary.active_workers}명</div>
+              <div className="text-2xl font-bold">
+                {summary.active_workers}명
+              </div>
             </CardContent>
           </Card>
 
@@ -356,8 +400,12 @@ export default function SALaborPage() {
                     key={tenant.organization_id}
                     className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2"
                   >
-                    <span className="text-sm font-medium text-slate-800">{tenant.organization_name}</span>
-                    <span className="text-sm text-slate-500">{tenant.worker_count}명</span>
+                    <span className="text-sm font-medium text-slate-800">
+                      {tenant.organization_name}
+                    </span>
+                    <span className="text-sm text-slate-500">
+                      {tenant.worker_count}명
+                    </span>
                   </div>
                 ))}
               </div>
@@ -368,12 +416,18 @@ export default function SALaborPage() {
         <Card>
           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-base font-semibold text-slate-900">서류 검토 현황</p>
+              <p className="text-base font-semibold text-slate-900">
+                서류 검토 현황
+              </p>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                <Badge variant="default">검토대기 {reviewSummary.pending_review}건</Badge>
+                <Badge variant="default">
+                  검토대기 {reviewSummary.pending_review}건
+                </Badge>
                 <Badge variant="success">승인 {reviewSummary.approved}건</Badge>
                 <Badge variant="warning">반려 {reviewSummary.rejected}건</Badge>
-                <Badge variant="error">격리 {reviewSummary.quarantined}건</Badge>
+                <Badge variant="error">
+                  격리 {reviewSummary.quarantined}건
+                </Badge>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -395,9 +449,13 @@ export default function SALaborPage() {
             {/* Mobile view */}
             <div className="space-y-3 md:hidden">
               {isLoading ? (
-                <p className="py-6 text-center text-sm text-slate-400">불러오는 중...</p>
+                <p className="py-6 text-center text-sm text-slate-400">
+                  불러오는 중...
+                </p>
               ) : workers.length === 0 ? (
-                <p className="py-6 text-center text-sm text-slate-400">등록된 근로자가 없습니다.</p>
+                <p className="py-6 text-center text-sm text-slate-400">
+                  등록된 근로자가 없습니다.
+                </p>
               ) : (
                 workers.map((worker) => (
                   <MobileListCard
@@ -405,7 +463,11 @@ export default function SALaborPage() {
                     title={worker.name}
                     subtitle={worker.organization_name}
                     badge={
-                      <Badge variant={worker.status === "active" ? "success" : "default"}>
+                      <Badge
+                        variant={
+                          worker.status === "active" ? "success" : "default"
+                        }
+                      >
                         {worker.status === "active" ? "재직" : "대기"}
                       </Badge>
                     }
@@ -415,9 +477,15 @@ export default function SALaborPage() {
                         label: "계약상태",
                         value: (
                           <Badge
-                            variant={worker.contract_status === "signed" ? "success" : "warning"}
+                            variant={
+                              worker.contract_status === "signed"
+                                ? "success"
+                                : "warning"
+                            }
                           >
-                            {worker.contract_status === "signed" ? "서명 완료" : "서명 대기"}
+                            {worker.contract_status === "signed"
+                              ? "서명 완료"
+                              : "서명 대기"}
                           </Badge>
                         ),
                       },
@@ -426,7 +494,9 @@ export default function SALaborPage() {
                     actions={
                       <Button
                         size="sm"
-                        variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
+                        variant={
+                          worker.is_blocked_for_labor ? "secondary" : "ghost"
+                        }
                         onClick={() => handleWorkerControl(worker)}
                         disabled={
                           workerActionKey ===
@@ -460,46 +530,80 @@ export default function SALaborPage() {
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan={7} className="py-6 text-center text-sm text-slate-400">
+                        <td
+                          colSpan={7}
+                          className="py-6 text-center text-sm text-slate-400"
+                        >
                           불러오는 중...
                         </td>
                       </tr>
                     ) : workers.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-6 text-center text-sm text-slate-400">
+                        <td
+                          colSpan={7}
+                          className="py-6 text-center text-sm text-slate-400"
+                        >
                           등록된 근로자가 없습니다.
                         </td>
                       </tr>
                     ) : (
                       workers.map((worker) => (
-                        <tr key={worker.id} className="border-b border-slate-100 last:border-0">
-                          <td className="py-4 font-medium text-slate-900">{worker.name}</td>
+                        <tr
+                          key={worker.id}
+                          className="border-b border-slate-100 last:border-0"
+                        >
+                          <td className="py-4 font-medium text-slate-900">
+                            {worker.name}
+                          </td>
                           <td className="py-4 text-slate-500">{worker.role}</td>
-                          <td className="py-4 text-slate-500">{worker.organization_name}</td>
+                          <td className="py-4 text-slate-500">
+                            {worker.organization_name}
+                          </td>
                           <td className="py-4">
-                            <Badge variant={worker.status === "active" ? "success" : "default"}>
+                            <Badge
+                              variant={
+                                worker.status === "active"
+                                  ? "success"
+                                  : "default"
+                              }
+                            >
                               {worker.status === "active" ? "재직" : "대기"}
                             </Badge>
                           </td>
                           <td className="py-4">
                             <Badge
                               variant={
-                                worker.contract_status === "signed" ? "success" : "warning"
+                                worker.contract_status === "signed"
+                                  ? "success"
+                                  : "warning"
                               }
                             >
-                              {worker.contract_status === "signed" ? "서명 완료" : "서명 대기"}
+                              {worker.contract_status === "signed"
+                                ? "서명 완료"
+                                : "서명 대기"}
                             </Badge>
                           </td>
-                          <td className="py-4 text-slate-500">{worker.last_work_date}</td>
+                          <td className="py-4 text-slate-500">
+                            {worker.last_work_date}
+                          </td>
                           <td className="py-4">
                             <Button
                               size="sm"
-                              variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
+                              variant={
+                                worker.is_blocked_for_labor
+                                  ? "secondary"
+                                  : "ghost"
+                              }
                               onClick={() => handleWorkerControl(worker)}
-                              disabled={workerActionKey === `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`}
+                              disabled={
+                                workerActionKey ===
+                                `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`
+                              }
                             >
                               <Ban className="h-3.5 w-3.5" />
-                              {worker.is_blocked_for_labor ? "차단해제" : "차단"}
+                              {worker.is_blocked_for_labor
+                                ? "차단해제"
+                                : "차단"}
                             </Button>
                           </td>
                         </tr>
@@ -529,7 +633,9 @@ export default function SALaborPage() {
               <PrimitiveSelect
                 value={reviewFilter}
                 onChange={(e) => {
-                  const next = e.target.value as WorkerDocument["review_status"] | "all";
+                  const next = e.target.value as
+                    | WorkerDocument["review_status"]
+                    | "all";
                   setReviewFilter(next);
                   void fetchReviewQueue(next);
                 }}
@@ -546,26 +652,38 @@ export default function SALaborPage() {
                 onClick={handleRefreshReviewQueue}
                 disabled={isReviewLoading}
               >
-                {isReviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "새로고침"}
+                {isReviewLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "새로고침"
+                )}
               </Button>
             </div>
           </div>
 
           {isReviewLoading ? (
-            <div className="py-8 text-center text-sm text-slate-500">검토 목록을 불러오는 중...</div>
+            <div className="py-8 text-center text-sm text-slate-500">
+              검토 목록을 불러오는 중...
+            </div>
           ) : reviewQueue.length === 0 ? (
-            <div className="py-8 text-center text-sm text-slate-500">검토할 서류가 없습니다.</div>
+            <div className="py-8 text-center text-sm text-slate-500">
+              검토할 서류가 없습니다.
+            </div>
           ) : (
             <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
               {reviewQueue.map((item) => (
-                <div key={item.id} className="rounded-lg border border-slate-200 p-3">
+                <div
+                  key={item.id}
+                  className="rounded-lg border border-slate-200 p-3"
+                >
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
                         {item.worker_name} · {item.document_name}
                       </p>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        {item.original_filename || "파일명 없음"} · {formatFileSize(item.file_size_bytes)}
+                        {item.original_filename || "파일명 없음"} ·{" "}
+                        {formatFileSize(item.file_size_bytes)}
                       </p>
                       {!!item.anomaly_flags.length && (
                         <p className="mt-1 text-xs text-amber-700">
@@ -573,7 +691,9 @@ export default function SALaborPage() {
                         </p>
                       )}
                       {!!item.review_reason && (
-                        <p className="mt-1 text-xs text-red-600">사유: {item.review_reason}</p>
+                        <p className="mt-1 text-xs text-red-600">
+                          사유: {item.review_reason}
+                        </p>
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
-import { Button } from "@sigongon/ui";
+import { Button } from "@sigongcore/ui";
 import { useAuth } from "@/lib/auth";
 
 export default function ForbiddenPage() {
@@ -24,7 +24,9 @@ export default function ForbiddenPage() {
           이 페이지에 접근할 권한이 없습니다.
         </p>
         <div className="mt-8">
-          <Button asChild><Link href={backHref}>돌아가기</Link></Button>
+          <Button asChild>
+            <Link href={backHref}>돌아가기</Link>
+          </Button>
         </div>
       </div>
     </div>

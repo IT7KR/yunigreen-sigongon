@@ -1,7 +1,7 @@
 "use client";
 
 import { Printer } from "lucide-react";
-import { Button } from "@sigongon/ui";
+import { Button } from "@sigongcore/ui";
 
 interface TaxInvoiceData {
   id: string;

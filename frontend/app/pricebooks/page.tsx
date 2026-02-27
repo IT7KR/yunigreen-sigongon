@@ -16,7 +16,18 @@ import {
   Archive,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Button, Card, CardContent, CardHeader, CardTitle, LoadingOverlay, PrimitiveButton, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingOverlay,
+  PrimitiveButton,
+  formatDate,
+  toast,
+  useConfirmDialog,
+} from "@sigongcore/ui";
 import { api } from "@/lib/api";
 import { PdfUploadModal } from "@/components/PdfUploadModal";
 

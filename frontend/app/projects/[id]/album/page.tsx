@@ -4,7 +4,19 @@ import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Image, Loader2, Trash2 } from "lucide-react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, LoadingOverlay, PrimitiveButton, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingOverlay,
+  PrimitiveButton,
+  formatDate,
+  toast,
+  useConfirmDialog,
+} from "@sigongcore/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
 
 interface PhotoAlbum {
@@ -136,9 +148,7 @@ export default function ProjectAlbumListPage({
                         </h3>
                         <Badge
                           variant={
-                            album.status === "published"
-                              ? "success"
-                              : "default"
+                            album.status === "published" ? "success" : "default"
                           }
                         >
                           {album.status === "published" ? "발행" : "초안"}

@@ -4,7 +4,15 @@ import { use, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, Button, LoadingOverlay, toast } from "@sigongon/ui";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+  LoadingOverlay,
+  toast,
+} from "@sigongcore/ui";
 import { ConstructionReportForm } from "@/components/ConstructionReportForm";
 import { api } from "@/lib/api";
 
@@ -35,7 +43,9 @@ export default function CompletionReportPage({
   const searchParams = useSearchParams();
   const reportId = searchParams.get("reportId");
 
-  const [reportData, setReportData] = useState<CompletionReportData | null>(null);
+  const [reportData, setReportData] = useState<CompletionReportData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +69,7 @@ export default function CompletionReportPage({
         const reportsResponse = await api.getConstructionReports(id);
         if (reportsResponse.success && reportsResponse.data) {
           const startReport = reportsResponse.data.find(
-            (r: any) => r.report_type === "start" && r.status === "approved"
+            (r: any) => r.report_type === "start" && r.status === "approved",
           );
 
           if (!startReport) {
@@ -133,16 +143,16 @@ export default function CompletionReportPage({
   }
 
   if (loading) {
-    return (
-      <LoadingOverlay variant="inline" text="준공계를 불러오는 중..." />
-    );
+    return <LoadingOverlay variant="inline" text="준공계를 불러오는 중..." />;
   }
 
   if (error) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <p className="text-red-500">{error}</p>
-        <Button asChild><Link href={`/projects/${id}/reports`}>뒤로 가기</Link></Button>
+        <Button asChild>
+          <Link href={`/projects/${id}/reports`}>뒤로 가기</Link>
+        </Button>
       </div>
     );
   }
@@ -154,10 +164,12 @@ export default function CompletionReportPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="secondary" size="sm" asChild><Link href={`/projects/${id}/reports`}>
+        <Button variant="secondary" size="sm" asChild>
+          <Link href={`/projects/${id}/reports`}>
             <ArrowLeft className="h-4 w-4" />
             뒤로
-          </Link></Button>
+          </Link>
+        </Button>
         <h1 className="text-2xl font-bold text-slate-900">
           {reportId ? "준공계 보기" : "준공계 작성"}
         </h1>

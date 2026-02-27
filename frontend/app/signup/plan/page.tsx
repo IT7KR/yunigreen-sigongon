@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Card, Stepper } from "@sigongon/ui";
+import { Button, Card, Stepper } from "@sigongcore/ui";
 import { Droplets, Check, Sparkles, Zap, Crown } from "lucide-react";
-import { cn } from "@sigongon/ui";
+import { cn } from "@sigongcore/ui";
 import {
   STEPS,
   PLANS,
@@ -87,7 +87,7 @@ export default function PlanPage() {
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-point-500 text-white">
           <Droplets className="h-6 w-6" />
         </div>
-        <span className="text-2xl font-bold text-slate-900">시공ON</span>
+        <span className="text-2xl font-bold text-slate-900">시공코어</span>
       </Link>
 
       <Card className="w-full max-w-5xl p-6 md:p-8">

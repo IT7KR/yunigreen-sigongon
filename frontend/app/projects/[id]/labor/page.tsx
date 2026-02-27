@@ -1,17 +1,12 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@sigongon/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@sigongcore/ui";
 import { Users, Loader2, Download } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { generateSitePayrollExcel } from "@/lib/labor/excelExport";
-import type { SitePayrollReport } from "@sigongon/types";
+import type { SitePayrollReport } from "@sigongcore/types";
 import { MobileListCard } from "@/components/MobileListCard";
 
 export default function ProjectLaborPage({
@@ -66,7 +61,7 @@ export default function ProjectLaborPage({
     ? [...siteReport.entries].sort((a, b) =>
         canViewAmount
           ? b.total_labor_cost - a.total_labor_cost
-          : b.total_man_days - a.total_man_days
+          : b.total_man_days - a.total_man_days,
       )
     : [];
 
@@ -122,11 +117,19 @@ export default function ProjectLaborPage({
         />
         <MetricCard
           title="노무비"
-          value={canViewAmount ? `${(siteReport?.totals.total_labor_cost ?? 0).toLocaleString()}원` : "비공개"}
+          value={
+            canViewAmount
+              ? `${(siteReport?.totals.total_labor_cost ?? 0).toLocaleString()}원`
+              : "비공개"
+          }
         />
         <MetricCard
           title="차감지급액"
-          value={canViewAmount ? `${(siteReport?.totals.total_net_pay ?? 0).toLocaleString()}원` : "비공개"}
+          value={
+            canViewAmount
+              ? `${(siteReport?.totals.total_net_pay ?? 0).toLocaleString()}원`
+              : "비공개"
+          }
         />
       </div>
 
@@ -205,9 +208,7 @@ export default function ProjectLaborPage({
                     {sortedEntries.map((entry, i) => (
                       <tr
                         key={entry.worker_id}
-                        className={
-                          i % 2 === 0 ? "bg-white" : "bg-slate-50/60"
-                        }
+                        className={i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}
                       >
                         <td className="py-2 font-medium text-slate-800">
                           {entry.worker_name}
@@ -222,13 +223,19 @@ export default function ProjectLaborPage({
                           {entry.total_man_days}
                         </td>
                         <td className="py-2 text-right text-slate-600">
-                          {canViewAmount ? `${entry.daily_rate.toLocaleString()}원` : "비공개"}
+                          {canViewAmount
+                            ? `${entry.daily_rate.toLocaleString()}원`
+                            : "비공개"}
                         </td>
                         <td className="py-2 text-right text-slate-800">
-                          {canViewAmount ? `${entry.total_labor_cost.toLocaleString()}원` : "비공개"}
+                          {canViewAmount
+                            ? `${entry.total_labor_cost.toLocaleString()}원`
+                            : "비공개"}
                         </td>
                         <td className="py-2 text-right font-medium text-slate-900">
-                          {canViewAmount ? `${entry.net_pay.toLocaleString()}원` : "비공개"}
+                          {canViewAmount
+                            ? `${entry.net_pay.toLocaleString()}원`
+                            : "비공개"}
                         </td>
                       </tr>
                     ))}
@@ -243,7 +250,7 @@ export default function ProjectLaborPage({
                       <td className="pt-2 text-right text-slate-900">
                         {sortedEntries.reduce(
                           (s, e) => s + e.total_man_days,
-                          0
+                          0,
                         )}
                       </td>
                       <td />
@@ -297,4 +304,3 @@ function MetricCard({ title, value }: { title: string; value: string }) {
     </Card>
   );
 }
-

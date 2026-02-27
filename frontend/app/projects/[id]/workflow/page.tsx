@@ -20,7 +20,7 @@ import {
   CardTitle,
   PrimitiveButton,
   cn,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { useProject } from "@/hooks";
 import { buildSampleFileDownloadUrl, buildSamplePath } from "@/lib/sampleFiles";
 
@@ -458,11 +458,12 @@ function resolveStatuses(
   // Step 4: same as step 3
   const s4: StepStatus = s3;
   // Step 5: completed once estimate is created
-  const s5: StepStatus = hasEstimate || atLeast("quoted")
-    ? "completed"
-    : is("estimating")
-      ? "current"
-      : "pending";
+  const s5: StepStatus =
+    hasEstimate || atLeast("quoted")
+      ? "completed"
+      : is("estimating")
+        ? "current"
+        : "pending";
   // Step 6: completed once estimate is issued to customer
   const s6: StepStatus = ["issued", "accepted", "rejected"].includes(
     latestEstimateStatus || "",
@@ -472,11 +473,12 @@ function resolveStatuses(
       ? "current"
       : "pending";
   // Step 7: completed if contract exists/contracted, current when customer accepted
-  const s7: StepStatus = hasContract || atLeast("contracted")
-    ? "completed"
-    : latestEstimateStatus === "accepted"
-      ? "current"
-      : "pending";
+  const s7: StepStatus =
+    hasContract || atLeast("contracted")
+      ? "completed"
+      : latestEstimateStatus === "accepted"
+        ? "current"
+        : "pending";
   // Step 8: completed if in_progress or later
   const s8: StepStatus = atLeast("in_progress")
     ? "completed"

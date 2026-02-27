@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import type { UserRole } from "@sigongon/types";
+import type { UserRole } from "@sigongcore/types";
 
 export interface AuthUserBase {
   id: string;
@@ -43,7 +43,10 @@ interface APIResult<TData> {
 
 export interface AuthAPI<TUser> {
   setAccessToken(token: string | null): void;
-  login(identifier: string, password: string): Promise<APIResult<LoginSuccessPayload<TUser>>>;
+  login(
+    identifier: string,
+    password: string,
+  ): Promise<APIResult<LoginSuccessPayload<TUser>>>;
   getMe(): Promise<APIResult<TUser>>;
 }
 
@@ -228,7 +231,9 @@ export function createAuthModule<TUser extends AuthUserBase>(
       [state, login, logout, refreshUser],
     );
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return (
+      <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+    );
   }
 
   function useAuth() {

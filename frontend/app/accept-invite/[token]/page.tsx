@@ -4,9 +4,15 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Loader2, CheckCircle2, XCircle, Shield, Building2 } from "lucide-react";
-import { Button, Card, CardContent, PrimitiveInput } from "@sigongon/ui";
-import type { UserRole } from "@sigongon/types";
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Shield,
+  Building2,
+} from "lucide-react";
+import { Button, Card, CardContent, PrimitiveInput } from "@sigongcore/ui";
+import type { UserRole } from "@sigongcore/types";
 import { api } from "@/lib/api";
 
 const roleLabels: Record<UserRole, string> = {
@@ -57,7 +63,9 @@ export default function AcceptInvitePage() {
         setInvitation(response.data as InvitationInfo);
         setPageState("form");
       } else {
-        setErrorMessage(response.error?.message || "유효하지 않은 초대 링크예요");
+        setErrorMessage(
+          response.error?.message || "유효하지 않은 초대 링크예요",
+        );
         setPageState("error");
       }
     } catch (err) {
@@ -126,9 +134,9 @@ export default function AcceptInvitePage() {
             <h1 className="text-xl font-bold text-slate-900">초대 링크 오류</h1>
             <p className="mt-2 text-slate-500">{errorMessage}</p>
             <div className="mt-6">
-              <Button variant="secondary" className="w-full" asChild><Link href="/login">
-                  로그인 페이지로 이동
-                </Link></Button>
+              <Button variant="secondary" className="w-full" asChild>
+                <Link href="/login">로그인 페이지로 이동</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -145,16 +153,16 @@ export default function AcceptInvitePage() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <CheckCircle2 className="h-8 w-8 text-green-500" />
             </div>
-            <h1 className="text-xl font-bold text-slate-900">계정 생성 완료!</h1>
+            <h1 className="text-xl font-bold text-slate-900">
+              계정 생성 완료!
+            </h1>
             <p className="mt-2 text-slate-500">
-              {invitation?.name}님, 환영합니다!<br />
-              이제 시공ON 서비스를 이용하실 수 있어요.
+              {invitation?.name}님, 환영합니다!
+              <br />
+              이제 시공코어 서비스를 이용하실 수 있어요.
             </p>
             <div className="mt-6">
-              <Button
-                onClick={() => router.push("/login")}
-                className="w-full"
-              >
+              <Button onClick={() => router.push("/login")} className="w-full">
                 로그인하기
               </Button>
             </div>
@@ -173,7 +181,7 @@ export default function AcceptInvitePage() {
           <Link href="/" className="inline-block">
             <Image
               src="/logo.png"
-              alt="시공ON"
+              alt="시공코어"
               width={120}
               height={40}
               className="h-10 w-auto"
@@ -200,7 +208,10 @@ export default function AcceptInvitePage() {
                   </p>
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <Shield className="h-3.5 w-3.5" />
-                    <span>{roleLabels[invitation?.role || "site_manager"]} 역할로 초대됨</span>
+                    <span>
+                      {roleLabels[invitation?.role || "site_manager"]} 역할로
+                      초대됨
+                    </span>
                   </div>
                 </div>
               </div>
@@ -272,26 +283,26 @@ export default function AcceptInvitePage() {
                   className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-point-500 focus:ring-brand-point-500"
                 />
                 <label htmlFor="agreeTerms" className="text-sm text-slate-600">
-                  <Link href="/terms" className="text-brand-point-500 hover:underline">
+                  <Link
+                    href="/terms"
+                    className="text-brand-point-500 hover:underline"
+                  >
                     이용약관
-                  </Link>
-                  {" "}및{" "}
-                  <Link href="/privacy" className="text-brand-point-500 hover:underline">
+                  </Link>{" "}
+                  및{" "}
+                  <Link
+                    href="/privacy"
+                    className="text-brand-point-500 hover:underline"
+                  >
                     개인정보처리방침
                   </Link>
                   에 동의합니다.
                 </label>
               </div>
 
-              {formError && (
-                <p className="text-sm text-red-500">{formError}</p>
-              )}
+              {formError && <p className="text-sm text-red-500">{formError}</p>}
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={submitting}
-              >
+              <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -302,7 +313,10 @@ export default function AcceptInvitePage() {
 
             <p className="mt-6 text-center text-sm text-slate-500">
               이미 계정이 있으신가요?{" "}
-              <Link href="/login" className="text-brand-point-500 hover:underline">
+              <Link
+                href="/login"
+                className="text-brand-point-500 hover:underline"
+              >
                 로그인
               </Link>
             </p>

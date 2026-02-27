@@ -9,7 +9,7 @@ import {
   CardTitle,
   MotionNumber,
   Skeleton,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import {
   Building2,
   Users,
@@ -20,7 +20,6 @@ import {
   Calendar,
 } from "lucide-react";
 import { api } from "@/lib/api";
-
 
 interface DashboardStats {
   total_tenants: number;
@@ -76,7 +75,9 @@ export default function SADashboardPage() {
   const [planDistribution, setPlanDistribution] = useState<PlanDistribution[]>(
     [],
   );
-  const [expiringSubscriptions, setExpiringSubscriptions] = useState<ExpiringSubscription[]>([]);
+  const [expiringSubscriptions, setExpiringSubscriptions] = useState<
+    ExpiringSubscription[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

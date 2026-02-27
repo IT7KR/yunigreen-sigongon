@@ -10,7 +10,7 @@ import {
   Button,
   Badge,
   formatDate,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import {
   ReceiptText,
   FileSpreadsheet,
@@ -44,7 +44,9 @@ export default function PaymentClaimPage({
 }) {
   const { id: projectId } = use(params);
   const [loading, setLoading] = useState(true);
-  const [completionReports, setCompletionReports] = useState<CompletionReport[]>([]);
+  const [completionReports, setCompletionReports] = useState<
+    CompletionReport[]
+  >([]);
   const [invoices, setInvoices] = useState<TaxInvoice[]>([]);
 
   useEffect(() => {
@@ -52,7 +54,8 @@ export default function PaymentClaimPage({
   }, [projectId]);
 
   const approvedReports = useMemo(
-    () => completionReports.filter((report) => report.status === "approved").length,
+    () =>
+      completionReports.filter((report) => report.status === "approved").length,
     [completionReports],
   );
   const issuedInvoices = useMemo(
@@ -60,7 +63,8 @@ export default function PaymentClaimPage({
     [invoices],
   );
   const issuedTotal = useMemo(
-    () => issuedInvoices.reduce((sum, invoice) => sum + invoice.total_amount, 0),
+    () =>
+      issuedInvoices.reduce((sum, invoice) => sum + invoice.total_amount, 0),
     [issuedInvoices],
   );
 
@@ -132,8 +136,14 @@ export default function PaymentClaimPage({
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
           <MetricCard title="준공계 승인" value={`${approvedReports}건`} />
-          <MetricCard title="세금계산서 발행" value={`${issuedInvoices.length}건`} />
-          <MetricCard title="발행 합계" value={`${issuedTotal.toLocaleString()}원`} />
+          <MetricCard
+            title="세금계산서 발행"
+            value={`${issuedInvoices.length}건`}
+          />
+          <MetricCard
+            title="발행 합계"
+            value={`${issuedTotal.toLocaleString()}원`}
+          />
         </CardContent>
       </Card>
 
@@ -142,14 +152,22 @@ export default function PaymentClaimPage({
           <CardTitle>정산 액션</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 md:grid-cols-2">
-          <Button className="w-full justify-between" asChild><Link href={`/projects/${projectId}/reports/completion`}>
+          <Button className="w-full justify-between" asChild>
+            <Link href={`/projects/${projectId}/reports/completion`}>
               준공계 확인
               <ArrowRight className="h-4 w-4" />
-            </Link></Button>
-          <Button variant="secondary" className="w-full justify-between" asChild><Link href={`/projects/${projectId}/tax-invoice`}>
+            </Link>
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full justify-between"
+            asChild
+          >
+            <Link href={`/projects/${projectId}/tax-invoice`}>
               세금계산서 관리
               <ArrowRight className="h-4 w-4" />
-            </Link></Button>
+            </Link>
+          </Button>
           <Button
             variant="secondary"
             className="w-full justify-between"
@@ -213,7 +231,9 @@ export default function PaymentClaimPage({
                     </p>
                   </div>
                   <Badge
-                    variant={invoice.status === "issued" ? "success" : "default"}
+                    variant={
+                      invoice.status === "issued" ? "success" : "default"
+                    }
                   >
                     {invoice.status}
                   </Badge>
@@ -235,4 +255,3 @@ function MetricCard({ title, value }: { title: string; value: string }) {
     </div>
   );
 }
-

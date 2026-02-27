@@ -1,8 +1,23 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Sparkles, Plus, Loader2, X, AlertTriangle, CheckCircle2, Info } from "lucide-react";
-import { Button, Card, PrimitiveButton, PrimitiveInput, cn } from "@sigongon/ui";
+import {
+  Search,
+  Sparkles,
+  Plus,
+  Loader2,
+  X,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+} from "lucide-react";
+import {
+  Button,
+  Card,
+  PrimitiveButton,
+  PrimitiveInput,
+  cn,
+} from "@sigongcore/ui";
 import { api } from "@/lib/api";
 
 interface RAGSearchResult {
@@ -86,7 +101,7 @@ export function RAGSearchPanel({
         unit_price_snapshot: result.unit_price.toString(),
       });
     },
-    [onAddItem]
+    [onAddItem],
   );
 
   if (!isOpen) return null;
@@ -156,7 +171,8 @@ export function RAGSearchPanel({
             <div className="space-y-3">
               {results.map((result) => {
                 const isHighConfidence = result.confidence >= 0.9;
-                const isMediumConfidence = result.confidence >= 0.7 && result.confidence < 0.9;
+                const isMediumConfidence =
+                  result.confidence >= 0.7 && result.confidence < 0.9;
                 const isLowConfidence = result.confidence < 0.7;
 
                 return (
@@ -166,7 +182,8 @@ export function RAGSearchPanel({
                       "p-4 transition-all",
                       isHighConfidence && "bg-green-50 border-green-200",
                       isMediumConfidence && "bg-amber-50 border-amber-200",
-                      isLowConfidence && "bg-red-50 border-red-300 ring-1 ring-red-200"
+                      isLowConfidence &&
+                        "bg-red-50 border-red-300 ring-1 ring-red-200",
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -179,13 +196,18 @@ export function RAGSearchPanel({
                             className={cn(
                               "ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
                               isHighConfidence && "bg-green-200 text-green-800",
-                              isMediumConfidence && "bg-amber-200 text-amber-800",
-                              isLowConfidence && "bg-red-200 text-red-800"
+                              isMediumConfidence &&
+                                "bg-amber-200 text-amber-800",
+                              isLowConfidence && "bg-red-200 text-red-800",
                             )}
                           >
-                            {isHighConfidence && <CheckCircle2 className="h-3 w-3" />}
+                            {isHighConfidence && (
+                              <CheckCircle2 className="h-3 w-3" />
+                            )}
                             {isMediumConfidence && <Info className="h-3 w-3" />}
-                            {isLowConfidence && <AlertTriangle className="h-3 w-3" />}
+                            {isLowConfidence && (
+                              <AlertTriangle className="h-3 w-3" />
+                            )}
                             {Math.round(result.confidence * 100)}%
                           </span>
                         </div>
@@ -196,7 +218,8 @@ export function RAGSearchPanel({
                         )}
                         <div className="mt-2 flex items-center gap-4 text-sm">
                           <span className="text-slate-500">
-                            단위: <span className="font-medium">{result.unit}</span>
+                            단위:{" "}
+                            <span className="font-medium">{result.unit}</span>
                           </span>
                           <span className="text-slate-900">
                             단가:{" "}

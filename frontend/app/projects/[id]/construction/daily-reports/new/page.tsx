@@ -13,7 +13,7 @@ import {
   PrimitiveInput,
   Textarea,
   toast,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { api } from "@/lib/api";
 import Link from "next/link";
 

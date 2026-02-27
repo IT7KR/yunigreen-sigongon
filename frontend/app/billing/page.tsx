@@ -8,7 +8,7 @@ import {
   Button,
   Badge,
   toast,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { CheckCircle, RefreshCw } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
@@ -106,10 +106,7 @@ export default function BillingPage() {
             <p className="mb-6 text-slate-600">
               서비스를 계속 이용하시려면 플랜을 선택해주세요.
             </p>
-            <PlanSelector
-              currentPlan={null}
-              onSelectPlan={handlePlanSelect}
-            />
+            <PlanSelector currentPlan={null} onSelectPlan={handlePlanSelect} />
           </div>
         ) : (
           <>
@@ -180,9 +177,14 @@ export default function BillingPage() {
                       플랜 변경 예약됨
                     </p>
                     <p className="mt-1 text-sm text-amber-700">
-                      현재 구독 종료 후 <strong>{overview.scheduled_plan}</strong> 플랜으로 변경됩니다.
+                      현재 구독 종료 후{" "}
+                      <strong>{overview.scheduled_plan}</strong> 플랜으로
+                      변경됩니다.
                       {overview.scheduled_plan_date && (
-                        <span> (적용일: {overview.scheduled_plan_date.slice(0, 10)})</span>
+                        <span>
+                          {" "}
+                          (적용일: {overview.scheduled_plan_date.slice(0, 10)})
+                        </span>
                       )}
                     </p>
                   </div>
@@ -207,7 +209,9 @@ export default function BillingPage() {
                     currentPlan={overview.plan}
                     onSelectPlan={handlePlanSelect}
                     scheduledPlan={overview.scheduled_plan}
-                    reservationMode={!!overview.plan && overview.plan !== "무료 체험"}
+                    reservationMode={
+                      !!overview.plan && overview.plan !== "무료 체험"
+                    }
                   />
                 </CardContent>
               </Card>

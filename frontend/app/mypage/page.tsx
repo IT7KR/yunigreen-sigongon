@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { User, Lock, Bell, Clock, Shield } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Card, CardContent, PrimitiveButton } from "@sigongon/ui";
+import { Card, CardContent, PrimitiveButton } from "@sigongcore/ui";
 import { useAuth } from "@/lib/auth";
 import { ProfileSection } from "@/components/mypage/ProfileSection";
 import { PasswordSection } from "@/components/mypage/PasswordSection";
@@ -25,15 +25,29 @@ export default function MyPage() {
 
   const getRoleBadge = (role: string) => {
     const roleMap: Record<string, { label: string; color: string }> = {
-      super_admin: { label: "최고관리자", color: "bg-purple-100 text-purple-700" },
-      company_admin: { label: "대표", color: "bg-brand-point-100 text-brand-point-700" },
-      site_manager: { label: "현장소장", color: "bg-brand-point-100 text-brand-point-700" },
+      super_admin: {
+        label: "최고관리자",
+        color: "bg-purple-100 text-purple-700",
+      },
+      company_admin: {
+        label: "대표",
+        color: "bg-brand-point-100 text-brand-point-700",
+      },
+      site_manager: {
+        label: "현장소장",
+        color: "bg-brand-point-100 text-brand-point-700",
+      },
       worker: { label: "작업자", color: "bg-slate-100 text-slate-700" },
     };
 
-    const roleInfo = roleMap[role] || { label: role, color: "bg-slate-100 text-slate-700" };
+    const roleInfo = roleMap[role] || {
+      label: role,
+      color: "bg-slate-100 text-slate-700",
+    };
     return (
-      <span className={`rounded-full px-3 py-1 text-xs font-medium ${roleInfo.color}`}>
+      <span
+        className={`rounded-full px-3 py-1 text-xs font-medium ${roleInfo.color}`}
+      >
         {roleInfo.label}
       </span>
     );
@@ -44,7 +58,9 @@ export default function MyPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">마이페이지</h1>
-          <p className="mt-1 text-slate-500">개인 계정 및 프로필을 관리합니다</p>
+          <p className="mt-1 text-slate-500">
+            개인 계정 및 프로필을 관리합니다
+          </p>
         </div>
 
         {user && (
@@ -54,7 +70,9 @@ export default function MyPage() {
                 {user.name.charAt(0)}
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-slate-900">{user.name}</h2>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {user.name}
+                </h2>
                 <p className="text-sm text-slate-500">{user.email}</p>
               </div>
               <div>{getRoleBadge(user.role)}</div>

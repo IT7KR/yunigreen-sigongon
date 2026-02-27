@@ -3,7 +3,7 @@
 import { use, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, Button, Badge, formatDate } from "@sigongon/ui";
+import { Card, CardContent, Button, Badge, formatDate } from "@sigongcore/ui";
 import { useSiteVisit, useRequestDiagnosis } from "@/hooks";
 import {
   Camera,
@@ -13,7 +13,7 @@ import {
   ChevronLeft,
   ArrowLeft,
 } from "lucide-react";
-import type { PhotoType, VisitType } from "@sigongon/types";
+import type { PhotoType, VisitType } from "@sigongcore/types";
 
 interface VisitDetailPageProps {
   params: Promise<{ id: string; visitId: string }>;
@@ -99,10 +99,12 @@ export default function VisitDetailPage({ params }: VisitDetailPageProps) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <p className="text-sm text-slate-500">방문 기록을 찾을 수 없습니다.</p>
-        <Button variant="secondary" asChild><Link href={`/projects/${projectId}/visits`}>
+        <Button variant="secondary" asChild>
+          <Link href={`/projects/${projectId}/visits`}>
             <ArrowLeft className="h-4 w-4" />
             방문 목록으로
-          </Link></Button>
+          </Link>
+        </Button>
       </div>
     );
   }

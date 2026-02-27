@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { Button, Modal, PrimitiveInput } from "@sigongon/ui";
+import { Button, Modal, PrimitiveInput } from "@sigongcore/ui";
 
 interface LineData {
   id?: string;
@@ -178,7 +178,9 @@ export function EstimateLineModal({
 
         <div className="rounded-lg bg-brand-point-50 p-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-brand-point-700">금액</span>
+            <span className="text-sm font-medium text-brand-point-700">
+              금액
+            </span>
             <span className="text-lg font-bold text-brand-point-700">
               {calculatedAmount.toLocaleString()}원
             </span>

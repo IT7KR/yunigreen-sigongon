@@ -9,7 +9,7 @@ import {
   Button,
   Badge,
   Input,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { ArrowLeft, Edit, Save, X, FileText, Camera } from "lucide-react";
 import Link from "next/link";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -202,7 +202,9 @@ export default function WorkerDetailPage({
                   <div className="flex items-center justify-between">
                     <CardTitle>기본 정보</CardTitle>
                     <Badge
-                      variant={worker.status === "active" ? "success" : "default"}
+                      variant={
+                        worker.status === "active" ? "success" : "default"
+                      }
                     >
                       {worker.status === "active" ? "재직" : "대기"}
                     </Badge>
@@ -270,7 +272,10 @@ export default function WorkerDetailPage({
                         <Input
                           value={formData.address}
                           onChange={(e) =>
-                            setFormData({ ...formData, address: e.target.value })
+                            setFormData({
+                              ...formData,
+                              address: e.target.value,
+                            })
                           }
                           className="mt-1"
                         />

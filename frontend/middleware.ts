@@ -1,6 +1,4 @@
-import {
-  createAuthMiddleware,
-} from "@sigongon/platform";
+import { createAuthMiddleware } from "@sigongcore/platform";
 
 const PUBLIC_ROUTES = [
   "/",

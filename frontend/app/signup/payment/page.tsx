@@ -3,9 +3,12 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Card, Stepper } from "@sigongon/ui";
+import { Button, Card, Stepper } from "@sigongcore/ui";
 import { Droplets, Lock, AlertCircle } from "lucide-react";
-import { loadPaymentWidget, PaymentWidgetInstance } from "@tosspayments/payment-widget-sdk";
+import {
+  loadPaymentWidget,
+  PaymentWidgetInstance,
+} from "@tosspayments/payment-widget-sdk";
 import {
   STEPS,
   PLANS,
@@ -14,7 +17,9 @@ import {
   type SignupData,
 } from "../types";
 
-const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq";
+const clientKey =
+  process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY ||
+  "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq";
 
 // CSS selectors for widget containers
 const PAYMENT_METHODS_SELECTOR = "#payment-methods";
@@ -68,10 +73,11 @@ export default function PaymentPage() {
         paymentWidgetRef.current = paymentWidget;
 
         // Render payment methods widget using CSS selector
-        await paymentWidget.renderPaymentMethods(
-          PAYMENT_METHODS_SELECTOR,
-          { value: price, currency: "KRW", country: "KR" },
-        );
+        await paymentWidget.renderPaymentMethods(PAYMENT_METHODS_SELECTOR, {
+          value: price,
+          currency: "KRW",
+          country: "KR",
+        });
 
         // Render agreement widget using CSS selector
         await paymentWidget.renderAgreement(AGREEMENT_SELECTOR, {
@@ -99,7 +105,7 @@ export default function PaymentPage() {
 
     try {
       const orderId = generateOrderId();
-      const orderName = `시공ON ${selectedPlan.name} 연간 구독`;
+      const orderName = `시공코어 ${selectedPlan.name} 연간 구독`;
 
       await paymentWidgetRef.current.requestPayment({
         orderId,
@@ -110,7 +116,12 @@ export default function PaymentPage() {
         customerName: data.companyName || data.representativeName,
       });
     } catch (err: unknown) {
-      if (err && typeof err === "object" && "code" in err && err.code === "USER_CANCEL") {
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        err.code === "USER_CANCEL"
+      ) {
         // User cancelled the payment
         setError(null);
       } else {
@@ -139,7 +150,7 @@ export default function PaymentPage() {
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-point-500 text-white">
           <Droplets className="h-6 w-6" />
         </div>
-        <span className="text-2xl font-bold text-slate-900">시공ON</span>
+        <span className="text-2xl font-bold text-slate-900">시공코어</span>
       </Link>
 
       <Card className="w-full max-w-2xl p-6 md:p-8">
@@ -158,13 +169,17 @@ export default function PaymentPage() {
             <h3 className="mb-3 font-semibold text-slate-900">선택한 요금제</h3>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-slate-900">{selectedPlan?.name}</p>
+                <p className="font-medium text-slate-900">
+                  {selectedPlan?.name}
+                </p>
                 <p className="text-sm text-slate-600">연간 결제</p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-slate-900">
                   ₩{formatPrice(price)}
-                  <span className="text-sm font-normal text-slate-600">/년</span>
+                  <span className="text-sm font-normal text-slate-600">
+                    /년
+                  </span>
                 </p>
                 <p className="text-sm text-slate-500">
                   월 ₩{formatPrice(monthlyEquivalent)} 환산

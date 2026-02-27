@@ -1,7 +1,11 @@
 "use client";
 
-import { createAuthModule, type AuthAPI, type AuthUserBase } from "@sigongon/platform";
-import type { UserRole } from "@sigongon/types";
+import {
+  createAuthModule,
+  type AuthAPI,
+  type AuthUserBase,
+} from "@sigongcore/platform";
+import type { UserRole } from "@sigongcore/types";
 import { api } from "./api";
 
 interface AuthUser extends AuthUserBase {

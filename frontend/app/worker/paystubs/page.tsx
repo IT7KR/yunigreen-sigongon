@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { CreditCard } from "lucide-react";
-import { Card, CardContent } from "@sigongon/ui";
+import { Card, CardContent } from "@sigongcore/ui";
 import { WorkerLayout } from "@/components/WorkerLayout";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";

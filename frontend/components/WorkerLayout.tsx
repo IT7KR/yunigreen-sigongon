@@ -3,7 +3,7 @@
 import { type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { CreditCard, FileText, Home, User } from "lucide-react";
-import { AppLink, cn, useAppNavigation } from "@sigongon/ui";
+import { AppLink, cn, useAppNavigation } from "@sigongcore/ui";
 
 interface WorkerLayoutProps {
   children: ReactNode;
@@ -87,8 +87,7 @@ export function WorkerLayout({
         <div className="flex h-16 items-center justify-around">
           {workerNavItems.map((item) => {
             const isActive =
-              pathname === item.href ||
-              pathname.startsWith(`${item.href}/`);
+              pathname === item.href || pathname.startsWith(`${item.href}/`);
 
             return (
               <AppLink

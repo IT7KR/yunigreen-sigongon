@@ -22,9 +22,9 @@ import {
   PageHeader,
   EmptyState,
   AlertBox,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { useDashboardStats } from "@/hooks";
-import type { ProjectStatus } from "@sigongon/types";
+import type { ProjectStatus } from "@sigongcore/types";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -129,8 +129,14 @@ export default function DashboardPage() {
                             />
                           }
                           metadata={[
-                            { label: "고객", value: project.client_name || "-" },
-                            { label: "등록일", value: formatDate(project.created_at) },
+                            {
+                              label: "고객",
+                              value: project.client_name || "-",
+                            },
+                            {
+                              label: "등록일",
+                              value: formatDate(project.created_at),
+                            },
                           ]}
                           onClick={() => router.push(`/projects/${project.id}`)}
                         />
@@ -200,11 +206,20 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="space-y-3">
                   {stats.inProgress > 0 && (
-                    <AlertBox variant="info" action={{ label: "확인하기", href: "/projects?status=in_progress" }}>
+                    <AlertBox
+                      variant="info"
+                      action={{
+                        label: "확인하기",
+                        href: "/projects?status=in_progress",
+                      }}
+                    >
                       {stats.inProgress}개 프로젝트가 진행 중이에요
                     </AlertBox>
                   )}
-                  <AlertBox variant="warning" action={{ label: "확인하기", href: "/pricebooks" }}>
+                  <AlertBox
+                    variant="warning"
+                    action={{ label: "확인하기", href: "/pricebooks" }}
+                  >
                     적산 자료 갱신이 필요할 수 있어요
                   </AlertBox>
                 </div>

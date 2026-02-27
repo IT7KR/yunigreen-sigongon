@@ -11,8 +11,15 @@ import {
   Badge,
   LoadingOverlay,
   useConfirmDialog,
-} from "@sigongon/ui";
-import { Loader2, ArrowLeft, FileText, X, RefreshCw, ExternalLink } from "lucide-react";
+} from "@sigongcore/ui";
+import {
+  Loader2,
+  ArrowLeft,
+  FileText,
+  X,
+  RefreshCw,
+  ExternalLink,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { TaxInvoiceForm } from "@/components/TaxInvoiceForm";
 import { TaxInvoicePreview } from "@/components/TaxInvoicePreview";
@@ -49,7 +56,10 @@ const statusLabels: Record<string, string> = {
   failed: "실패",
 };
 
-const statusVariants: Record<string, "default" | "success" | "error" | "warning"> = {
+const statusVariants: Record<
+  string,
+  "default" | "success" | "error" | "warning"
+> = {
   draft: "default",
   issued: "success",
   cancelled: "error",
@@ -238,7 +248,11 @@ export default function TaxInvoiceDetailPage({
           </Button>
         )}
         {canCancel && (
-          <Button variant="secondary" onClick={handleCancel} disabled={actionLoading}>
+          <Button
+            variant="secondary"
+            onClick={handleCancel}
+            disabled={actionLoading}
+          >
             {actionLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (

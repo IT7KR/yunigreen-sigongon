@@ -2,8 +2,15 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Card, CardContent, PrimitiveButton } from "@sigongon/ui";
-import { CheckCircle2, ChevronDown, ChevronUp, ArrowRight, Shield, Loader2 } from "lucide-react";
+import { Button, Card, CardContent, PrimitiveButton } from "@sigongcore/ui";
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  ArrowRight,
+  Shield,
+  Loader2,
+} from "lucide-react";
 
 /**
  * 개인정보 처리방침 동의 페이지
@@ -37,7 +44,8 @@ function WorkerConsentContent() {
     thirdParty: false,
   });
 
-  const allAgreed = agreements.privacy && agreements.collection && agreements.thirdParty;
+  const allAgreed =
+    agreements.privacy && agreements.collection && agreements.thirdParty;
 
   const handleAgreeAll = () => {
     const newValue = !allAgreed;
@@ -57,7 +65,10 @@ function WorkerConsentContent() {
         records: [
           { consent_type: "privacy_collection", consented: agreements.privacy },
           { consent_type: "sensitive_info", consented: agreements.collection },
-          { consent_type: "third_party_sharing", consented: agreements.thirdParty },
+          {
+            consent_type: "third_party_sharing",
+            consented: agreements.thirdParty,
+          },
         ],
         invite_token: token || undefined,
       });
@@ -81,7 +92,9 @@ function WorkerConsentContent() {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
               <Shield className="h-6 w-6 text-red-600" />
             </div>
-            <h2 className="text-lg font-bold text-slate-900">유효하지 않은 링크</h2>
+            <h2 className="text-lg font-bold text-slate-900">
+              유효하지 않은 링크
+            </h2>
             <p className="mt-2 text-sm text-slate-600">
               초대 링크가 만료되었거나 유효하지 않습니다.
               <br />
@@ -98,8 +111,10 @@ function WorkerConsentContent() {
       <div className="mx-auto max-w-lg">
         {/* Header */}
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">시공ON 가입</h1>
-          <p className="mt-2 text-slate-600">개인정보 처리방침에 동의해주세요</p>
+          <h1 className="text-2xl font-bold text-slate-900">시공코어 가입</h1>
+          <p className="mt-2 text-slate-600">
+            개인정보 처리방침에 동의해주세요
+          </p>
         </div>
 
         {/* Progress */}
@@ -142,7 +157,9 @@ function WorkerConsentContent() {
                 title="개인정보 처리방침 (필수)"
                 checked={agreements.privacy}
                 expanded={expandedSection === "privacy"}
-                onCheck={() => setAgreements({ ...agreements, privacy: !agreements.privacy })}
+                onCheck={() =>
+                  setAgreements({ ...agreements, privacy: !agreements.privacy })
+                }
                 onToggle={() => toggleSection("privacy")}
               >
                 <PrivacyPolicyContent />
@@ -153,7 +170,12 @@ function WorkerConsentContent() {
                 title="개인정보 수집 및 이용 동의 (필수)"
                 checked={agreements.collection}
                 expanded={expandedSection === "collection"}
-                onCheck={() => setAgreements({ ...agreements, collection: !agreements.collection })}
+                onCheck={() =>
+                  setAgreements({
+                    ...agreements,
+                    collection: !agreements.collection,
+                  })
+                }
                 onToggle={() => toggleSection("collection")}
               >
                 <CollectionContent />
@@ -164,7 +186,12 @@ function WorkerConsentContent() {
                 title="제3자 정보 제공 동의 (필수)"
                 checked={agreements.thirdParty}
                 expanded={expandedSection === "thirdParty"}
-                onCheck={() => setAgreements({ ...agreements, thirdParty: !agreements.thirdParty })}
+                onCheck={() =>
+                  setAgreements({
+                    ...agreements,
+                    thirdParty: !agreements.thirdParty,
+                  })
+                }
                 onToggle={() => toggleSection("thirdParty")}
               >
                 <ThirdPartyContent />
@@ -199,7 +226,14 @@ interface ConsentItemProps {
   children: React.ReactNode;
 }
 
-function ConsentItem({ title, checked, expanded, onCheck, onToggle, children }: ConsentItemProps) {
+function ConsentItem({
+  title,
+  checked,
+  expanded,
+  onCheck,
+  onToggle,
+  children,
+}: ConsentItemProps) {
   return (
     <div className="rounded-lg border border-slate-200">
       <div className="flex items-center justify-between p-3">
@@ -222,12 +256,18 @@ function ConsentItem({ title, checked, expanded, onCheck, onToggle, children }: 
           onClick={onToggle}
           className="p-1 text-slate-400 hover:text-slate-600"
         >
-          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          {expanded ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
         </PrimitiveButton>
       </div>
       {expanded && (
         <div className="border-t border-slate-200 bg-slate-50 p-3">
-          <div className="max-h-48 overflow-y-auto text-xs text-slate-600">{children}</div>
+          <div className="max-h-48 overflow-y-auto text-xs text-slate-600">
+            {children}
+          </div>
         </div>
       )}
     </div>
@@ -239,15 +279,17 @@ function PrivacyPolicyContent() {
     <div className="space-y-3">
       <p className="font-medium">개인정보 처리방침</p>
       <p>
-        주식회사 유니그린(이하 &quot;회사&quot;)는 「개인정보 보호법」 제30조에 따라 정보주체의 개인정보를
-        보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 다음과 같이
-        개인정보 처리방침을 수립·공개합니다.
+        주식회사 유니그린(이하 &quot;회사&quot;)는 「개인정보 보호법」 제30조에
+        따라 정보주체의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게
+        처리할 수 있도록 하기 위하여 다음과 같이 개인정보 처리방침을
+        수립·공개합니다.
       </p>
       <p className="font-medium mt-2">제1조 (개인정보의 처리 목적)</p>
       <p>
-        회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적
-        이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 「개인정보 보호법」 제18조에
-        따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
+        회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는
+        개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용 목적이
+        변경되는 경우에는 「개인정보 보호법」 제18조에 따라 별도의 동의를 받는
+        등 필요한 조치를 이행할 예정입니다.
       </p>
       <ul className="list-disc pl-4 space-y-1">
         <li>일용근로자 신원확인 및 관리</li>
@@ -258,8 +300,9 @@ function PrivacyPolicyContent() {
       </ul>
       <p className="font-medium mt-2">제2조 (개인정보의 처리 및 보유기간)</p>
       <p>
-        회사는 법령에 따른 개인정보 보유·이용기간 또는 정보주체로부터 개인정보를 수집 시에 동의받은
-        개인정보 보유·이용기간 내에서 개인정보를 처리·보유합니다.
+        회사는 법령에 따른 개인정보 보유·이용기간 또는 정보주체로부터 개인정보를
+        수집 시에 동의받은 개인정보 보유·이용기간 내에서 개인정보를
+        처리·보유합니다.
       </p>
       <ul className="list-disc pl-4 space-y-1">
         <li>근로계약 관련 기록: 3년</li>
@@ -316,7 +359,8 @@ function CollectionContent() {
         </tbody>
       </table>
       <p className="mt-2">
-        ※ 주민등록번호 전체(13자리)는 수집하지 않습니다. 생년월일과 성별만 수집합니다.
+        ※ 주민등록번호 전체(13자리)는 수집하지 않습니다. 생년월일과 성별만
+        수집합니다.
       </p>
     </div>
   );
@@ -327,9 +371,10 @@ function ThirdPartyContent() {
     <div className="space-y-3">
       <p className="font-medium">개인정보 제3자 제공</p>
       <p>
-        회사는 정보주체의 개인정보를 제1조(개인정보의 처리 목적)에서 명시한 범위 내에서만
-        처리하며, 정보주체의 동의, 법률의 특별한 규정 등 「개인정보 보호법」 제17조 및 제18조에
-        해당하는 경우에만 개인정보를 제3자에게 제공합니다.
+        회사는 정보주체의 개인정보를 제1조(개인정보의 처리 목적)에서 명시한 범위
+        내에서만 처리하며, 정보주체의 동의, 법률의 특별한 규정 등 「개인정보
+        보호법」 제17조 및 제18조에 해당하는 경우에만 개인정보를 제3자에게
+        제공합니다.
       </p>
       <table className="w-full text-xs mt-2">
         <thead>

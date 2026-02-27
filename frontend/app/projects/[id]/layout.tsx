@@ -12,8 +12,8 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { cn, StatusBadge, Button, formatDate } from "@sigongon/ui";
-import { PROJECT_CATEGORIES } from "@sigongon/types";
+import { cn, StatusBadge, Button, formatDate } from "@sigongcore/ui";
+import { PROJECT_CATEGORIES } from "@sigongcore/types";
 import { useProject } from "@/hooks";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";

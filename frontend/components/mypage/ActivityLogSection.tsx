@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
   Button,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { api } from "@/lib/api";
 import { ChevronRight } from "lucide-react";
 
@@ -100,9 +100,7 @@ export function ActivityLogSection() {
       <CardContent>
         <div className="space-y-4">
           {loading && page === 1 ? (
-            <div className="py-8 text-center text-slate-500">
-              로딩 중...
-            </div>
+            <div className="py-8 text-center text-slate-500">로딩 중...</div>
           ) : logs.length === 0 ? (
             <div className="py-8 text-center text-slate-500">
               활동 내역이 없습니다
@@ -119,7 +117,9 @@ export function ActivityLogSection() {
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm text-slate-900">{log.description}</p>
+                      <p className="text-sm text-slate-900">
+                        {log.description}
+                      </p>
                       <span className="shrink-0 text-xs text-slate-500">
                         {formatDateTime(log.created_at)}
                       </span>
@@ -175,7 +175,12 @@ function generateMockLogs(page: number): ActivityLog[] {
       action: actionData.action,
       description: actionData.description,
       ip_address: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-      device_info: i % 3 === 0 ? "Chrome (Windows)" : i % 3 === 1 ? "Safari (macOS)" : "Chrome (Android)",
+      device_info:
+        i % 3 === 0
+          ? "Chrome (Windows)"
+          : i % 3 === 1
+            ? "Safari (macOS)"
+            : "Chrome (Android)",
       created_at: timestamp.toISOString(),
     };
   });

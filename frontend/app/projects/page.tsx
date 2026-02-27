@@ -37,15 +37,15 @@ import {
   TableRow,
   formatDate,
   useAppNavigation,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { useProjects } from "@/hooks";
 import { api } from "@/lib/api";
 import type {
   CustomerMaster,
   ProjectCategory,
   ProjectStatus,
-} from "@sigongon/types";
-import { PROJECT_CATEGORIES } from "@sigongon/types";
+} from "@sigongcore/types";
+import { PROJECT_CATEGORIES } from "@sigongcore/types";
 
 export default function ProjectsPage() {
   const navigation = useAppNavigation();

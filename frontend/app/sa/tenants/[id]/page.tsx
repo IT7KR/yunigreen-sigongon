@@ -3,7 +3,21 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, LoadingOverlay, Modal, PrimitiveInput, Textarea, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingOverlay,
+  Modal,
+  PrimitiveInput,
+  Textarea,
+  formatDate,
+  toast,
+  useConfirmDialog,
+} from "@sigongcore/ui";
 import {
   Building2,
   Users,
@@ -20,7 +34,6 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { MobileListCard } from "@/components/MobileListCard";
-
 
 interface TenantDetail {
   id: string;
@@ -112,7 +125,10 @@ export default function TenantDetailPage() {
         const now = new Date();
         const endDate = new Date(tenantData.subscription_end_date);
         const diffTime = endDate.getTime() - now.getTime();
-        const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+        const daysRemaining = Math.max(
+          0,
+          Math.ceil(diffTime / (1000 * 60 * 60 * 24)),
+        );
 
         // API가 상세 필드를 제공하지 않는 경우를 고려한 안전 매핑
         const mappedDetail: TenantDetail = {
@@ -135,14 +151,18 @@ export default function TenantDetailPage() {
           contact_name: tenantAny.contact_name,
           contact_phone: tenantAny.contact_phone,
           contact_position: tenantAny.contact_position,
-          payment_history: (tenantData.billing_amount || 0) > 0 ? [
-            {
-              id: "p1",
-              date: tenantData.subscription_start_date?.slice(0, 10) || "-",
-              amount: tenantData.billing_amount || 0,
-              status: "paid" as const,
-            },
-          ] : [],
+          payment_history:
+            (tenantData.billing_amount || 0) > 0
+              ? [
+                  {
+                    id: "p1",
+                    date:
+                      tenantData.subscription_start_date?.slice(0, 10) || "-",
+                    amount: tenantData.billing_amount || 0,
+                    status: "paid" as const,
+                  },
+                ]
+              : [],
           users: [],
           project_stats: {
             draft: 0,
@@ -241,7 +261,17 @@ export default function TenantDetailPage() {
               variant={tenant.is_active ? "destructive" : "primary"}
               onClick={toggleActiveStatus}
             >
-              {tenant.is_active ? <><ToggleLeft className="h-4 w-4" />계정 비활성화</> : <><ToggleRight className="h-4 w-4" />계정 활성화</>}
+              {tenant.is_active ? (
+                <>
+                  <ToggleLeft className="h-4 w-4" />
+                  계정 비활성화
+                </>
+              ) : (
+                <>
+                  <ToggleRight className="h-4 w-4" />
+                  계정 활성화
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -272,41 +302,57 @@ export default function TenantDetailPage() {
               </div>
 
               <div className="pt-2">
-                <h4 className="mb-3 text-sm font-semibold text-slate-700">대표자 정보</h4>
+                <h4 className="mb-3 text-sm font-semibold text-slate-700">
+                  대표자 정보
+                </h4>
                 <div className="space-y-3 rounded-lg bg-slate-50 p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-500">성함</span>
-                    <span className="font-medium text-slate-900">{tenant.representative}</span>
+                    <span className="font-medium text-slate-900">
+                      {tenant.representative}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                     <span className="text-sm text-slate-500">연락처</span>
-                    <span className="font-medium text-slate-900">{tenant.rep_phone}</span>
+                    <span className="font-medium text-slate-900">
+                      {tenant.rep_phone}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                     <span className="text-sm text-slate-500">이메일</span>
-                    <span className="font-medium text-slate-900">{tenant.rep_email}</span>
+                    <span className="font-medium text-slate-900">
+                      {tenant.rep_email}
+                    </span>
                   </div>
                 </div>
               </div>
 
               {tenant.contact_name && (
                 <div className="pt-2">
-                  <h4 className="mb-3 text-sm font-semibold text-slate-700">실무자 정보</h4>
+                  <h4 className="mb-3 text-sm font-semibold text-slate-700">
+                    실무자 정보
+                  </h4>
                   <div className="space-y-3 rounded-lg bg-slate-50 p-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate-500">성함</span>
-                      <span className="font-medium text-slate-900">{tenant.contact_name}</span>
+                      <span className="font-medium text-slate-900">
+                        {tenant.contact_name}
+                      </span>
                     </div>
                     {tenant.contact_phone && (
                       <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                         <span className="text-sm text-slate-500">연락처</span>
-                        <span className="font-medium text-slate-900">{tenant.contact_phone}</span>
+                        <span className="font-medium text-slate-900">
+                          {tenant.contact_phone}
+                        </span>
                       </div>
                     )}
                     {tenant.contact_position && (
                       <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                         <span className="text-sm text-slate-500">직위</span>
-                        <span className="font-medium text-slate-900">{tenant.contact_position}</span>
+                        <span className="font-medium text-slate-900">
+                          {tenant.contact_position}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -344,7 +390,9 @@ export default function TenantDetailPage() {
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-sm text-slate-500">연간 요금</span>
                 <span className="font-medium text-slate-900">
-                  {tenant.is_custom_trial ? "무료" : `${plan.yearlyPrice.toLocaleString()}원`}
+                  {tenant.is_custom_trial
+                    ? "무료"
+                    : `${plan.yearlyPrice.toLocaleString()}원`}
                 </span>
               </div>
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -361,8 +409,12 @@ export default function TenantDetailPage() {
               </div>
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-sm text-slate-500">남은 기간</span>
-                <span className={`font-medium ${tenant.days_remaining <= 7 ? "text-red-600" : tenant.days_remaining <= 30 ? "text-amber-600" : "text-slate-900"}`}>
-                  {tenant.days_remaining > 0 ? `${tenant.days_remaining}일` : "만료됨"}
+                <span
+                  className={`font-medium ${tenant.days_remaining <= 7 ? "text-red-600" : tenant.days_remaining <= 30 ? "text-amber-600" : "text-slate-900"}`}
+                >
+                  {tenant.days_remaining > 0
+                    ? `${tenant.days_remaining}일`
+                    : "만료됨"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -379,7 +431,8 @@ export default function TenantDetailPage() {
                   onClick={() => setShowCustomTrialModal(true)}
                   className="w-full"
                 >
-                  <Calendar className="h-4 w-4" />커스텀 무료 기간 설정
+                  <Calendar className="h-4 w-4" />
+                  커스텀 무료 기간 설정
                 </Button>
               </div>
             </CardContent>
@@ -456,7 +509,9 @@ export default function TenantDetailPage() {
             {/* 모바일 뷰 */}
             <div className="space-y-3 md:hidden">
               {tenant.users.length === 0 ? (
-                <p className="py-6 text-center text-sm text-slate-400">사용자가 없어요</p>
+                <p className="py-6 text-center text-sm text-slate-400">
+                  사용자가 없어요
+                </p>
               ) : (
                 tenant.users.map((user) => (
                   <MobileListCard
@@ -464,7 +519,10 @@ export default function TenantDetailPage() {
                     title={user.name}
                     subtitle={user.email}
                     metadata={[
-                      { label: "역할", value: roleLabels[user.role] || user.role },
+                      {
+                        label: "역할",
+                        value: roleLabels[user.role] || user.role,
+                      },
                       { label: "전화", value: user.phone },
                     ]}
                   />
@@ -489,15 +547,11 @@ export default function TenantDetailPage() {
                       key={user.id}
                       className="border-b border-slate-100 last:border-0"
                     >
-                      <td className="py-4 text-sm text-slate-600">
-                        {user.id}
-                      </td>
+                      <td className="py-4 text-sm text-slate-600">{user.id}</td>
                       <td className="py-4 font-medium text-slate-900">
                         {user.name}
                       </td>
-                      <td className="py-4 text-slate-600">
-                        {user.phone}
-                      </td>
+                      <td className="py-4 text-slate-600">{user.phone}</td>
                       <td className="py-4 text-slate-600">{user.email}</td>
                       <td className="py-4">
                         <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
@@ -520,23 +574,30 @@ export default function TenantDetailPage() {
             {/* 모바일 뷰 */}
             <div className="space-y-3 md:hidden">
               {tenant.payment_history.length === 0 ? (
-                <p className="py-6 text-center text-sm text-slate-400">결제 이력이 없어요</p>
+                <p className="py-6 text-center text-sm text-slate-400">
+                  결제 이력이 없어요
+                </p>
               ) : (
                 tenant.payment_history.map((payment) => (
                   <MobileListCard
                     key={payment.id}
                     title={payment.date}
                     metadata={[
-                      { label: "금액", value: `${payment.amount.toLocaleString()}원` },
+                      {
+                        label: "금액",
+                        value: `${payment.amount.toLocaleString()}원`,
+                      },
                     ]}
                     badge={
                       payment.status === "paid" ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
-                          <CheckCircle className="h-3 w-3" />결제 성공
+                          <CheckCircle className="h-3 w-3" />
+                          결제 성공
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700">
-                          <XCircle className="h-3 w-3" />결제 실패
+                          <XCircle className="h-3 w-3" />
+                          결제 실패
                         </span>
                       )
                     }
@@ -557,7 +618,10 @@ export default function TenantDetailPage() {
                 <tbody>
                   {tenant.payment_history.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="py-6 text-center text-sm text-slate-400">
+                      <td
+                        colSpan={3}
+                        className="py-6 text-center text-sm text-slate-400"
+                      >
                         결제 이력이 없어요
                       </td>
                     </tr>
@@ -637,7 +701,8 @@ export default function TenantDetailPage() {
             className="flex-1"
             disabled={isSettingCustomTrial}
           >
-            <X className="h-4 w-4" />취소
+            <X className="h-4 w-4" />
+            취소
           </Button>
           <Button
             onClick={handleSetCustomTrial}
@@ -650,7 +715,10 @@ export default function TenantDetailPage() {
                 적용 중...
               </>
             ) : (
-              <><Check className="h-4 w-4" />적용</>
+              <>
+                <Check className="h-4 w-4" />
+                적용
+              </>
             )}
           </Button>
         </div>

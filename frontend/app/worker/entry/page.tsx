@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, PrimitiveInput } from "@sigongon/ui";
+import { Button, PrimitiveInput } from "@sigongcore/ui";
 import { Droplets, ShieldCheck, Smartphone } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -13,7 +13,10 @@ type WorkerAccessApi = {
     data: { request_id: string } | null;
     error: { code: string; message: string } | null;
   }>;
-  verifyWorkerAccess: (requestId: string, code: string) => Promise<{
+  verifyWorkerAccess: (
+    requestId: string,
+    code: string,
+  ) => Promise<{
     success: boolean;
     data: { worker_id: string } | null;
     error: { code: string; message: string } | null;
@@ -98,7 +101,9 @@ function WorkerEntryContent() {
         setStep("verify");
         setMessage("인증번호를 전송했어요.");
       } else {
-        setMessage(response.error?.message || "요청에 실패했어요. 다시 시도해 주세요.");
+        setMessage(
+          response.error?.message || "요청에 실패했어요. 다시 시도해 주세요.",
+        );
       }
     } catch {
       setMessage("요청에 실패했어요. 다시 시도해 주세요.");
@@ -112,7 +117,10 @@ function WorkerEntryContent() {
     setIsSubmitting(true);
     setMessage(null);
     try {
-      const response = await workerAccessApi.verifyWorkerAccess(requestId, otpCode);
+      const response = await workerAccessApi.verifyWorkerAccess(
+        requestId,
+        otpCode,
+      );
       if (response.success && response.data) {
         router.push(`/worker/consent?workerId=${response.data.worker_id}`);
         return;
@@ -133,7 +141,7 @@ function WorkerEntryContent() {
             <Droplets className="h-6 w-6" />
           </div>
           <h2 className="mt-6 text-2xl font-bold text-slate-900">
-            시공ON 현장
+            시공코어 현장
           </h2>
           <p className="mt-2 text-slate-500">
             초대받은 링크 또는 휴대폰 인증으로

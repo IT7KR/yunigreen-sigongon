@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, Button } from "@sigongon/ui";
+import { Card, CardContent, Button } from "@sigongcore/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -25,7 +25,8 @@ function FailContent() {
       },
       REJECT_CARD_COMPANY: {
         title: "카드사 승인 거부",
-        description: "카드사에서 승인을 거부했습니다. 다른 카드를 시도해주세요.",
+        description:
+          "카드사에서 승인을 거부했습니다. 다른 카드를 시도해주세요.",
       },
       EXCEED_MAX_CARD_LIMIT: {
         title: "한도 초과",
@@ -72,9 +73,7 @@ function FailContent() {
 
             {errorMessage && (
               <div className="mb-6 rounded-lg bg-red-50 p-4">
-                <p className="text-sm text-red-700">
-                  {errorMessage}
-                </p>
+                <p className="text-sm text-red-700">{errorMessage}</p>
                 {errorCode && (
                   <p className="mt-1 text-xs text-red-600">
                     오류 코드: {errorCode}
@@ -116,7 +115,7 @@ function FailContent() {
             • 결제 관련 문의사항은 고객센터로 연락주세요.
             <br />
             • 문의 시 오류 코드를 함께 알려주시면 빠른 해결이 가능합니다.
-            <br />• 고객센터: support@sigongon.com
+            <br />• 고객센터: support@sigongcore.com
           </p>
         </div>
       </div>

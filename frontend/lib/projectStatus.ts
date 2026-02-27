@@ -1,4 +1,4 @@
-import type { ProjectStatus } from "@sigongon/types";
+import type { ProjectStatus } from "@sigongcore/types";
 
 export interface StatusConfig {
   label: string;

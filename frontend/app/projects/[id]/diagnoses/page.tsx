@@ -20,9 +20,9 @@ import {
   Button,
   Badge,
   formatDate,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { useDiagnoses } from "@/hooks";
-import type { DiagnosisStatus } from "@sigongon/types";
+import type { DiagnosisStatus } from "@sigongcore/types";
 
 const statusConfig: Record<
   DiagnosisStatus,
@@ -79,7 +79,10 @@ export default function DiagnosesPage({
         aria-live="polite"
         aria-label="진단 목록을 불러오는 중"
       >
-        <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" aria-hidden="true" />
+        <Loader2
+          className="h-8 w-8 animate-spin text-brand-point-500"
+          aria-hidden="true"
+        />
         <span className="sr-only">진단 목록을 불러오는 중입니다</span>
       </div>
     );
@@ -120,8 +123,7 @@ export default function DiagnosesPage({
                 현장 방문 후 AI 진단을 요청해 보세요.
               </p>
               <Button className="mt-6" onClick={handleRequestDiagnosis}>
-                <Plus className="h-4 w-4" />
-                첫 진단 요청하기
+                <Plus className="h-4 w-4" />첫 진단 요청하기
               </Button>
             </div>
           ) : (
@@ -156,7 +158,11 @@ export default function DiagnosesPage({
                             {statusInfo.label}
                           </Badge>
                           {diagnosis.status === "processing" && (
-                            <span className="sr-only" role="status" aria-live="polite">
+                            <span
+                              className="sr-only"
+                              role="status"
+                              aria-live="polite"
+                            >
                               AI가 진단을 분석 중입니다
                             </span>
                           )}
@@ -218,28 +224,19 @@ export default function DiagnosesPage({
               <div className="rounded-lg border border-slate-200 p-4">
                 <p className="text-sm text-slate-500">완료</p>
                 <p className="mt-2 text-2xl font-bold text-green-600">
-                  {
-                    diagnoses.filter((d) => d.status === "completed")
-                      .length
-                  }건
+                  {diagnoses.filter((d) => d.status === "completed").length}건
                 </p>
               </div>
               <div className="rounded-lg border border-slate-200 p-4">
                 <p className="text-sm text-slate-500">처리 중</p>
                 <p className="mt-2 text-2xl font-bold text-blue-600">
-                  {
-                    diagnoses.filter((d) => d.status === "processing")
-                      .length
-                  }건
+                  {diagnoses.filter((d) => d.status === "processing").length}건
                 </p>
               </div>
               <div className="rounded-lg border border-slate-200 p-4">
                 <p className="text-sm text-slate-500">실패</p>
                 <p className="mt-2 text-2xl font-bold text-red-600">
-                  {
-                    diagnoses.filter((d) => d.status === "failed")
-                      .length
-                  }건
+                  {diagnoses.filter((d) => d.status === "failed").length}건
                 </p>
               </div>
             </div>

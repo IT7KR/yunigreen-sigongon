@@ -19,7 +19,7 @@ import {
   Button,
   formatDate,
   toast,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { api } from "@/lib/api";
 import { MobileListCard } from "@/components/MobileListCard";
 

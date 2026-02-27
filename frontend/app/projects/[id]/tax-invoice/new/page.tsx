@@ -2,7 +2,13 @@
 
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, Button } from "@sigongon/ui";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+} from "@sigongcore/ui";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { TaxInvoiceForm } from "@/components/TaxInvoiceForm";
@@ -60,7 +66,9 @@ export default function NewTaxInvoicePage({
       if (createResult.success && createResult.data) {
         const issueResult = await api.issueTaxInvoice(createResult.data.id);
         if (issueResult.success) {
-          router.push(`/projects/${projectId}/tax-invoice/${createResult.data.id}`);
+          router.push(
+            `/projects/${projectId}/tax-invoice/${createResult.data.id}`,
+          );
         }
       }
     } catch (err) {
@@ -74,11 +82,7 @@ export default function NewTaxInvoicePage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.back()}
-        >
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h2 className="text-xl font-semibold text-slate-900">
@@ -97,9 +101,7 @@ export default function NewTaxInvoicePage({
             onIssue={handleIssue}
             loading={saving}
           />
-          {error && (
-            <p className="mt-4 text-sm text-red-500">{error}</p>
-          )}
+          {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
         </CardContent>
       </Card>
     </div>

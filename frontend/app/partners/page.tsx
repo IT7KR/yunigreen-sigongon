@@ -12,7 +12,7 @@ import {
   PrimitiveInput,
   toast,
   useConfirmDialog,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import {
   Check,
   Loader2,
@@ -681,7 +681,9 @@ export default function PartnersPage() {
                         <td className="px-6 py-4">
                           <Badge
                             variant={
-                              partner.status === "active" ? "success" : "default"
+                              partner.status === "active"
+                                ? "success"
+                                : "default"
                             }
                           >
                             {partner.status === "active" ? "정상" : "정지"}

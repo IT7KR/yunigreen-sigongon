@@ -1,4 +1,4 @@
-import type { ProjectDocumentStatus } from "@sigongon/types";
+import type { ProjectDocumentStatus } from "@sigongcore/types";
 
 export interface ProjectDocumentOverride {
   status?: ProjectDocumentStatus;
@@ -7,7 +7,7 @@ export interface ProjectDocumentOverride {
   generated_at?: string;
 }
 
-const STORAGE_KEY = "sigongon_project_document_overrides_v1";
+const STORAGE_KEY = "sigongcore_project_document_overrides_v1";
 
 type StoredOverrides = Record<string, Record<string, ProjectDocumentOverride>>;
 

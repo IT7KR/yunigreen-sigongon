@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { cn } from "@sigongon/ui";
+import { cn } from "@sigongcore/ui";
 
 interface MetaItem {
   label?: string;
@@ -44,7 +44,9 @@ export function MobileListCard({
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-slate-900 truncate">{title}</div>
           {subtitle && (
-            <div className="mt-0.5 text-sm text-slate-500 truncate">{subtitle}</div>
+            <div className="mt-0.5 text-sm text-slate-500 truncate">
+              {subtitle}
+            </div>
           )}
         </div>
         {badge && <div className="shrink-0">{badge}</div>}
@@ -55,7 +57,9 @@ export function MobileListCard({
         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
           {metadata.map((item, i) => (
             <span key={i} className="text-xs text-slate-500">
-              {item.label && <span className="text-slate-400">{item.label} </span>}
+              {item.label && (
+                <span className="text-slate-400">{item.label} </span>
+              )}
               {item.value}
             </span>
           ))}

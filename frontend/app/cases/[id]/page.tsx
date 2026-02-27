@@ -4,13 +4,24 @@ import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/AdminLayout";
 import { api } from "@/lib/api";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, LoadingOverlay, Textarea, toast } from "@sigongon/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  LoadingOverlay,
+  Textarea,
+  toast,
+} from "@sigongcore/ui";
 import type {
   DiagnosisCase,
   DiagnosisCaseEstimate,
   DiagnosisCaseImage,
   VisionResultDetail,
-} from "@sigongon/types";
+} from "@sigongcore/types";
 import { Download, Play, Save } from "lucide-react";
 import { MobileListCard } from "@/components/MobileListCard";
 import { saveAs } from "file-saver";
@@ -46,7 +57,8 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
       ]);
       if (caseRes.success && caseRes.data) setCaseData(caseRes.data);
       if (imageRes.success && imageRes.data) setImages(imageRes.data);
-      if (estimateRes?.success && estimateRes.data) setEstimate(estimateRes.data);
+      if (estimateRes?.success && estimateRes.data)
+        setEstimate(estimateRes.data);
     } catch (err) {
       console.error("케이스 데이터 불러오기 실패:", err);
     } finally {
@@ -95,7 +107,9 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
   async function handleSaveVision() {
     setBusy(true);
     try {
-      const parsed = JSON.parse(visionEditor) as VisionResultDetail["result_json"];
+      const parsed = JSON.parse(
+        visionEditor,
+      ) as VisionResultDetail["result_json"];
       const res = await api.updateCaseVision(caseId, {
         result_json: parsed,
       });
@@ -161,8 +175,12 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">케이스 #{caseData.id}</h1>
-            <p className="mt-1 text-sm text-slate-500">시즌 {caseData.season_id}</p>
+            <h1 className="text-2xl font-bold text-slate-900">
+              케이스 #{caseData.id}
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              시즌 {caseData.season_id}
+            </p>
           </div>
           <Badge variant={caseData.status === "estimated" ? "success" : "info"}>
             {caseData.status}
@@ -180,7 +198,9 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
               onChange={(e) => void handleUploadImages(e.target.files)}
               disabled={busy}
             />
-            <p className="text-sm text-slate-500">등록 사진: {images.length}장</p>
+            <p className="text-sm text-slate-500">
+              등록 사진: {images.length}장
+            </p>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {images.map((image) => (
                 <img
@@ -198,7 +218,11 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Vision JSON</CardTitle>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={handleRunVision} loading={busy}>
+              <Button
+                variant="secondary"
+                onClick={handleRunVision}
+                loading={busy}
+              >
                 <Play className="h-4 w-4" />
                 분석 실행
               </Button>
@@ -223,14 +247,26 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>견적 결과</CardTitle>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={handleCreateEstimate} loading={busy}>
+              <Button
+                variant="secondary"
+                onClick={handleCreateEstimate}
+                loading={busy}
+              >
                 견적 생성
               </Button>
-              <Button variant="ghost" onClick={handleDownloadCsv} disabled={!estimate}>
+              <Button
+                variant="ghost"
+                onClick={handleDownloadCsv}
+                disabled={!estimate}
+              >
                 <Download className="h-4 w-4" />
                 CSV
               </Button>
-              <Button variant="ghost" onClick={handleDownloadXlsx} disabled={!estimate}>
+              <Button
+                variant="ghost"
+                onClick={handleDownloadXlsx}
+                disabled={!estimate}
+              >
                 <Download className="h-4 w-4" />
                 XLSX
               </Button>
@@ -238,7 +274,9 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
           </CardHeader>
           <CardContent>
             {!estimate ? (
-              <p className="text-sm text-slate-500">견적을 아직 생성하지 않았습니다.</p>
+              <p className="text-sm text-slate-500">
+                견적을 아직 생성하지 않았습니다.
+              </p>
             ) : (
               <div className="space-y-4">
                 {/* 모바일 카드 뷰 */}
@@ -248,9 +286,18 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
                       key={`${line.item_name}-${idx}`}
                       title={line.item_name}
                       metadata={[
-                        { label: "수량", value: `${line.quantity} ${line.unit}` },
-                        { label: "단가", value: `${line.unit_price.toLocaleString()}원` },
-                        { label: "금액", value: `${line.amount.toLocaleString()}원` },
+                        {
+                          label: "수량",
+                          value: `${line.quantity} ${line.unit}`,
+                        },
+                        {
+                          label: "단가",
+                          value: `${line.unit_price.toLocaleString()}원`,
+                        },
+                        {
+                          label: "금액",
+                          value: `${line.amount.toLocaleString()}원`,
+                        },
                       ]}
                     />
                   ))}
@@ -274,14 +321,22 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
                         {estimate.items.map((line, idx) => {
                           const evidence = line.evidence[0];
                           return (
-                            <tr key={`${line.item_name}-${idx}`} className="border-b border-slate-100">
+                            <tr
+                              key={`${line.item_name}-${idx}`}
+                              className="border-b border-slate-100"
+                            >
                               <td className="py-2">{line.item_name}</td>
                               <td className="py-2">{line.unit}</td>
                               <td className="py-2">{line.quantity}</td>
-                              <td className="py-2">{line.unit_price.toLocaleString()}</td>
-                              <td className="py-2">{line.amount.toLocaleString()}</td>
+                              <td className="py-2">
+                                {line.unit_price.toLocaleString()}
+                              </td>
+                              <td className="py-2">
+                                {line.amount.toLocaleString()}
+                              </td>
                               <td className="py-2 text-xs text-slate-600">
-                                {evidence?.doc_title} / p.{evidence?.page} / {evidence?.table_id} / {evidence?.row_id}
+                                {evidence?.doc_title} / p.{evidence?.page} /{" "}
+                                {evidence?.table_id} / {evidence?.row_id}
                               </td>
                             </tr>
                           );
@@ -292,8 +347,8 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
                 </div>
 
                 <div className="rounded-lg bg-slate-50 p-3 text-sm">
-                  공급가액 {estimate.totals.subtotal.toLocaleString()}원 / 부가세{" "}
-                  {estimate.totals.vat_amount.toLocaleString()}원 / 합계{" "}
+                  공급가액 {estimate.totals.subtotal.toLocaleString()}원 /
+                  부가세 {estimate.totals.vat_amount.toLocaleString()}원 / 합계{" "}
                   {estimate.totals.total_amount.toLocaleString()}원
                 </div>
               </div>

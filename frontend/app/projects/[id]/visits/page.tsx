@@ -11,8 +11,8 @@ import {
   Button,
   formatDate,
   Badge,
-} from "@sigongon/ui";
-import type { SiteVisitDetail, VisitType } from "@sigongon/types";
+} from "@sigongcore/ui";
+import type { SiteVisitDetail, VisitType } from "@sigongcore/types";
 import { api } from "@/lib/api";
 import { MobileListCard } from "@/components/MobileListCard";
 

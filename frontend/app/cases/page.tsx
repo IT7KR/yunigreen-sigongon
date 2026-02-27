@@ -5,8 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/AdminLayout";
 import { api } from "@/lib/api";
-import { Button, Card, CardContent, CardHeader, CardTitle, Badge, formatDate } from "@sigongon/ui";
-import type { DiagnosisCase, SeasonInfo } from "@sigongon/types";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Badge,
+  formatDate,
+} from "@sigongcore/ui";
+import type { DiagnosisCase, SeasonInfo } from "@sigongcore/types";
 import { Plus, Sparkles } from "lucide-react";
 import { MobileListCard } from "@/components/MobileListCard";
 
@@ -40,7 +48,9 @@ export default function CasesPage() {
   async function handleCreateCase() {
     setCreating(true);
     try {
-      const res = await api.createCase(activeSeason ? { season_id: activeSeason.id } : undefined);
+      const res = await api.createCase(
+        activeSeason ? { season_id: activeSeason.id } : undefined,
+      );
       if (res.success && res.data) {
         router.push(`/cases/${res.data.id}`);
       }
@@ -60,8 +70,7 @@ export default function CasesPage() {
             </p>
           </div>
           <Button onClick={handleCreateCase} loading={creating}>
-            <Plus className="h-4 w-4" />
-            새 케이스
+            <Plus className="h-4 w-4" />새 케이스
           </Button>
         </div>
 
@@ -75,7 +84,10 @@ export default function CasesPage() {
               ) : (
                 <Badge variant="warning">없음</Badge>
               )}
-              <Link className="ml-2 text-sm text-brand-point-600 hover:underline" href="/sa/estimation-governance">
+              <Link
+                className="ml-2 text-sm text-brand-point-600 hover:underline"
+                href="/sa/estimation-governance"
+              >
                 적산 운영
               </Link>
             </div>
@@ -90,7 +102,9 @@ export default function CasesPage() {
             {loading ? (
               <p className="text-sm text-slate-500">불러오는 중...</p>
             ) : cases.length === 0 ? (
-              <p className="text-sm text-slate-500">등록된 케이스가 없습니다.</p>
+              <p className="text-sm text-slate-500">
+                등록된 케이스가 없습니다.
+              </p>
             ) : (
               <>
                 {/* 모바일 카드 뷰 */}
@@ -100,7 +114,11 @@ export default function CasesPage() {
                       key={item.id}
                       title={`케이스#${item.id}`}
                       badge={
-                        <Badge variant={item.status === "estimated" ? "success" : "info"}>
+                        <Badge
+                          variant={
+                            item.status === "estimated" ? "success" : "info"
+                          }
+                        >
                           {item.status}
                         </Badge>
                       }
@@ -128,17 +146,31 @@ export default function CasesPage() {
                       </thead>
                       <tbody>
                         {cases.map((item) => (
-                          <tr key={item.id} className="border-b border-slate-100 last:border-0">
+                          <tr
+                            key={item.id}
+                            className="border-b border-slate-100 last:border-0"
+                          >
                             <td className="py-3 font-medium">{item.id}</td>
                             <td className="py-3">{item.season_id}</td>
                             <td className="py-3">
-                              <Badge variant={item.status === "estimated" ? "success" : "info"}>
+                              <Badge
+                                variant={
+                                  item.status === "estimated"
+                                    ? "success"
+                                    : "info"
+                                }
+                              >
                                 {item.status}
                               </Badge>
                             </td>
-                            <td className="py-3 text-sm text-slate-600">{formatDate(item.created_at)}</td>
+                            <td className="py-3 text-sm text-slate-600">
+                              {formatDate(item.created_at)}
+                            </td>
                             <td className="py-3 text-right">
-                              <Link href={`/cases/${item.id}`} className="text-sm text-brand-point-600 hover:underline">
+                              <Link
+                                href={`/cases/${item.id}`}
+                                className="text-sm text-brand-point-600 hover:underline"
+                              >
                                 열기
                               </Link>
                             </td>

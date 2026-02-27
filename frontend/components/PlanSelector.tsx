@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, Button, Badge } from "@sigongon/ui";
+import { Card, CardContent, Button, Badge } from "@sigongcore/ui";
 import { Check, Calendar } from "lucide-react";
 
 type PlanType = "STARTER" | "STANDARD" | "PREMIUM";
@@ -162,7 +162,13 @@ export function PlanSelector({
 
                 <Button
                   className="w-full"
-                  variant={isScheduled ? "secondary" : plan.recommended ? "primary" : "secondary"}
+                  variant={
+                    isScheduled
+                      ? "secondary"
+                      : plan.recommended
+                        ? "primary"
+                        : "secondary"
+                  }
                   disabled={isCurrent}
                   onClick={() => onSelectPlan(plan.id)}
                 >

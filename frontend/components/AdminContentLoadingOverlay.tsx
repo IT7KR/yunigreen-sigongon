@@ -1,6 +1,6 @@
 "use client";
 
-import { Skeleton } from "@sigongon/ui";
+import { Skeleton } from "@sigongcore/ui";
 
 export function AdminContentLoadingOverlay() {
   return (

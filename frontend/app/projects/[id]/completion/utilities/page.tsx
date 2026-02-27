@@ -10,7 +10,7 @@ import {
   Button,
   Badge,
   formatDate,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import {
   Building2,
   Zap,
@@ -108,15 +108,15 @@ export default function CompletionUtilitiesPage({
               !enabled
                 ? "bg-slate-100 text-slate-600"
                 : pendingCount > 0
-                ? "bg-amber-100 text-amber-700"
-                : "bg-emerald-100 text-emerald-700"
+                  ? "bg-amber-100 text-amber-700"
+                  : "bg-emerald-100 text-emerald-700"
             }
           >
             {!enabled
               ? "조건 미충족"
               : pendingCount > 0
-              ? `대기 ${pendingCount}건`
-              : "정산 완료"}
+                ? `대기 ${pendingCount}건`
+                : "정산 완료"}
           </Badge>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
@@ -134,7 +134,11 @@ export default function CompletionUtilitiesPage({
           <CardTitle>정산 액션</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 md:grid-cols-2">
-          <Button className="w-full justify-between" asChild disabled={!enabled}>
+          <Button
+            className="w-full justify-between"
+            asChild
+            disabled={!enabled}
+          >
             <Link href={`/projects/${projectId}/utilities`}>
               수도광열비 관리 화면
               <ArrowRight className="h-4 w-4" />

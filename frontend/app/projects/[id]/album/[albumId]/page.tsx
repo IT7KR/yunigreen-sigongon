@@ -10,7 +10,20 @@ import {
   Loader2,
   LayoutGrid,
 } from "lucide-react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, LoadingOverlay, PrimitiveButton, Textarea, toast, useConfirmDialog } from "@sigongon/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  LoadingOverlay,
+  PrimitiveButton,
+  Textarea,
+  toast,
+  useConfirmDialog,
+} from "@sigongcore/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
 import { PhotoAlbumGrid } from "@/components/PhotoAlbumGrid";
 import { PhotoSelector } from "@/components/PhotoSelector";
@@ -56,7 +69,7 @@ export default function AlbumDetailPage({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [layout, setLayout] = useState<"three_column" | "four_column">(
-    "three_column"
+    "three_column",
   );
   const [status, setStatus] = useState<"draft" | "published">("draft");
 
@@ -175,9 +188,7 @@ export default function AlbumDetailPage({
   }
 
   if (loading || !album) {
-    return (
-      <LoadingOverlay variant="inline" text="앨범을 불러오는 중..." />
-    );
+    return <LoadingOverlay variant="inline" text="앨범을 불러오는 중..." />;
   }
 
   return (
@@ -190,9 +201,7 @@ export default function AlbumDetailPage({
           <ArrowLeft className="h-4 w-4" />
           목록으로
         </Button>
-        <h1 className="flex-1 text-2xl font-bold text-slate-900">
-          앨범 편집
-        </h1>
+        <h1 className="flex-1 text-2xl font-bold text-slate-900">앨범 편집</h1>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={handleSave} disabled={saving}>
             {saving ? (
@@ -301,9 +310,7 @@ export default function AlbumDetailPage({
 
       <Card>
         <CardHeader className="flex-row items-center justify-between">
-          <CardTitle>
-            사진 ({album.photos.length}장)
-          </CardTitle>
+          <CardTitle>사진 ({album.photos.length}장)</CardTitle>
           <Button onClick={() => setShowPhotoSelector(true)}>
             <Plus className="h-4 w-4" />
             사진 추가

@@ -68,7 +68,7 @@ import type {
   WorkerDocumentReviewAction,
   WorkerDocumentReviewQueueItem,
   WorkerDocumentType,
-} from "@sigongon/types";
+} from "@sigongcore/types";
 
 export class NetworkError extends Error {
   constructor(
@@ -259,19 +259,18 @@ export class APIClient {
     }
 
     const status = error.response.status;
-    const data = error.response.data as
-      | Record<string, unknown>
-      | undefined;
+    const data = error.response.data as Record<string, unknown> | undefined;
     const detail = data?.detail;
     const messageFromDetail = typeof detail === "string" ? detail : undefined;
     const messageFromDetailObject =
-      detail && typeof detail === "object" && typeof (detail as { message?: unknown }).message === "string"
-        ? ((detail as { message: string }).message)
+      detail &&
+      typeof detail === "object" &&
+      typeof (detail as { message?: unknown }).message === "string"
+        ? (detail as { message: string }).message
         : undefined;
     const messageFromBody =
       typeof data?.message === "string" ? data.message : undefined;
-    const code =
-      typeof data?.code === "string" ? data.code : undefined;
+    const code = typeof data?.code === "string" ? data.code : undefined;
 
     const messages: Record<number, string> = {
       400: "잘못된 요청이에요",
@@ -287,7 +286,11 @@ export class APIClient {
     };
 
     return new APIError(
-      messageFromBody || messageFromDetail || messageFromDetailObject || messages[status] || "알 수 없는 오류가 발생했어요",
+      messageFromBody ||
+        messageFromDetail ||
+        messageFromDetailObject ||
+        messages[status] ||
+        "알 수 없는 오류가 발생했어요",
       status,
       code,
       detail,
@@ -423,7 +426,11 @@ export class APIClient {
     return response.data;
   }
 
-  async confirmPasswordReset(requestId: string, code: string, newPassword: string) {
+  async confirmPasswordReset(
+    requestId: string,
+    code: string,
+    newPassword: string,
+  ) {
     const response = await this.client.post<
       APIResponse<{ verified: boolean; message: string }>
     >("/auth/password-reset/confirm", {
@@ -1138,7 +1145,11 @@ export class APIClient {
     return response.data;
   }
 
-  async registerWorker(data: { name: string; phone: string; id_number?: string }) {
+  async registerWorker(data: {
+    name: string;
+    phone: string;
+    id_number?: string;
+  }) {
     const response = await this.client.post<
       APIResponse<{
         user_id: string;
@@ -1950,7 +1961,10 @@ export class APIClient {
     is_primary?: boolean;
     notes?: string;
   }) {
-    const response = await this.client.post<APIResponse<any>>("/licenses", data);
+    const response = await this.client.post<APIResponse<any>>(
+      "/licenses",
+      data,
+    );
     return response.data;
   }
 
@@ -2095,32 +2109,51 @@ export class APIClient {
   // ============================================
 
   async getDailyWorkers() {
-    const response = await this.client.get<APIResponse<DailyWorker[]>>("/labor/daily-workers");
+    const response = await this.client.get<APIResponse<DailyWorker[]>>(
+      "/labor/daily-workers",
+    );
     return response.data;
   }
 
   async getLaborCodebook() {
-    const response = await this.client.get<APIResponse<LaborCodebookResponse>>("/labor/codebook");
+    const response =
+      await this.client.get<APIResponse<LaborCodebookResponse>>(
+        "/labor/codebook",
+      );
     return response.data;
   }
 
   async createDailyWorker(
-    data: Omit<DailyWorker, "id"> & { gender: 1 | 2 | 3 | 4; daily_rate: number },
+    data: Omit<DailyWorker, "id"> & {
+      gender: 1 | 2 | 3 | 4;
+      daily_rate: number;
+    },
   ) {
-    const response = await this.client.post<APIResponse<{ id: string }>>("/labor/daily-workers", data);
+    const response = await this.client.post<APIResponse<{ id: string }>>(
+      "/labor/daily-workers",
+      data,
+    );
     return response.data;
   }
 
   async updateDailyWorker(
     id: string,
-    data: Partial<Omit<DailyWorker, "id">> & { gender?: 1 | 2 | 3 | 4; daily_rate?: number },
+    data: Partial<Omit<DailyWorker, "id">> & {
+      gender?: 1 | 2 | 3 | 4;
+      daily_rate?: number;
+    },
   ) {
-    const response = await this.client.patch<APIResponse<{ id: string }>>(`/labor/daily-workers/${id}`, data);
+    const response = await this.client.patch<APIResponse<{ id: string }>>(
+      `/labor/daily-workers/${id}`,
+      data,
+    );
     return response.data;
   }
 
   async deleteDailyWorker(id: string) {
-    const response = await this.client.delete<APIResponse<{ id: string }>>(`/labor/daily-workers/${id}`);
+    const response = await this.client.delete<APIResponse<{ id: string }>>(
+      `/labor/daily-workers/${id}`,
+    );
     return response.data;
   }
 
@@ -2153,11 +2186,14 @@ export class APIClient {
     return response.data;
   }
 
-  async getWorkerDocumentReviewQueue(reviewStatus: WorkerDocument["review_status"] | "all" = "pending_review") {
-    const response = await this.client.get<APIResponse<WorkerDocumentReviewQueueItem[]>>(
-      "/labor/worker-documents/review-queue",
-      { params: { review_status: reviewStatus } },
-    );
+  async getWorkerDocumentReviewQueue(
+    reviewStatus: WorkerDocument["review_status"] | "all" = "pending_review",
+  ) {
+    const response = await this.client.get<
+      APIResponse<WorkerDocumentReviewQueueItem[]>
+    >("/labor/worker-documents/review-queue", {
+      params: { review_status: reviewStatus },
+    });
     return response.data;
   }
 
@@ -2199,50 +2235,73 @@ export class APIClient {
   }
 
   async getWorkRecords(projectId: string, year: number, month: number) {
-    const response = await this.client.get<APIResponse<any[]>>(`/labor/work-records`, {
-      params: { project_id: projectId, year, month },
-    });
+    const response = await this.client.get<APIResponse<any[]>>(
+      `/labor/work-records`,
+      {
+        params: { project_id: projectId, year, month },
+      },
+    );
     return response.data;
   }
 
   async upsertWorkRecords(records: any[]) {
-    const response = await this.client.post<APIResponse<any>>("/labor/work-records/batch", { records });
+    const response = await this.client.post<APIResponse<any>>(
+      "/labor/work-records/batch",
+      { records },
+    );
     return response.data;
   }
 
   async deleteWorkRecord(id: string) {
-    const response = await this.client.delete<APIResponse<any>>(`/labor/work-records/${id}`);
+    const response = await this.client.delete<APIResponse<any>>(
+      `/labor/work-records/${id}`,
+    );
     return response.data;
   }
 
   async generateSiteReport(projectId: string, year: number, month: number) {
-    const response = await this.client.get<APIResponse<any>>(`/labor/reports/site`, {
-      params: { project_id: projectId, year, month },
-    });
+    const response = await this.client.get<APIResponse<any>>(
+      `/labor/reports/site`,
+      {
+        params: { project_id: projectId, year, month },
+      },
+    );
     return response.data;
   }
 
   async generateConsolidatedReport(year: number, month: number) {
-    const response = await this.client.get<APIResponse<any>>(`/labor/reports/consolidated`, {
-      params: { year, month },
-    });
+    const response = await this.client.get<APIResponse<any>>(
+      `/labor/reports/consolidated`,
+      {
+        params: { year, month },
+      },
+    );
     return response.data;
   }
 
   async getInsuranceRates(year?: number) {
-    const response = await this.client.get<APIResponse<any[]>>("/labor/insurance-rates", {
-      params: year ? { year } : {},
-    });
+    const response = await this.client.get<APIResponse<any[]>>(
+      "/labor/insurance-rates",
+      {
+        params: year ? { year } : {},
+      },
+    );
     return response.data;
   }
 
   async updateInsuranceRates(id: string, data: any) {
-    const response = await this.client.patch<APIResponse<any>>(`/labor/insurance-rates/${id}`, data);
+    const response = await this.client.patch<APIResponse<any>>(
+      `/labor/insurance-rates/${id}`,
+      data,
+    );
     return response.data;
   }
 
   async createInsuranceRates(data: any) {
-    const response = await this.client.post<APIResponse<any>>("/labor/insurance-rates", data);
+    const response = await this.client.post<APIResponse<any>>(
+      "/labor/insurance-rates",
+      data,
+    );
     return response.data;
   }
 
@@ -3066,12 +3125,14 @@ export class APIClient {
   // ============================================
 
   async getSeasons() {
-    const response = await this.client.get<APIResponse<SeasonInfo[]>>("/seasons");
+    const response =
+      await this.client.get<APIResponse<SeasonInfo[]>>("/seasons");
     return response.data;
   }
 
   async getActiveSeason() {
-    const response = await this.client.get<APIResponse<SeasonInfo>>("/seasons/active");
+    const response =
+      await this.client.get<APIResponse<SeasonInfo>>("/seasons/active");
     return response.data;
   }
 
@@ -3188,9 +3249,9 @@ export class APIClient {
   }
 
   async ingestAdminDocument(documentId: number) {
-    const response = await this.client.post<APIResponse<SeasonDocumentStatusInfo>>(
-      `/admin/documents/${documentId}/ingest`,
-    );
+    const response = await this.client.post<
+      APIResponse<SeasonDocumentStatusInfo>
+    >(`/admin/documents/${documentId}/ingest`);
     return response.data;
   }
 
@@ -3203,21 +3264,22 @@ export class APIClient {
   }
 
   async getAdminDocumentStatus(documentId: number) {
-    const response = await this.client.get<APIResponse<SeasonDocumentStatusInfo>>(
-      `/admin/documents/${documentId}/status`,
-    );
+    const response = await this.client.get<
+      APIResponse<SeasonDocumentStatusInfo>
+    >(`/admin/documents/${documentId}/status`);
     return response.data;
   }
 
   async getEstimationGovernanceOverview() {
-    const response = await this.client.get<APIResponse<EstimationGovernanceOverview>>(
-      "/admin/estimation-governance/overview",
-    );
+    const response = await this.client.get<
+      APIResponse<EstimationGovernanceOverview>
+    >("/admin/estimation-governance/overview");
     return response.data;
   }
 
   async listCases() {
-    const response = await this.client.get<APIResponse<DiagnosisCase[]>>("/cases");
+    const response =
+      await this.client.get<APIResponse<DiagnosisCase[]>>("/cases");
     return response.data;
   }
 
@@ -3271,7 +3333,10 @@ export class APIClient {
 
   async updateCaseVision(
     caseId: number,
-    data: { result_json: VisionResultDetail["result_json"]; confidence?: number },
+    data: {
+      result_json: VisionResultDetail["result_json"];
+      confidence?: number;
+    },
   ) {
     const response = await this.client.patch<APIResponse<VisionResultDetail>>(
       `/cases/${caseId}/vision`,
@@ -3364,11 +3429,15 @@ export class APIClient {
         const rawCatalogId = item.catalog_item_id;
         const rawRevisionId = item.pricebook_revision_id;
         const parsedCatalogId =
-          rawCatalogId === undefined || rawCatalogId === null || rawCatalogId === ""
+          rawCatalogId === undefined ||
+          rawCatalogId === null ||
+          rawCatalogId === ""
             ? undefined
             : Number(rawCatalogId);
         const parsedRevisionId =
-          rawRevisionId === undefined || rawRevisionId === null || rawRevisionId === ""
+          rawRevisionId === undefined ||
+          rawRevisionId === null ||
+          rawRevisionId === ""
             ? undefined
             : Number(rawRevisionId);
 
@@ -3405,8 +3474,7 @@ export class APIClient {
           invoice_file_url?: string;
         },
   ) {
-    const data =
-      typeof payload === "string" ? { status: payload } : payload;
+    const data = typeof payload === "string" ? { status: payload } : payload;
 
     const response = await this.client.patch<
       APIResponse<{
@@ -3488,17 +3556,19 @@ export class APIClient {
     organization_id?: number;
     run_date?: string;
   }) {
-    const response = await this.client.post<APIResponse<{
-      run_date: string;
-      organization_id?: number;
-      checked_count: number;
-      eligible_count: number;
-      notifications_created: number;
-      alimtalk_success: number;
-      alimtalk_failure: number;
-      skipped_duplicate: number;
-      skipped_no_receiver: number;
-    }>>("/field-representatives/reminders/run", data ?? {});
+    const response = await this.client.post<
+      APIResponse<{
+        run_date: string;
+        organization_id?: number;
+        checked_count: number;
+        eligible_count: number;
+        notifications_created: number;
+        alimtalk_success: number;
+        alimtalk_failure: number;
+        skipped_duplicate: number;
+        skipped_no_receiver: number;
+      }>
+    >("/field-representatives/reminders/run", data ?? {});
     return response.data;
   }
 
@@ -3509,19 +3579,23 @@ export class APIClient {
     template_code: string;
     variables: Record<string, string>;
   }) {
-    const response = await this.client.post<APIResponse<{
-      message_id: string;
-      success: boolean;
-      message: string;
-    }>>("/notifications/alimtalk", payload);
+    const response = await this.client.post<
+      APIResponse<{
+        message_id: string;
+        success: boolean;
+        message: string;
+      }>
+    >("/notifications/alimtalk", payload);
     return response.data;
   }
 
   async getAlimTalkStatus(messageId: string) {
-    const response = await this.client.get<APIResponse<{
-      message_id: string;
-      status: string;
-    }>>(`/notifications/alimtalk/${messageId}/status`);
+    const response = await this.client.get<
+      APIResponse<{
+        message_id: string;
+        status: string;
+      }>
+    >(`/notifications/alimtalk/${messageId}/status`);
     return response.data;
   }
 
@@ -3536,25 +3610,37 @@ export class APIClient {
     }>;
     invite_token?: string;
   }) {
-    const response = await this.client.post<APIResponse<Array<{
-      id: number;
-      consent_type: string;
-      consented: boolean;
-      consented_at: string;
-    }>>>("/consent/records", payload);
+    const response = await this.client.post<
+      APIResponse<
+        Array<{
+          id: number;
+          consent_type: string;
+          consented: boolean;
+          consented_at: string;
+        }>
+      >
+    >("/consent/records", payload);
     return response.data;
   }
 
   async checkWorkerDocuments(workerId: number) {
-    const response = await this.client.get<APIResponse<{
-      worker_id: number;
-      documents_complete: boolean;
-      missing_documents: Array<{ type: string; name: string; required: boolean }>;
-    }>>(`/labor-contracts/workers/${workerId}/document-check`);
+    const response = await this.client.get<
+      APIResponse<{
+        worker_id: number;
+        documents_complete: boolean;
+        missing_documents: Array<{
+          type: string;
+          name: string;
+          required: boolean;
+        }>;
+      }>
+    >(`/labor-contracts/workers/${workerId}/document-check`);
     return response.data;
   }
 
-  async downloadLaborContractHwpx(laborContractId: number | string): Promise<Blob> {
+  async downloadLaborContractHwpx(
+    laborContractId: number | string,
+  ): Promise<Blob> {
     const response = await this.client.get<Blob>(
       `/labor-contracts/${laborContractId}/hwpx`,
       { responseType: "blob" },
@@ -3577,9 +3663,9 @@ export class APIClient {
   }
 
   async deleteDeviceToken(token: string) {
-    const response = await this.client.delete<APIResponse<{ deleted: boolean }>>(
-      `/device-tokens/${encodeURIComponent(token)}`,
-    );
+    const response = await this.client.delete<
+      APIResponse<{ deleted: boolean }>
+    >(`/device-tokens/${encodeURIComponent(token)}`);
     return response.data;
   }
 }

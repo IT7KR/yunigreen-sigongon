@@ -3,8 +3,16 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { FileText, Plus, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, Button, Badge, toast } from "@sigongon/ui";
-import type { ProjectStatus } from "@sigongon/types";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+  Badge,
+  toast,
+} from "@sigongcore/ui";
+import type { ProjectStatus } from "@sigongcore/types";
 import { api } from "@/lib/api";
 
 type ReportStatus = "draft" | "submitted" | "approved" | "rejected";
@@ -29,7 +37,10 @@ const statusLabels: Record<ReportStatus, string> = {
   rejected: "반려",
 };
 
-const statusVariants: Record<ReportStatus, "default" | "success" | "warning" | "error"> = {
+const statusVariants: Record<
+  ReportStatus,
+  "default" | "success" | "warning" | "error"
+> = {
   draft: "default",
   submitted: "warning",
   approved: "success",
@@ -55,9 +66,13 @@ export default function ConstructionReportsPage({
 }) {
   const { id } = use(params);
   const [reports, setReports] = useState<ConstructionReport[]>([]);
-  const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
+  const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
-  const [updatingStatus, setUpdatingStatus] = useState<ProjectStatus | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<ProjectStatus | null>(
+    null,
+  );
 
   useEffect(() => {
     loadData();
@@ -107,9 +122,15 @@ export default function ConstructionReportsPage({
   }
 
   const startReports = reports.filter((r) => r.report_type === "start");
-  const completionReports = reports.filter((r) => r.report_type === "completion");
-  const hasApprovedStartReport = startReports.some((r) => r.status === "approved");
-  const hasApprovedCompletionReport = completionReports.some((r) => r.status === "approved");
+  const completionReports = reports.filter(
+    (r) => r.report_type === "completion",
+  );
+  const hasApprovedStartReport = startReports.some(
+    (r) => r.status === "approved",
+  );
+  const hasApprovedCompletionReport = completionReports.some(
+    (r) => r.status === "approved",
+  );
 
   const needsInProgressAction =
     hasApprovedStartReport &&
@@ -198,7 +219,9 @@ export default function ConstructionReportsPage({
         </CardHeader>
         <CardContent>
           {startReports.length === 0 ? (
-            <p className="py-8 text-center text-slate-500">아직 착공계가 없습니다.</p>
+            <p className="py-8 text-center text-slate-500">
+              아직 착공계가 없습니다.
+            </p>
           ) : (
             <div className="space-y-3">
               {startReports.map((report) => (
@@ -213,7 +236,9 @@ export default function ConstructionReportsPage({
                         {report.construction_name || "착공계"}
                       </p>
                       <p className="text-sm text-slate-500">
-                        {new Date(report.created_at).toLocaleDateString("ko-KR")}
+                        {new Date(report.created_at).toLocaleDateString(
+                          "ko-KR",
+                        )}
                       </p>
                       {report.rejection_reason && (
                         <p className="mt-1 text-sm text-red-600">
@@ -253,7 +278,9 @@ export default function ConstructionReportsPage({
               착공계가 승인되면 준공계를 작성할 수 있어요.
             </p>
           ) : completionReports.length === 0 ? (
-            <p className="py-8 text-center text-slate-500">아직 준공계가 없습니다.</p>
+            <p className="py-8 text-center text-slate-500">
+              아직 준공계가 없습니다.
+            </p>
           ) : (
             <div className="space-y-3">
               {completionReports.map((report) => (
@@ -268,7 +295,9 @@ export default function ConstructionReportsPage({
                         {report.construction_name || "준공계"}
                       </p>
                       <p className="text-sm text-slate-500">
-                        {new Date(report.created_at).toLocaleDateString("ko-KR")}
+                        {new Date(report.created_at).toLocaleDateString(
+                          "ko-KR",
+                        )}
                       </p>
                       {report.rejection_reason && (
                         <p className="mt-1 text-sm text-red-600">

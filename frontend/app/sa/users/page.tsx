@@ -2,7 +2,26 @@
 
 import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Badge, Button, Card, CardContent, LoadingOverlay, Modal, Pagination, PrimitiveButton, PrimitiveInput, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  LoadingOverlay,
+  Modal,
+  Pagination,
+  PrimitiveButton,
+  PrimitiveInput,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  formatDate,
+  toast,
+  useConfirmDialog,
+} from "@sigongcore/ui";
 import {
   Search,
   Shield,
@@ -20,7 +39,7 @@ import {
 import { api } from "@/lib/api";
 import { MobileListCard } from "@/components/MobileListCard";
 
-import type { UserRole } from "@sigongon/types";
+import type { UserRole } from "@sigongcore/types";
 
 /** 역할별 한글 라벨 및 스타일 */
 const ROLE_CONFIG: Record<UserRole, { label: string; color: string }> = {
@@ -147,7 +166,8 @@ export default function SAUsersPage() {
             전체 사용자 관리
           </h1>
           <p className="mt-1 text-slate-500">
-            전체 {users.length}명 · 활성 {users.filter(u => u.is_active).length}명
+            전체 {users.length}명 · 활성{" "}
+            {users.filter((u) => u.is_active).length}명
           </p>
         </div>
 
@@ -167,7 +187,10 @@ export default function SAUsersPage() {
         </Card>
 
         {isLoading ? (
-          <LoadingOverlay variant="inline" text="사용자 목록을 불러오는 중..." />
+          <LoadingOverlay
+            variant="inline"
+            text="사용자 목록을 불러오는 중..."
+          />
         ) : (
           <>
             {/* 모바일 카드 뷰 */}
@@ -178,7 +201,10 @@ export default function SAUsersPage() {
                 </div>
               ) : (
                 filteredUsers.map((user) => {
-                  const roleInfo = ROLE_CONFIG[user.role] || { label: user.role, color: "bg-slate-100 text-slate-700" };
+                  const roleInfo = ROLE_CONFIG[user.role] || {
+                    label: user.role,
+                    color: "bg-slate-100 text-slate-700",
+                  };
                   return (
                     <MobileListCard
                       key={user.id}
@@ -193,7 +219,9 @@ export default function SAUsersPage() {
                         {
                           label: "역할",
                           value: (
-                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${roleInfo.color}`}>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${roleInfo.color}`}
+                            >
                               <Shield className="h-3 w-3" />
                               {roleInfo.label}
                             </span>
@@ -213,14 +241,18 @@ export default function SAUsersPage() {
                             <Eye className="h-4 w-4 text-slate-400" />
                           </PrimitiveButton>
                           <PrimitiveButton
-                            onClick={() => handleResetPassword(user.id, user.name)}
+                            onClick={() =>
+                              handleResetPassword(user.id, user.name)
+                            }
                             className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                             title="비밀번호 초기화"
                           >
                             <Key className="h-4 w-4 text-slate-400" />
                           </PrimitiveButton>
                           <PrimitiveButton
-                            onClick={() => handleToggleActive(user.id, user.is_active)}
+                            onClick={() =>
+                              handleToggleActive(user.id, user.is_active)
+                            }
                             className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
                             title={user.is_active ? "비활성화" : "활성화"}
                           >
@@ -255,7 +287,9 @@ export default function SAUsersPage() {
                         <TableRow>
                           <TableCell colSpan={7} className="text-center">
                             <div className="py-12 text-slate-500">
-                              {searchQuery ? "검색 결과가 없어요" : "사용자가 없어요"}
+                              {searchQuery
+                                ? "검색 결과가 없어요"
+                                : "사용자가 없어요"}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -288,9 +322,14 @@ export default function SAUsersPage() {
                             </TableCell>
                             <TableCell>
                               {(() => {
-                                const roleInfo = ROLE_CONFIG[user.role] || { label: user.role, color: "bg-slate-100 text-slate-700" };
+                                const roleInfo = ROLE_CONFIG[user.role] || {
+                                  label: user.role,
+                                  color: "bg-slate-100 text-slate-700",
+                                };
                                 return (
-                                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${roleInfo.color}`}>
+                                  <span
+                                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${roleInfo.color}`}
+                                  >
                                     <Shield className="h-3.5 w-3.5" />
                                     {roleInfo.label}
                                   </span>
@@ -343,9 +382,7 @@ export default function SAUsersPage() {
                                     handleToggleActive(user.id, user.is_active)
                                   }
                                   className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
-                                  title={
-                                    user.is_active ? "비활성화" : "활성화"
-                                  }
+                                  title={user.is_active ? "비활성화" : "활성화"}
                                 >
                                   <Ban className="h-4 w-4 text-red-400" />
                                 </PrimitiveButton>
@@ -392,9 +429,14 @@ export default function SAUsersPage() {
                   {selectedUser.name}
                 </h3>
                 {(() => {
-                  const roleInfo = ROLE_CONFIG[selectedUser.role] || { label: selectedUser.role, color: "bg-slate-100 text-slate-700" };
+                  const roleInfo = ROLE_CONFIG[selectedUser.role] || {
+                    label: selectedUser.role,
+                    color: "bg-slate-100 text-slate-700",
+                  };
                   return (
-                    <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${roleInfo.color}`}>
+                    <span
+                      className={`mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${roleInfo.color}`}
+                    >
                       <Shield className="h-3.5 w-3.5" />
                       {roleInfo.label}
                     </span>
@@ -409,7 +451,9 @@ export default function SAUsersPage() {
                 <Mail className="h-4 w-4 text-slate-400" />
                 <div>
                   <p className="text-xs text-slate-500">이메일</p>
-                  <p className="font-medium text-slate-900">{selectedUser.email}</p>
+                  <p className="font-medium text-slate-900">
+                    {selectedUser.email}
+                  </p>
                 </div>
               </div>
 
@@ -418,7 +462,9 @@ export default function SAUsersPage() {
                   <Phone className="h-4 w-4 text-slate-400" />
                   <div>
                     <p className="text-xs text-slate-500">전화번호</p>
-                    <p className="font-medium text-slate-900">{selectedUser.phone}</p>
+                    <p className="font-medium text-slate-900">
+                      {selectedUser.phone}
+                    </p>
                   </div>
                 </div>
               )}
@@ -427,7 +473,9 @@ export default function SAUsersPage() {
                 <Building2 className="h-4 w-4 text-slate-400" />
                 <div>
                   <p className="text-xs text-slate-500">소속 고객사</p>
-                  <p className="font-medium text-slate-900">{selectedUser.tenant_name}</p>
+                  <p className="font-medium text-slate-900">
+                    {selectedUser.tenant_name}
+                  </p>
                 </div>
               </div>
 
@@ -435,7 +483,9 @@ export default function SAUsersPage() {
                 <Calendar className="h-4 w-4 text-slate-400" />
                 <div>
                   <p className="text-xs text-slate-500">가입일</p>
-                  <p className="font-medium text-slate-900">{formatDate(selectedUser.created_at)}</p>
+                  <p className="font-medium text-slate-900">
+                    {formatDate(selectedUser.created_at)}
+                  </p>
                 </div>
               </div>
 
@@ -444,7 +494,9 @@ export default function SAUsersPage() {
                 <div>
                   <p className="text-xs text-slate-500">마지막 로그인</p>
                   <p className="font-medium text-slate-900">
-                    {selectedUser.last_login_at ? formatDate(selectedUser.last_login_at) : "없음"}
+                    {selectedUser.last_login_at
+                      ? formatDate(selectedUser.last_login_at)
+                      : "없음"}
                   </p>
                 </div>
               </div>
@@ -453,7 +505,9 @@ export default function SAUsersPage() {
                 <User className="h-4 w-4 text-slate-400" />
                 <div>
                   <p className="text-xs text-slate-500">상태</p>
-                  <Badge variant={selectedUser.is_active ? "success" : "default"}>
+                  <Badge
+                    variant={selectedUser.is_active ? "success" : "default"}
+                  >
                     {selectedUser.is_active ? "활성" : "비활성"}
                   </Badge>
                 </div>
@@ -490,7 +544,8 @@ export default function SAUsersPage() {
               className="w-full"
               onClick={closeDetailModal}
             >
-              <X className="h-4 w-4" />닫기
+              <X className="h-4 w-4" />
+              닫기
             </Button>
           </div>
         </Modal>

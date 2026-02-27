@@ -30,4 +30,4 @@ export type {
   DiagnosisCaseImage,
   VisionResultDetail,
   DiagnosisCaseEstimate,
-} from "@sigongon/types";
+} from "@sigongcore/types";

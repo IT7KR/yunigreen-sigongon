@@ -3,7 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Card, CardContent, Input, PrimitiveButton } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  Input,
+  PrimitiveButton,
+} from "@sigongcore/ui";
 import { Droplets, ArrowLeft, Check, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -137,7 +143,7 @@ export default function ForgotPasswordPage() {
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-point-500 text-white">
           <Droplets className="h-6 w-6" />
         </div>
-        <span className="text-2xl font-bold text-slate-900">시공ON</span>
+        <span className="text-2xl font-bold text-slate-900">시공코어</span>
       </Link>
 
       <Card className="w-full max-w-md">
@@ -319,7 +325,7 @@ export default function ForgotPasswordPage() {
       </Card>
 
       <p className="mt-8 text-xs text-slate-400">
-        © 2026 시공ON. All rights reserved.
+        © 2026 시공코어. All rights reserved.
       </p>
     </div>
   );

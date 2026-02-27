@@ -7,7 +7,7 @@ import type {
   LaborContractStatus,
   DiagnosisStatus,
   PhotoAlbumStatus,
-} from "@sigongon/types";
+} from "@sigongcore/types";
 
 type StatusType =
   | ProjectStatus
@@ -37,7 +37,8 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
   },
   contracted: {
     label: "계약완료",
-    className: "bg-brand-point-50 text-brand-point-700 before:bg-brand-point-500",
+    className:
+      "bg-brand-point-50 text-brand-point-700 before:bg-brand-point-500",
   },
   in_progress: {
     label: "공사중",
@@ -49,7 +50,8 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
   },
   warranty: {
     label: "하자보증",
-    className: "bg-brand-point-50 text-brand-point-700 before:bg-brand-point-500",
+    className:
+      "bg-brand-point-50 text-brand-point-700 before:bg-brand-point-500",
   },
   closed: {
     label: "완결",
@@ -101,7 +103,8 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
   },
   active: {
     label: "활성",
-    className: "bg-brand-point-50 text-brand-point-700 before:bg-brand-point-500",
+    className:
+      "bg-brand-point-50 text-brand-point-700 before:bg-brand-point-500",
   },
   cancelled: {
     label: "취소됨",

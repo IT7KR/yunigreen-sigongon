@@ -1,6 +1,13 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, Button, toast } from "@sigongon/ui";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+  toast,
+} from "@sigongcore/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -9,7 +16,11 @@ import { useTossPayments } from "@/hooks/useTossPayments";
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const plan = searchParams.get("plan") as "STARTER" | "STANDARD" | "PREMIUM" | null;
+  const plan = searchParams.get("plan") as
+    | "STARTER"
+    | "STANDARD"
+    | "PREMIUM"
+    | null;
   const [isProcessing, setIsProcessing] = useState(false);
   const { requestPayment } = useTossPayments();
 
@@ -38,9 +49,7 @@ function CheckoutContent() {
     return (
       <AdminLayout>
         <div className="flex flex-col items-center justify-center py-12">
-          <p className="mb-4 text-slate-600">
-            플랜이 선택되지 않았습니다.
-          </p>
+          <p className="mb-4 text-slate-600">플랜이 선택되지 않았습니다.</p>
           <Button onClick={() => router.push("/billing")}>
             플랜 선택하러 가기
           </Button>

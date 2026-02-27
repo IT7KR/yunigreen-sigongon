@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Button, Card } from "@sigongon/ui";
+import { Button, Card } from "@sigongcore/ui";
 import { Droplets, AlertCircle, Loader2 } from "lucide-react";
 
 function PaymentFailContent() {
@@ -48,7 +48,7 @@ function PaymentFailContent() {
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-point-500 text-white">
           <Droplets className="h-6 w-6" />
         </div>
-        <span className="text-2xl font-bold text-slate-900">시공ON</span>
+        <span className="text-2xl font-bold text-slate-900">시공코어</span>
       </Link>
 
       <Card className="w-full max-w-md p-8">
@@ -92,8 +92,11 @@ function PaymentFailContent() {
 
         <p className="mt-4 text-center text-xs text-slate-500">
           결제 문의:{" "}
-          <a href="mailto:support@sigongon.com" className="text-brand-point-600">
-            support@sigongon.com
+          <a
+            href="mailto:support@sigongcore.com"
+            className="text-brand-point-600"
+          >
+            support@sigongcore.com
           </a>
         </p>
       </Card>

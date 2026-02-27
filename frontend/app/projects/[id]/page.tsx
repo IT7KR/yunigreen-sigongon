@@ -28,9 +28,9 @@ import {
   StatusBadge,
   cn,
   formatDate,
-} from "@sigongon/ui";
-import type { ProjectDetail, ProjectStatus } from "@sigongon/types";
-import { PROJECT_CATEGORIES } from "@sigongon/types";
+} from "@sigongcore/ui";
+import type { ProjectDetail, ProjectStatus } from "@sigongcore/types";
+import { PROJECT_CATEGORIES } from "@sigongcore/types";
 import { useConstructionReports, useProject } from "@/hooks";
 import { ProjectWorkflowTimeline } from "@/components/ProjectWorkflowTimeline";
 import {
@@ -220,8 +220,12 @@ export default function ProjectDetailPage({
   )[0];
   const latestContract = [...(project.contracts || [])][0];
   const reports =
-    reportsResponse?.success && reportsResponse.data ? reportsResponse.data : [];
-  const startReports = reports.filter((report) => report.report_type === "start");
+    reportsResponse?.success && reportsResponse.data
+      ? reportsResponse.data
+      : [];
+  const startReports = reports.filter(
+    (report) => report.report_type === "start",
+  );
   const latestStartReport = [...startReports].sort(
     (a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -304,7 +308,15 @@ export default function ProjectDetailPage({
                 고객 정보
               </h4>
               <InfoRow label="고객명" value={project.client_name || "-"} />
-              <InfoRow label="연락처" value={project.client_phone || "-"} href={project.client_phone ? `tel:${project.client_phone}` : undefined} />
+              <InfoRow
+                label="연락처"
+                value={project.client_phone || "-"}
+                href={
+                  project.client_phone
+                    ? `tel:${project.client_phone}`
+                    : undefined
+                }
+              />
             </div>
           </div>
         </CollapsibleCard>
@@ -323,7 +335,11 @@ export default function ProjectDetailPage({
             ) : representativeInfo ? (
               <div className="space-y-3">
                 <InfoRow label="이름" value={representativeInfo.name} />
-                <InfoRow label="연락처" value={representativeInfo.phone} href={`tel:${representativeInfo.phone}`} />
+                <InfoRow
+                  label="연락처"
+                  value={representativeInfo.phone}
+                  href={`tel:${representativeInfo.phone}`}
+                />
                 <InfoRow
                   label="배정일"
                   value={formatDate(representativeInfo.effectiveDate)}
@@ -414,12 +430,23 @@ function CollapsibleCard({
   );
 }
 
-function InfoRow({ label, value, href }: { label: string; value: string; href?: string }) {
+function InfoRow({
+  label,
+  value,
+  href,
+}: {
+  label: string;
+  value: string;
+  href?: string;
+}) {
   return (
     <div>
       <p className="text-xs text-slate-500">{label}</p>
       {href ? (
-        <a href={href} className="font-medium text-brand-point-600 hover:underline">
+        <a
+          href={href}
+          className="font-medium text-brand-point-600 hover:underline"
+        >
           {value}
         </a>
       ) : (

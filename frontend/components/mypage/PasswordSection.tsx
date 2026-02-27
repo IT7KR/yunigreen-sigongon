@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveButton } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  PrimitiveButton,
+} from "@sigongcore/ui";
 import { api } from "@/lib/api";
 import { Lock, Eye, EyeOff } from "lucide-react";
 

@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import { Toaster } from "@sigongon/ui";
+import { Toaster } from "@sigongcore/ui";
 
 export interface AppRootLayoutProps {
   children: ReactNode;

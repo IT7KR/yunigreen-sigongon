@@ -11,7 +11,17 @@ import {
   Save,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveButton, PrimitiveInput, PrimitiveSelect } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  PrimitiveButton,
+  PrimitiveInput,
+  PrimitiveSelect,
+} from "@sigongcore/ui";
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState("organization");
@@ -67,7 +77,7 @@ export default function SettingsPage() {
                   <CardTitle>조직 정보</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Input label="회사명" defaultValue="시공ON" />
+                  <Input label="회사명" defaultValue="시공코어" />
                   <Input label="사업자등록번호" defaultValue="123-45-67890" />
                   <Input label="대표자" defaultValue="홍길동" />
                   <Input
@@ -78,7 +88,7 @@ export default function SettingsPage() {
                   <Input
                     label="이메일"
                     type="email"
-                    defaultValue="info@sigongon.com"
+                    defaultValue="info@sigongcore.com"
                   />
                   <div className="flex justify-end pt-4">
                     <Button>
@@ -158,7 +168,10 @@ export default function SettingsPage() {
                       </p>
                     </div>
                     <label className="relative inline-flex cursor-pointer items-center">
-                      <PrimitiveInput type="checkbox" className="peer sr-only" />
+                      <PrimitiveInput
+                        type="checkbox"
+                        className="peer sr-only"
+                      />
                       <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-brand-point-500 peer-checked:after:translate-x-full"></div>
                     </label>
                   </div>

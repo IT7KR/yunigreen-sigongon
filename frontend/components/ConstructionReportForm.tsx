@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Input, Button, Textarea } from "@sigongon/ui";
+import { Input, Button, Textarea } from "@sigongcore/ui";
 import { Loader2 } from "lucide-react";
 
 type ReportType = "start" | "completion";
@@ -53,7 +53,7 @@ export function ConstructionReportForm({
   const [saving, setSaving] = useState(false);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -75,8 +75,7 @@ export function ConstructionReportForm({
         newErrors.construction_name = "공사명을 입력해 주세요";
       if (!formData.site_address)
         newErrors.site_address = "공사 장소를 입력해 주세요";
-      if (!formData.start_date)
-        newErrors.start_date = "착공일을 입력해 주세요";
+      if (!formData.start_date) newErrors.start_date = "착공일을 입력해 주세요";
       if (!formData.expected_end_date)
         newErrors.expected_end_date = "준공예정일을 입력해 주세요";
       if (!formData.supervisor_name)
@@ -184,11 +183,7 @@ export function ConstructionReportForm({
                 disabled
               />
             </div>
-            <Input
-              label="공사 장소"
-              value={formData.site_address}
-              disabled
-            />
+            <Input label="공사 장소" value={formData.site_address} disabled />
             <Input
               label="착공일"
               type="date"
@@ -225,11 +220,7 @@ export function ConstructionReportForm({
               value={DEFAULT_WARRANTY_PERIOD_MONTHS}
               disabled
             />
-            <Input
-              label="감독자명"
-              value={formData.supervisor_name}
-              disabled
-            />
+            <Input label="감독자명" value={formData.supervisor_name} disabled />
             <Input
               label="감독자 연락처"
               value={formData.supervisor_phone}

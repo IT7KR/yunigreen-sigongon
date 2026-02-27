@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Upload, File, Loader2, CheckCircle } from "lucide-react";
-import { Button, Modal, PrimitiveInput } from "@sigongon/ui";
+import { Button, Modal, PrimitiveInput } from "@sigongcore/ui";
 import { api } from "@/lib/api";
 
 interface PdfUploadModalProps {
@@ -115,12 +115,7 @@ export function PdfUploadModal({
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="PDF 업로드"
-      size="md"
-    >
+    <Modal isOpen={isOpen} onClose={handleClose} title="PDF 업로드" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div
           onDragOver={(e) => {

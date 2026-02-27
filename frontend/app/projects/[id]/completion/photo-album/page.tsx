@@ -10,7 +10,7 @@ import {
   Button,
   Badge,
   formatDate,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { Image, Download, ArrowRight, Loader2 } from "lucide-react";
 import { mockApiClient } from "@/lib/mocks/mockApi";
 import { buildSampleFileDownloadUrl } from "@/lib/sampleFiles";
@@ -103,10 +103,12 @@ export default function CompletionPhotoAlbumPage({
           <CardTitle>바로가기</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          <Button asChild><Link href={`/projects/${projectId}/album`}>
+          <Button asChild>
+            <Link href={`/projects/${projectId}/album`}>
               앨범 목록 열기
               <ArrowRight className="h-4 w-4" />
-            </Link></Button>
+            </Link>
+          </Button>
           <Button variant="secondary" onClick={downloadSampleWorkbook}>
             <Download className="h-4 w-4" />
             준공사진첩 샘플 다운로드
@@ -143,7 +145,11 @@ export default function CompletionPhotoAlbumPage({
                         {album.photo_count}장 · {formatDate(album.created_at)}
                       </p>
                     </div>
-                    <Badge variant={album.status === "published" ? "success" : "default"}>
+                    <Badge
+                      variant={
+                        album.status === "published" ? "success" : "default"
+                      }
+                    >
                       {album.status === "published" ? "발행" : "초안"}
                     </Badge>
                   </div>
@@ -165,4 +171,3 @@ function MetricCard({ title, value }: { title: string; value: string }) {
     </div>
   );
 }
-

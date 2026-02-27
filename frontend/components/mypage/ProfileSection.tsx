@@ -8,7 +8,7 @@ import {
   CardTitle,
   Button,
   Input,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { Save, Pencil, X } from "lucide-react";
@@ -73,11 +73,14 @@ export function ProfileSection() {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).replace(/\. /g, ".").replace(/\.$/, "");
+    return date
+      .toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+      .replace(/\. /g, ".")
+      .replace(/\.$/, "");
   };
 
   const formatDateTime = (dateString?: string) => {
@@ -92,7 +95,8 @@ export function ProfileSection() {
     return `${datePart} ${timePart}`;
   };
 
-  const shouldShowOrganization = user?.role === "company_admin" || user?.role === "site_manager";
+  const shouldShowOrganization =
+    user?.role === "company_admin" || user?.role === "site_manager";
 
   if (!user) return null;
 
@@ -167,14 +171,18 @@ export function ProfileSection() {
           {/* 역할 */}
           <div>
             <label className="text-sm font-medium text-slate-500">역할</label>
-            <p className="mt-1 text-slate-900">{ROLE_LABELS[user.role] || user.role}</p>
+            <p className="mt-1 text-slate-900">
+              {ROLE_LABELS[user.role] || user.role}
+            </p>
           </div>
 
           {/* 소속 - 조건부 표시 */}
           {shouldShowOrganization && (
             <div>
               <label className="text-sm font-medium text-slate-500">소속</label>
-              <p className="mt-1 text-slate-900">{user.organization?.name || "-"}</p>
+              <p className="mt-1 text-slate-900">
+                {user.organization?.name || "-"}
+              </p>
             </div>
           )}
 
@@ -186,8 +194,12 @@ export function ProfileSection() {
 
           {/* 최근 로그인 */}
           <div>
-            <label className="text-sm font-medium text-slate-500">최근 로그인</label>
-            <p className="mt-1 text-slate-900">{formatDateTime(user.last_login_at)}</p>
+            <label className="text-sm font-medium text-slate-500">
+              최근 로그인
+            </label>
+            <p className="mt-1 text-slate-900">
+              {formatDateTime(user.last_login_at)}
+            </p>
           </div>
         </div>
 

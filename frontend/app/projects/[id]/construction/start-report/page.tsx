@@ -1,7 +1,7 @@
 "use client";
 
 import { use } from "react";
-import { StartReportActionsCard } from "@sigongon/features";
+import { StartReportActionsCard } from "@sigongcore/features";
 
 export default function ConstructionStartReportPage({
   params,

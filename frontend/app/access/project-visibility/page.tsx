@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Card, PrimitiveButton } from "@sigongon/ui";
+import { Badge, Button, Card, PrimitiveButton } from "@sigongcore/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Check } from "lucide-react";
 
@@ -65,7 +65,9 @@ export default function ProjectVisibilityPage() {
         </div>
 
         <div className="flex justify-end border-t border-slate-200 p-6">
-          <Button size="lg" asChild><Link href="/projects">저장</Link></Button>
+          <Button size="lg" asChild>
+            <Link href="/projects">저장</Link>
+          </Button>
         </div>
       </Card>
     </AdminLayout>

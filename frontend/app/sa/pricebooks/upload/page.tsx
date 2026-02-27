@@ -3,7 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Button, Card, CardContent, CardHeader, CardTitle, FileUpload, Input, PrimitiveButton, PrimitiveInput, Textarea, toast } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  FileUpload,
+  Input,
+  PrimitiveButton,
+  PrimitiveInput,
+  Textarea,
+  toast,
+} from "@sigongcore/ui";
 import { Upload, ArrowLeft, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -172,7 +184,9 @@ export default function PricebookUploadPage() {
               </Button>
               <Button
                 onClick={handleUpload}
-                disabled={isUploading || !file || !versionLabel || !effectiveFrom}
+                disabled={
+                  isUploading || !file || !versionLabel || !effectiveFrom
+                }
               >
                 {isUploading ? (
                   <>
@@ -202,9 +216,7 @@ export default function PricebookUploadPage() {
                 업로드 후 자동으로 파싱이 시작되며, 완료까지 수 분이 소요될 수
                 있습니다
               </li>
-              <li>
-                적용 시작일 이전에 업로드하면 자동으로 예약 적용됩니다
-              </li>
+              <li>적용 시작일 이전에 업로드하면 자동으로 예약 적용됩니다</li>
               <li>
                 파싱이 완료되면 검토 페이지에서 항목을 확인하고 수정할 수
                 있습니다

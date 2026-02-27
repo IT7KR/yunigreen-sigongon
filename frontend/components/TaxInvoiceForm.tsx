@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button, Calendar, PrimitiveButton, PrimitiveInput, Textarea } from "@sigongon/ui";
+import {
+  Button,
+  Calendar,
+  PrimitiveButton,
+  PrimitiveInput,
+  Textarea,
+} from "@sigongcore/ui";
 import { Loader2, Calendar as CalendarIcon } from "lucide-react";
 
 interface TaxInvoiceFormData {
@@ -66,7 +72,8 @@ export function TaxInvoiceForm({
     tax_amount: initialData?.tax_amount || 0,
     description: initialData?.description || "",
     remark: initialData?.remark || "",
-    issue_date: initialData?.issue_date || new Date().toISOString().split("T")[0],
+    issue_date:
+      initialData?.issue_date || new Date().toISOString().split("T")[0],
   });
 
   const [showCalendar, setShowCalendar] = useState(false);
@@ -156,7 +163,9 @@ export function TaxInvoiceForm({
         <div className="space-y-3 rounded-lg bg-slate-50 p-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-xs text-slate-500">사업자등록번호</label>
+              <label className="mb-1 block text-xs text-slate-500">
+                사업자등록번호
+              </label>
               <p className="text-sm text-slate-700">123-45-67890</p>
             </div>
             <div>
@@ -166,17 +175,23 @@ export function TaxInvoiceForm({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-xs text-slate-500">대표자</label>
+              <label className="mb-1 block text-xs text-slate-500">
+                대표자
+              </label>
               <p className="text-sm text-slate-700">이중호</p>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500">이메일</label>
+              <label className="mb-1 block text-xs text-slate-500">
+                이메일
+              </label>
               <p className="text-sm text-slate-700">ceo@yunigreen.com</p>
             </div>
           </div>
           <div>
             <label className="mb-1 block text-xs text-slate-500">주소</label>
-            <p className="text-sm text-slate-700">서울특별시 강남구 테헤란로 123</p>
+            <p className="text-sm text-slate-700">
+              서울특별시 강남구 테헤란로 123
+            </p>
           </div>
         </div>
       </div>
@@ -200,7 +215,9 @@ export function TaxInvoiceForm({
               maxLength={12}
             />
             {errors.buyer_corp_num && (
-              <p className="mt-1 text-xs text-red-500">{errors.buyer_corp_num}</p>
+              <p className="mt-1 text-xs text-red-500">
+                {errors.buyer_corp_num}
+              </p>
             )}
           </div>
 
@@ -249,7 +266,9 @@ export function TaxInvoiceForm({
               placeholder="사업장 주소"
             />
             {errors.buyer_address && (
-              <p className="mt-1 text-xs text-red-500">{errors.buyer_address}</p>
+              <p className="mt-1 text-xs text-red-500">
+                {errors.buyer_address}
+              </p>
             )}
           </div>
 
@@ -273,7 +292,9 @@ export function TaxInvoiceForm({
 
       {/* 금액 정보 */}
       <div>
-        <h3 className="mb-4 text-sm font-semibold text-slate-700">금액 정보 *</h3>
+        <h3 className="mb-4 text-sm font-semibold text-slate-700">
+          금액 정보 *
+        </h3>
         <div className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -282,13 +303,17 @@ export function TaxInvoiceForm({
             <PrimitiveInput
               type="number"
               value={formData.supply_amount || ""}
-              onChange={(e) => handleChange("supply_amount", Number(e.target.value))}
+              onChange={(e) =>
+                handleChange("supply_amount", Number(e.target.value))
+              }
               className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
               placeholder="0"
               min="0"
             />
             {errors.supply_amount && (
-              <p className="mt-1 text-xs text-red-500">{errors.supply_amount}</p>
+              <p className="mt-1 text-xs text-red-500">
+                {errors.supply_amount}
+              </p>
             )}
           </div>
 
@@ -319,7 +344,9 @@ export function TaxInvoiceForm({
 
       {/* 품목 및 비고 */}
       <div>
-        <h3 className="mb-4 text-sm font-semibold text-slate-700">품목 및 비고</h3>
+        <h3 className="mb-4 text-sm font-semibold text-slate-700">
+          품목 및 비고
+        </h3>
         <div className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -356,7 +383,11 @@ export function TaxInvoiceForm({
             onClick={() => setShowCalendar(!showCalendar)}
             className="flex h-10 w-full items-center justify-between rounded-lg border border-slate-300 px-3 text-sm hover:border-brand-point-500"
           >
-            <span className={formData.issue_date ? "text-slate-900" : "text-slate-400"}>
+            <span
+              className={
+                formData.issue_date ? "text-slate-900" : "text-slate-400"
+              }
+            >
               {formData.issue_date || "날짜 선택"}
             </span>
             <CalendarIcon className="h-4 w-4 text-slate-400" />
@@ -364,7 +395,11 @@ export function TaxInvoiceForm({
           {showCalendar && (
             <div className="absolute top-12 z-10">
               <Calendar
-                value={formData.issue_date ? new Date(formData.issue_date) : undefined}
+                value={
+                  formData.issue_date
+                    ? new Date(formData.issue_date)
+                    : undefined
+                }
                 onChange={(date) => {
                   handleChange("issue_date", date.toISOString().split("T")[0]);
                   setShowCalendar(false);

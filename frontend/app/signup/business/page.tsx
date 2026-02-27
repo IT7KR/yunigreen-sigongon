@@ -3,8 +3,15 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Input, Card, Stepper, FileUpload } from "@sigongon/ui";
-import { Droplets, Check, Loader2, Building2, ArrowLeft, ArrowRight } from "lucide-react";
+import { Button, Input, Card, Stepper, FileUpload } from "@sigongcore/ui";
+import {
+  Droplets,
+  Check,
+  Loader2,
+  Building2,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react";
 import {
   STEPS,
   getSignupData,
@@ -24,7 +31,11 @@ export default function BusinessPage() {
     const stored = getSignupData();
 
     // Redirect if basic info not completed (both email and phone verification required)
-    if (!stored.username || !stored.usernameAvailable || !stored.phoneVerified) {
+    if (
+      !stored.username ||
+      !stored.usernameAvailable ||
+      !stored.phoneVerified
+    ) {
       router.push("/signup");
       return;
     }
@@ -35,13 +46,17 @@ export default function BusinessPage() {
   const handleBusinessNumberFormat = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
     if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 5) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    if (cleaned.length <= 5)
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 5)}-${cleaned.slice(5, 10)}`;
   };
 
   const handleVerifyBusiness = async () => {
     if (!data.businessNumber || !validateBusinessNumber(data.businessNumber)) {
-      setErrors({ ...errors, businessNumber: "000-00-00000 형식으로 입력하세요" });
+      setErrors({
+        ...errors,
+        businessNumber: "000-00-00000 형식으로 입력하세요",
+      });
       return;
     }
 
@@ -50,7 +65,10 @@ export default function BusinessPage() {
       // Phase 1: 사업자등록번호 중복 체크
       const checkRes = await api.checkBusinessNumber(data.businessNumber);
       if (!checkRes.success || !checkRes.data?.available) {
-        setErrors({ ...errors, businessNumber: "이미 가입된 사업자번호입니다" });
+        setErrors({
+          ...errors,
+          businessNumber: "이미 가입된 사업자번호입니다",
+        });
         setVerifying(false);
         return;
       }
@@ -95,7 +113,8 @@ export default function BusinessPage() {
 
     // Validation: At least one contact phone must be provided
     if (!data.repPhone && !data.contactPhone) {
-      newErrors.contactPhone = "대표자 또는 실무자 연락처 중 하나 이상 입력해주세요";
+      newErrors.contactPhone =
+        "대표자 또는 실무자 연락처 중 하나 이상 입력해주세요";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -118,7 +137,7 @@ export default function BusinessPage() {
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-point-500 text-white">
           <Droplets className="h-6 w-6" />
         </div>
-        <span className="text-2xl font-bold text-slate-900">시공ON</span>
+        <span className="text-2xl font-bold text-slate-900">시공코어</span>
       </Link>
 
       <Card className="w-full max-w-3xl p-6 md:p-8">
@@ -141,7 +160,9 @@ export default function BusinessPage() {
                   placeholder="000-00-00000"
                   value={data.businessNumber || ""}
                   onChange={(e) => {
-                    const formatted = handleBusinessNumberFormat(e.target.value);
+                    const formatted = handleBusinessNumberFormat(
+                      e.target.value,
+                    );
                     setData({
                       ...data,
                       businessNumber: formatted,
@@ -185,7 +206,8 @@ export default function BusinessPage() {
                   <h3 className="font-semibold text-green-900">사업자 정보</h3>
                   <div className="mt-2 space-y-1 text-sm text-green-800">
                     <p>
-                      <span className="font-medium">회사명:</span> {data.companyName}
+                      <span className="font-medium">회사명:</span>{" "}
+                      {data.companyName}
                     </p>
                     <p>
                       <span className="font-medium">대표자:</span>{" "}
@@ -212,7 +234,9 @@ export default function BusinessPage() {
                 }}
               />
               {errors.businessLicense && (
-                <p className="mt-1 text-sm text-red-600">{errors.businessLicense}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.businessLicense}
+                </p>
               )}
             </div>
 
@@ -229,7 +253,9 @@ export default function BusinessPage() {
                 }}
               />
               {errors.constructionLicense && (
-                <p className="mt-1 text-sm text-red-600">{errors.constructionLicense}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.constructionLicense}
+                </p>
               )}
               <p className="mt-1 text-xs text-slate-500">
                 전문건설업 면허 보유 시 업로드해주세요
@@ -242,7 +268,8 @@ export default function BusinessPage() {
             <p className="text-sm text-blue-800">
               💡 <strong>프로젝트별 알림 수신자를 지정할 수 있습니다.</strong>
               <br />
-              대표자와 실무자 정보를 등록하면, 각 프로젝트에서 알림을 받을 담당자를 선택할 수 있습니다.
+              대표자와 실무자 정보를 등록하면, 각 프로젝트에서 알림을 받을
+              담당자를 선택할 수 있습니다.
             </p>
           </div>
 
@@ -253,7 +280,9 @@ export default function BusinessPage() {
               <Input
                 label="대표자 성함"
                 value={data.representativeName || ""}
-                onChange={(e) => setData({ ...data, representativeName: e.target.value })}
+                onChange={(e) =>
+                  setData({ ...data, representativeName: e.target.value })
+                }
                 disabled={data.businessVerified}
               />
               <Input
@@ -263,8 +292,10 @@ export default function BusinessPage() {
                 onChange={(e) => {
                   const cleaned = e.target.value.replace(/\D/g, "");
                   let formatted = cleaned;
-                  if (cleaned.length > 3 && cleaned.length <= 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3)}`;
-                  else if (cleaned.length > 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3,7)}-${cleaned.slice(7,11)}`;
+                  if (cleaned.length > 3 && cleaned.length <= 7)
+                    formatted = `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+                  else if (cleaned.length > 7)
+                    formatted = `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
                   setData({ ...data, repPhone: formatted });
                 }}
                 error={errors.repPhone}
@@ -280,12 +311,16 @@ export default function BusinessPage() {
             </div>
 
             <div className="h-full space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <h3 className="font-semibold text-slate-700">실무자 정보 (선택)</h3>
+              <h3 className="font-semibold text-slate-700">
+                실무자 정보 (선택)
+              </h3>
               <Input
                 label="실무자 성함"
                 placeholder="담당자 이름"
                 value={data.contactName || ""}
-                onChange={(e) => setData({ ...data, contactName: e.target.value })}
+                onChange={(e) =>
+                  setData({ ...data, contactName: e.target.value })
+                }
               />
               <Input
                 label="실무자 연락처"
@@ -294,8 +329,10 @@ export default function BusinessPage() {
                 onChange={(e) => {
                   const cleaned = e.target.value.replace(/\D/g, "");
                   let formatted = cleaned;
-                  if (cleaned.length > 3 && cleaned.length <= 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3)}`;
-                  else if (cleaned.length > 7) formatted = `${cleaned.slice(0,3)}-${cleaned.slice(3,7)}-${cleaned.slice(7,11)}`;
+                  if (cleaned.length > 3 && cleaned.length <= 7)
+                    formatted = `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+                  else if (cleaned.length > 7)
+                    formatted = `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
                   setData({ ...data, contactPhone: formatted });
                 }}
               />
@@ -303,7 +340,9 @@ export default function BusinessPage() {
                 label="실무자 직위"
                 placeholder="예: 과장, 팀장"
                 value={data.contactPosition || ""}
-                onChange={(e) => setData({ ...data, contactPosition: e.target.value })}
+                onChange={(e) =>
+                  setData({ ...data, contactPosition: e.target.value })
+                }
               />
             </div>
           </div>
@@ -334,10 +373,12 @@ export default function BusinessPage() {
               size="lg"
               className="flex-1"
             >
-              <ArrowLeft className="h-5 w-5" />이전
+              <ArrowLeft className="h-5 w-5" />
+              이전
             </Button>
             <Button onClick={handleNext} fullWidth size="lg" className="flex-1">
-              <ArrowRight className="h-5 w-5" />다음
+              <ArrowRight className="h-5 w-5" />
+              다음
             </Button>
           </div>
         </div>

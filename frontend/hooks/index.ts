@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { ProjectStatus, EstimateStatus } from "@sigongon/types";
+import type { ProjectStatus, EstimateStatus } from "@sigongcore/types";
 
 export { useAuth, useRequireAuth } from "@/lib/auth";
 
@@ -338,7 +338,9 @@ export function useRequestDiagnosis() {
       };
     }) => api.requestDiagnosis(visitId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["siteVisit", variables.visitId] });
+      queryClient.invalidateQueries({
+        queryKey: ["siteVisit", variables.visitId],
+      });
       queryClient.invalidateQueries({ queryKey: ["diagnoses"] });
     },
   });

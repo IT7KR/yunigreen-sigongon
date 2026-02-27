@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Card, Button } from "@sigongon/ui";
+import { Card, Button } from "@sigongcore/ui";
 import { Droplets, CheckCircle, Loader2, RefreshCw } from "lucide-react";
 import { getSignupData, clearSignupData, saveSignupData } from "../../types";
 import { api } from "@/lib/api";
@@ -11,7 +11,9 @@ import { api } from "@/lib/api";
 function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    "loading",
+  );
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
@@ -27,7 +29,11 @@ function PaymentSuccessContent() {
       }
 
       const signupData = getSignupData();
-      if (!signupData.username || !signupData.companyName || !signupData.businessNumber) {
+      if (
+        !signupData.username ||
+        !signupData.companyName ||
+        !signupData.businessNumber
+      ) {
         setStatus("error");
         setErrorMessage("회원가입 정보가 누락되었습니다.");
         return;
@@ -76,7 +82,9 @@ function PaymentSuccessContent() {
         } else {
           // 결제 확인 실패 — 계정은 생성됨, 결제만 재시도 필요
           setStatus("error");
-          setErrorMessage("결제 확인에 실패했습니다. 로그인 후 다시 시도해주세요.");
+          setErrorMessage(
+            "결제 확인에 실패했습니다. 로그인 후 다시 시도해주세요.",
+          );
         }
       } catch (err) {
         console.error("Signup process failed:", err);
@@ -96,9 +104,7 @@ function PaymentSuccessContent() {
           <h1 className="mt-4 text-xl font-bold text-slate-900">
             결제 확인 중...
           </h1>
-          <p className="mt-2 text-slate-600">
-            잠시만 기다려 주세요.
-          </p>
+          <p className="mt-2 text-slate-600">잠시만 기다려 주세요.</p>
         </Card>
       </div>
     );
@@ -111,25 +117,19 @@ function PaymentSuccessContent() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-point-500 text-white">
             <Droplets className="h-6 w-6" />
           </div>
-          <span className="text-2xl font-bold text-slate-900">시공ON</span>
+          <span className="text-2xl font-bold text-slate-900">시공코어</span>
         </Link>
 
         <Card className="w-full max-w-md p-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
             <span className="text-3xl">⚠️</span>
           </div>
-          <h1 className="text-xl font-bold text-slate-900">
-            결제 확인 실패
-          </h1>
-          <p className="mt-2 text-slate-600">
-            {errorMessage}
-          </p>
+          <h1 className="text-xl font-bold text-slate-900">결제 확인 실패</h1>
+          <p className="mt-2 text-slate-600">{errorMessage}</p>
           <div className="mt-6 space-y-3">
-            <Button
-              onClick={() => router.push("/signup/payment")}
-              fullWidth
-            >
-              <RefreshCw className="h-4 w-4" />다시 시도하기
+            <Button onClick={() => router.push("/signup/payment")} fullWidth>
+              <RefreshCw className="h-4 w-4" />
+              다시 시도하기
             </Button>
             <Button
               variant="secondary"
@@ -150,7 +150,7 @@ function PaymentSuccessContent() {
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-point-500 text-white">
           <Droplets className="h-6 w-6" />
         </div>
-        <span className="text-2xl font-bold text-slate-900">시공ON</span>
+        <span className="text-2xl font-bold text-slate-900">시공코어</span>
       </Link>
 
       <Card className="w-full max-w-md p-8 text-center">

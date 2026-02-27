@@ -15,14 +15,14 @@ import {
   Input,
   formatDate,
   toast,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import type {
   EstimationGovernanceOverview,
   SeasonCategoryInfo,
   SeasonDocumentInfo,
   SeasonDocumentStatus,
   SeasonInfo,
-} from "@sigongon/types";
+} from "@sigongcore/types";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -637,7 +637,9 @@ export default function SAEstimationGovernancePage() {
                         </p>
                       </div>
                       <div className="rounded-lg border border-slate-200 p-3">
-                        <p className="text-xs text-slate-500">활성 문서 분류/인덱싱 완료 문서</p>
+                        <p className="text-xs text-slate-500">
+                          활성 문서 분류/인덱싱 완료 문서
+                        </p>
                         <p className="mt-1 text-sm font-medium text-slate-900">
                           {enabledCategoryCount}개 / {doneEnabledDocumentCount}
                           개

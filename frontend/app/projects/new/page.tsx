@@ -3,9 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Card, Input, Modal, PrimitiveInput, Select, Textarea } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  Input,
+  Modal,
+  PrimitiveInput,
+  Select,
+  Textarea,
+} from "@sigongcore/ui";
 import { AdminLayout } from "@/components/AdminLayout";
-import { PROJECT_CATEGORIES, type CustomerMaster } from "@sigongon/types";
+import { PROJECT_CATEGORIES, type CustomerMaster } from "@sigongcore/types";
 import { api } from "@/lib/api";
 import { Loader2, X, Plus } from "lucide-react";
 
@@ -34,12 +42,16 @@ export default function NewProjectPage() {
   const handlePhoneFormat = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
     if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    if (cleaned.length <= 7)
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
   };
 
   const getCustomerPrimaryPhone = (customer: CustomerMaster) =>
-    customer.representative_phone || customer.contact_phone || customer.phone || "";
+    customer.representative_phone ||
+    customer.contact_phone ||
+    customer.phone ||
+    "";
 
   useEffect(() => {
     const query = customerQuery.trim();
@@ -162,7 +174,9 @@ export default function NewProjectPage() {
   return (
     <AdminLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">새 프로젝트 만들기</h1>
+        <h1 className="text-2xl font-bold text-slate-900">
+          새 프로젝트 만들기
+        </h1>
         <p className="mt-1 text-slate-600">
           프로젝트가 생성되면 견적→계약→준공까지 한 화면에서 관리됩니다.
         </p>
@@ -195,7 +209,10 @@ export default function NewProjectPage() {
             <Select
               label="공사 분류 (필수)"
               placeholder="분류 선택"
-              options={PROJECT_CATEGORIES.map((cat) => ({ value: cat.id, label: cat.label }))}
+              options={PROJECT_CATEGORIES.map((cat) => ({
+                value: cat.id,
+                label: cat.label,
+              }))}
               value={category}
               onChange={(value) => {
                 setCategory(value);
@@ -240,7 +257,9 @@ export default function NewProjectPage() {
                     className="w-full border-b border-slate-100 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-slate-50"
                     onClick={() => handleSelectCustomer(customer)}
                   >
-                    <p className="font-medium text-slate-900">{customer.name}</p>
+                    <p className="font-medium text-slate-900">
+                      {customer.name}
+                    </p>
                     <p className="text-xs text-slate-500">
                       {getCustomerPrimaryPhone(customer) || "연락처 없음"}
                     </p>
@@ -250,7 +269,9 @@ export default function NewProjectPage() {
             )}
             {selectedCustomerId && (
               <div className="flex items-center justify-between rounded-lg bg-brand-point-50 px-3 py-2 text-xs text-brand-point-700">
-                <span>선택된 발주처: {selectedCustomerLabel || selectedCustomerId}</span>
+                <span>
+                  선택된 발주처: {selectedCustomerLabel || selectedCustomerId}
+                </span>
                 <button
                   type="button"
                   className="font-medium underline"
@@ -273,7 +294,9 @@ export default function NewProjectPage() {
               label="고객 연락처 (스냅샷)"
               placeholder="010-0000-0000"
               value={clientPhone}
-              onChange={(e) => setClientPhone(handlePhoneFormat(e.target.value))}
+              onChange={(e) =>
+                setClientPhone(handlePhoneFormat(e.target.value))
+              }
             />
           </div>
 
@@ -327,7 +350,9 @@ export default function NewProjectPage() {
                   className="h-4 w-4 text-brand-point-600"
                 />
                 <div className="flex-1">
-                  <div className="font-medium text-slate-900">대표자 + 실무자</div>
+                  <div className="font-medium text-slate-900">
+                    대표자 + 실무자
+                  </div>
                   <div className="text-sm text-slate-600">
                     대표자와 실무자 모두 알림을 받습니다
                   </div>
@@ -335,7 +360,8 @@ export default function NewProjectPage() {
               </label>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              프로젝트 진행 상황, 견적, 계약 등의 알림이 선택한 담당자에게 전송됩니다.
+              프로젝트 진행 상황, 견적, 계약 등의 알림이 선택한 담당자에게
+              전송됩니다.
             </p>
           </div>
 
@@ -352,12 +378,20 @@ export default function NewProjectPage() {
           )}
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="ghost" type="button" asChild><Link href="/projects"><X className="h-4 w-4" />취소</Link></Button>
+            <Button variant="ghost" type="button" asChild>
+              <Link href="/projects">
+                <X className="h-4 w-4" />
+                취소
+              </Link>
+            </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <><Plus className="h-4 w-4" />프로젝트 만들기</>
+                <>
+                  <Plus className="h-4 w-4" />
+                  프로젝트 만들기
+                </>
               )}
             </Button>
           </div>
@@ -384,7 +418,9 @@ export default function NewProjectPage() {
             label="연락처"
             placeholder="010-0000-0000"
             value={newCustomerPhone}
-            onChange={(e) => setNewCustomerPhone(handlePhoneFormat(e.target.value))}
+            onChange={(e) =>
+              setNewCustomerPhone(handlePhoneFormat(e.target.value))
+            }
           />
           {newCustomerError && (
             <p className="text-sm text-red-600">{newCustomerError}</p>
@@ -398,7 +434,11 @@ export default function NewProjectPage() {
               취소
             </Button>
             <Button type="submit" disabled={isCreatingCustomer}>
-              {isCreatingCustomer ? <Loader2 className="h-4 w-4 animate-spin" /> : "등록"}
+              {isCreatingCustomer ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "등록"
+              )}
             </Button>
           </div>
         </form>

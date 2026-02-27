@@ -13,7 +13,7 @@ import {
   Select,
   toast,
   useConfirmDialog,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import {
   Check,
   Loader2,
@@ -27,7 +27,7 @@ import {
 import { AdminLayout } from "@/components/AdminLayout";
 import { MobileListCard } from "@/components/MobileListCard";
 import { api } from "@/lib/api";
-import type { CustomerKind } from "@sigongon/types";
+import type { CustomerKind } from "@sigongcore/types";
 
 type Customer = {
   id: string;
@@ -234,11 +234,14 @@ export default function CustomersPage() {
       throw new Error("면허 목록 조회 실패");
     }
     const existingRecords = existingResponse.data || [];
-    const existingById = new Map(existingRecords.map((item) => [String(item.id), item]));
+    const existingById = new Map(
+      existingRecords.map((item) => [String(item.id), item]),
+    );
 
     const primaryIndex = normalized.findIndex((item) => item.is_primary);
     normalized.forEach((item, index) => {
-      item.is_primary = primaryIndex >= 0 ? index === primaryIndex : index === 0;
+      item.is_primary =
+        primaryIndex >= 0 ? index === primaryIndex : index === 0;
     });
 
     for (const item of normalized) {
@@ -429,9 +432,12 @@ export default function CustomersPage() {
       contact_name: formData.contact_name.trim() || undefined,
       contact_phone: formData.contact_phone.trim() || undefined,
       license_type:
-        formData.licenses.find((item) => item.is_primary && item.license_name.trim())
+        formData.licenses
+          .find((item) => item.is_primary && item.license_name.trim())
           ?.license_name.trim() ||
-        formData.licenses.find((item) => item.license_name.trim())?.license_name.trim() ||
+        formData.licenses
+          .find((item) => item.license_name.trim())
+          ?.license_name.trim() ||
         undefined,
       is_women_owned: formData.is_women_owned,
       phone:
@@ -795,8 +801,12 @@ export default function CustomersPage() {
               <div className="space-y-3 rounded-lg border border-slate-200 p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">면허 정보 (선택)</p>
-                    <p className="text-xs text-slate-500">면허명과 증빙파일을 함께 관리합니다.</p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      면허 정보 (선택)
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      면허명과 증빙파일을 함께 관리합니다.
+                    </p>
                   </div>
                   <Button
                     size="sm"
@@ -907,7 +917,9 @@ export default function CustomersPage() {
 
                       {license.existing_files.some((file) => !file.deleted) && (
                         <div className="space-y-1">
-                          <p className="text-xs font-medium text-slate-600">기존 첨부</p>
+                          <p className="text-xs font-medium text-slate-600">
+                            기존 첨부
+                          </p>
                           {license.existing_files.map((file) =>
                             file.deleted ? null : (
                               <div
@@ -921,14 +933,18 @@ export default function CustomersPage() {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() =>
-                                    updateLicenseItem(license.local_id, (item) => ({
-                                      ...item,
-                                      existing_files: item.existing_files.map((existing) =>
-                                        existing.id === file.id
-                                          ? { ...existing, deleted: true }
-                                          : existing,
-                                      ),
-                                    }))
+                                    updateLicenseItem(
+                                      license.local_id,
+                                      (item) => ({
+                                        ...item,
+                                        existing_files: item.existing_files.map(
+                                          (existing) =>
+                                            existing.id === file.id
+                                              ? { ...existing, deleted: true }
+                                              : existing,
+                                        ),
+                                      }),
+                                    )
                                   }
                                 >
                                   삭제

@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { CheckCircle2, Loader2, Clock3, Circle } from "lucide-react";
-import { Button, cn } from "@sigongon/ui";
+import { Button, cn } from "@sigongcore/ui";
 import type {
   ProjectStatus,
   EstimateStatus,
   ContractStatus,
   ReportStatus,
-} from "@sigongon/types";
+} from "@sigongcore/types";
 
 interface ProjectWorkflowTimelineProps {
   projectId: string;
@@ -150,7 +150,8 @@ export function ProjectWorkflowTimeline({
       id: "visit",
       label: "방문",
       href: `/projects/${projectId}/visits`,
-      description: "최초 방문/진행 점검/준공 확인 이력을 등록하고 현장 사진을 수집합니다.",
+      description:
+        "최초 방문/진행 점검/준공 확인 이력을 등록하고 현장 사진을 수집합니다.",
       count: visitCount,
       status: getVisitStatus(),
     },
@@ -188,7 +189,8 @@ export function ProjectWorkflowTimeline({
       id: "construction",
       label: "시공",
       href: `/projects/${projectId}/construction/daily-reports`,
-      description: "착공계 승인 이후 작업일지/노무를 관리하며 진행률을 업데이트합니다.",
+      description:
+        "착공계 승인 이후 작업일지/노무를 관리하며 진행률을 업데이트합니다.",
       status: getConstructionStatus(),
     },
     {

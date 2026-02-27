@@ -21,8 +21,8 @@ import {
   Button,
   formatDate,
   ConfirmModal,
-} from "@sigongon/ui";
-import type { ProjectStatus } from "@sigongon/types";
+} from "@sigongcore/ui";
+import type { ProjectStatus } from "@sigongcore/types";
 import { canTransition } from "@/lib/projectStatus";
 
 interface ConstructionOverview {
@@ -192,9 +192,7 @@ export default function ConstructionPage({
               <div className="py-8 text-center">
                 <p className="mb-4 text-slate-500">아직 착공계가 없습니다.</p>
                 <Button asChild>
-                  <Link href={`/projects/${id}/reports`}>
-                    착공계 작성
-                  </Link>
+                  <Link href={`/projects/${id}/reports`}>착공계 작성</Link>
                 </Button>
               </div>
             )}

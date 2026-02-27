@@ -4,9 +4,18 @@ import { use, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Camera, Loader2, X, UploadCloud } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, PrimitiveInput, Textarea } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  PrimitiveButton,
+  PrimitiveInput,
+  Textarea,
+} from "@sigongcore/ui";
 import { api } from "@/lib/api";
-import type { PhotoType, VisitType } from "@sigongon/types";
+import type { PhotoType, VisitType } from "@sigongcore/types";
 
 const VISIT_TYPES: Array<{ value: VisitType; label: string }> = [
   { value: "initial", label: "최초 방문" },
@@ -101,7 +110,9 @@ export default function NewVisitPage({
       });
 
       if (!created.success || !created.data?.id) {
-        setErrorMessage(created.error?.message || "현장방문 생성에 실패했어요.");
+        setErrorMessage(
+          created.error?.message || "현장방문 생성에 실패했어요.",
+        );
         setIsSubmitting(false);
         return;
       }
@@ -134,7 +145,9 @@ export default function NewVisitPage({
             웹에서 방문 기록과 사진을 바로 등록할 수 있어요.
           </p>
         </div>
-        <Button variant="secondary" asChild><Link href={`/projects/${projectId}/visits`}>목록으로</Link></Button>
+        <Button variant="secondary" asChild>
+          <Link href={`/projects/${projectId}/visits`}>목록으로</Link>
+        </Button>
       </div>
 
       {errorMessage && (
@@ -232,7 +245,10 @@ export default function NewVisitPage({
 
           <div className="grid gap-3 sm:grid-cols-4">
             {photos.map((photo) => (
-              <div key={photo.id} className="relative overflow-hidden rounded-lg border border-slate-200">
+              <div
+                key={photo.id}
+                className="relative overflow-hidden rounded-lg border border-slate-200"
+              >
                 <img
                   src={photo.preview}
                   alt="업로드 미리보기"
@@ -282,7 +298,9 @@ export default function NewVisitPage({
       )}
 
       <div className="flex justify-end gap-2">
-        <Button variant="secondary" asChild><Link href={`/projects/${projectId}/visits`}>취소</Link></Button>
+        <Button variant="secondary" asChild>
+          <Link href={`/projects/${projectId}/visits`}>취소</Link>
+        </Button>
         <Button onClick={handleSubmit} disabled={isSubmitting}>
           {isSubmitting ? (
             <>

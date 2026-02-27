@@ -2,12 +2,7 @@
 
 import { Bell, CreditCard, FileText } from "lucide-react";
 import { WorkerLayout } from "@/components/WorkerLayout";
-import {
-  AppLink,
-  Card,
-  CardContent,
-  InteractiveCard,
-} from "@sigongon/ui";
+import { AppLink, Card, CardContent, InteractiveCard } from "@sigongcore/ui";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -261,7 +256,10 @@ export default function WorkerHomePage() {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">읽지 않은 알림</h2>
-              <AppLink href="/notifications" className="text-sm text-brand-point-600">
+              <AppLink
+                href="/notifications"
+                className="text-sm text-brand-point-600"
+              >
                 전체보기
               </AppLink>
             </div>

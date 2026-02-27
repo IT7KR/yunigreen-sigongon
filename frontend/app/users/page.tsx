@@ -20,8 +20,25 @@ import { MobileListCard } from "@/components/MobileListCard";
 import { UserModal } from "@/components/UserModal";
 import { InviteUserModal } from "@/components/InviteUserModal";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Card, CardContent, LoadingOverlay, PrimitiveButton, PrimitiveInput, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate, toast, useConfirmDialog } from "@sigongon/ui";
-import type { UserRole } from "@sigongon/types";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  LoadingOverlay,
+  PrimitiveButton,
+  PrimitiveInput,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  formatDate,
+  toast,
+  useConfirmDialog,
+} from "@sigongcore/ui";
+import type { UserRole } from "@sigongcore/types";
 import { api } from "@/lib/api";
 import type { InvitationStatus } from "@/lib/mocks/db";
 
@@ -245,12 +262,12 @@ export default function UsersPage() {
   );
 
   const filteredInvitations = invitations.filter(
-    (inv) =>
-      inv.name.includes(searchQuery) ||
-      inv.phone?.includes(searchQuery),
+    (inv) => inv.name.includes(searchQuery) || inv.phone?.includes(searchQuery),
   );
 
-  const pendingInvitations = invitations.filter((inv) => inv.status === "pending");
+  const pendingInvitations = invitations.filter(
+    (inv) => inv.status === "pending",
+  );
   const activeCount = users.filter((u) => u.is_active).length;
 
   const loading = loadingUsers || loadingInvitations;
@@ -355,7 +372,9 @@ export default function UsersPage() {
             <div className="space-y-3 md:hidden">
               {filteredUsers.length === 0 ? (
                 <div className="py-12 text-center text-slate-500">
-                  {searchQuery ? "검색 결과가 없어요" : "등록된 사용자가 없어요"}
+                  {searchQuery
+                    ? "검색 결과가 없어요"
+                    : "등록된 사용자가 없어요"}
                 </div>
               ) : (
                 filteredUsers.map((user) => {
@@ -477,7 +496,9 @@ export default function UsersPage() {
                               {formatDate(user.created_at)}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={user.is_active ? "success" : "default"}>
+                              <Badge
+                                variant={user.is_active ? "success" : "default"}
+                              >
                                 {user.is_active ? "활성" : "비활성"}
                               </Badge>
                             </TableCell>
@@ -504,7 +525,9 @@ export default function UsersPage() {
                         <TableRow>
                           <TableCell colSpan={6} className="text-center">
                             <div className="py-12 text-slate-500">
-                              {searchQuery ? "검색 결과가 없어요" : "등록된 사용자가 없어요"}
+                              {searchQuery
+                                ? "검색 결과가 없어요"
+                                : "등록된 사용자가 없어요"}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -522,14 +545,19 @@ export default function UsersPage() {
             <div className="space-y-3 md:hidden">
               {filteredInvitations.length === 0 ? (
                 <div className="py-12 text-center text-slate-500">
-                  {searchQuery ? "검색 결과가 없어요" : "대기중인 초대가 없어요"}
+                  {searchQuery
+                    ? "검색 결과가 없어요"
+                    : "대기중인 초대가 없어요"}
                 </div>
               ) : (
                 filteredInvitations.map((invitation) => {
                   const role = roleConfig[invitation.role];
                   const status = invitationStatusConfig[invitation.status];
-                  const isExpired = new Date(invitation.expires_at) < new Date();
-                  const canResend = invitation.status === "pending" || invitation.status === "expired";
+                  const isExpired =
+                    new Date(invitation.expires_at) < new Date();
+                  const canResend =
+                    invitation.status === "pending" ||
+                    invitation.status === "expired";
                   const canRevoke = invitation.status === "pending";
                   return (
                     <MobileListCard
@@ -557,11 +585,13 @@ export default function UsersPage() {
                         },
                       ]}
                       actions={
-                        (canResend || canRevoke) ? (
+                        canResend || canRevoke ? (
                           <>
                             {canResend && (
                               <PrimitiveButton
-                                onClick={() => handleResendInvitation(invitation.id)}
+                                onClick={() =>
+                                  handleResendInvitation(invitation.id)
+                                }
                                 className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                                 title="재발송"
                               >
@@ -570,7 +600,9 @@ export default function UsersPage() {
                             )}
                             {canRevoke && (
                               <PrimitiveButton
-                                onClick={() => handleRevokeInvitation(invitation.id)}
+                                onClick={() =>
+                                  handleRevokeInvitation(invitation.id)
+                                }
                                 className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
                                 title="취소"
                               >
@@ -604,9 +636,13 @@ export default function UsersPage() {
                     <TableBody>
                       {filteredInvitations.map((invitation) => {
                         const role = roleConfig[invitation.role];
-                        const status = invitationStatusConfig[invitation.status];
-                        const isExpired = new Date(invitation.expires_at) < new Date();
-                        const canResend = invitation.status === "pending" || invitation.status === "expired";
+                        const status =
+                          invitationStatusConfig[invitation.status];
+                        const isExpired =
+                          new Date(invitation.expires_at) < new Date();
+                        const canResend =
+                          invitation.status === "pending" ||
+                          invitation.status === "expired";
                         const canRevoke = invitation.status === "pending";
 
                         return (
@@ -654,7 +690,9 @@ export default function UsersPage() {
                               <div className="flex gap-1">
                                 {canResend && (
                                   <PrimitiveButton
-                                    onClick={() => handleResendInvitation(invitation.id)}
+                                    onClick={() =>
+                                      handleResendInvitation(invitation.id)
+                                    }
                                     className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
                                     title="재발송"
                                   >
@@ -663,7 +701,9 @@ export default function UsersPage() {
                                 )}
                                 {canRevoke && (
                                   <PrimitiveButton
-                                    onClick={() => handleRevokeInvitation(invitation.id)}
+                                    onClick={() =>
+                                      handleRevokeInvitation(invitation.id)
+                                    }
                                     className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
                                     title="취소"
                                   >
@@ -677,8 +717,13 @@ export default function UsersPage() {
                       })}
                       {filteredInvitations.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={6} className="py-8 text-center text-slate-500">
-                            {searchQuery ? "검색 결과가 없어요" : "대기중인 초대가 없어요"}
+                          <TableCell
+                            colSpan={6}
+                            className="py-8 text-center text-slate-500"
+                          >
+                            {searchQuery
+                              ? "검색 결과가 없어요"
+                              : "대기중인 초대가 없어요"}
                           </TableCell>
                         </TableRow>
                       )}

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@sigongon/ui";
+import { Button } from "@sigongcore/ui";
 import { PLANS } from "./signup/types";
 
 const fadeInUp = {
@@ -45,7 +45,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-3">
               <Image
                 src="/logo-mark.png"
-                alt="시공ON"
+                alt="시공코어"
                 width={36}
                 height={36}
                 className="object-contain"
@@ -328,7 +328,7 @@ export default function LandingPage() {
               지금 바로 시작하세요
             </h2>
             <p className="mb-10 text-xl text-slate-300">
-              1개월 무료 체험으로 시공ON의 모든 기능을 경험해보세요
+              1개월 무료 체험으로 시공코어의 모든 기능을 경험해보세요
             </p>
             <Button size="lg" className="text-lg" asChild>
               <Link href="/signup">
@@ -347,12 +347,12 @@ export default function LandingPage() {
             <div className="flex items-center gap-3">
               <Image
                 src="/logo-mark.png"
-                alt="시공ON"
+                alt="시공코어"
                 width={32}
                 height={32}
                 className="object-contain"
               />
-              <span className="text-lg font-bold text-white">시공ON</span>
+              <span className="text-lg font-bold text-white">시공코어</span>
             </div>
             <div className="flex gap-6 text-sm text-slate-400">
               <Link href="/terms" className="hover:text-white">
@@ -365,7 +365,9 @@ export default function LandingPage() {
           </div>
           <div className="border-t border-white/10 pt-8 text-center text-sm text-slate-500">
             <p className="mb-2">© 2026 (주)유니그린. All rights reserved.</p>
-            <p className="text-xs">AI 기반 방수/누수 시공 관리 SaaS - 시공ON</p>
+            <p className="text-xs">
+              AI 기반 방수/누수 시공 관리 SaaS - 시공코어
+            </p>
           </div>
         </div>
       </footer>

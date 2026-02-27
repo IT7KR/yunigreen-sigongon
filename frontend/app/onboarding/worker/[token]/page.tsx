@@ -2,7 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Button, Card, CardContent, Input, PrimitiveButton, PrimitiveInput, PrimitiveSelect, toast } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  Input,
+  PrimitiveButton,
+  PrimitiveInput,
+  PrimitiveSelect,
+  toast,
+} from "@sigongcore/ui";
 import {
   CheckCircle2,
   Upload,
@@ -41,7 +50,9 @@ export default function WorkerOnboardingPage() {
   const [idCardFile, setIdCardFile] = useState<File | null>(null);
   const [safetyCertFile, setSafetyCertFile] = useState<File | null>(null);
   const [idCardPreview, setIdCardPreview] = useState<string | null>(null);
-  const [safetyCertPreview, setSafetyCertPreview] = useState<string | null>(null);
+  const [safetyCertPreview, setSafetyCertPreview] = useState<string | null>(
+    null,
+  );
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -91,7 +102,7 @@ export default function WorkerOnboardingPage() {
 
   function handleFileChange(
     e: React.ChangeEvent<HTMLInputElement>,
-    type: "idCard" | "safetyCert"
+    type: "idCard" | "safetyCert",
   ) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -206,7 +217,9 @@ export default function WorkerOnboardingPage() {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
               <Shield className="h-6 w-6 text-red-600" />
             </div>
-            <h2 className="text-lg font-bold text-slate-900">유효하지 않은 링크</h2>
+            <h2 className="text-lg font-bold text-slate-900">
+              유효하지 않은 링크
+            </h2>
             <p className="mt-2 text-sm text-slate-600">
               초대 링크가 만료되었거나 유효하지 않습니다.
               <br />
@@ -231,7 +244,7 @@ export default function WorkerOnboardingPage() {
       <div className="mx-auto max-w-lg">
         {/* Header */}
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">시공ON 가입</h1>
+          <h1 className="text-2xl font-bold text-slate-900">시공코어 가입</h1>
           <p className="mt-2 text-slate-600">
             {inviteData?.companyName}에서 초대했습니다
           </p>
@@ -249,7 +262,9 @@ export default function WorkerOnboardingPage() {
             >
               1
             </div>
-            <div className={`h-0.5 w-12 ${currentStep >= 2 ? "bg-brand-point-600" : "bg-slate-200"}`} />
+            <div
+              className={`h-0.5 w-12 ${currentStep >= 2 ? "bg-brand-point-600" : "bg-slate-200"}`}
+            />
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
                 currentStep >= 2
@@ -259,7 +274,9 @@ export default function WorkerOnboardingPage() {
             >
               2
             </div>
-            <div className={`h-0.5 w-12 ${currentStep >= 3 ? "bg-brand-point-600" : "bg-slate-200"}`} />
+            <div
+              className={`h-0.5 w-12 ${currentStep >= 3 ? "bg-brand-point-600" : "bg-slate-200"}`}
+            />
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
                 currentStep >= 3
@@ -276,7 +293,9 @@ export default function WorkerOnboardingPage() {
         {step === "documents" && (
           <Card>
             <CardContent className="p-6">
-              <h2 className="mb-4 text-lg font-bold text-slate-900">서류 업로드</h2>
+              <h2 className="mb-4 text-lg font-bold text-slate-900">
+                서류 업로드
+              </h2>
               <p className="mb-6 text-sm text-slate-600">
                 본인 확인을 위한 서류를 업로드해주세요
               </p>
@@ -404,7 +423,9 @@ export default function WorkerOnboardingPage() {
               <div className="mt-6 flex gap-3">
                 <Button
                   variant="secondary"
-                  onClick={() => router.push(`/onboarding/worker/consent?token=${token}`)}
+                  onClick={() =>
+                    router.push(`/onboarding/worker/consent?token=${token}`)
+                  }
                 >
                   <ArrowLeft className="h-4 w-4" />
                   이전
@@ -422,7 +443,9 @@ export default function WorkerOnboardingPage() {
         {step === "info" && (
           <Card>
             <CardContent className="p-6">
-              <h2 className="mb-4 text-lg font-bold text-slate-900">정보 입력</h2>
+              <h2 className="mb-4 text-lg font-bold text-slate-900">
+                정보 입력
+              </h2>
               <p className="mb-6 text-sm text-slate-600">
                 급여 지급 및 4대보험 신고에 필요한 정보입니다
               </p>
@@ -436,7 +459,9 @@ export default function WorkerOnboardingPage() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        birthDate: e.target.value.replace(/\D/g, "").slice(0, 6),
+                        birthDate: e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 6),
                       })
                     }
                     maxLength={6}
@@ -468,7 +493,9 @@ export default function WorkerOnboardingPage() {
                   label="주소 *"
                   placeholder="예: 서울시 강남구 테헤란로 123"
                   value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
                 />
 
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -476,14 +503,19 @@ export default function WorkerOnboardingPage() {
                     label="은행명 *"
                     placeholder="예: 국민은행"
                     value={formData.bankName}
-                    onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, bankName: e.target.value })
+                    }
                   />
                   <Input
                     label="계좌번호 *"
                     placeholder="예: 123-456-789012"
                     value={formData.accountNumber}
                     onChange={(e) =>
-                      setFormData({ ...formData, accountNumber: e.target.value })
+                      setFormData({
+                        ...formData,
+                        accountNumber: e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -508,7 +540,10 @@ export default function WorkerOnboardingPage() {
                       placeholder="비밀번호 재입력"
                       value={formData.passwordConfirm}
                       onChange={(e) =>
-                        setFormData({ ...formData, passwordConfirm: e.target.value })
+                        setFormData({
+                          ...formData,
+                          passwordConfirm: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -518,7 +553,9 @@ export default function WorkerOnboardingPage() {
               <div className="mt-6 flex gap-3">
                 <Button
                   variant="secondary"
-                  onClick={() => router.push(`/onboarding/worker/${token}?step=documents`)}
+                  onClick={() =>
+                    router.push(`/onboarding/worker/${token}?step=documents`)
+                  }
                 >
                   <ArrowLeft className="h-4 w-4" />
                   이전
@@ -560,14 +597,21 @@ export default function WorkerOnboardingPage() {
               </p>
 
               <div className="mt-6 rounded-lg bg-slate-50 p-4">
-                <p className="text-sm font-medium text-slate-700">로그인 정보</p>
+                <p className="text-sm font-medium text-slate-700">
+                  로그인 정보
+                </p>
                 <p className="mt-1 text-sm text-slate-600">
                   아이디: {inviteData?.phone}
                 </p>
-                <p className="text-sm text-slate-600">비밀번호: 설정하신 비밀번호</p>
+                <p className="text-sm text-slate-600">
+                  비밀번호: 설정하신 비밀번호
+                </p>
               </div>
 
-              <Button className="mt-6 w-full" onClick={() => router.push("/login")}>
+              <Button
+                className="mt-6 w-full"
+                onClick={() => router.push("/login")}
+              >
                 <User className="h-4 w-4" />
                 로그인하기
               </Button>

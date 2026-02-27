@@ -1,4 +1,9 @@
-import type { LaborInsuranceRates, DailyWorker, SitePayrollWorkerEntry, DailyWorkRecord } from "@sigongon/types";
+import type {
+  LaborInsuranceRates,
+  DailyWorker,
+  SitePayrollWorkerEntry,
+  DailyWorkRecord,
+} from "@sigongcore/types";
 
 /**
  * 일용근로자 세금/보험 계산 엔진
@@ -20,7 +25,7 @@ import type { LaborInsuranceRates, DailyWorker, SitePayrollWorkerEntry, DailyWor
 export function calculateAge(
   birthDate: string,
   gender: 1 | 2 | 3 | 4,
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
 ): number {
   if (!birthDate || birthDate.length < 6) return 0;
 
@@ -53,7 +58,10 @@ export function calculateAge(
  * (하위 호환용) 주민번호로 만 나이 계산
  * @deprecated Use calculateAge(birthDate, gender) instead
  */
-export function calculateAgeFromSSN(ssn: string, referenceDate: Date = new Date()): number {
+export function calculateAgeFromSSN(
+  ssn: string,
+  referenceDate: Date = new Date(),
+): number {
   const cleaned = ssn.replace(/-/g, "");
   if (cleaned.length < 7) return 0;
 
@@ -61,9 +69,19 @@ export function calculateAgeFromSSN(ssn: string, referenceDate: Date = new Date(
   let birthYear: number;
   const twoDigitYear = parseInt(cleaned.slice(0, 2), 10);
 
-  if (yearPrefix === "1" || yearPrefix === "2" || yearPrefix === "5" || yearPrefix === "6") {
+  if (
+    yearPrefix === "1" ||
+    yearPrefix === "2" ||
+    yearPrefix === "5" ||
+    yearPrefix === "6"
+  ) {
     birthYear = 1900 + twoDigitYear;
-  } else if (yearPrefix === "3" || yearPrefix === "4" || yearPrefix === "7" || yearPrefix === "8") {
+  } else if (
+    yearPrefix === "3" ||
+    yearPrefix === "4" ||
+    yearPrefix === "7" ||
+    yearPrefix === "8"
+  ) {
     birthYear = 2000 + twoDigitYear;
   } else {
     birthYear = 1900 + twoDigitYear;
@@ -88,7 +106,11 @@ export function calculateAgeFromSSN(ssn: string, referenceDate: Date = new Date(
 // 면제 판별
 // ============================================
 
-export type InsuranceType = "employment" | "health" | "national_pension" | "longterm_care";
+export type InsuranceType =
+  | "employment"
+  | "health"
+  | "national_pension"
+  | "longterm_care";
 
 /**
  * 보험 면제 여부 판별
@@ -138,7 +160,11 @@ export function isInsuranceExempt(
 // 상하한 적용
 // ============================================
 
-export function clampToLimit(value: number, lower: number, upper: number): number {
+export function clampToLimit(
+  value: number,
+  lower: number,
+  upper: number,
+): number {
   return Math.max(lower, Math.min(upper, value));
 }
 
@@ -159,14 +185,14 @@ export function roundDown10(value: number): number {
 // ============================================
 
 export interface DeductionResult {
-  income_tax: number;        // 갑근세
-  resident_tax: number;      // 주민세 (지방소득세)
-  health_insurance: number;  // 건강보험
-  longterm_care: number;     // 요양보험 (장기요양)
-  national_pension: number;  // 국민연금
+  income_tax: number; // 갑근세
+  resident_tax: number; // 주민세 (지방소득세)
+  health_insurance: number; // 건강보험
+  longterm_care: number; // 요양보험 (장기요양)
+  national_pension: number; // 국민연금
   employment_insurance: number; // 고용보험
-  total_deductions: number;  // 공제 합계
-  net_pay: number;           // 차감지급액
+  total_deductions: number; // 공제 합계
+  net_pay: number; // 차감지급액
 }
 
 /**
@@ -181,7 +207,10 @@ export interface DeductionResult {
  * - 고용보험 = 일당 × 0.9% × 일수
  */
 export function calculateWorkerDeductions(
-  worker: Pick<DailyWorker, "daily_rate" | "birth_date" | "gender" | "is_foreign" | "visa_status">,
+  worker: Pick<
+    DailyWorker,
+    "daily_rate" | "birth_date" | "gender" | "is_foreign" | "visa_status"
+  >,
   totalManDays: number,
   totalWorkDays: number,
   rates: LaborInsuranceRates,
@@ -204,34 +233,86 @@ export function calculateWorkerDeductions(
 
   // === 건강보험 ===
   let health_insurance = 0;
-  if (!isInsuranceExempt("health", age, totalWorkDays, worker.is_foreign, worker.visa_status)) {
+  if (
+    !isInsuranceExempt(
+      "health",
+      age,
+      totalWorkDays,
+      worker.is_foreign,
+      worker.visa_status,
+    )
+  ) {
     // 월소득 × 건강보험요율 / 2 (근로자 부담분)
-    health_insurance = roundDown10(totalLaborCost * rates.health_insurance_rate / 2);
+    health_insurance = roundDown10(
+      (totalLaborCost * rates.health_insurance_rate) / 2,
+    );
     // 상하한 적용
-    health_insurance = clampToLimit(health_insurance, rates.health_premium_lower, rates.health_premium_upper);
+    health_insurance = clampToLimit(
+      health_insurance,
+      rates.health_premium_lower,
+      rates.health_premium_upper,
+    );
   }
 
   // === 요양보험 (장기요양) ===
   let longterm_care = 0;
-  if (!isInsuranceExempt("longterm_care", age, totalWorkDays, worker.is_foreign, worker.visa_status)) {
+  if (
+    !isInsuranceExempt(
+      "longterm_care",
+      age,
+      totalWorkDays,
+      worker.is_foreign,
+      worker.visa_status,
+    )
+  ) {
     longterm_care = roundDown10(health_insurance * rates.longterm_care_rate);
   }
 
   // === 국민연금 ===
   let national_pension = 0;
-  if (!isInsuranceExempt("national_pension", age, totalWorkDays, worker.is_foreign, worker.visa_status)) {
+  if (
+    !isInsuranceExempt(
+      "national_pension",
+      age,
+      totalWorkDays,
+      worker.is_foreign,
+      worker.visa_status,
+    )
+  ) {
     // 기준소득월액에 상하한 적용 후 요율 적용
-    const standardMonthlyIncome = clampToLimit(totalLaborCost, rates.pension_lower_limit, rates.pension_upper_limit);
-    national_pension = roundDown10(standardMonthlyIncome * rates.national_pension_rate / 2);
+    const standardMonthlyIncome = clampToLimit(
+      totalLaborCost,
+      rates.pension_lower_limit,
+      rates.pension_upper_limit,
+    );
+    national_pension = roundDown10(
+      (standardMonthlyIncome * rates.national_pension_rate) / 2,
+    );
   }
 
   // === 고용보험 ===
   let employment_insurance = 0;
-  if (!isInsuranceExempt("employment", age, totalWorkDays, worker.is_foreign, worker.visa_status)) {
-    employment_insurance = roundDown10(dailyRate * rates.employment_insurance_rate * totalManDays);
+  if (
+    !isInsuranceExempt(
+      "employment",
+      age,
+      totalWorkDays,
+      worker.is_foreign,
+      worker.visa_status,
+    )
+  ) {
+    employment_insurance = roundDown10(
+      dailyRate * rates.employment_insurance_rate * totalManDays,
+    );
   }
 
-  const total_deductions = income_tax + resident_tax + health_insurance + longterm_care + national_pension + employment_insurance;
+  const total_deductions =
+    income_tax +
+    resident_tax +
+    health_insurance +
+    longterm_care +
+    national_pension +
+    employment_insurance;
   const net_pay = totalLaborCost - total_deductions;
 
   return {
@@ -314,7 +395,10 @@ export function buildWorkerEntry(
  * @param birthDate - 생년월일 (YYMMDD)
  * @param gender - 성별코드 (1,2,3,4)
  */
-export function formatMaskedSSN(birthDate: string, gender: 1 | 2 | 3 | 4): string {
+export function formatMaskedSSN(
+  birthDate: string,
+  gender: 1 | 2 | 3 | 4,
+): string {
   if (!birthDate || birthDate.length < 6) return "";
   return `${birthDate.slice(0, 6)}-${gender}******`;
 }

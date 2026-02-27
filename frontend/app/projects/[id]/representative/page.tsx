@@ -15,7 +15,7 @@ import {
   Select,
   toast,
   useConfirmDialog,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { useProject } from "@/hooks";
 import {
   assignRepresentativeToProject,

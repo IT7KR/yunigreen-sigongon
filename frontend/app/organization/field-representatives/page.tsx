@@ -15,7 +15,7 @@ import {
   Textarea,
   toast,
   useConfirmDialog,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { Edit2, Plus, Trash2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { MobileListCard } from "@/components/MobileListCard";
@@ -83,7 +83,8 @@ export default function OrganizationFieldRepresentativesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formState, setFormState] = useState<RepresentativeFormState>(EMPTY_FORM);
+  const [formState, setFormState] =
+    useState<RepresentativeFormState>(EMPTY_FORM);
   const { confirm } = useConfirmDialog();
 
   const refreshRepresentatives = useCallback(async () => {
@@ -284,9 +285,7 @@ export default function OrganizationFieldRepresentativesPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              현장대리인
-            </h1>
+            <h1 className="text-2xl font-bold text-slate-900">현장대리인</h1>
             <p className="mt-1 text-sm text-slate-500">
               회사 공통 현장대리인 인력풀과 자격서류를 관리합니다.
             </p>
@@ -337,7 +336,9 @@ export default function OrganizationFieldRepresentativesPage() {
                         {
                           label: "기술수첩",
                           value: item.booklet_filename ? (
-                            <Badge variant="success">{item.booklet_filename}</Badge>
+                            <Badge variant="success">
+                              {item.booklet_filename}
+                            </Badge>
                           ) : (
                             <Badge variant="default">미등록</Badge>
                           ),
@@ -347,7 +348,9 @@ export default function OrganizationFieldRepresentativesPage() {
                           value: `${item.assigned_project_ids?.length ?? 0}건`,
                         },
                       ]}
-                      onClick={() => canManageRegistry ? openEditModal(item) : undefined}
+                      onClick={() =>
+                        canManageRegistry ? openEditModal(item) : undefined
+                      }
                       actions={
                         canManageRegistry ? (
                           <>
@@ -397,13 +400,17 @@ export default function OrganizationFieldRepresentativesPage() {
                               {item.name}
                             </div>
                             {item.grade && (
-                              <p className="text-xs text-slate-500">{item.grade}</p>
+                              <p className="text-xs text-slate-500">
+                                {item.grade}
+                              </p>
                             )}
                           </td>
                           <td className="py-3 text-slate-700">{item.phone}</td>
                           <td className="py-3">
                             {item.booklet_filename ? (
-                              <Badge variant="success">{item.booklet_filename}</Badge>
+                              <Badge variant="success">
+                                {item.booklet_filename}
+                              </Badge>
                             ) : (
                               <Badge variant="default">미등록</Badge>
                             )}
@@ -434,13 +441,17 @@ export default function OrganizationFieldRepresentativesPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleDeleteRepresentative(item)}
+                                  onClick={() =>
+                                    handleDeleteRepresentative(item)
+                                  }
                                 >
                                   <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
                               </div>
                             ) : (
-                              <span className="text-xs text-slate-400">조회 전용</span>
+                              <span className="text-xs text-slate-400">
+                                조회 전용
+                              </span>
                             )}
                           </td>
                         </tr>
@@ -487,8 +498,12 @@ export default function OrganizationFieldRepresentativesPage() {
             }
           />
           <div className="rounded-lg border border-slate-200 p-3">
-            <p className="mb-1 text-sm font-medium text-slate-700">기술수첩 사본 첨부</p>
-            <p className="mb-2 text-xs text-slate-500">JPG/PNG/PDF, 10MB 이하</p>
+            <p className="mb-1 text-sm font-medium text-slate-700">
+              기술수첩 사본 첨부
+            </p>
+            <p className="mb-2 text-xs text-slate-500">
+              JPG/PNG/PDF, 10MB 이하
+            </p>
             <PrimitiveInput
               type="file"
               accept=".jpg,.jpeg,.png,.pdf"
@@ -497,7 +512,8 @@ export default function OrganizationFieldRepresentativesPage() {
             />
             {formState.bookletFile ? (
               <p className="mt-2 text-xs text-slate-600">
-                선택 파일: {formState.bookletFile.name} ({formatFileSize(formState.bookletFile.size)})
+                선택 파일: {formState.bookletFile.name} (
+                {formatFileSize(formState.bookletFile.size)})
               </p>
             ) : formState.bookletFileName ? (
               <p className="mt-2 text-xs text-slate-500">
@@ -507,8 +523,12 @@ export default function OrganizationFieldRepresentativesPage() {
           </div>
 
           <div className="rounded-lg border border-slate-200 p-3">
-            <p className="mb-1 text-sm font-medium text-slate-700">현장경력증명서 첨부</p>
-            <p className="mb-2 text-xs text-slate-500">JPG/PNG/PDF, 10MB 이하</p>
+            <p className="mb-1 text-sm font-medium text-slate-700">
+              현장경력증명서 첨부
+            </p>
+            <p className="mb-2 text-xs text-slate-500">
+              JPG/PNG/PDF, 10MB 이하
+            </p>
             <PrimitiveInput
               type="file"
               accept=".jpg,.jpeg,.png,.pdf"
@@ -517,7 +537,8 @@ export default function OrganizationFieldRepresentativesPage() {
             />
             {formState.careerFile ? (
               <p className="mt-2 text-xs text-slate-600">
-                선택 파일: {formState.careerFile.name} ({formatFileSize(formState.careerFile.size)})
+                선택 파일: {formState.careerFile.name} (
+                {formatFileSize(formState.careerFile.size)})
               </p>
             ) : formState.careerFileName ? (
               <p className="mt-2 text-xs text-slate-500">
@@ -527,8 +548,12 @@ export default function OrganizationFieldRepresentativesPage() {
           </div>
 
           <div className="rounded-lg border border-slate-200 p-3">
-            <p className="mb-1 text-sm font-medium text-slate-700">재직증명서 첨부</p>
-            <p className="mb-2 text-xs text-slate-500">JPG/PNG/PDF, 10MB 이하</p>
+            <p className="mb-1 text-sm font-medium text-slate-700">
+              재직증명서 첨부
+            </p>
+            <p className="mb-2 text-xs text-slate-500">
+              JPG/PNG/PDF, 10MB 이하
+            </p>
             <PrimitiveInput
               type="file"
               accept=".jpg,.jpeg,.png,.pdf"
@@ -537,7 +562,8 @@ export default function OrganizationFieldRepresentativesPage() {
             />
             {formState.employmentFile ? (
               <p className="mt-2 text-xs text-slate-600">
-                선택 파일: {formState.employmentFile.name} ({formatFileSize(formState.employmentFile.size)})
+                선택 파일: {formState.employmentFile.name} (
+                {formatFileSize(formState.employmentFile.size)})
               </p>
             ) : formState.employmentFileName ? (
               <p className="mt-2 text-xs text-slate-500">

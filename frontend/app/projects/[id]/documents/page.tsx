@@ -15,7 +15,15 @@ import {
   AlertCircle,
   FolderOpen,
 } from "lucide-react";
-import { Badge, Button, Card, CardContent, PrimitiveButton, PrimitiveInput, toast } from "@sigongon/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  PrimitiveButton,
+  PrimitiveInput,
+  toast,
+} from "@sigongcore/ui";
 import type {
   DocumentPhase,
   DocumentGenerationType,
@@ -23,7 +31,7 @@ import type {
   ProjectDocumentStatus,
   ProjectDocumentItem,
   ProjectDocumentPhaseGroup,
-} from "@sigongon/types";
+} from "@sigongcore/types";
 import {
   buildSampleFileDownloadUrl,
   getSamplePathForDocument,
@@ -123,7 +131,9 @@ function doc(
     is_conditional: opts?.is_conditional ?? false,
     condition_description: opts?.condition_description,
     status,
-    file_path: isComplete ? sampleFilePath ?? opts?.file_path : opts?.file_path,
+    file_path: isComplete
+      ? (sampleFilePath ?? opts?.file_path)
+      : opts?.file_path,
     file_size: isComplete ? 102400 : undefined,
     generated_at: isComplete ? "2026-01-20T10:00:00Z" : undefined,
   };
@@ -152,70 +162,276 @@ function makePhaseGroup(
 const MOCK_DOCUMENT_PHASES: ProjectDocumentPhaseGroup[] = [
   makePhaseGroup("contract", [
     doc("c1", "contract", "견적내역서", "xlsx", "auto", true, "generated"),
-    doc("c2", "contract", "수의계약체결제한여부확인서", "hwp", "template", true, "not_started"),
+    doc(
+      "c2",
+      "contract",
+      "수의계약체결제한여부확인서",
+      "hwp",
+      "template",
+      true,
+      "not_started",
+    ),
     doc("c3", "contract", "시방서", "hwpx", "auto", true, "generated"),
     doc("c4", "contract", "사업자 외 서류", "pdf", "upload", true, "uploaded"),
     doc("c5", "contract", "계약보증서", "pdf", "upload", true, "not_started"),
-    doc("c6", "contract", "계약보증금 지급각서", "hwp", "template", false, "not_started", {
-      is_conditional: true,
-      condition_description: "보증서 대체 시",
-    }),
+    doc(
+      "c6",
+      "contract",
+      "계약보증금 지급각서",
+      "hwp",
+      "template",
+      false,
+      "not_started",
+      {
+        is_conditional: true,
+        condition_description: "보증서 대체 시",
+      },
+    ),
   ]),
   makePhaseGroup("commencement", [
-    doc("m1", "commencement", "착공공문", "hwp", "template", true, "not_started"),
-    doc("m2", "commencement", "착공신고서", "hwp", "template", true, "not_started"),
-    doc("m3-1", "commencement", "현장대리인 기술수첩 사본", "pdf", "upload", true, "not_started"),
-    doc("m3-2", "commencement", "현장대리인 경력증명서", "pdf", "upload", true, "not_started"),
-    doc("m3-3", "commencement", "현장대리인 재직증명서", "pdf", "upload", true, "not_started"),
+    doc(
+      "m1",
+      "commencement",
+      "착공공문",
+      "hwp",
+      "template",
+      true,
+      "not_started",
+    ),
+    doc(
+      "m2",
+      "commencement",
+      "착공신고서",
+      "hwp",
+      "template",
+      true,
+      "not_started",
+    ),
+    doc(
+      "m3-1",
+      "commencement",
+      "현장대리인 기술수첩 사본",
+      "pdf",
+      "upload",
+      true,
+      "not_started",
+    ),
+    doc(
+      "m3-2",
+      "commencement",
+      "현장대리인 경력증명서",
+      "pdf",
+      "upload",
+      true,
+      "not_started",
+    ),
+    doc(
+      "m3-3",
+      "commencement",
+      "현장대리인 재직증명서",
+      "pdf",
+      "upload",
+      true,
+      "not_started",
+    ),
     doc("m4", "commencement", "계약내역서", "xlsx", "auto", true, "generated"),
-    doc("m5", "commencement", "노무비 서류", "hwp", "template", false, "not_started", {
-      is_conditional: true,
-      condition_description: "상용/일용 선택",
-    }),
-    doc("m6", "commencement", "안전보건관리 서약서", "hwp", "template", true, "not_started"),
-    doc("m7", "commencement", "착공 전 사진", "hwp", "auto", true, "not_started"),
-    doc("m8", "commencement", "직접시공계획서", "hwp", "template", true, "not_started"),
-    doc("m9", "commencement", "안전보건관리계획서", "hwp", "template", true, "not_started"),
+    doc(
+      "m5",
+      "commencement",
+      "노무비 서류",
+      "hwp",
+      "template",
+      false,
+      "not_started",
+      {
+        is_conditional: true,
+        condition_description: "상용/일용 선택",
+      },
+    ),
+    doc(
+      "m6",
+      "commencement",
+      "안전보건관리 서약서",
+      "hwp",
+      "template",
+      true,
+      "not_started",
+    ),
+    doc(
+      "m7",
+      "commencement",
+      "착공 전 사진",
+      "hwp",
+      "auto",
+      true,
+      "not_started",
+    ),
+    doc(
+      "m8",
+      "commencement",
+      "직접시공계획서",
+      "hwp",
+      "template",
+      true,
+      "not_started",
+    ),
+    doc(
+      "m9",
+      "commencement",
+      "안전보건관리계획서",
+      "hwp",
+      "template",
+      true,
+      "not_started",
+    ),
   ]),
   makePhaseGroup("construction", [
     doc("s1", "construction", "공사일지", "hwp", "auto", true, "generated"),
-    doc("s2", "construction", "일용근로계약서", "hwp", "auto", true, "generated"),
-    doc("s3", "construction", "현장 점검 보고서", "xlsx", "ai", true, "not_started"),
+    doc(
+      "s2",
+      "construction",
+      "일용근로계약서",
+      "hwp",
+      "auto",
+      true,
+      "generated",
+    ),
+    doc(
+      "s3",
+      "construction",
+      "현장 점검 보고서",
+      "xlsx",
+      "ai",
+      true,
+      "not_started",
+    ),
   ]),
   makePhaseGroup("completion", [
     doc("p1", "completion", "준공공문", "hwp", "template", true, "not_started"),
     doc("p2", "completion", "준공계", "hwp", "template", true, "not_started"),
     doc("p3", "completion", "준공내역서", "xlsx", "auto", true, "not_started"),
-    doc("p4", "completion", "준공정산동의서", "pdf", "template", false, "not_started", {
-      is_conditional: true,
-      condition_description: "금액 변동 시",
-    }),
+    doc(
+      "p4",
+      "completion",
+      "준공정산동의서",
+      "pdf",
+      "template",
+      false,
+      "not_started",
+      {
+        is_conditional: true,
+        condition_description: "금액 변동 시",
+      },
+    ),
     doc("p5", "completion", "준공사진첩", "pdf", "auto", true, "not_started"),
-    doc("p6", "completion", "노무비 증빙자료", "pdf", "upload", true, "not_started"),
-    doc("p7", "completion", "산업안전관리비 집행내역", "hwp", "template", false, "not_started", {
-      is_conditional: true,
-      condition_description: "2천만원 이상 공사",
-    }),
-    doc("p8", "completion", "하자보수보증금 지급각서", "hwp", "template", true, "not_started"),
-    doc("p9", "completion", "폐기물/납세 증빙서류", "pdf", "upload", true, "not_started"),
+    doc(
+      "p6",
+      "completion",
+      "노무비 증빙자료",
+      "pdf",
+      "upload",
+      true,
+      "not_started",
+    ),
+    doc(
+      "p7",
+      "completion",
+      "산업안전관리비 집행내역",
+      "hwp",
+      "template",
+      false,
+      "not_started",
+      {
+        is_conditional: true,
+        condition_description: "2천만원 이상 공사",
+      },
+    ),
+    doc(
+      "p8",
+      "completion",
+      "하자보수보증금 지급각서",
+      "hwp",
+      "template",
+      true,
+      "not_started",
+    ),
+    doc(
+      "p9",
+      "completion",
+      "폐기물/납세 증빙서류",
+      "pdf",
+      "upload",
+      true,
+      "not_started",
+    ),
   ]),
   makePhaseGroup("labor_report", [
-    doc("l1", "labor_report", "근로내용확인신고", "xlsx", "auto", true, "not_started"),
-    doc("l2", "labor_report", "일용근로지급명세서", "xlsx", "auto", true, "not_started"),
-    doc("l3", "labor_report", "일용근로계약서", "hwp", "auto", true, "generated"),
+    doc(
+      "l1",
+      "labor_report",
+      "근로내용확인신고",
+      "xlsx",
+      "auto",
+      true,
+      "not_started",
+    ),
+    doc(
+      "l2",
+      "labor_report",
+      "일용근로지급명세서",
+      "xlsx",
+      "auto",
+      true,
+      "not_started",
+    ),
+    doc(
+      "l3",
+      "labor_report",
+      "일용근로계약서",
+      "hwp",
+      "auto",
+      true,
+      "generated",
+    ),
   ]),
   makePhaseGroup("private_contract", [
-    doc("v1", "private_contract", "공사도급표준계약서", "pdf", "external", true, "not_started"),
+    doc(
+      "v1",
+      "private_contract",
+      "공사도급표준계약서",
+      "pdf",
+      "external",
+      true,
+      "not_started",
+    ),
   ]),
   makePhaseGroup("school", [
-    doc("h1", "school", "교육청 원클릭 프로그램 양식", "xlsx", "upload", false, "not_started", {
-      is_conditional: true,
-      condition_description: "학교 프로젝트만",
-    }),
-    doc("h2", "school", "수도전기공문", "hwp", "template", false, "not_started", {
-      is_conditional: true,
-      condition_description: "학교 준공 시",
-    }),
+    doc(
+      "h1",
+      "school",
+      "교육청 원클릭 프로그램 양식",
+      "xlsx",
+      "upload",
+      false,
+      "not_started",
+      {
+        is_conditional: true,
+        condition_description: "학교 프로젝트만",
+      },
+    ),
+    doc(
+      "h2",
+      "school",
+      "수도전기공문",
+      "hwp",
+      "template",
+      false,
+      "not_started",
+      {
+        is_conditional: true,
+        condition_description: "학교 준공 시",
+      },
+    ),
   ]),
 ];
 
@@ -244,14 +460,19 @@ async function hydrateRepresentativeDocumentState(
 ) {
   try {
     const reportsResponse = await api.getConstructionReports(projectId);
-    const reports = reportsResponse.success && Array.isArray(reportsResponse.data)
-      ? reportsResponse.data
-      : [];
+    const reports =
+      reportsResponse.success && Array.isArray(reportsResponse.data)
+        ? reportsResponse.data
+        : [];
     const latestStartReport = reports
       .filter((report) => report.report_type === "start")
-      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))[0];
+      .sort((a, b) =>
+        (b.created_at || "").localeCompare(a.created_at || ""),
+      )[0];
     if (latestStartReport) {
-      const detailResponse = await api.getConstructionReport(String(latestStartReport.id));
+      const detailResponse = await api.getConstructionReport(
+        String(latestStartReport.id),
+      );
       if (
         detailResponse.success &&
         detailResponse.data?.auto_link_representative_docs === false
@@ -261,7 +482,9 @@ async function hydrateRepresentativeDocumentState(
     }
 
     const assignmentResponse = await api.getProjectRepresentative(projectId);
-    const assignment = assignmentResponse.success ? assignmentResponse.data : null;
+    const assignment = assignmentResponse.success
+      ? assignmentResponse.data
+      : null;
     if (!assignment) {
       return phases;
     }
@@ -284,7 +507,9 @@ async function hydrateRepresentativeDocumentState(
       ["m3-2", representative.career_cert_filename],
       ["m3-3", representative.employment_cert_filename],
     ]);
-    const hasLinkedDocument = Array.from(representativeDocMap.values()).some(Boolean);
+    const hasLinkedDocument = Array.from(representativeDocMap.values()).some(
+      Boolean,
+    );
     if (!hasLinkedDocument) {
       return phases;
     }
@@ -301,12 +526,13 @@ async function hydrateRepresentativeDocumentState(
         }
         const resolvedPath = linkedFilePath.includes("/")
           ? linkedFilePath
-          : getSamplePathForDocument(docItem.id) ??
+          : (getSamplePathForDocument(docItem.id) ??
             getSamplePathForDocument("m3") ??
-            linkedFilePath;
-        const generatedAt = docItem.id === "m3-2"
-          ? representative.career_cert_uploaded_at || docItem.generated_at
-          : docItem.generated_at;
+            linkedFilePath);
+        const generatedAt =
+          docItem.id === "m3-2"
+            ? representative.career_cert_uploaded_at || docItem.generated_at
+            : docItem.generated_at;
         return {
           ...docItem,
           status: "uploaded" as const,
@@ -331,12 +557,13 @@ export default function DocumentsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [documentPhases, setDocumentPhases] = useState<ProjectDocumentPhaseGroup[]>(
-    () =>
-      applyDocumentOverrides(
-        MOCK_DOCUMENT_PHASES,
-        getProjectDocumentOverrides(id),
-      ),
+  const [documentPhases, setDocumentPhases] = useState<
+    ProjectDocumentPhaseGroup[]
+  >(() =>
+    applyDocumentOverrides(
+      MOCK_DOCUMENT_PHASES,
+      getProjectDocumentOverrides(id),
+    ),
   );
   const [expandedPhases, setExpandedPhases] = useState<Set<DocumentPhase>>(
     () => new Set(documentPhases.map((g) => g.phase)),
@@ -361,7 +588,10 @@ export default function DocumentsPage({
         MOCK_DOCUMENT_PHASES,
         getProjectDocumentOverrides(id),
       );
-      const hydrated = await hydrateRepresentativeDocumentState(id, localPhases);
+      const hydrated = await hydrateRepresentativeDocumentState(
+        id,
+        localPhases,
+      );
       if (isMounted) {
         setDocumentPhases(hydrated);
       }
@@ -391,7 +621,9 @@ export default function DocumentsPage({
   ) {
     setDocumentPhases((prev) =>
       prev.map((group) => {
-        const hasTarget = group.documents.some((docItem) => docItem.id === documentId);
+        const hasTarget = group.documents.some(
+          (docItem) => docItem.id === documentId,
+        );
         if (!hasTarget) {
           return group;
         }
@@ -540,9 +772,7 @@ export default function DocumentsPage({
           const isExpanded = expandedPhases.has(group.phase);
           const phaseProgress =
             group.total_count > 0
-              ? Math.round(
-                  (group.completed_count / group.total_count) * 100,
-                )
+              ? Math.round((group.completed_count / group.total_count) * 100)
               : 0;
 
           return (
@@ -659,9 +889,7 @@ function DocumentRow({
             </span>
             {/* Required label */}
             {d.is_required && (
-              <span className="text-[10px] font-medium text-red-500">
-                필수
-              </span>
+              <span className="text-[10px] font-medium text-red-500">필수</span>
             )}
           </div>
           {/* Conditional description */}

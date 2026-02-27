@@ -24,13 +24,13 @@ import {
   Modal,
   PrimitiveSelect,
   formatDate,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import type {
   ContractDetail,
   ContractKind,
   ContractTemplateType,
   PublicPlatformType,
-} from "@sigongon/types";
+} from "@sigongcore/types";
 import { api } from "@/lib/api";
 import { ModusignModal } from "@/components/ModusignModal";
 import {

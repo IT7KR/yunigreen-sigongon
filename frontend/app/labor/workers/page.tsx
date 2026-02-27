@@ -22,7 +22,17 @@ import {
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { MobileListCard } from "@/components/MobileListCard";
-import { Badge, Button, Card, CardContent, Input, Modal, PrimitiveInput, PrimitiveSelect, toast } from "@sigongon/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  Input,
+  Modal,
+  PrimitiveInput,
+  PrimitiveSelect,
+  toast,
+} from "@sigongcore/ui";
 import { api } from "@/lib/api";
 import type {
   DailyWorker,
@@ -30,7 +40,7 @@ import type {
   WorkerDocument,
   WorkerDocumentReviewAction,
   WorkerDocumentReviewQueueItem,
-} from "@sigongon/types";
+} from "@sigongcore/types";
 import { sendWorkerInvite } from "@/lib/aligo";
 
 interface LaborCodebook {
@@ -82,16 +92,20 @@ export default function DailyWorkersPage() {
   const [workerPhone, setWorkerPhone] = useState("");
   const [isInviting, setIsInviting] = useState(false);
   const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
-  const [inviteSuccess, setInviteSuccess] = useState<{ inviteUrl: string } | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<{
+    inviteUrl: string;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [pendingInvitations, setPendingInvitations] = useState<Array<{
-    id: string;
-    name: string;
-    phone: string;
-    created_at: string;
-    expires_at: string;
-    status: string;
-  }>>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<
+    Array<{
+      id: string;
+      name: string;
+      phone: string;
+      created_at: string;
+      expires_at: string;
+      status: string;
+    }>
+  >([]);
 
   // Report download modal state
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -104,20 +118,31 @@ export default function DailyWorkersPage() {
   // Registration modal state
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [registerIdCardFile, setRegisterIdCardFile] = useState<File | null>(null);
-  const [registerSafetyCertFile, setRegisterSafetyCertFile] = useState<File | null>(null);
+  const [registerIdCardFile, setRegisterIdCardFile] = useState<File | null>(
+    null,
+  );
+  const [registerSafetyCertFile, setRegisterSafetyCertFile] =
+    useState<File | null>(null);
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingWorker, setEditingWorker] = useState<DailyWorker | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [editingDocuments, setEditingDocuments] = useState<WorkerDocument[]>([]);
+  const [editingDocuments, setEditingDocuments] = useState<WorkerDocument[]>(
+    [],
+  );
   const [editIdCardFile, setEditIdCardFile] = useState<File | null>(null);
-  const [editSafetyCertFile, setEditSafetyCertFile] = useState<File | null>(null);
+  const [editSafetyCertFile, setEditSafetyCertFile] = useState<File | null>(
+    null,
+  );
 
   // Review queue state
-  const [reviewQueue, setReviewQueue] = useState<WorkerDocumentReviewQueueItem[]>([]);
-  const [reviewFilter, setReviewFilter] = useState<WorkerDocument["review_status"] | "all">("pending_review");
+  const [reviewQueue, setReviewQueue] = useState<
+    WorkerDocumentReviewQueueItem[]
+  >([]);
+  const [reviewFilter, setReviewFilter] = useState<
+    WorkerDocument["review_status"] | "all"
+  >("pending_review");
   const [isReviewQueueOpen, setIsReviewQueueOpen] = useState(false);
   const [isReviewLoading, setIsReviewLoading] = useState(false);
   const [reviewActionKey, setReviewActionKey] = useState<string | null>(null);
@@ -127,14 +152,18 @@ export default function DailyWorkersPage() {
     rejected: 0,
     quarantined: 0,
   });
-  const [pendingReviewWorkerIds, setPendingReviewWorkerIds] = useState<string[]>([]);
+  const [pendingReviewWorkerIds, setPendingReviewWorkerIds] = useState<
+    string[]
+  >([]);
   const [workerActionKey, setWorkerActionKey] = useState<string | null>(null);
 
   const [workerFilter, setWorkerFilter] = useState<WorkerQuickFilter>("all");
 
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingWorker, setDeletingWorker] = useState<DailyWorker | null>(null);
+  const [deletingWorker, setDeletingWorker] = useState<DailyWorker | null>(
+    null,
+  );
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state
@@ -156,7 +185,8 @@ export default function DailyWorkersPage() {
     nationality_code: "",
     english_name: "",
   });
-  const nationalityCodes = codebook?.nationality_codes ?? FALLBACK_NATIONALITY_CODES;
+  const nationalityCodes =
+    codebook?.nationality_codes ?? FALLBACK_NATIONALITY_CODES;
   const visaCodes = codebook?.visa_status_codes ?? FALLBACK_VISA_CODES;
   const jobCodes = codebook?.job_type_codes ?? FALLBACK_JOB_CODES;
 
@@ -340,7 +370,9 @@ export default function DailyWorkersPage() {
       if (response.success && response.data) {
         setReviewQueue(response.data);
         if (status === "pending_review") {
-          setPendingReviewWorkerIds(Array.from(new Set(response.data.map((item) => item.worker_id))));
+          setPendingReviewWorkerIds(
+            Array.from(new Set(response.data.map((item) => item.worker_id))),
+          );
         }
       }
     } catch (error) {
@@ -381,7 +413,9 @@ export default function DailyWorkersPage() {
     }
   };
 
-  const handleDownloadDocument = async (item: WorkerDocumentReviewQueueItem | WorkerDocument) => {
+  const handleDownloadDocument = async (
+    item: WorkerDocumentReviewQueueItem | WorkerDocument,
+  ) => {
     if (!item.id) {
       toast.error("다운로드할 서류가 없습니다.");
       return;
@@ -404,7 +438,11 @@ export default function DailyWorkersPage() {
     setReviewActionKey(key);
     try {
       let reason: string | undefined;
-      if (action === "reject" || action === "quarantine" || action === "request_reupload") {
+      if (
+        action === "reject" ||
+        action === "quarantine" ||
+        action === "request_reupload"
+      ) {
         const input = window.prompt("사유를 입력하세요.", "");
         if (!input || !input.trim()) {
           toast.error("사유를 입력해야 합니다.");
@@ -412,13 +450,22 @@ export default function DailyWorkersPage() {
         }
         reason = input.trim();
       }
-      const response = await api.reviewWorkerDocument(String(item.id), { action, reason });
+      const response = await api.reviewWorkerDocument(String(item.id), {
+        action,
+        reason,
+      });
       if (response.success) {
         toast.success("검토 결과를 반영했습니다.");
-        await Promise.all([fetchReviewQueue(reviewFilter), fetchWorkers(), fetchReviewSummary()]);
+        await Promise.all([
+          fetchReviewQueue(reviewFilter),
+          fetchWorkers(),
+          fetchReviewSummary(),
+        ]);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "서류 검토에 실패했습니다.");
+      toast.error(
+        error instanceof Error ? error.message : "서류 검토에 실패했습니다.",
+      );
     } finally {
       setReviewActionKey(null);
     }
@@ -428,7 +475,10 @@ export default function DailyWorkersPage() {
     const action = worker.is_blocked_for_labor ? "unblock" : "block";
     let reason: string | undefined;
     if (action === "block") {
-      const input = window.prompt("노무 투입 차단 사유를 입력하세요.", worker.block_reason || "");
+      const input = window.prompt(
+        "노무 투입 차단 사유를 입력하세요.",
+        worker.block_reason || "",
+      );
       if (!input || !input.trim()) {
         toast.error("차단 사유를 입력해야 합니다.");
         return;
@@ -437,13 +487,28 @@ export default function DailyWorkersPage() {
     }
     setWorkerActionKey(`${worker.id}:${action}`);
     try {
-      const response = await api.setDailyWorkerControl(worker.id, { action, reason });
+      const response = await api.setDailyWorkerControl(worker.id, {
+        action,
+        reason,
+      });
       if (response.success) {
-        toast.success(action === "block" ? "근로자를 차단했습니다." : "근로자 차단을 해제했습니다.");
-        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
+        toast.success(
+          action === "block"
+            ? "근로자를 차단했습니다."
+            : "근로자 차단을 해제했습니다.",
+        );
+        await Promise.all([
+          fetchWorkers(),
+          fetchReviewQueue(reviewFilter),
+          fetchReviewSummary(),
+        ]);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "근로자 통제 변경에 실패했습니다.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "근로자 통제 변경에 실패했습니다.",
+      );
     } finally {
       setWorkerActionKey(null);
     }
@@ -482,15 +547,29 @@ export default function DailyWorkersPage() {
 
       const response = await api.createDailyWorker(payload);
       if (response.success && response.data?.id) {
-        await api.uploadDailyWorkerDocument(response.data.id, "id_card", registerIdCardFile);
-        await api.uploadDailyWorkerDocument(response.data.id, "safety_cert", registerSafetyCertFile);
+        await api.uploadDailyWorkerDocument(
+          response.data.id,
+          "id_card",
+          registerIdCardFile,
+        );
+        await api.uploadDailyWorkerDocument(
+          response.data.id,
+          "safety_cert",
+          registerSafetyCertFile,
+        );
         toast.success("근로자 등록 및 필수 서류 업로드가 완료되었습니다.");
         setShowRegisterModal(false);
         resetForm();
-        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
+        await Promise.all([
+          fetchWorkers(),
+          fetchReviewQueue(reviewFilter),
+          fetchReviewSummary(),
+        ]);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "근로자 등록에 실패했습니다.");
+      toast.error(
+        error instanceof Error ? error.message : "근로자 등록에 실패했습니다.",
+      );
     } finally {
       setIsRegistering(false);
     }
@@ -553,19 +632,35 @@ export default function DailyWorkersPage() {
       const response = await api.updateDailyWorker(editingWorker.id, payload);
       if (response.success) {
         if (editIdCardFile) {
-          await api.uploadDailyWorkerDocument(editingWorker.id, "id_card", editIdCardFile);
+          await api.uploadDailyWorkerDocument(
+            editingWorker.id,
+            "id_card",
+            editIdCardFile,
+          );
         }
         if (editSafetyCertFile) {
-          await api.uploadDailyWorkerDocument(editingWorker.id, "safety_cert", editSafetyCertFile);
+          await api.uploadDailyWorkerDocument(
+            editingWorker.id,
+            "safety_cert",
+            editSafetyCertFile,
+          );
         }
         toast.success("근로자 정보가 수정되었습니다.");
         setShowEditModal(false);
         setEditingWorker(null);
         resetForm();
-        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
+        await Promise.all([
+          fetchWorkers(),
+          fetchReviewQueue(reviewFilter),
+          fetchReviewSummary(),
+        ]);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "근로자 정보 수정에 실패했습니다.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "근로자 정보 수정에 실패했습니다.",
+      );
     } finally {
       setIsUpdating(false);
     }
@@ -586,7 +681,11 @@ export default function DailyWorkersPage() {
         toast.success("근로자가 삭제되었습니다.");
         setShowDeleteModal(false);
         setDeletingWorker(null);
-        await Promise.all([fetchWorkers(), fetchReviewQueue(reviewFilter), fetchReviewSummary()]);
+        await Promise.all([
+          fetchWorkers(),
+          fetchReviewQueue(reviewFilter),
+          fetchReviewSummary(),
+        ]);
       }
     } catch (error) {
       toast.error("근로자 삭제에 실패했습니다.");
@@ -598,7 +697,8 @@ export default function DailyWorkersPage() {
   const handlePhoneFormat = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
     if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    if (cleaned.length <= 7)
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
   };
 
@@ -720,7 +820,9 @@ export default function DailyWorkersPage() {
 
       setShowDownloadModal(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "파일 생성에 실패했습니다.");
+      toast.error(
+        error instanceof Error ? error.message : "파일 생성에 실패했습니다.",
+      );
     } finally {
       setIsDownloading(false);
     }
@@ -769,9 +871,15 @@ export default function DailyWorkersPage() {
   };
 
   const pendingReviewWorkerSet = new Set(pendingReviewWorkerIds);
-  const docsPendingCount = workers.filter((worker) => isWorkerDocumentIncomplete(worker)).length;
-  const blockedWorkerCount = workers.filter((worker) => !!worker.is_blocked_for_labor).length;
-  const needsReviewCount = workers.filter((worker) => pendingReviewWorkerSet.has(worker.id)).length;
+  const docsPendingCount = workers.filter((worker) =>
+    isWorkerDocumentIncomplete(worker),
+  ).length;
+  const blockedWorkerCount = workers.filter(
+    (worker) => !!worker.is_blocked_for_labor,
+  ).length;
+  const needsReviewCount = workers.filter((worker) =>
+    pendingReviewWorkerSet.has(worker.id),
+  ).length;
 
   const handleOpenReviewQueue = () => {
     setIsReviewQueueOpen(true);
@@ -795,15 +903,22 @@ export default function DailyWorkersPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">근로자 관리</h1>
             <p className="mt-1 text-slate-500">
-              검색/필터 결과 {filteredWorkers.length}명 · 전체 {workers.length}명
+              검색/필터 결과 {filteredWorkers.length}명 · 전체 {workers.length}
+              명
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => openDownloadModal("kwdi")}>
+            <Button
+              variant="secondary"
+              onClick={() => openDownloadModal("kwdi")}
+            >
               <FileSpreadsheet className="h-4 w-4" />
               근로복지공단 양식
             </Button>
-            <Button variant="secondary" onClick={() => openDownloadModal("tax")}>
+            <Button
+              variant="secondary"
+              onClick={() => openDownloadModal("tax")}
+            >
               <Download className="h-4 w-4" />
               국세청 양식
             </Button>
@@ -841,7 +956,9 @@ export default function DailyWorkersPage() {
               </Button>
               <Button
                 size="sm"
-                variant={workerFilter === "docs_pending" ? "secondary" : "ghost"}
+                variant={
+                  workerFilter === "docs_pending" ? "secondary" : "ghost"
+                }
                 onClick={() => setWorkerFilter("docs_pending")}
               >
                 서류 미완 {docsPendingCount}
@@ -855,7 +972,9 @@ export default function DailyWorkersPage() {
               </Button>
               <Button
                 size="sm"
-                variant={workerFilter === "needs_review" ? "secondary" : "ghost"}
+                variant={
+                  workerFilter === "needs_review" ? "secondary" : "ghost"
+                }
                 onClick={() => setWorkerFilter("needs_review")}
               >
                 검토 필요 {needsReviewCount}
@@ -868,12 +987,18 @@ export default function DailyWorkersPage() {
         <Card>
           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-base font-semibold text-slate-900">서류 검토 현황</p>
+              <p className="text-base font-semibold text-slate-900">
+                서류 검토 현황
+              </p>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                <Badge variant="default">검토대기 {reviewSummary.pending_review}건</Badge>
+                <Badge variant="default">
+                  검토대기 {reviewSummary.pending_review}건
+                </Badge>
                 <Badge variant="success">승인 {reviewSummary.approved}건</Badge>
                 <Badge variant="warning">반려 {reviewSummary.rejected}건</Badge>
-                <Badge variant="error">격리 {reviewSummary.quarantined}건</Badge>
+                <Badge variant="error">
+                  격리 {reviewSummary.quarantined}건
+                </Badge>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -904,7 +1029,8 @@ export default function DailyWorkersPage() {
                 <div className="space-y-3 p-4 md:hidden">
                   {filteredWorkers.map((worker) => {
                     const nationalityLabel = worker.nationality_code
-                      ? (nationalityCodes[worker.nationality_code] ?? worker.nationality_code)
+                      ? (nationalityCodes[worker.nationality_code] ??
+                        worker.nationality_code)
                       : undefined;
                     const workerBadge = worker.is_blocked_for_labor ? (
                       <Badge variant="error">투입 차단</Badge>
@@ -921,21 +1047,48 @@ export default function DailyWorkersPage() {
                         badge={workerBadge ?? undefined}
                         metadata={[
                           { label: "직종", value: worker.job_type || "-" },
-                          { label: "일당", value: formatCurrency(worker.daily_rate) },
-                          ...(nationalityLabel ? [{ label: "국적", value: nationalityLabel }] : []),
-                          ...(worker.hire_date ? [{ label: "입사일", value: worker.hire_date }] : []),
-                          ...(worker.block_reason ? [{ label: "차단사유", value: <span className="text-red-600">{worker.block_reason}</span> }] : []),
+                          {
+                            label: "일당",
+                            value: formatCurrency(worker.daily_rate),
+                          },
+                          ...(nationalityLabel
+                            ? [{ label: "국적", value: nationalityLabel }]
+                            : []),
+                          ...(worker.hire_date
+                            ? [{ label: "입사일", value: worker.hire_date }]
+                            : []),
+                          ...(worker.block_reason
+                            ? [
+                                {
+                                  label: "차단사유",
+                                  value: (
+                                    <span className="text-red-600">
+                                      {worker.block_reason}
+                                    </span>
+                                  ),
+                                },
+                              ]
+                            : []),
                         ]}
                         actions={
                           <div className="flex flex-wrap gap-2">
                             <Button
                               size="sm"
-                              variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
+                              variant={
+                                worker.is_blocked_for_labor
+                                  ? "secondary"
+                                  : "ghost"
+                              }
                               onClick={() => handleWorkerControl(worker)}
-                              disabled={workerActionKey === `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`}
+                              disabled={
+                                workerActionKey ===
+                                `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`
+                              }
                             >
                               <Ban className="h-3.5 w-3.5" />
-                              {worker.is_blocked_for_labor ? "차단해제" : "차단"}
+                              {worker.is_blocked_for_labor
+                                ? "차단해제"
+                                : "차단"}
                             </Button>
                             <Button
                               size="sm"
@@ -983,10 +1136,14 @@ export default function DailyWorkersPage() {
                           key={worker.id}
                           className="border-b border-slate-100 last:border-0"
                         >
-                          <td className="px-4 py-4 text-slate-500">{index + 1}</td>
+                          <td className="px-4 py-4 text-slate-500">
+                            {index + 1}
+                          </td>
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-2">
-                              <p className="font-medium text-slate-900">{worker.name}</p>
+                              <p className="font-medium text-slate-900">
+                                {worker.name}
+                              </p>
                               {isWorkerDocumentIncomplete(worker) && (
                                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
                                   서류 미완
@@ -999,7 +1156,10 @@ export default function DailyWorkersPage() {
                               )}
                             </div>
                             <p className="text-xs text-slate-500">
-                              {formatMaskedSSN(worker.birth_date, worker.gender)}
+                              {formatMaskedSSN(
+                                worker.birth_date,
+                                worker.gender,
+                              )}
                             </p>
                             {worker.block_reason && (
                               <p className="mt-1 text-xs text-red-600">
@@ -1010,11 +1170,15 @@ export default function DailyWorkersPage() {
                           <td className="px-4 py-4 text-slate-600">
                             {worker.job_type}
                           </td>
-                          <td className="px-4 py-4 text-slate-600">{worker.team}</td>
+                          <td className="px-4 py-4 text-slate-600">
+                            {worker.team}
+                          </td>
                           <td className="px-4 py-4 text-slate-900 font-medium">
                             {formatCurrency(worker.daily_rate)}
                           </td>
-                          <td className="px-4 py-4 text-slate-600">{worker.phone}</td>
+                          <td className="px-4 py-4 text-slate-600">
+                            {worker.phone}
+                          </td>
                           <td className="px-4 py-4">
                             {worker.is_foreign ? (
                               <div>
@@ -1030,7 +1194,9 @@ export default function DailyWorkersPage() {
                             )}
                           </td>
                           <td className="px-4 py-4">
-                            <p className="text-sm text-slate-900">{worker.bank_name}</p>
+                            <p className="text-sm text-slate-900">
+                              {worker.bank_name}
+                            </p>
                             <p className="text-xs text-slate-500">
                               {worker.account_number}
                             </p>
@@ -1038,12 +1204,21 @@ export default function DailyWorkersPage() {
                           <td className="px-4 py-4">
                             <Button
                               size="sm"
-                              variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
+                              variant={
+                                worker.is_blocked_for_labor
+                                  ? "secondary"
+                                  : "ghost"
+                              }
                               onClick={() => handleWorkerControl(worker)}
-                              disabled={workerActionKey === `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`}
+                              disabled={
+                                workerActionKey ===
+                                `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`
+                              }
                             >
                               <Ban className="h-3.5 w-3.5" />
-                              {worker.is_blocked_for_labor ? "차단해제" : "차단"}
+                              {worker.is_blocked_for_labor
+                                ? "차단해제"
+                                : "차단"}
                             </Button>
                           </td>
                           <td className="px-4 py-4">
@@ -1079,15 +1254,23 @@ export default function DailyWorkersPage() {
         {/* 대기중 초대 */}
         {pendingInvitations.length > 0 && (
           <div className="mt-6">
-            <h2 className="mb-3 text-sm font-semibold text-slate-700">대기중 초대 ({pendingInvitations.length}명)</h2>
+            <h2 className="mb-3 text-sm font-semibold text-slate-700">
+              대기중 초대 ({pendingInvitations.length}명)
+            </h2>
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
               {pendingInvitations.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between border-b border-slate-100 px-4 py-3 last:border-b-0">
+                <div
+                  key={inv.id}
+                  className="flex items-center justify-between border-b border-slate-100 px-4 py-3 last:border-b-0"
+                >
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{inv.name}</p>
+                    <p className="text-sm font-medium text-slate-900">
+                      {inv.name}
+                    </p>
                     <p className="text-xs text-slate-500">{inv.phone}</p>
                     <p className="text-xs text-slate-400">
-                      만료: {new Date(inv.expires_at).toLocaleDateString("ko-KR")}
+                      만료:{" "}
+                      {new Date(inv.expires_at).toLocaleDateString("ko-KR")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1096,7 +1279,10 @@ export default function DailyWorkersPage() {
                         try {
                           const invToken = inv.id;
                           const inviteUrl = `${window.location.origin}/onboarding/worker/consent?token=${invToken}`;
-                          await (api as any).resendWorkerInvitation(inv.id, inviteUrl);
+                          await (api as any).resendWorkerInvitation(
+                            inv.id,
+                            inviteUrl,
+                          );
                           toast.success(`${inv.name}님에게 재발송했습니다.`);
                           await fetchPendingInvitations();
                         } catch {
@@ -1127,7 +1313,6 @@ export default function DailyWorkersPage() {
             </div>
           </div>
         )}
-
       </div>
 
       {/* Worker Document Review Queue Modal */}
@@ -1147,7 +1332,9 @@ export default function DailyWorkersPage() {
               <PrimitiveSelect
                 value={reviewFilter}
                 onChange={(e) => {
-                  const next = e.target.value as WorkerDocument["review_status"] | "all";
+                  const next = e.target.value as
+                    | WorkerDocument["review_status"]
+                    | "all";
                   setReviewFilter(next);
                   void fetchReviewQueue(next);
                 }}
@@ -1164,13 +1351,19 @@ export default function DailyWorkersPage() {
                 onClick={handleRefreshReviewQueue}
                 disabled={isReviewLoading}
               >
-                {isReviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "새로고침"}
+                {isReviewLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "새로고침"
+                )}
               </Button>
             </div>
           </div>
 
           {isReviewLoading ? (
-            <div className="py-10 text-center text-sm text-slate-500">검토 목록을 불러오는 중...</div>
+            <div className="py-10 text-center text-sm text-slate-500">
+              검토 목록을 불러오는 중...
+            </div>
           ) : reviewQueue.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">
               검토할 서류가 없습니다.
@@ -1188,7 +1381,8 @@ export default function DailyWorkersPage() {
                         {item.worker_name} · {item.document_name}
                       </p>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        {item.original_filename || "파일명 없음"} · {formatFileSize(item.file_size_bytes)}
+                        {item.original_filename || "파일명 없음"} ·{" "}
+                        {formatFileSize(item.file_size_bytes)}
                       </p>
                       {!!item.anomaly_flags?.length && (
                         <p className="mt-1 text-xs text-amber-700">
@@ -1196,7 +1390,9 @@ export default function DailyWorkersPage() {
                         </p>
                       )}
                       {!!item.review_reason && (
-                        <p className="mt-1 text-xs text-red-600">사유: {item.review_reason}</p>
+                        <p className="mt-1 text-xs text-red-600">
+                          사유: {item.review_reason}
+                        </p>
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -1297,7 +1493,11 @@ export default function DailyWorkersPage() {
               <X className="h-4 w-4" />
               닫기
             </Button>
-            <Button onClick={handleInviteWorker} fullWidth disabled={isInviting}>
+            <Button
+              onClick={handleInviteWorker}
+              fullWidth
+              disabled={isInviting}
+            >
               {isInviting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -1315,7 +1515,11 @@ export default function DailyWorkersPage() {
       <Modal
         isOpen={showDownloadModal}
         onClose={() => setShowDownloadModal(false)}
-        title={downloadType === "kwdi" ? "근로복지공단 양식 다운로드" : "국세청 양식 다운로드"}
+        title={
+          downloadType === "kwdi"
+            ? "근로복지공단 양식 다운로드"
+            : "국세청 양식 다운로드"
+        }
         size="md"
       >
         <div className="space-y-4">
@@ -1347,7 +1551,10 @@ export default function DailyWorkersPage() {
                 onChange={(e) => setDownloadYear(Number(e.target.value))}
                 className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
               >
-                {Array.from({ length: 4 }, (_, idx) => now.getFullYear() - 1 + idx).map((year) => (
+                {Array.from(
+                  { length: 4 },
+                  (_, idx) => now.getFullYear() - 1 + idx,
+                ).map((year) => (
                   <option key={year} value={year}>
                     {year}년
                   </option>
@@ -1363,11 +1570,13 @@ export default function DailyWorkersPage() {
                 onChange={(e) => setDownloadMonth(Number(e.target.value))}
                 className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
               >
-                {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => (
-                  <option key={month} value={month}>
-                    {month}월
-                  </option>
-                ))}
+                {Array.from({ length: 12 }, (_, idx) => idx + 1).map(
+                  (month) => (
+                    <option key={month} value={month}>
+                      {month}월
+                    </option>
+                  ),
+                )}
               </PrimitiveSelect>
             </div>
           </div>
@@ -1411,7 +1620,9 @@ export default function DailyWorkersPage() {
               label="성명 *"
               placeholder="홍길동"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
             />
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -1455,7 +1666,9 @@ export default function DailyWorkersPage() {
               label="소속반"
               placeholder="1반"
               value={formData.team}
-              onChange={(e) => setFormData({ ...formData, team: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, team: e.target.value })
+              }
             />
           </div>
 
@@ -1465,7 +1678,10 @@ export default function DailyWorkersPage() {
               placeholder="예: 900101"
               value={formData.birth_date}
               onChange={(e) =>
-                setFormData({ ...formData, birth_date: e.target.value.replace(/\D/g, "").slice(0, 6) })
+                setFormData({
+                  ...formData,
+                  birth_date: e.target.value.replace(/\D/g, "").slice(0, 6),
+                })
               }
               maxLength={6}
             />
@@ -1476,7 +1692,10 @@ export default function DailyWorkersPage() {
               <PrimitiveSelect
                 value={formData.gender}
                 onChange={(e) =>
-                  setFormData({ ...formData, gender: e.target.value as "" | "1" | "2" | "3" | "4" })
+                  setFormData({
+                    ...formData,
+                    gender: e.target.value as "" | "1" | "2" | "3" | "4",
+                  })
                 }
                 className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
               >
@@ -1504,7 +1723,9 @@ export default function DailyWorkersPage() {
             label="주소"
             placeholder="서울시 강남구..."
             value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, address: e.target.value })
+            }
           />
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -1521,7 +1742,9 @@ export default function DailyWorkersPage() {
               label="연락처"
               placeholder="010-0000-0000"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
             />
           </div>
 
@@ -1554,7 +1777,9 @@ export default function DailyWorkersPage() {
                 }
                 className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
               />
-              <span className="text-sm font-medium text-slate-700">외국인 근로자</span>
+              <span className="text-sm font-medium text-slate-700">
+                외국인 근로자
+              </span>
             </label>
           </div>
 
@@ -1586,7 +1811,10 @@ export default function DailyWorkersPage() {
                 <PrimitiveSelect
                   value={formData.nationality_code}
                   onChange={(e) =>
-                    setFormData({ ...formData, nationality_code: e.target.value })
+                    setFormData({
+                      ...formData,
+                      nationality_code: e.target.value,
+                    })
                   }
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 >
@@ -1610,11 +1838,17 @@ export default function DailyWorkersPage() {
           )}
 
           <div className="space-y-3 rounded-lg border border-slate-200 p-3">
-            <p className="text-sm font-medium text-slate-800">필수 서류 업로드 *</p>
+            <p className="text-sm font-medium text-slate-800">
+              필수 서류 업로드 *
+            </p>
             <div className="grid gap-3 md:grid-cols-2">
               <label className="block rounded-lg border border-slate-200 p-3">
-                <p className="mb-1 text-sm font-medium text-slate-700">신분증</p>
-                <p className="mb-2 text-xs text-slate-500">JPG/PNG/PDF, 10MB 이하</p>
+                <p className="mb-1 text-sm font-medium text-slate-700">
+                  신분증
+                </p>
+                <p className="mb-2 text-xs text-slate-500">
+                  JPG/PNG/PDF, 10MB 이하
+                </p>
                 <PrimitiveInput
                   type="file"
                   accept=".jpg,.jpeg,.png,.pdf"
@@ -1623,13 +1857,18 @@ export default function DailyWorkersPage() {
                 />
                 {registerIdCardFile && (
                   <p className="mt-2 text-xs text-slate-600">
-                    {registerIdCardFile.name} · {formatFileSize(registerIdCardFile.size)}
+                    {registerIdCardFile.name} ·{" "}
+                    {formatFileSize(registerIdCardFile.size)}
                   </p>
                 )}
               </label>
               <label className="block rounded-lg border border-slate-200 p-3">
-                <p className="mb-1 text-sm font-medium text-slate-700">안전교육 이수증</p>
-                <p className="mb-2 text-xs text-slate-500">JPG/PNG/PDF, 10MB 이하</p>
+                <p className="mb-1 text-sm font-medium text-slate-700">
+                  안전교육 이수증
+                </p>
+                <p className="mb-2 text-xs text-slate-500">
+                  JPG/PNG/PDF, 10MB 이하
+                </p>
                 <PrimitiveInput
                   type="file"
                   accept=".jpg,.jpeg,.png,.pdf"
@@ -1638,7 +1877,8 @@ export default function DailyWorkersPage() {
                 />
                 {registerSafetyCertFile && (
                   <p className="mt-2 text-xs text-slate-600">
-                    {registerSafetyCertFile.name} · {formatFileSize(registerSafetyCertFile.size)}
+                    {registerSafetyCertFile.name} ·{" "}
+                    {formatFileSize(registerSafetyCertFile.size)}
                   </p>
                 )}
               </label>
@@ -1694,7 +1934,9 @@ export default function DailyWorkersPage() {
               label="성명 *"
               placeholder="홍길동"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
             />
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -1738,7 +1980,9 @@ export default function DailyWorkersPage() {
               label="소속반"
               placeholder="1반"
               value={formData.team}
-              onChange={(e) => setFormData({ ...formData, team: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, team: e.target.value })
+              }
             />
           </div>
 
@@ -1748,7 +1992,10 @@ export default function DailyWorkersPage() {
               placeholder="예: 900101"
               value={formData.birth_date}
               onChange={(e) =>
-                setFormData({ ...formData, birth_date: e.target.value.replace(/\D/g, "").slice(0, 6) })
+                setFormData({
+                  ...formData,
+                  birth_date: e.target.value.replace(/\D/g, "").slice(0, 6),
+                })
               }
               maxLength={6}
             />
@@ -1759,7 +2006,10 @@ export default function DailyWorkersPage() {
               <PrimitiveSelect
                 value={formData.gender}
                 onChange={(e) =>
-                  setFormData({ ...formData, gender: e.target.value as "" | "1" | "2" | "3" | "4" })
+                  setFormData({
+                    ...formData,
+                    gender: e.target.value as "" | "1" | "2" | "3" | "4",
+                  })
                 }
                 className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
               >
@@ -1787,7 +2037,9 @@ export default function DailyWorkersPage() {
             label="주소"
             placeholder="서울시 강남구..."
             value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, address: e.target.value })
+            }
           />
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -1804,7 +2056,9 @@ export default function DailyWorkersPage() {
               label="연락처"
               placeholder="010-0000-0000"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
             />
           </div>
 
@@ -1837,7 +2091,9 @@ export default function DailyWorkersPage() {
                 }
                 className="h-4 w-4 rounded border-slate-300 text-brand-point-600 focus:ring-brand-point-500"
               />
-              <span className="text-sm font-medium text-slate-700">외국인 근로자</span>
+              <span className="text-sm font-medium text-slate-700">
+                외국인 근로자
+              </span>
             </label>
           </div>
 
@@ -1869,7 +2125,10 @@ export default function DailyWorkersPage() {
                 <PrimitiveSelect
                   value={formData.nationality_code}
                   onChange={(e) =>
-                    setFormData({ ...formData, nationality_code: e.target.value })
+                    setFormData({
+                      ...formData,
+                      nationality_code: e.target.value,
+                    })
                   }
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 >
@@ -1893,7 +2152,9 @@ export default function DailyWorkersPage() {
           )}
 
           <div className="space-y-3 rounded-lg border border-slate-200 p-3">
-            <p className="text-sm font-medium text-slate-800">필수 서류 재업로드 *</p>
+            <p className="text-sm font-medium text-slate-800">
+              필수 서류 재업로드 *
+            </p>
             <p className="text-xs text-slate-500">
               수정 저장 시 신분증과 안전교육 이수증을 모두 다시 첨부해야 합니다.
             </p>
@@ -1903,21 +2164,30 @@ export default function DailyWorkersPage() {
                   (item) => item.document_type === documentType,
                 );
                 const uploadFile =
-                  documentType === "id_card" ? editIdCardFile : editSafetyCertFile;
+                  documentType === "id_card"
+                    ? editIdCardFile
+                    : editSafetyCertFile;
                 const setUploadFile =
-                  documentType === "id_card" ? setEditIdCardFile : setEditSafetyCertFile;
+                  documentType === "id_card"
+                    ? setEditIdCardFile
+                    : setEditSafetyCertFile;
 
                 return (
-                  <div key={documentType} className="rounded-lg border border-slate-200 p-3">
+                  <div
+                    key={documentType}
+                    className="rounded-lg border border-slate-200 p-3"
+                  >
                     <div className="mb-2 flex items-center justify-between">
                       <p className="text-sm font-medium text-slate-700">
-                        {documentType === "id_card" ? "신분증" : "안전교육 이수증"}
+                        {documentType === "id_card"
+                          ? "신분증"
+                          : "안전교육 이수증"}
                       </p>
-                      {currentDocument
-                        ? renderReviewBadge(currentDocument.review_status)
-                        : (
-                          <Badge variant="default">미등록</Badge>
-                        )}
+                      {currentDocument ? (
+                        renderReviewBadge(currentDocument.review_status)
+                      ) : (
+                        <Badge variant="default">미등록</Badge>
+                      )}
                     </div>
                     {currentDocument?.original_filename && (
                       <p className="mb-2 text-xs text-slate-500">
@@ -1943,7 +2213,8 @@ export default function DailyWorkersPage() {
                     />
                     {uploadFile && (
                       <p className="mt-2 text-xs text-slate-600">
-                        신규 파일: {uploadFile.name} · {formatFileSize(uploadFile.size)}
+                        신규 파일: {uploadFile.name} ·{" "}
+                        {formatFileSize(uploadFile.size)}
                       </p>
                     )}
                   </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, CheckSquare, Square } from "lucide-react";
-import { Button, Modal, PrimitiveButton } from "@sigongon/ui";
+import { Button, Modal, PrimitiveButton } from "@sigongcore/ui";
 import { mockApiClient } from "@/lib/mocks/mockApi";
 
 interface ProjectPhoto {
@@ -94,7 +94,7 @@ export function PhotoSelector({
   function renderPhotoGroup(
     title: string,
     photoList: ProjectPhoto[],
-    photoType: keyof typeof photoTypeLabels
+    photoType: keyof typeof photoTypeLabels,
   ) {
     if (photoList.length === 0) return null;
 
@@ -169,10 +169,7 @@ export function PhotoSelector({
               <Button variant="secondary" onClick={onClose}>
                 취소
               </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={selectedIds.size === 0}
-              >
+              <Button onClick={handleSubmit} disabled={selectedIds.size === 0}>
                 추가
               </Button>
             </div>

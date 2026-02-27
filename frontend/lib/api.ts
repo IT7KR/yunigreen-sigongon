@@ -1,4 +1,4 @@
-import { createApiBinding } from "@sigongon/platform";
+import { createApiBinding } from "@sigongcore/platform";
 import { mockApiClient } from "./mocks/mockApi";
 
 export const { api } = createApiBinding({

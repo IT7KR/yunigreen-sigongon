@@ -3,11 +3,32 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Badge, Button, Card, CardContent, Pagination, PrimitiveInput, PrimitiveSelect, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatDate } from "@sigongon/ui";
-import { Search, Building2, Users, FolderKanban, Loader2, Eye } from "lucide-react";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  Pagination,
+  PrimitiveInput,
+  PrimitiveSelect,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  formatDate,
+} from "@sigongcore/ui";
+import {
+  Search,
+  Building2,
+  Users,
+  FolderKanban,
+  Loader2,
+  Eye,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { MobileListCard } from "@/components/MobileListCard";
-
 
 interface TenantItem {
   id: string;
@@ -94,9 +115,7 @@ export default function TenantsPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">고객사 관리</h1>
-          <p className="mt-1 text-slate-500">
-            전체 {tenants.length}개 고객사
-          </p>
+          <p className="mt-1 text-slate-500">전체 {tenants.length}개 고객사</p>
         </div>
 
         <Card>
@@ -174,7 +193,10 @@ export default function TenantsPage() {
                             ? `${tenant.billing_amount.toLocaleString()}원`
                             : "무료",
                         },
-                        { label: "가입일", value: formatDate(tenant.created_at) },
+                        {
+                          label: "가입일",
+                          value: formatDate(tenant.created_at),
+                        },
                       ]}
                       onClick={() => {
                         window.location.href = `/sa/tenants/${tenant.id}`;
@@ -182,7 +204,8 @@ export default function TenantsPage() {
                       actions={
                         <Button size="sm" variant="ghost" asChild>
                           <Link href={`/sa/tenants/${tenant.id}`}>
-                            <Eye className="h-3.5 w-3.5" />상세보기
+                            <Eye className="h-3.5 w-3.5" />
+                            상세보기
                           </Link>
                         </Button>
                       }
@@ -269,13 +292,18 @@ export default function TenantsPage() {
                                       : "default"
                                   }
                                 >
-                                  {tenant.status === "active" ? "활성" : "비활성"}
+                                  {tenant.status === "active"
+                                    ? "활성"
+                                    : "비활성"}
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                <Button size="sm" variant="ghost" asChild><Link href={`/sa/tenants/${tenant.id}`}>
-                                    <Eye className="h-3.5 w-3.5" />상세보기
-                                  </Link></Button>
+                                <Button size="sm" variant="ghost" asChild>
+                                  <Link href={`/sa/tenants/${tenant.id}`}>
+                                    <Eye className="h-3.5 w-3.5" />
+                                    상세보기
+                                  </Link>
+                                </Button>
                               </TableCell>
                             </TableRow>
                           );

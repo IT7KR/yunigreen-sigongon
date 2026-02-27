@@ -8,7 +8,7 @@ import {
   Button,
   Badge,
   toast,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { Plus, FileDown } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { MobileListCard } from "@/components/MobileListCard";
@@ -163,9 +163,16 @@ export default function LaborContractsPage() {
                         key={contract.id}
                         title={contract.worker_name}
                         subtitle={contract.project_name}
-                        badge={<Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>}
+                        badge={
+                          <Badge variant={statusInfo.variant}>
+                            {statusInfo.label}
+                          </Badge>
+                        }
                         metadata={[
-                          { label: "일당", value: `${contract.daily_rate.toLocaleString()}원` },
+                          {
+                            label: "일당",
+                            value: `${contract.daily_rate.toLocaleString()}원`,
+                          },
                           { label: "근무일", value: contract.work_date },
                           { label: "작성일", value: contract.created_at },
                         ]}

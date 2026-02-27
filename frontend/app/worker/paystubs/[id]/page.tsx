@@ -2,7 +2,7 @@
 
 import { Suspense, use, useEffect, useState } from "react";
 import { CheckCircle } from "lucide-react";
-import { Button, Card, CardContent } from "@sigongon/ui";
+import { Button, Card, CardContent } from "@sigongcore/ui";
 import { WorkerLayout } from "@/components/WorkerLayout";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -58,9 +58,7 @@ function PaystubDetailContent({ id }: { id: string }) {
       const response = await (api as any).ackWorkerPaystub(workerId, id);
       if (response.success) {
         setConfirmed(true);
-        setPaystub((prev) =>
-          prev ? { ...prev, status: "confirmed" } : prev,
-        );
+        setPaystub((prev) => (prev ? { ...prev, status: "confirmed" } : prev));
       }
     } finally {
       setIsConfirming(false);

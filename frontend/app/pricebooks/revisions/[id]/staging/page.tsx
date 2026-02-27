@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, Badge } from "@sigongon/ui";
+import { Button, Card, Badge } from "@sigongcore/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import {
   Upload,
@@ -88,7 +88,9 @@ export default function PricebookStagingPage({
               <Upload className="h-6 w-6 text-slate-600" />
             </div>
             <p className="mt-4 text-center text-sm text-slate-600">
-              <span className="font-semibold text-brand-point-600">파일 선택</span>{" "}
+              <span className="font-semibold text-brand-point-600">
+                파일 선택
+              </span>{" "}
               또는 여기로 드래그
             </p>
             <p className="mt-1 text-xs text-slate-500">PDF 파일만 가능</p>
@@ -204,12 +206,14 @@ export default function PricebookStagingPage({
             {report.is_valid ? (
               <div className="flex items-center gap-2 rounded-md bg-green-50 p-3 text-sm text-green-800 mb-4">
                 <CheckCircle className="h-4 w-4 shrink-0" />
-                <span className="font-medium">검증 통과</span> — 오류 항목이 없습니다.
+                <span className="font-medium">검증 통과</span> — 오류 항목이
+                없습니다.
               </div>
             ) : (
               <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-700 mb-4">
                 <XCircle className="h-4 w-4 shrink-0" />
-                <span className="font-medium">검증 실패</span> — 오류 항목을 수정한 후 정식 반영하세요.
+                <span className="font-medium">검증 실패</span> — 오류 항목을
+                수정한 후 정식 반영하세요.
               </div>
             )}
 
@@ -219,11 +223,21 @@ export default function PricebookStagingPage({
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50">
                     <tr>
-                      <th className="px-4 py-2 text-left font-medium text-slate-600 w-8">#</th>
-                      <th className="px-4 py-2 text-left font-medium text-slate-600">품명</th>
-                      <th className="px-4 py-2 text-left font-medium text-slate-600">필드</th>
-                      <th className="px-4 py-2 text-left font-medium text-slate-600">심각도</th>
-                      <th className="px-4 py-2 text-left font-medium text-slate-600">메시지</th>
+                      <th className="px-4 py-2 text-left font-medium text-slate-600 w-8">
+                        #
+                      </th>
+                      <th className="px-4 py-2 text-left font-medium text-slate-600">
+                        품명
+                      </th>
+                      <th className="px-4 py-2 text-left font-medium text-slate-600">
+                        필드
+                      </th>
+                      <th className="px-4 py-2 text-left font-medium text-slate-600">
+                        심각도
+                      </th>
+                      <th className="px-4 py-2 text-left font-medium text-slate-600">
+                        메시지
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -238,9 +252,15 @@ export default function PricebookStagingPage({
                               : "bg-white"
                         }
                       >
-                        <td className="px-4 py-2 text-slate-500">{issue.item_index + 1}</td>
-                        <td className="px-4 py-2 font-medium text-slate-800">{issue.item_name}</td>
-                        <td className="px-4 py-2 text-slate-500 font-mono text-xs">{issue.field}</td>
+                        <td className="px-4 py-2 text-slate-500">
+                          {issue.item_index + 1}
+                        </td>
+                        <td className="px-4 py-2 font-medium text-slate-800">
+                          {issue.item_name}
+                        </td>
+                        <td className="px-4 py-2 text-slate-500 font-mono text-xs">
+                          {issue.field}
+                        </td>
                         <td className="px-4 py-2">
                           {issue.severity === "error" ? (
                             <span className="inline-flex items-center gap-1 text-red-700">
@@ -259,7 +279,9 @@ export default function PricebookStagingPage({
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-2 text-slate-700">{issue.message}</td>
+                        <td className="px-4 py-2 text-slate-700">
+                          {issue.message}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -268,7 +290,9 @@ export default function PricebookStagingPage({
             )}
 
             {showIssues && report.issues.length === 0 && (
-              <p className="text-sm text-slate-500 text-center py-4">이슈가 없습니다.</p>
+              <p className="text-sm text-slate-500 text-center py-4">
+                이슈가 없습니다.
+              </p>
             )}
           </div>
         )}

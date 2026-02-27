@@ -9,7 +9,7 @@ import {
   CardTitle,
   Button,
   Badge,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { FileText, Plus, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { MobileListCard } from "@/components/MobileListCard";
@@ -33,7 +33,10 @@ const statusLabels: Record<string, string> = {
   failed: "실패",
 };
 
-const statusVariants: Record<string, "default" | "success" | "error" | "warning"> = {
+const statusVariants: Record<
+  string,
+  "default" | "success" | "error" | "warning"
+> = {
   draft: "default",
   issued: "success",
   cancelled: "error",
@@ -79,9 +82,10 @@ export default function TaxInvoicePage({
         <h2 className="text-xl font-semibold text-slate-900">
           세금계산서 관리
         </h2>
-        <Button onClick={() => router.push(`/projects/${projectId}/tax-invoice/new`)}>
-          <Plus className="mr-2 h-4 w-4" />
-          새 세금계산서 발행
+        <Button
+          onClick={() => router.push(`/projects/${projectId}/tax-invoice/new`)}
+        >
+          <Plus className="mr-2 h-4 w-4" />새 세금계산서 발행
         </Button>
       </div>
 
@@ -181,10 +185,7 @@ export default function TaxInvoicePage({
                     </tr>
                   ) : invoices.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={6}
-                        className="py-12 text-center"
-                      >
+                      <td colSpan={6} className="py-12 text-center">
                         <FileText className="mx-auto h-12 w-12 text-slate-300" />
                         <p className="mt-4 text-slate-500">
                           발행 이력이 없습니다.
@@ -209,7 +210,9 @@ export default function TaxInvoicePage({
                         }}
                         className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
                       >
-                        <td className="py-4 text-slate-900">{invoice.issue_date}</td>
+                        <td className="py-4 text-slate-900">
+                          {invoice.issue_date}
+                        </td>
                         <td className="py-4 text-slate-900">
                           {invoice.buyer_name}
                         </td>
@@ -226,11 +229,12 @@ export default function TaxInvoicePage({
                           <Badge variant={statusVariants[invoice.status]}>
                             {statusLabels[invoice.status]}
                           </Badge>
-                          {invoice.status === "failed" && invoice.failure_reason && (
-                            <p className="mt-1 text-xs text-red-500">
-                              {invoice.failure_reason}
-                            </p>
-                          )}
+                          {invoice.status === "failed" &&
+                            invoice.failure_reason && (
+                              <p className="mt-1 text-xs text-red-500">
+                                {invoice.failure_reason}
+                              </p>
+                            )}
                         </td>
                       </tr>
                     ))

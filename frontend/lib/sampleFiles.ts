@@ -6,4 +6,4 @@ export {
   buildSampleFileDownloadUrl,
   getSamplePathForDocument,
   buildSamplePath,
-} from "@sigongon/mocks";
+} from "@sigongcore/mocks";

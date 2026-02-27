@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { WorkerLayout } from "@/components/WorkerLayout";
-import { AppLink, Badge, Card, CardContent } from "@sigongon/ui";
+import { AppLink, Badge, Card, CardContent } from "@sigongcore/ui";
 import { FileText } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";

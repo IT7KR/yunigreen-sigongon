@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Loader2 } from "lucide-react";
-import { Button, Modal, PrimitiveInput, PrimitiveSelect } from "@sigongon/ui";
-import type { UserRole } from "@sigongon/types";
+import { Button, Modal, PrimitiveInput, PrimitiveSelect } from "@sigongcore/ui";
+import type { UserRole } from "@sigongcore/types";
 
 interface UserData {
   id?: string;

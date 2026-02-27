@@ -2,10 +2,19 @@
 
 import { useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { Button, Card, CardContent, CardHeader, CardTitle, PrimitiveInput, PrimitiveSelect, toast } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  PrimitiveInput,
+  PrimitiveSelect,
+  toast,
+} from "@sigongcore/ui";
 import { Plus, Trash2, MessageSquare, Copy, Check } from "lucide-react";
 import { api } from "@/lib/api";
-import type { UserRole } from "@sigongon/types";
+import type { UserRole } from "@sigongcore/types";
 
 type InviteRole = Extract<UserRole, "site_manager" | "company_admin">;
 
@@ -109,7 +118,9 @@ export default function OnboardingInvitePage() {
       toast.success("알림톡 초대를 발송했어요.");
     } catch (error) {
       console.error(error);
-      toast.error(error instanceof Error ? error.message : "초대 발송에 실패했어요.");
+      toast.error(
+        error instanceof Error ? error.message : "초대 발송에 실패했어요.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -129,7 +140,9 @@ export default function OnboardingInvitePage() {
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">담당자 및 소장 초대</h1>
+          <h1 className="text-2xl font-bold text-slate-900">
+            담당자 및 소장 초대
+          </h1>
           <p className="mt-1 text-slate-600">
             알림톡 링크로 초대하며, 수신자가 개인정보 동의 후 가입을 완료합니다.
           </p>
@@ -153,7 +166,9 @@ export default function OnboardingInvitePage() {
                   type="text"
                   placeholder="이름"
                   value={row.name}
-                  onChange={(event) => updateRow(row.id, { name: event.target.value })}
+                  onChange={(event) =>
+                    updateRow(row.id, { name: event.target.value })
+                  }
                   className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 />
                 <PrimitiveInput
@@ -161,14 +176,18 @@ export default function OnboardingInvitePage() {
                   placeholder="010-0000-0000"
                   value={row.phone}
                   onChange={(event) =>
-                    updateRow(row.id, { phone: formatPhone(event.target.value) })
+                    updateRow(row.id, {
+                      phone: formatPhone(event.target.value),
+                    })
                   }
                   className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 />
                 <PrimitiveSelect
                   value={row.role}
                   onChange={(event) =>
-                    updateRow(row.id, { role: event.target.value as InviteRole })
+                    updateRow(row.id, {
+                      role: event.target.value as InviteRole,
+                    })
                   }
                   className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 >
@@ -201,7 +220,10 @@ export default function OnboardingInvitePage() {
             </CardHeader>
             <CardContent className="space-y-2">
               {results.map((result, index) => (
-                <div key={`${result.phone}_${index}`} className="rounded-lg border border-slate-200 p-3">
+                <div
+                  key={`${result.phone}_${index}`}
+                  className="rounded-lg border border-slate-200 p-3"
+                >
                   <p className="text-sm font-medium text-slate-900">
                     {result.name} ({result.phone})
                   </p>

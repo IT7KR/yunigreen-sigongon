@@ -19,6 +19,7 @@ import {
 import { AdminLayout } from "@/components/AdminLayout";
 import { EstimateLineModal } from "@/components/EstimateLineModal";
 import { RAGSearchPanel } from "@/components/RAGSearchPanel";
+import { CostCalculationSheet } from "@/components/CostCalculationSheet";
 import {
   Button,
   Card,
@@ -31,8 +32,8 @@ import {
   formatDate,
   toast,
   useConfirmDialog,
-} from "@sigongon/ui";
-import type { EstimateStatus, EstimateLineSource } from "@sigongon/types";
+} from "@sigongcore/ui";
+import type { EstimateStatus, EstimateLineSource } from "@sigongcore/types";
 import { api } from "@/lib/api";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -87,8 +88,13 @@ export default function EstimateDetailPage({
   const [ragPanelOpen, setRagPanelOpen] = useState(false);
   const { confirm } = useConfirmDialog();
 
+  const [activeTab, setActiveTab] = useState<"estimate" | "cost">("estimate");
+  const [costCalc, setCostCalc] = useState<any | null>(null);
+  const [costLoading, setCostLoading] = useState(false);
+
   useEffect(() => {
     loadEstimate();
+    loadCostCalc();
   }, [id]);
 
   async function loadEstimate() {
@@ -104,6 +110,20 @@ export default function EstimateDetailPage({
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadCostCalc() {
+    try {
+      setCostLoading(true);
+      const response = await api.getCostCalculation(id);
+      if (response.success) {
+        setCostCalc(response.data);
+      }
+    } catch (err) {
+      console.error("원가계산서 로드 실패", err);
+    } finally {
+      setCostLoading(false);
     }
   }
 
@@ -205,6 +225,49 @@ export default function EstimateDetailPage({
       toast.error("항목 추가에 실패했어요");
       console.error(err);
     }
+  }
+
+  async function handleCreateCostCalc() {
+    try {
+      const response = await api.createCostCalculation(id);
+      if (response.success) {
+        setCostCalc(response.data);
+        toast.success("원가계산서를 생성했어요");
+      }
+    } catch (err) {
+      toast.error("원가계산서 생성에 실패했어요");
+    }
+  }
+
+  async function handleUpdateCostCalc(data: any) {
+    try {
+      const response = await api.updateCostCalculation(id, data);
+      if (response.success) {
+        setCostCalc(response.data);
+      }
+    } catch (err) {
+      toast.error("원가계산서 저장에 실패했어요");
+    }
+  }
+
+  async function handleRecalculate() {
+    try {
+      const response = await api.recalculateCostCalculation(id);
+      if (response.success) {
+        setCostCalc(response.data);
+        toast.success("재계산 완료");
+      }
+    } catch (err) {
+      toast.error("재계산에 실패했어요");
+    }
+  }
+
+  function handleExportCalc() {
+    window.open(`/api/v1/estimates/${id}/cost-calculation/export`, "_blank");
+  }
+
+  function handleExportCombined() {
+    window.open(`/api/v1/estimates/${id}/export-combined`, "_blank");
   }
 
   const formatCurrency = (amount: string) => {
@@ -365,232 +428,277 @@ export default function EstimateDetailPage({
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>견적 요약</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-lg bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">공급가액</p>
-                <p className="mt-1 text-xl font-bold text-slate-900">
-                  {formatCurrency(estimate.subtotal)}
-                </p>
-              </div>
-              <div className="rounded-lg bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">부가세 (10%)</p>
-                <p className="mt-1 text-xl font-bold text-slate-900">
-                  {formatCurrency(estimate.vat_amount)}
-                </p>
-              </div>
-              <div className="rounded-lg bg-brand-point-50 p-4">
-                <p className="text-sm text-brand-point-600">합계</p>
-                <p className="mt-1 text-xl font-bold text-brand-point-700">
-                  {formatCurrency(estimate.total_amount)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* 탭 네비게이션 */}
+        <div className="flex border-b border-slate-200">
+          <button
+            onClick={() => setActiveTab("estimate")}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "estimate"
+                ? "border-brand-point-500 text-brand-point-600"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            견적 내역
+          </button>
+          <button
+            onClick={() => setActiveTab("cost")}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "cost"
+                ? "border-brand-point-500 text-brand-point-600"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            원가계산서
+            {costCalc && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                생성됨
+              </span>
+            )}
+          </button>
+        </div>
 
-        <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>견적 항목</CardTitle>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => setRagPanelOpen(true)}
-              >
-                <Sparkles className="h-4 w-4" />
-                적산 검색
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  setEditingLine(null);
-                  setLineModalOpen(true);
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                항목 추가
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-sm text-slate-500">
-                    <th className="px-6 py-4 font-medium">No</th>
-                    <th className="px-6 py-4 font-medium">품목</th>
-                    <th className="px-6 py-4 font-medium">규격</th>
-                    <th className="px-6 py-4 font-medium text-right">수량</th>
-                    <th className="px-6 py-4 font-medium text-right">단가</th>
-                    <th className="px-6 py-4 font-medium text-right">금액</th>
-                    <th className="px-6 py-4 font-medium">출처</th>
-                    <th className="px-6 py-4 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {estimate.lines.map((line, index) => (
-                    <tr
-                      key={line.id}
-                      className="border-b border-slate-100 hover:bg-slate-50"
-                    >
-                      <td className="px-6 py-4 text-slate-500">{index + 1}</td>
-                      <td className="px-6 py-4 font-medium text-slate-900">
-                        {line.description}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {line.specification || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-right text-slate-900">
-                        {line.quantity} {line.unit}
-                      </td>
-                      <td className="px-6 py-4 text-right text-slate-900">
-                        {formatCurrency(line.unit_price_snapshot)}
-                      </td>
-                      <td className="px-6 py-4 text-right font-medium text-slate-900">
-                        {formatCurrency(line.amount)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${sourceLabels[line.source].color}`}
-                        >
-                          {sourceLabels[line.source].label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-1">
-                          <PrimitiveButton
-                            onClick={() => {
-                              setEditingLine(line);
-                              setLineModalOpen(true);
-                            }}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
-                          >
-                            <Edit2 className="h-4 w-4 text-slate-400" />
-                          </PrimitiveButton>
-                          <PrimitiveButton
-                            onClick={() => handleDeleteLine(line.id)}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-400" />
-                          </PrimitiveButton>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-slate-200 bg-slate-50">
-                    <td
-                      colSpan={5}
-                      className="px-6 py-4 text-right font-medium text-slate-700"
-                    >
-                      공급가액
-                    </td>
-                    <td className="px-6 py-4 text-right font-bold text-slate-900">
+        {activeTab === "estimate" && (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>견적 요약</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="rounded-lg bg-slate-50 p-4">
+                    <p className="text-sm text-slate-500">공급가액</p>
+                    <p className="mt-1 text-xl font-bold text-slate-900">
                       {formatCurrency(estimate.subtotal)}
-                    </td>
-                    <td colSpan={2}></td>
-                  </tr>
-                  <tr className="bg-slate-50">
-                    <td
-                      colSpan={5}
-                      className="px-6 py-4 text-right font-medium text-slate-700"
-                    >
-                      부가세 (10%)
-                    </td>
-                    <td className="px-6 py-4 text-right font-bold text-slate-900">
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-4">
+                    <p className="text-sm text-slate-500">부가세 (10%)</p>
+                    <p className="mt-1 text-xl font-bold text-slate-900">
                       {formatCurrency(estimate.vat_amount)}
-                    </td>
-                    <td colSpan={2}></td>
-                  </tr>
-                  <tr className="bg-brand-point-50">
-                    <td
-                      colSpan={5}
-                      className="px-6 py-4 text-right font-bold text-brand-point-700"
-                    >
-                      합계
-                    </td>
-                    <td className="px-6 py-4 text-right text-lg font-bold text-brand-point-700">
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-brand-point-50 p-4">
+                    <p className="text-sm text-brand-point-600">합계</p>
+                    <p className="mt-1 text-xl font-bold text-brand-point-700">
                       {formatCurrency(estimate.total_amount)}
-                    </td>
-                    <td colSpan={2}></td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>이력</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-point-100">
-                  <Plus className="h-4 w-4 text-brand-point-600" />
+            <Card>
+              <CardHeader className="flex-row items-center justify-between">
+                <CardTitle>견적 항목</CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setRagPanelOpen(true)}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    적산 검색
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setEditingLine(null);
+                      setLineModalOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    항목 추가
+                  </Button>
                 </div>
-                <div>
-                  <p className="font-medium text-slate-900">견적서 생성</p>
-                  <p className="text-sm text-slate-500">
-                    {formatDate(estimate.created_at)}
-                  </p>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-left text-sm text-slate-500">
+                        <th className="px-6 py-4 font-medium">No</th>
+                        <th className="px-6 py-4 font-medium">품목</th>
+                        <th className="px-6 py-4 font-medium">규격</th>
+                        <th className="px-6 py-4 font-medium text-right">수량</th>
+                        <th className="px-6 py-4 font-medium text-right">단가</th>
+                        <th className="px-6 py-4 font-medium text-right">금액</th>
+                        <th className="px-6 py-4 font-medium">출처</th>
+                        <th className="px-6 py-4 font-medium"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {estimate.lines.map((line, index) => (
+                        <tr
+                          key={line.id}
+                          className="border-b border-slate-100 hover:bg-slate-50"
+                        >
+                          <td className="px-6 py-4 text-slate-500">{index + 1}</td>
+                          <td className="px-6 py-4 font-medium text-slate-900">
+                            {line.description}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600">
+                            {line.specification || "-"}
+                          </td>
+                          <td className="px-6 py-4 text-right text-slate-900">
+                            {line.quantity} {line.unit}
+                          </td>
+                          <td className="px-6 py-4 text-right text-slate-900">
+                            {formatCurrency(line.unit_price_snapshot)}
+                          </td>
+                          <td className="px-6 py-4 text-right font-medium text-slate-900">
+                            {formatCurrency(line.amount)}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${sourceLabels[line.source].color}`}
+                            >
+                              {sourceLabels[line.source].label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex gap-1">
+                              <PrimitiveButton
+                                onClick={() => {
+                                  setEditingLine(line);
+                                  setLineModalOpen(true);
+                                }}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100"
+                              >
+                                <Edit2 className="h-4 w-4 text-slate-400" />
+                              </PrimitiveButton>
+                              <PrimitiveButton
+                                onClick={() => handleDeleteLine(line.id)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4 text-red-400" />
+                              </PrimitiveButton>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-slate-200 bg-slate-50">
+                        <td
+                          colSpan={5}
+                          className="px-6 py-4 text-right font-medium text-slate-700"
+                        >
+                          공급가액
+                        </td>
+                        <td className="px-6 py-4 text-right font-bold text-slate-900">
+                          {formatCurrency(estimate.subtotal)}
+                        </td>
+                        <td colSpan={2}></td>
+                      </tr>
+                      <tr className="bg-slate-50">
+                        <td
+                          colSpan={5}
+                          className="px-6 py-4 text-right font-medium text-slate-700"
+                        >
+                          부가세 (10%)
+                        </td>
+                        <td className="px-6 py-4 text-right font-bold text-slate-900">
+                          {formatCurrency(estimate.vat_amount)}
+                        </td>
+                        <td colSpan={2}></td>
+                      </tr>
+                      <tr className="bg-brand-point-50">
+                        <td
+                          colSpan={5}
+                          className="px-6 py-4 text-right font-bold text-brand-point-700"
+                        >
+                          합계
+                        </td>
+                        <td className="px-6 py-4 text-right text-lg font-bold text-brand-point-700">
+                          {formatCurrency(estimate.total_amount)}
+                        </td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
-              </div>
-              {estimate.issued_at && (
-                <div className="flex gap-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
-                    <Send className="h-4 w-4 text-blue-600" />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>이력</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-point-100">
+                      <Plus className="h-4 w-4 text-brand-point-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">견적서 생성</p>
+                      <p className="text-sm text-slate-500">
+                        {formatDate(estimate.created_at)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-slate-900">견적서 발송</p>
-                    <p className="text-sm text-slate-500">
-                      {formatDate(estimate.issued_at)}
-                    </p>
-                  </div>
+                  {estimate.issued_at && (
+                    <div className="flex gap-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                        <Send className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">견적서 발송</p>
+                        <p className="text-sm text-slate-500">
+                          {formatDate(estimate.issued_at)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {estimate.accepted_at && (
+                    <div className="flex gap-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
+                        <Check className="h-4 w-4 text-emerald-700" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">고객 수락</p>
+                        <p className="text-sm text-slate-500">
+                          {formatDate(estimate.accepted_at)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {estimate.rejected_at && (
+                    <div className="flex gap-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                        <X className="h-4 w-4 text-red-700" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">고객 미선정</p>
+                        <p className="text-sm text-slate-500">
+                          {formatDate(estimate.rejected_at)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {estimate.notes && (
+                    <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                      {estimate.notes}
+                    </div>
+                  )}
                 </div>
-              )}
-              {estimate.accepted_at && (
-                <div className="flex gap-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
-                    <Check className="h-4 w-4 text-emerald-700" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-900">고객 수락</p>
-                    <p className="text-sm text-slate-500">
-                      {formatDate(estimate.accepted_at)}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {estimate.rejected_at && (
-                <div className="flex gap-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
-                    <X className="h-4 w-4 text-red-700" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-900">고객 미선정</p>
-                    <p className="text-sm text-slate-500">
-                      {formatDate(estimate.rejected_at)}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {estimate.notes && (
-                <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-                  {estimate.notes}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {activeTab === "cost" && (
+          <CostCalculationSheet
+            estimateId={id}
+            calc={costCalc}
+            onCreateCalc={handleCreateCostCalc}
+            onUpdateCalc={handleUpdateCostCalc}
+            onRecalculate={handleRecalculate}
+            onExportCalc={handleExportCalc}
+            onExportCombined={handleExportCombined}
+          />
+        )}
       </div>
 
       <EstimateLineModal

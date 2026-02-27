@@ -26,10 +26,10 @@ import {
   PrimitiveButton,
   Badge,
   toast,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { useDiagnosis } from "@/hooks";
 import { api } from "@/lib/api";
-import type { DiagnosisStatus } from "@sigongon/types";
+import type { DiagnosisStatus } from "@sigongcore/types";
 
 interface DiagnosisDetailPageProps {
   params: Promise<{ id: string }>;
@@ -131,10 +131,9 @@ export default function DiagnosisDetailPage({
 
     try {
       setIsSavingFieldOpinion(true);
-      const result = await api.updateDiagnosisFieldOpinion(
-        diagnosis.id,
-        { field_opinion_text: fieldOpinion.trim() },
-      );
+      const result = await api.updateDiagnosisFieldOpinion(diagnosis.id, {
+        field_opinion_text: fieldOpinion.trim(),
+      });
 
       if (result.success) {
         toast.success("현장 소견을 저장했어요.");
@@ -387,9 +386,7 @@ export default function DiagnosisDetailPage({
                     생성 중...
                   </>
                 ) : (
-                  <>
-                    선택한 자재로 견적서 만들기 ({selectedMaterials.size}개)
-                  </>
+                  <>선택한 자재로 견적서 만들기 ({selectedMaterials.size}개)</>
                 )}
               </Button>
             </div>

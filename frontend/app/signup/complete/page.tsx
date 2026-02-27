@@ -3,9 +3,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Card } from "@sigongon/ui";
-import { Droplets, CheckCircle, Sparkles, ArrowRight, Loader2 } from "lucide-react";
-import { getSignupData, clearSignupData, saveSignupData, PLANS } from "../types";
+import { Button, Card } from "@sigongcore/ui";
+import {
+  Droplets,
+  CheckCircle,
+  Sparkles,
+  ArrowRight,
+  Loader2,
+} from "lucide-react";
+import {
+  getSignupData,
+  clearSignupData,
+  saveSignupData,
+  PLANS,
+} from "../types";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 
@@ -118,7 +129,7 @@ export default function CompletePage() {
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-point-500 text-white">
           <Droplets className="h-6 w-6" />
         </div>
-        <span className="text-2xl font-bold text-slate-900">시공ON</span>
+        <span className="text-2xl font-bold text-slate-900">시공코어</span>
       </Link>
 
       <Card className="w-full max-w-2xl p-8 md:p-12">
@@ -142,7 +153,7 @@ export default function CompletePage() {
                 님,
               </>
             )}{" "}
-            시공ON에 오신 것을 환영합니다
+            시공코어에 오신 것을 환영합니다
           </p>
 
           {/* Plan Info */}
@@ -153,7 +164,9 @@ export default function CompletePage() {
                 선택하신 요금제
               </span>
             </div>
-            <p className="text-2xl font-bold text-brand-point-900">{planName}</p>
+            <p className="text-2xl font-bold text-brand-point-900">
+              {planName}
+            </p>
           </div>
 
           {/* Next Steps */}
@@ -167,7 +180,9 @@ export default function CompletePage() {
                   1
                 </div>
                 <div>
-                  <p className="font-medium text-slate-900">프로젝트 생성하기</p>
+                  <p className="font-medium text-slate-900">
+                    프로젝트 생성하기
+                  </p>
                   <p className="text-sm text-slate-600">
                     첫 번째 건설 프로젝트를 등록하고 관리를 시작하세요
                   </p>
@@ -189,7 +204,9 @@ export default function CompletePage() {
                   3
                 </div>
                 <div>
-                  <p className="font-medium text-slate-900">모바일 앱 다운로드</p>
+                  <p className="font-medium text-slate-900">
+                    모바일 앱 다운로드
+                  </p>
                   <p className="text-sm text-slate-600">
                     현장에서 실시간으로 프로젝트 관리 및 보고서 작성
                   </p>
@@ -236,7 +253,7 @@ export default function CompletePage() {
             <p>도움이 필요하신가요?</p>
             <p className="mt-1">
               <Link
-                href="mailto:support@sigongon.com"
+                href="mailto:support@sigongcore.com"
                 className="font-medium text-brand-point-600 hover:text-brand-point-700"
               >
                 고객센터

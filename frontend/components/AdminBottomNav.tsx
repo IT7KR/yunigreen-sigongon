@@ -1,8 +1,19 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FolderKanban, HardHat, Menu, BarChart3, Building2, FileText, CreditCard, User, Home } from "lucide-react";
-import { AppLink, cn } from "@sigongon/ui";
+import {
+  LayoutDashboard,
+  FolderKanban,
+  HardHat,
+  Menu,
+  BarChart3,
+  Building2,
+  FileText,
+  CreditCard,
+  User,
+  Home,
+} from "lucide-react";
+import { AppLink, cn } from "@sigongcore/ui";
 import { useAuth } from "@/lib/auth";
 
 interface AdminBottomNavProps {

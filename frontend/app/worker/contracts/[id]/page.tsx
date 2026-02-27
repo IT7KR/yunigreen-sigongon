@@ -9,7 +9,7 @@ import {
   Modal,
   SignaturePad,
   toast,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { ChevronLeft, CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";

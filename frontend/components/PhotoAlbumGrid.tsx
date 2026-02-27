@@ -1,6 +1,6 @@
 "use client";
 
-import { PrimitiveButton } from "@sigongon/ui";
+import { PrimitiveButton } from "@sigongcore/ui";
 
 import { useState } from "react";
 import { GripVertical, X } from "lucide-react";

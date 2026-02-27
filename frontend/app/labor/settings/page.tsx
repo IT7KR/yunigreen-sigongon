@@ -1,16 +1,26 @@
 "use client";
 
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, PrimitiveSelect, toast } from "@sigongon/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  PrimitiveSelect,
+  toast,
+} from "@sigongcore/ui";
 import { Save, RefreshCw, Calendar, Percent, ArrowRight } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { LaborInsuranceRates } from "@sigongon/types";
+import type { LaborInsuranceRates } from "@sigongcore/types";
 
 export default function LaborSettingsPage() {
   const [selectedYear, setSelectedYear] = useState(2026);
   const [rates, setRates] = useState<LaborInsuranceRates | null>(null);
-  const [previousYearRates, setPreviousYearRates] = useState<LaborInsuranceRates | null>(null);
+  const [previousYearRates, setPreviousYearRates] =
+    useState<LaborInsuranceRates | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -72,7 +82,9 @@ export default function LaborSettingsPage() {
     setIncomeDeduction(data.income_deduction.toString());
     setSimplifiedTaxRate((data.simplified_tax_rate * 100).toFixed(3));
     setLocalTaxRate((data.local_tax_rate * 100).toFixed(1));
-    setEmploymentInsuranceRate((data.employment_insurance_rate * 100).toFixed(2));
+    setEmploymentInsuranceRate(
+      (data.employment_insurance_rate * 100).toFixed(2),
+    );
     setHealthInsuranceRate((data.health_insurance_rate * 100).toFixed(3));
     setLongtermCareRate((data.longterm_care_rate * 100).toFixed(2));
     setNationalPensionRate((data.national_pension_rate * 100).toFixed(1));
@@ -99,7 +111,11 @@ export default function LaborSettingsPage() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    const validatePositiveNumber = (value: string, field: string, label: string) => {
+    const validatePositiveNumber = (
+      value: string,
+      field: string,
+      label: string,
+    ) => {
       const num = parseFloat(value);
       if (isNaN(num) || num < 0) {
         newErrors[field] = `${label}은(는) 0 이상의 숫자여야 합니다`;
@@ -109,14 +125,46 @@ export default function LaborSettingsPage() {
     validatePositiveNumber(incomeDeduction, "incomeDeduction", "소득공제금액");
     validatePositiveNumber(simplifiedTaxRate, "simplifiedTaxRate", "속산세율");
     validatePositiveNumber(localTaxRate, "localTaxRate", "지방소득세율");
-    validatePositiveNumber(employmentInsuranceRate, "employmentInsuranceRate", "고용보험 근로자");
-    validatePositiveNumber(healthInsuranceRate, "healthInsuranceRate", "건강보험");
-    validatePositiveNumber(longtermCareRate, "longtermCareRate", "장기요양보험");
-    validatePositiveNumber(nationalPensionRate, "nationalPensionRate", "국민연금");
-    validatePositiveNumber(pensionUpperLimit, "pensionUpperLimit", "국민연금 상한");
-    validatePositiveNumber(pensionLowerLimit, "pensionLowerLimit", "국민연금 하한");
-    validatePositiveNumber(healthPremiumUpper, "healthPremiumUpper", "건강보험 상한");
-    validatePositiveNumber(healthPremiumLower, "healthPremiumLower", "건강보험 하한");
+    validatePositiveNumber(
+      employmentInsuranceRate,
+      "employmentInsuranceRate",
+      "고용보험 근로자",
+    );
+    validatePositiveNumber(
+      healthInsuranceRate,
+      "healthInsuranceRate",
+      "건강보험",
+    );
+    validatePositiveNumber(
+      longtermCareRate,
+      "longtermCareRate",
+      "장기요양보험",
+    );
+    validatePositiveNumber(
+      nationalPensionRate,
+      "nationalPensionRate",
+      "국민연금",
+    );
+    validatePositiveNumber(
+      pensionUpperLimit,
+      "pensionUpperLimit",
+      "국민연금 상한",
+    );
+    validatePositiveNumber(
+      pensionLowerLimit,
+      "pensionLowerLimit",
+      "국민연금 하한",
+    );
+    validatePositiveNumber(
+      healthPremiumUpper,
+      "healthPremiumUpper",
+      "건강보험 상한",
+    );
+    validatePositiveNumber(
+      healthPremiumLower,
+      "healthPremiumLower",
+      "건강보험 하한",
+    );
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -186,13 +234,18 @@ export default function LaborSettingsPage() {
     const isIncrease = diff > 0;
 
     return (
-      <span className={`ml-2 text-xs font-medium ${isIncrease ? "text-red-600" : "text-green-600"}`}>
+      <span
+        className={`ml-2 text-xs font-medium ${isIncrease ? "text-red-600" : "text-green-600"}`}
+      >
         {isIncrease ? "↑" : "↓"} {Math.abs(diff).toFixed(2)}
       </span>
     );
   };
 
-  const getChangeIndicatorPercent = (currentValue: string, previousValue?: number) => {
+  const getChangeIndicatorPercent = (
+    currentValue: string,
+    previousValue?: number,
+  ) => {
     if (!previousValue || !previousYearRates) return null;
 
     const current = parseFloat(currentValue);
@@ -203,7 +256,9 @@ export default function LaborSettingsPage() {
     const isIncrease = diff > 0;
 
     return (
-      <span className={`ml-2 text-xs font-medium ${isIncrease ? "text-red-600" : "text-green-600"}`}>
+      <span
+        className={`ml-2 text-xs font-medium ${isIncrease ? "text-red-600" : "text-green-600"}`}
+      >
         {isIncrease ? "↑" : "↓"} {Math.abs(diff).toFixed(3)}%
       </span>
     );
@@ -216,7 +271,8 @@ export default function LaborSettingsPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">보험요율 설정</h1>
             <p className="mt-1 text-sm text-slate-600">
-              자사에 적용되는 4대보험 요율과 세율을 확인합니다. 요율은 플랫폼에서 매년 업데이트됩니다.
+              자사에 적용되는 4대보험 요율과 세율을 확인합니다. 요율은
+              플랫폼에서 매년 업데이트됩니다.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -250,12 +306,18 @@ export default function LaborSettingsPage() {
               <CardContent className="space-y-6">
                 {/* 소득세 설정 */}
                 <div>
-                  <h3 className="mb-4 text-sm font-semibold text-slate-900">소득세 설정</h3>
+                  <h3 className="mb-4 text-sm font-semibold text-slate-900">
+                    소득세 설정
+                  </h3>
                   <div className="grid gap-4 md:grid-cols-3">
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         소득공제금액 (원)
-                        {previousYearRates && getChangeIndicator(incomeDeduction, previousYearRates.income_deduction)}
+                        {previousYearRates &&
+                          getChangeIndicator(
+                            incomeDeduction,
+                            previousYearRates.income_deduction,
+                          )}
                       </label>
                       <Input
                         type="text"
@@ -272,7 +334,11 @@ export default function LaborSettingsPage() {
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         속산세율 (%)
-                        {previousYearRates && getChangeIndicatorPercent(simplifiedTaxRate, previousYearRates.simplified_tax_rate)}
+                        {previousYearRates &&
+                          getChangeIndicatorPercent(
+                            simplifiedTaxRate,
+                            previousYearRates.simplified_tax_rate,
+                          )}
                       </label>
                       <Input
                         type="text"
@@ -288,7 +354,11 @@ export default function LaborSettingsPage() {
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         지방소득세율 (%)
-                        {previousYearRates && getChangeIndicatorPercent(localTaxRate, previousYearRates.local_tax_rate)}
+                        {previousYearRates &&
+                          getChangeIndicatorPercent(
+                            localTaxRate,
+                            previousYearRates.local_tax_rate,
+                          )}
                       </label>
                       <Input
                         type="text"
@@ -306,12 +376,18 @@ export default function LaborSettingsPage() {
 
                 {/* 4대보험 요율 */}
                 <div>
-                  <h3 className="mb-4 text-sm font-semibold text-slate-900">4대보험 요율 (%)</h3>
+                  <h3 className="mb-4 text-sm font-semibold text-slate-900">
+                    4대보험 요율 (%)
+                  </h3>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         고용보험 근로자
-                        {previousYearRates && getChangeIndicatorPercent(employmentInsuranceRate, previousYearRates.employment_insurance_rate)}
+                        {previousYearRates &&
+                          getChangeIndicatorPercent(
+                            employmentInsuranceRate,
+                            previousYearRates.employment_insurance_rate,
+                          )}
                       </label>
                       <Input
                         type="text"
@@ -327,7 +403,11 @@ export default function LaborSettingsPage() {
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         건강보험
-                        {previousYearRates && getChangeIndicatorPercent(healthInsuranceRate, previousYearRates.health_insurance_rate)}
+                        {previousYearRates &&
+                          getChangeIndicatorPercent(
+                            healthInsuranceRate,
+                            previousYearRates.health_insurance_rate,
+                          )}
                       </label>
                       <Input
                         type="text"
@@ -343,7 +423,11 @@ export default function LaborSettingsPage() {
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         장기요양보험
-                        {previousYearRates && getChangeIndicatorPercent(longtermCareRate, previousYearRates.longterm_care_rate)}
+                        {previousYearRates &&
+                          getChangeIndicatorPercent(
+                            longtermCareRate,
+                            previousYearRates.longterm_care_rate,
+                          )}
                       </label>
                       <Input
                         type="text"
@@ -359,7 +443,11 @@ export default function LaborSettingsPage() {
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         국민연금
-                        {previousYearRates && getChangeIndicatorPercent(nationalPensionRate, previousYearRates.national_pension_rate)}
+                        {previousYearRates &&
+                          getChangeIndicatorPercent(
+                            nationalPensionRate,
+                            previousYearRates.national_pension_rate,
+                          )}
                       </label>
                       <Input
                         type="text"
@@ -377,12 +465,18 @@ export default function LaborSettingsPage() {
 
                 {/* 국민연금 기준소득월액 */}
                 <div>
-                  <h3 className="mb-4 text-sm font-semibold text-slate-900">국민연금 기준소득월액 (원)</h3>
+                  <h3 className="mb-4 text-sm font-semibold text-slate-900">
+                    국민연금 기준소득월액 (원)
+                  </h3>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         상한
-                        {previousYearRates && getChangeIndicator(pensionUpperLimit, previousYearRates.pension_upper_limit)}
+                        {previousYearRates &&
+                          getChangeIndicator(
+                            pensionUpperLimit,
+                            previousYearRates.pension_upper_limit,
+                          )}
                       </label>
                       <Input
                         type="text"
@@ -399,7 +493,11 @@ export default function LaborSettingsPage() {
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         하한
-                        {previousYearRates && getChangeIndicator(pensionLowerLimit, previousYearRates.pension_lower_limit)}
+                        {previousYearRates &&
+                          getChangeIndicator(
+                            pensionLowerLimit,
+                            previousYearRates.pension_lower_limit,
+                          )}
                       </label>
                       <Input
                         type="text"
@@ -418,12 +516,18 @@ export default function LaborSettingsPage() {
 
                 {/* 건강보험 납부한도 */}
                 <div>
-                  <h3 className="mb-4 text-sm font-semibold text-slate-900">건강보험 납부한도 (원)</h3>
+                  <h3 className="mb-4 text-sm font-semibold text-slate-900">
+                    건강보험 납부한도 (원)
+                  </h3>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         상한
-                        {previousYearRates && getChangeIndicator(healthPremiumUpper, previousYearRates.health_premium_upper)}
+                        {previousYearRates &&
+                          getChangeIndicator(
+                            healthPremiumUpper,
+                            previousYearRates.health_premium_upper,
+                          )}
                       </label>
                       <Input
                         type="text"
@@ -440,7 +544,11 @@ export default function LaborSettingsPage() {
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         하한
-                        {previousYearRates && getChangeIndicator(healthPremiumLower, previousYearRates.health_premium_lower)}
+                        {previousYearRates &&
+                          getChangeIndicator(
+                            healthPremiumLower,
+                            previousYearRates.health_premium_lower,
+                          )}
                       </label>
                       <Input
                         type="text"
@@ -459,7 +567,11 @@ export default function LaborSettingsPage() {
 
                 {/* Actions */}
                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                  <Button variant="secondary" onClick={handleReset} disabled={isSaving}>
+                  <Button
+                    variant="secondary"
+                    onClick={handleReset}
+                    disabled={isSaving}
+                  >
                     <RefreshCw className="h-4 w-4" />
                     초기화
                   </Button>
@@ -491,68 +603,136 @@ export default function LaborSettingsPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-slate-200 text-left">
-                          <th className="pb-3 font-medium text-slate-900">항목</th>
-                          <th className="pb-3 font-medium text-slate-600 text-right">{selectedYear - 1}년</th>
+                          <th className="pb-3 font-medium text-slate-900">
+                            항목
+                          </th>
+                          <th className="pb-3 font-medium text-slate-600 text-right">
+                            {selectedYear - 1}년
+                          </th>
                           <th className="pb-3 font-medium text-slate-600 text-center">
                             <ArrowRight className="h-4 w-4 inline" />
                           </th>
-                          <th className="pb-3 font-medium text-slate-900 text-right">{selectedYear}년</th>
-                          <th className="pb-3 font-medium text-slate-600 text-right">변동</th>
+                          <th className="pb-3 font-medium text-slate-900 text-right">
+                            {selectedYear}년
+                          </th>
+                          <th className="pb-3 font-medium text-slate-600 text-right">
+                            변동
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         <tr>
                           <td className="py-3 text-slate-700">소득공제금액</td>
-                          <td className="py-3 text-right text-slate-600">{formatCurrency(previousYearRates.income_deduction.toString())}원</td>
+                          <td className="py-3 text-right text-slate-600">
+                            {formatCurrency(
+                              previousYearRates.income_deduction.toString(),
+                            )}
+                            원
+                          </td>
                           <td></td>
-                          <td className="py-3 text-right font-medium">{formatCurrency(incomeDeduction)}원</td>
+                          <td className="py-3 text-right font-medium">
+                            {formatCurrency(incomeDeduction)}원
+                          </td>
                           <td className="py-3 text-right">
-                            {getChangeIndicator(incomeDeduction, previousYearRates.income_deduction)}
+                            {getChangeIndicator(
+                              incomeDeduction,
+                              previousYearRates.income_deduction,
+                            )}
                           </td>
                         </tr>
                         <tr>
                           <td className="py-3 text-slate-700">속산세율</td>
-                          <td className="py-3 text-right text-slate-600">{(previousYearRates.simplified_tax_rate * 100).toFixed(3)}%</td>
+                          <td className="py-3 text-right text-slate-600">
+                            {(
+                              previousYearRates.simplified_tax_rate * 100
+                            ).toFixed(3)}
+                            %
+                          </td>
                           <td></td>
-                          <td className="py-3 text-right font-medium">{simplifiedTaxRate}%</td>
+                          <td className="py-3 text-right font-medium">
+                            {simplifiedTaxRate}%
+                          </td>
                           <td className="py-3 text-right">
-                            {getChangeIndicatorPercent(simplifiedTaxRate, previousYearRates.simplified_tax_rate)}
+                            {getChangeIndicatorPercent(
+                              simplifiedTaxRate,
+                              previousYearRates.simplified_tax_rate,
+                            )}
                           </td>
                         </tr>
                         <tr>
                           <td className="py-3 text-slate-700">고용보험</td>
-                          <td className="py-3 text-right text-slate-600">{(previousYearRates.employment_insurance_rate * 100).toFixed(2)}%</td>
+                          <td className="py-3 text-right text-slate-600">
+                            {(
+                              previousYearRates.employment_insurance_rate * 100
+                            ).toFixed(2)}
+                            %
+                          </td>
                           <td></td>
-                          <td className="py-3 text-right font-medium">{employmentInsuranceRate}%</td>
+                          <td className="py-3 text-right font-medium">
+                            {employmentInsuranceRate}%
+                          </td>
                           <td className="py-3 text-right">
-                            {getChangeIndicatorPercent(employmentInsuranceRate, previousYearRates.employment_insurance_rate)}
+                            {getChangeIndicatorPercent(
+                              employmentInsuranceRate,
+                              previousYearRates.employment_insurance_rate,
+                            )}
                           </td>
                         </tr>
                         <tr>
                           <td className="py-3 text-slate-700">건강보험</td>
-                          <td className="py-3 text-right text-slate-600">{(previousYearRates.health_insurance_rate * 100).toFixed(3)}%</td>
+                          <td className="py-3 text-right text-slate-600">
+                            {(
+                              previousYearRates.health_insurance_rate * 100
+                            ).toFixed(3)}
+                            %
+                          </td>
                           <td></td>
-                          <td className="py-3 text-right font-medium">{healthInsuranceRate}%</td>
+                          <td className="py-3 text-right font-medium">
+                            {healthInsuranceRate}%
+                          </td>
                           <td className="py-3 text-right">
-                            {getChangeIndicatorPercent(healthInsuranceRate, previousYearRates.health_insurance_rate)}
+                            {getChangeIndicatorPercent(
+                              healthInsuranceRate,
+                              previousYearRates.health_insurance_rate,
+                            )}
                           </td>
                         </tr>
                         <tr>
                           <td className="py-3 text-slate-700">장기요양보험</td>
-                          <td className="py-3 text-right text-slate-600">{(previousYearRates.longterm_care_rate * 100).toFixed(2)}%</td>
+                          <td className="py-3 text-right text-slate-600">
+                            {(
+                              previousYearRates.longterm_care_rate * 100
+                            ).toFixed(2)}
+                            %
+                          </td>
                           <td></td>
-                          <td className="py-3 text-right font-medium">{longtermCareRate}%</td>
+                          <td className="py-3 text-right font-medium">
+                            {longtermCareRate}%
+                          </td>
                           <td className="py-3 text-right">
-                            {getChangeIndicatorPercent(longtermCareRate, previousYearRates.longterm_care_rate)}
+                            {getChangeIndicatorPercent(
+                              longtermCareRate,
+                              previousYearRates.longterm_care_rate,
+                            )}
                           </td>
                         </tr>
                         <tr>
                           <td className="py-3 text-slate-700">국민연금</td>
-                          <td className="py-3 text-right text-slate-600">{(previousYearRates.national_pension_rate * 100).toFixed(1)}%</td>
+                          <td className="py-3 text-right text-slate-600">
+                            {(
+                              previousYearRates.national_pension_rate * 100
+                            ).toFixed(1)}
+                            %
+                          </td>
                           <td></td>
-                          <td className="py-3 text-right font-medium">{nationalPensionRate}%</td>
+                          <td className="py-3 text-right font-medium">
+                            {nationalPensionRate}%
+                          </td>
                           <td className="py-3 text-right">
-                            {getChangeIndicatorPercent(nationalPensionRate, previousYearRates.national_pension_rate)}
+                            {getChangeIndicatorPercent(
+                              nationalPensionRate,
+                              previousYearRates.national_pension_rate,
+                            )}
                           </td>
                         </tr>
                       </tbody>

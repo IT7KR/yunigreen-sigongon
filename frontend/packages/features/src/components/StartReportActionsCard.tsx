@@ -2,9 +2,15 @@
 
 import Link from "next/link";
 import { ArrowRight, Download, FileCheck2 } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@sigongon/ui";
-import { triggerBrowserDownload } from "@sigongon/platform";
-import { buildSampleFileDownloadUrl } from "@sigongon/mocks";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@sigongcore/ui";
+import { triggerBrowserDownload } from "@sigongcore/platform";
+import { buildSampleFileDownloadUrl } from "@sigongcore/mocks";
 
 export interface StartReportActionsCardProps {
   title: string;
@@ -43,16 +49,20 @@ export function StartReportActionsCard({
         <p className="text-sm text-slate-600">{description}</p>
         <div className="flex flex-wrap gap-2">
           {createReportPath ? (
-            <Button asChild><Link href={createReportPath.replace("{projectId}", projectId)}>
+            <Button asChild>
+              <Link href={createReportPath.replace("{projectId}", projectId)}>
                 <FileCheck2 className="h-4 w-4" />
                 {createLabel}
-              </Link></Button>
+              </Link>
+            </Button>
           ) : null}
 
-          <Button variant="secondary" asChild><Link href={reportListPath.replace("{projectId}", projectId)}>
+          <Button variant="secondary" asChild>
+            <Link href={reportListPath.replace("{projectId}", projectId)}>
               {listLabel}
               <ArrowRight className="h-4 w-4" />
-            </Link></Button>
+            </Link>
+          </Button>
 
           <Button
             variant="secondary"

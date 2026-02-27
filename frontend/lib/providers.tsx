@@ -2,13 +2,13 @@
 
 import { useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { createProviders } from "@sigongon/platform";
+import { createProviders } from "@sigongcore/platform";
 import {
   ConfirmDialogProvider,
   NavigationProgress,
   NavigationProgressProvider,
   useNavigationProgress,
-} from "@sigongon/ui";
+} from "@sigongcore/ui";
 import { AdminAppShell } from "@/components/AdminLayout";
 import { AuthProvider } from "./auth";
 
@@ -30,8 +30,8 @@ function isAdminPublicPath(pathname: string): boolean {
     return true;
   }
 
-  return ADMIN_PUBLIC_PATH_PREFIXES.some((prefix) =>
-    pathname === prefix || pathname.startsWith(`${prefix}/`),
+  return ADMIN_PUBLIC_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
 

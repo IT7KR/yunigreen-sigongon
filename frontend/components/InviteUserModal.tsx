@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Loader2, MessageSquare, Copy, Check } from "lucide-react";
-import { Button, Modal, PrimitiveInput, PrimitiveSelect } from "@sigongon/ui";
-import type { UserRole } from "@sigongon/types";
+import { Button, Modal, PrimitiveInput, PrimitiveSelect } from "@sigongcore/ui";
+import type { UserRole } from "@sigongcore/types";
 
 interface InviteUserModalProps {
   isOpen: boolean;
@@ -17,12 +17,25 @@ interface InviteUserModalProps {
 }
 
 /** Role options with Korean labels */
-const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = [
-  { value: "site_manager", label: "현장소장", description: "프로젝트 현장 관리 담당" },
-  { value: "company_admin", label: "대표", description: "회사 전체 관리 권한" },
-  { value: "worker", label: "근로자", description: "일용직 근로자" },
-  { value: "super_admin", label: "슈퍼관리자", description: "시스템 전체 관리" },
-];
+const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] =
+  [
+    {
+      value: "site_manager",
+      label: "현장소장",
+      description: "프로젝트 현장 관리 담당",
+    },
+    {
+      value: "company_admin",
+      label: "대표",
+      description: "회사 전체 관리 권한",
+    },
+    { value: "worker", label: "근로자", description: "일용직 근로자" },
+    {
+      value: "super_admin",
+      label: "슈퍼관리자",
+      description: "시스템 전체 관리",
+    },
+  ];
 
 export function InviteUserModal({
   isOpen,
@@ -210,12 +223,7 @@ export function InviteUserModal({
 
   // Form view
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="사용자 초대"
-      size="md"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="사용자 초대" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm text-slate-500">
           초대받은 사용자가 직접 비밀번호를 설정합니다.

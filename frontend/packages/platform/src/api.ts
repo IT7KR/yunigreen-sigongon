@@ -1,4 +1,4 @@
-import { APIClient } from "@sigongon/api";
+import { APIClient } from "@sigongcore/api";
 
 export interface CreateApiBindingOptions<TMockClient> {
   mockClient: TMockClient;
@@ -45,7 +45,12 @@ function setAccessTokenCookie(token: string | null) {
 // Example: NEXT_PUBLIC_REAL_DOMAINS=auth,fieldRepresentatives
 const _realDomainsEnv = process.env.NEXT_PUBLIC_REAL_DOMAINS ?? "";
 const _realDomains = _realDomainsEnv
-  ? new Set(_realDomainsEnv.split(",").map((d) => d.trim()).filter(Boolean))
+  ? new Set(
+      _realDomainsEnv
+        .split(",")
+        .map((d) => d.trim())
+        .filter(Boolean),
+    )
   : new Set<string>();
 
 function shouldUseMock(useMocks: boolean, methodName: string): boolean {
@@ -62,7 +67,8 @@ export function createApiBinding<TMockClient>(
 ) {
   const {
     mockClient,
-    apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
+    apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ||
+      "http://localhost:8000/api/v1",
     useMocks = process.env.NEXT_PUBLIC_USE_MOCKS === "true",
     loginPath = "/login",
   } = options;

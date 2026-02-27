@@ -12,9 +12,25 @@ import {
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { MobileListCard } from "@/components/MobileListCard";
-import { Badge, Button, Card, CardContent, PrimitiveButton, PrimitiveInput, PrimitiveSelect, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, formatCurrency, formatDate } from "@sigongon/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  PrimitiveButton,
+  PrimitiveInput,
+  PrimitiveSelect,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  formatCurrency,
+  formatDate,
+} from "@sigongcore/ui";
 import { useEstimates } from "@/hooks";
-import type { EstimateStatus } from "@sigongon/types";
+import type { EstimateStatus } from "@sigongcore/types";
 
 const statusConfig: Record<
   EstimateStatus,
@@ -160,7 +176,9 @@ export default function EstimatesPage() {
                         key={estimate.id}
                         title={`${estimate.project_name} v${estimate.version}`}
                         subtitle={estimate.client_name || undefined}
-                        badge={<Badge variant={config.variant}>{config.label}</Badge>}
+                        badge={
+                          <Badge variant={config.variant}>{config.label}</Badge>
+                        }
                         metadata={[
                           { value: formatCurrency(estimate.total_amount) },
                           { value: formatDate(estimate.created_at) },
@@ -191,7 +209,9 @@ export default function EstimatesPage() {
                           <TableRow
                             key={estimate.id}
                             clickable
-                            onClick={() => router.push(`/estimates/${estimate.id}`)}
+                            onClick={() =>
+                              router.push(`/estimates/${estimate.id}`)
+                            }
                           >
                             <TableCell>
                               <Link

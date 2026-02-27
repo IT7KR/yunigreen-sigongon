@@ -1,6 +1,16 @@
 "use client";
 
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, PrimitiveButton, PrimitiveSelect, toast } from "@sigongon/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  PrimitiveButton,
+  PrimitiveSelect,
+  toast,
+} from "@sigongcore/ui";
 import {
   Download,
   ChevronLeft,
@@ -14,7 +24,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { MobileListCard } from "@/components/MobileListCard";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { api } from "@/lib/api";
-import { APIError } from "@sigongon/api";
+import { APIError } from "@sigongcore/api";
 import { calculateWorkerDeductions } from "@/lib/labor/calculations";
 import type {
   DailyWorker,
@@ -22,7 +32,7 @@ import type {
   SitePayrollReport,
   LaborInsuranceRates,
   ProjectListItem,
-} from "@sigongon/types";
+} from "@sigongcore/types";
 
 // ============================================
 // Helpers
@@ -55,7 +65,9 @@ export default function PayrollPage() {
   // Selectors
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    now.getMonth() + 1,
+  );
 
   // Data
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
@@ -63,10 +75,14 @@ export default function PayrollPage() {
   const [rates, setRates] = useState<LaborInsuranceRates | null>(null);
 
   // Work records: workerId -> day -> manDays
-  const [workRecords, setWorkRecords] = useState<Map<string, Map<number, number>>>(new Map());
+  const [workRecords, setWorkRecords] = useState<
+    Map<string, Map<number, number>>
+  >(new Map());
 
   // Worker rates: workerId -> daily_rate (override from records or user edit)
-  const [workerRates, setWorkerRates] = useState<Map<string, number>>(new Map());
+  const [workerRates, setWorkerRates] = useState<Map<string, number>>(
+    new Map(),
+  );
 
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
@@ -145,7 +161,11 @@ export default function PayrollPage() {
     const fetchRecords = async () => {
       setIsLoading(true);
       try {
-        const res = await api.getWorkRecords(selectedProject, selectedYear, selectedMonth);
+        const res = await api.getWorkRecords(
+          selectedProject,
+          selectedYear,
+          selectedMonth,
+        );
         if (res.success && res.data) {
           const records = res.data as DailyWorkRecord[];
           const map = new Map<string, Map<number, number>>();
@@ -176,7 +196,10 @@ export default function PayrollPage() {
   // Close excel menu on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (excelMenuRef.current && !excelMenuRef.current.contains(event.target as Node)) {
+      if (
+        excelMenuRef.current &&
+        !excelMenuRef.current.contains(event.target as Node)
+      ) {
         setShowExcelMenu(false);
       }
     };
@@ -192,25 +215,22 @@ export default function PayrollPage() {
   // Day Toggle
   // ============================================
 
-  const toggleDay = useCallback(
-    (workerId: string, day: number) => {
-      setWorkRecords((prev) => {
-        const next = new Map(prev);
-        const workerMap = new Map(next.get(workerId) || new Map());
-        const current = workerMap.get(day) || 0;
-        if (current === 0) {
-          workerMap.set(day, 1);
-        } else if (current === 1) {
-          workerMap.set(day, 0.5);
-        } else {
-          workerMap.delete(day);
-        }
-        next.set(workerId, workerMap);
-        return next;
-      });
-    },
-    [],
-  );
+  const toggleDay = useCallback((workerId: string, day: number) => {
+    setWorkRecords((prev) => {
+      const next = new Map(prev);
+      const workerMap = new Map(next.get(workerId) || new Map());
+      const current = workerMap.get(day) || 0;
+      if (current === 0) {
+        workerMap.set(day, 1);
+      } else if (current === 1) {
+        workerMap.set(day, 0.5);
+      } else {
+        workerMap.delete(day);
+      }
+      next.set(workerId, workerMap);
+      return next;
+    });
+  }, []);
 
   // ============================================
   // Calculations
@@ -258,7 +278,8 @@ export default function PayrollPage() {
         uniqueDays.add(day);
       });
       const totalDays = uniqueDays.size;
-      const effectiveDailyRate = workerRates.get(worker.id) ?? worker.daily_rate;
+      const effectiveDailyRate =
+        workerRates.get(worker.id) ?? worker.daily_rate;
       const totalLaborCost = effectiveDailyRate * totalManDays;
 
       const referenceDate = new Date(selectedYear, selectedMonth - 1, 15);
@@ -320,7 +341,10 @@ export default function PayrollPage() {
       }> = [];
 
       workRecords.forEach((dayMap, workerId) => {
-        const effectiveRate = workerRates.get(workerId) ?? workers.find((w) => w.id === workerId)?.daily_rate ?? 0;
+        const effectiveRate =
+          workerRates.get(workerId) ??
+          workers.find((w) => w.id === workerId)?.daily_rate ??
+          0;
         dayMap.forEach((manDays, day) => {
           const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           records.push({
@@ -363,7 +387,11 @@ export default function PayrollPage() {
           return;
         }
       }
-      toast.error(error instanceof Error ? error.message : "근무 기록 저장에 실패했습니다.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "근무 기록 저장에 실패했습니다.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -373,7 +401,9 @@ export default function PayrollPage() {
   // Excel Downloads
   // ============================================
 
-  const handleExcelDownload = async (type: "site" | "consolidated" | "kwdi" | "national_tax") => {
+  const handleExcelDownload = async (
+    type: "site" | "consolidated" | "kwdi" | "national_tax",
+  ) => {
     if (!selectedProject && type !== "consolidated") {
       toast.error("프로젝트를 선택하세요.");
       return;
@@ -384,27 +414,50 @@ export default function PayrollPage() {
       const excelModule = await import("@/lib/labor/excelExport");
 
       if (type === "site") {
-        const res = await api.generateSiteReport(selectedProject, selectedYear, selectedMonth);
+        const res = await api.generateSiteReport(
+          selectedProject,
+          selectedYear,
+          selectedMonth,
+        );
         if (res.success && res.data) {
-          await excelModule.generateSitePayrollExcel(res.data as SitePayrollReport);
+          await excelModule.generateSitePayrollExcel(
+            res.data as SitePayrollReport,
+          );
           toast.success("현장별 일용신고명세서가 다운로드되었습니다.");
         }
       } else if (type === "consolidated") {
-        const res = await api.generateConsolidatedReport(selectedYear, selectedMonth);
+        const res = await api.generateConsolidatedReport(
+          selectedYear,
+          selectedMonth,
+        );
         if (res.success && res.data) {
           await excelModule.generateConsolidatedExcel(res.data);
           toast.success("월별 통합본이 다운로드되었습니다.");
         }
       } else if (type === "kwdi") {
-        const res = await api.generateSiteReport(selectedProject, selectedYear, selectedMonth);
+        const res = await api.generateSiteReport(
+          selectedProject,
+          selectedYear,
+          selectedMonth,
+        );
         if (res.success && res.data) {
-          await excelModule.generateKWDIReportExcel(res.data as SitePayrollReport);
-          toast.success("근로복지공단 근로내용확인신고서가 다운로드되었습니다.");
+          await excelModule.generateKWDIReportExcel(
+            res.data as SitePayrollReport,
+          );
+          toast.success(
+            "근로복지공단 근로내용확인신고서가 다운로드되었습니다.",
+          );
         }
       } else if (type === "national_tax") {
-        const res = await api.generateSiteReport(selectedProject, selectedYear, selectedMonth);
+        const res = await api.generateSiteReport(
+          selectedProject,
+          selectedYear,
+          selectedMonth,
+        );
         if (res.success && res.data) {
-          await excelModule.generateNationalTaxExcel(res.data as SitePayrollReport);
+          await excelModule.generateNationalTaxExcel(
+            res.data as SitePayrollReport,
+          );
           toast.success("국세청 일용소득 지급명세서가 다운로드되었습니다.");
         }
       }
@@ -447,7 +500,9 @@ export default function PayrollPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Calendar className="h-6 w-6 text-slate-500" />
-            <h1 className="text-2xl font-bold text-slate-900">급여/근무 관리</h1>
+            <h1 className="text-2xl font-bold text-slate-900">
+              급여/근무 관리
+            </h1>
           </div>
         </div>
 
@@ -457,7 +512,9 @@ export default function PayrollPage() {
             <div className="flex flex-wrap items-center gap-3">
               {/* Project selector */}
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-slate-600 whitespace-nowrap">현장</label>
+                <label className="text-sm font-medium text-slate-600 whitespace-nowrap">
+                  현장
+                </label>
                 <PrimitiveSelect
                   value={selectedProject}
                   onChange={(e) => setSelectedProject(e.target.value)}
@@ -474,21 +531,31 @@ export default function PayrollPage() {
 
               {/* Year selector */}
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-slate-600 whitespace-nowrap">연도</label>
+                <label className="text-sm font-medium text-slate-600 whitespace-nowrap">
+                  연도
+                </label>
                 <PrimitiveSelect
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
                   className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((year) => (
-                    <option key={year} value={year}>{year}</option>
+                  {[
+                    now.getFullYear() - 1,
+                    now.getFullYear(),
+                    now.getFullYear() + 1,
+                  ].map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
                   ))}
                 </PrimitiveSelect>
               </div>
 
               {/* Month selector with navigation */}
               <div className="flex items-center gap-1">
-                <label className="text-sm font-medium text-slate-600 whitespace-nowrap mr-1">월</label>
+                <label className="text-sm font-medium text-slate-600 whitespace-nowrap mr-1">
+                  월
+                </label>
                 <PrimitiveButton
                   onClick={goToPrevMonth}
                   className="rounded-md p-1.5 hover:bg-slate-100 transition-colors"
@@ -509,7 +576,10 @@ export default function PayrollPage() {
               <div className="flex-1" />
 
               {/* Save button */}
-              <Button onClick={saveWorkRecords} disabled={isSaving || !selectedProject}>
+              <Button
+                onClick={saveWorkRecords}
+                disabled={isSaving || !selectedProject}
+              >
                 {isSaving ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
@@ -578,7 +648,8 @@ export default function PayrollPage() {
           ) : (
             workers.map((worker) => {
               const calc = getWorkerCalc(worker);
-              const effectiveDailyRate = workerRates.get(worker.id) ?? worker.daily_rate;
+              const effectiveDailyRate =
+                workerRates.get(worker.id) ?? worker.daily_rate;
               return (
                 <MobileListCard
                   key={worker.id}
@@ -586,9 +657,18 @@ export default function PayrollPage() {
                   subtitle={worker.job_type}
                   metadata={[
                     { label: "공수", value: `${calc.totalManDays}일` },
-                    { label: "단가", value: formatCurrency(effectiveDailyRate) },
-                    { label: "노무비", value: formatCurrency(calc.totalLaborCost) },
-                    { label: "공제", value: formatCurrency(calc.total_deductions) },
+                    {
+                      label: "단가",
+                      value: formatCurrency(effectiveDailyRate),
+                    },
+                    {
+                      label: "노무비",
+                      value: formatCurrency(calc.totalLaborCost),
+                    },
+                    {
+                      label: "공제",
+                      value: formatCurrency(calc.total_deductions),
+                    },
                     { label: "지급액", value: formatCurrency(calc.net_pay) },
                   ]}
                 />
@@ -599,232 +679,310 @@ export default function PayrollPage() {
 
         {/* Work Grid Table — desktop only */}
         <div className="hidden md:block">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              근무 현황표 &mdash; {selectedYear}년 {selectedMonth}월
-              {workers.length > 0 && (
-                <Badge variant="default" className="ml-2">
-                  {workers.length}명
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-                <span className="ml-3 text-sm text-slate-500">근무 기록을 불러오는 중...</span>
-              </div>
-            ) : workers.length === 0 ? (
-              <div className="py-20 text-center text-sm text-slate-400">
-                등록된 일용 근로자가 없습니다.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b-2 border-slate-300 bg-slate-50">
-                      {/* Sticky columns */}
-                      <th className="sticky left-0 z-20 bg-slate-50 border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 w-10">
-                        No.
-                      </th>
-                      <th className="sticky left-[40px] z-20 bg-slate-50 border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 w-16">
-                        성명
-                      </th>
-                      <th className="sticky left-[104px] z-20 bg-slate-50 border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 w-16">
-                        직종
-                      </th>
-                      {/* Day columns */}
-                      {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-                        const weekend = isWeekend(selectedYear, selectedMonth, day);
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                근무 현황표 &mdash; {selectedYear}년 {selectedMonth}월
+                {workers.length > 0 && (
+                  <Badge variant="default" className="ml-2">
+                    {workers.length}명
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                  <span className="ml-3 text-sm text-slate-500">
+                    근무 기록을 불러오는 중...
+                  </span>
+                </div>
+              ) : workers.length === 0 ? (
+                <div className="py-20 text-center text-sm text-slate-400">
+                  등록된 일용 근로자가 없습니다.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b-2 border-slate-300 bg-slate-50">
+                        {/* Sticky columns */}
+                        <th className="sticky left-0 z-20 bg-slate-50 border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 w-10">
+                          No.
+                        </th>
+                        <th className="sticky left-[40px] z-20 bg-slate-50 border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 w-16">
+                          성명
+                        </th>
+                        <th className="sticky left-[104px] z-20 bg-slate-50 border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 w-16">
+                          직종
+                        </th>
+                        {/* Day columns */}
+                        {Array.from(
+                          { length: daysInMonth },
+                          (_, i) => i + 1,
+                        ).map((day) => {
+                          const weekend = isWeekend(
+                            selectedYear,
+                            selectedMonth,
+                            day,
+                          );
+                          return (
+                            <th
+                              key={`day-${day}`}
+                              className={`border-r border-slate-200 px-1 py-2 text-center font-medium w-8 ${
+                                weekend
+                                  ? "bg-blue-50 text-blue-600"
+                                  : "text-slate-500"
+                              }`}
+                            >
+                              {day}
+                            </th>
+                          );
+                        })}
+                        {/* Summary columns */}
+                        <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">
+                          출력일수
+                        </th>
+                        <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">
+                          공수
+                        </th>
+                        <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">
+                          단가
+                        </th>
+                        <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">
+                          노무비
+                        </th>
+                        <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">
+                          갑근세
+                        </th>
+                        <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">
+                          주민세
+                        </th>
+                        <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">
+                          건강보험
+                        </th>
+                        <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">
+                          요양보험
+                        </th>
+                        <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">
+                          국민연금
+                        </th>
+                        <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">
+                          고용보험
+                        </th>
+                        <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">
+                          공제계
+                        </th>
+                        <th className="px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">
+                          차감지급액
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {workers.map((worker, idx) => {
+                        const calc = getWorkerCalc(worker);
+                        const workerDayMap = workRecords.get(worker.id);
                         return (
-                          <th
-                            key={`day-${day}`}
-                            className={`border-r border-slate-200 px-1 py-2 text-center font-medium w-8 ${
-                              weekend ? "bg-blue-50 text-blue-600" : "text-slate-500"
-                            }`}
+                          <tr
+                            key={worker.id}
+                            className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
                           >
-                            {day}
-                          </th>
+                            {/* Sticky columns */}
+                            <td className="sticky left-0 z-10 bg-white border-r border-slate-200 px-2 py-2 text-center text-slate-500 font-medium">
+                              {idx + 1}
+                            </td>
+                            <td className="sticky left-[40px] z-10 bg-white border-r border-slate-200 px-2 py-2 text-center font-medium text-slate-900 whitespace-nowrap">
+                              {worker.name}
+                            </td>
+                            <td className="sticky left-[104px] z-10 bg-white border-r border-slate-200 px-2 py-2 text-center text-slate-500 whitespace-nowrap">
+                              {worker.job_type}
+                            </td>
+                            {/* Day cells */}
+                            {Array.from(
+                              { length: daysInMonth },
+                              (_, i) => i + 1,
+                            ).map((day) => {
+                              const manDays = workerDayMap?.get(day) || 0;
+                              const weekend = isWeekend(
+                                selectedYear,
+                                selectedMonth,
+                                day,
+                              );
+                              return (
+                                <td
+                                  key={`${worker.id}-${day}`}
+                                  onClick={() => toggleDay(worker.id, day)}
+                                  className={`border-r border-slate-100 px-1 py-2 text-center cursor-pointer select-none transition-colors ${
+                                    weekend ? "bg-blue-50/50" : ""
+                                  } ${manDays === 1 ? "text-blue-700 font-bold" : manDays === 0.5 ? "text-orange-600 font-semibold" : "text-slate-300"} hover:bg-blue-100`}
+                                >
+                                  {manDays === 1
+                                    ? "1"
+                                    : manDays === 0.5
+                                      ? "½"
+                                      : ""}
+                                </td>
+                              );
+                            })}
+                            {/* Summary columns */}
+                            <td className="border-r border-slate-200 px-2 py-2 text-center font-medium text-slate-700">
+                              {calc.totalDays || ""}
+                            </td>
+                            <td className="border-r border-slate-200 px-2 py-2 text-center font-medium text-slate-700">
+                              {calc.totalManDays || ""}
+                            </td>
+                            <td className="border-r border-slate-200 px-1 py-1">
+                              <input
+                                type="number"
+                                value={
+                                  workerRates.get(worker.id) ??
+                                  worker.daily_rate
+                                }
+                                onChange={(e) => {
+                                  const newRate = parseInt(e.target.value) || 0;
+                                  setWorkerRates((prev) =>
+                                    new Map(prev).set(worker.id, newRate),
+                                  );
+                                }}
+                                className="w-24 text-right font-mono text-slate-700 border border-slate-200 rounded px-1 py-0.5 text-sm focus:outline-none focus:border-blue-400"
+                              />
+                            </td>
+                            <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-slate-900 font-medium whitespace-nowrap">
+                              {calc.totalLaborCost > 0
+                                ? formatCurrency(calc.totalLaborCost)
+                                : ""}
+                            </td>
+                            <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
+                              {calc.income_tax > 0
+                                ? formatCurrency(calc.income_tax)
+                                : ""}
+                            </td>
+                            <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
+                              {calc.resident_tax > 0
+                                ? formatCurrency(calc.resident_tax)
+                                : ""}
+                            </td>
+                            <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
+                              {calc.health_insurance > 0
+                                ? formatCurrency(calc.health_insurance)
+                                : ""}
+                            </td>
+                            <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
+                              {calc.longterm_care > 0
+                                ? formatCurrency(calc.longterm_care)
+                                : ""}
+                            </td>
+                            <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
+                              {calc.national_pension > 0
+                                ? formatCurrency(calc.national_pension)
+                                : ""}
+                            </td>
+                            <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
+                              {calc.employment_insurance > 0
+                                ? formatCurrency(calc.employment_insurance)
+                                : ""}
+                            </td>
+                            <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-700 font-medium whitespace-nowrap">
+                              {calc.total_deductions > 0
+                                ? formatCurrency(calc.total_deductions)
+                                : ""}
+                            </td>
+                            <td className="px-2 py-2 text-right font-mono text-blue-700 font-bold whitespace-nowrap">
+                              {calc.net_pay > 0
+                                ? formatCurrency(calc.net_pay)
+                                : ""}
+                            </td>
+                          </tr>
                         );
                       })}
-                      {/* Summary columns */}
-                      <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">출력일수</th>
-                      <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">공수</th>
-                      <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">단가</th>
-                      <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">노무비</th>
-                      <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">갑근세</th>
-                      <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">주민세</th>
-                      <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">건강보험</th>
-                      <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">요양보험</th>
-                      <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">국민연금</th>
-                      <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">고용보험</th>
-                      <th className="border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-600">공제계</th>
-                      <th className="px-2 py-2 text-center font-semibold text-slate-600 whitespace-nowrap">차감지급액</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {workers.map((worker, idx) => {
-                      const calc = getWorkerCalc(worker);
-                      const workerDayMap = workRecords.get(worker.id);
-                      return (
-                        <tr
-                          key={worker.id}
-                          className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
-                        >
-                          {/* Sticky columns */}
-                          <td className="sticky left-0 z-10 bg-white border-r border-slate-200 px-2 py-2 text-center text-slate-500 font-medium">
-                            {idx + 1}
+
+                      {/* Totals row */}
+                      {workers.length > 0 && (
+                        <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold">
+                          <td
+                            colSpan={3}
+                            className="sticky left-0 z-10 bg-slate-50 border-r border-slate-200 px-2 py-3 text-center text-slate-700"
+                          >
+                            합계
                           </td>
-                          <td className="sticky left-[40px] z-10 bg-white border-r border-slate-200 px-2 py-2 text-center font-medium text-slate-900 whitespace-nowrap">
-                            {worker.name}
-                          </td>
-                          <td className="sticky left-[104px] z-10 bg-white border-r border-slate-200 px-2 py-2 text-center text-slate-500 whitespace-nowrap">
-                            {worker.job_type}
-                          </td>
-                          {/* Day cells */}
-                          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-                            const manDays = workerDayMap?.get(day) || 0;
-                            const weekend = isWeekend(selectedYear, selectedMonth, day);
-                            return (
-                              <td
-                                key={`${worker.id}-${day}`}
-                                onClick={() => toggleDay(worker.id, day)}
-                                className={`border-r border-slate-100 px-1 py-2 text-center cursor-pointer select-none transition-colors ${
-                                  weekend ? "bg-blue-50/50" : ""
-                                } ${manDays === 1 ? "text-blue-700 font-bold" : manDays === 0.5 ? "text-orange-600 font-semibold" : "text-slate-300"} hover:bg-blue-100`}
-                              >
-                                {manDays === 1 ? "1" : manDays === 0.5 ? "½" : ""}
-                              </td>
-                            );
-                          })}
-                          {/* Summary columns */}
-                          <td className="border-r border-slate-200 px-2 py-2 text-center font-medium text-slate-700">
-                            {calc.totalDays || ""}
-                          </td>
-                          <td className="border-r border-slate-200 px-2 py-2 text-center font-medium text-slate-700">
-                            {calc.totalManDays || ""}
-                          </td>
-                          <td className="border-r border-slate-200 px-1 py-1">
-                            <input
-                              type="number"
-                              value={workerRates.get(worker.id) ?? worker.daily_rate}
-                              onChange={(e) => {
-                                const newRate = parseInt(e.target.value) || 0;
-                                setWorkerRates((prev) => new Map(prev).set(worker.id, newRate));
-                              }}
-                              className="w-24 text-right font-mono text-slate-700 border border-slate-200 rounded px-1 py-0.5 text-sm focus:outline-none focus:border-blue-400"
+                          {/* Empty day columns */}
+                          {Array.from({ length: daysInMonth }, (_, i) => (
+                            <td
+                              key={`total-day-${i}`}
+                              className="border-r border-slate-100"
                             />
+                          ))}
+                          {/* Empty: 출력일수, 공수, 단가 */}
+                          <td className="border-r border-slate-200" />
+                          <td className="border-r border-slate-200" />
+                          <td className="border-r border-slate-200" />
+                          {/* 노무비 total */}
+                          <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-slate-900 whitespace-nowrap">
+                            {formatCurrency(totals.totalLaborCost)}
                           </td>
-                          <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-slate-900 font-medium whitespace-nowrap">
-                            {calc.totalLaborCost > 0 ? formatCurrency(calc.totalLaborCost) : ""}
+                          {/* Deduction detail totals */}
+                          {(() => {
+                            let tIncome = 0;
+                            let tResident = 0;
+                            let tHealth = 0;
+                            let tLongterm = 0;
+                            let tPension = 0;
+                            let tEmployment = 0;
+                            for (const w of workers) {
+                              const c = getWorkerCalc(w);
+                              tIncome += c.income_tax;
+                              tResident += c.resident_tax;
+                              tHealth += c.health_insurance;
+                              tLongterm += c.longterm_care;
+                              tPension += c.national_pension;
+                              tEmployment += c.employment_insurance;
+                            }
+                            return (
+                              <>
+                                <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
+                                  {tIncome > 0 ? formatCurrency(tIncome) : ""}
+                                </td>
+                                <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
+                                  {tResident > 0
+                                    ? formatCurrency(tResident)
+                                    : ""}
+                                </td>
+                                <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
+                                  {tHealth > 0 ? formatCurrency(tHealth) : ""}
+                                </td>
+                                <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
+                                  {tLongterm > 0
+                                    ? formatCurrency(tLongterm)
+                                    : ""}
+                                </td>
+                                <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
+                                  {tPension > 0 ? formatCurrency(tPension) : ""}
+                                </td>
+                                <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
+                                  {tEmployment > 0
+                                    ? formatCurrency(tEmployment)
+                                    : ""}
+                                </td>
+                              </>
+                            );
+                          })()}
+                          {/* 공제계 total */}
+                          <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-700 whitespace-nowrap">
+                            {formatCurrency(totals.totalDeductions)}
                           </td>
-                          <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
-                            {calc.income_tax > 0 ? formatCurrency(calc.income_tax) : ""}
-                          </td>
-                          <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
-                            {calc.resident_tax > 0 ? formatCurrency(calc.resident_tax) : ""}
-                          </td>
-                          <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
-                            {calc.health_insurance > 0 ? formatCurrency(calc.health_insurance) : ""}
-                          </td>
-                          <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
-                            {calc.longterm_care > 0 ? formatCurrency(calc.longterm_care) : ""}
-                          </td>
-                          <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
-                            {calc.national_pension > 0 ? formatCurrency(calc.national_pension) : ""}
-                          </td>
-                          <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-600 whitespace-nowrap">
-                            {calc.employment_insurance > 0 ? formatCurrency(calc.employment_insurance) : ""}
-                          </td>
-                          <td className="border-r border-slate-200 px-2 py-2 text-right font-mono text-red-700 font-medium whitespace-nowrap">
-                            {calc.total_deductions > 0 ? formatCurrency(calc.total_deductions) : ""}
-                          </td>
-                          <td className="px-2 py-2 text-right font-mono text-blue-700 font-bold whitespace-nowrap">
-                            {calc.net_pay > 0 ? formatCurrency(calc.net_pay) : ""}
+                          {/* 차감지급액 total */}
+                          <td className="px-2 py-3 text-right font-mono text-blue-700 whitespace-nowrap">
+                            {formatCurrency(totals.totalNetPay)}
                           </td>
                         </tr>
-                      );
-                    })}
-
-                    {/* Totals row */}
-                    {workers.length > 0 && (
-                      <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold">
-                        <td
-                          colSpan={3}
-                          className="sticky left-0 z-10 bg-slate-50 border-r border-slate-200 px-2 py-3 text-center text-slate-700"
-                        >
-                          합계
-                        </td>
-                        {/* Empty day columns */}
-                        {Array.from({ length: daysInMonth }, (_, i) => (
-                          <td key={`total-day-${i}`} className="border-r border-slate-100" />
-                        ))}
-                        {/* Empty: 출력일수, 공수, 단가 */}
-                        <td className="border-r border-slate-200" />
-                        <td className="border-r border-slate-200" />
-                        <td className="border-r border-slate-200" />
-                        {/* 노무비 total */}
-                        <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-slate-900 whitespace-nowrap">
-                          {formatCurrency(totals.totalLaborCost)}
-                        </td>
-                        {/* Deduction detail totals */}
-                        {(() => {
-                          let tIncome = 0;
-                          let tResident = 0;
-                          let tHealth = 0;
-                          let tLongterm = 0;
-                          let tPension = 0;
-                          let tEmployment = 0;
-                          for (const w of workers) {
-                            const c = getWorkerCalc(w);
-                            tIncome += c.income_tax;
-                            tResident += c.resident_tax;
-                            tHealth += c.health_insurance;
-                            tLongterm += c.longterm_care;
-                            tPension += c.national_pension;
-                            tEmployment += c.employment_insurance;
-                          }
-                          return (
-                            <>
-                              <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
-                                {tIncome > 0 ? formatCurrency(tIncome) : ""}
-                              </td>
-                              <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
-                                {tResident > 0 ? formatCurrency(tResident) : ""}
-                              </td>
-                              <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
-                                {tHealth > 0 ? formatCurrency(tHealth) : ""}
-                              </td>
-                              <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
-                                {tLongterm > 0 ? formatCurrency(tLongterm) : ""}
-                              </td>
-                              <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
-                                {tPension > 0 ? formatCurrency(tPension) : ""}
-                              </td>
-                              <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-600 whitespace-nowrap">
-                                {tEmployment > 0 ? formatCurrency(tEmployment) : ""}
-                              </td>
-                            </>
-                          );
-                        })()}
-                        {/* 공제계 total */}
-                        <td className="border-r border-slate-200 px-2 py-3 text-right font-mono text-red-700 whitespace-nowrap">
-                          {formatCurrency(totals.totalDeductions)}
-                        </td>
-                        {/* 차감지급액 total */}
-                        <td className="px-2 py-3 text-right font-mono text-blue-700 whitespace-nowrap">
-                          {formatCurrency(totals.totalNetPay)}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Summary Cards */}
@@ -854,9 +1012,7 @@ export default function PayrollPage() {
               <div className="text-2xl font-bold text-red-600">
                 {formatCurrency(totals.totalDeductions)}원
               </div>
-              <p className="text-xs text-slate-400 mt-1">
-                세금 + 4대보험
-              </p>
+              <p className="text-xs text-slate-400 mt-1">세금 + 4대보험</p>
             </CardContent>
           </Card>
           <Card>
@@ -869,9 +1025,7 @@ export default function PayrollPage() {
               <div className="text-2xl font-bold text-blue-700">
                 {formatCurrency(totals.totalNetPay)}원
               </div>
-              <p className="text-xs text-slate-400 mt-1">
-                노무비 - 공제
-              </p>
+              <p className="text-xs text-slate-400 mt-1">노무비 - 공제</p>
             </CardContent>
           </Card>
         </div>
