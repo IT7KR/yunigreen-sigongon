@@ -14,9 +14,9 @@ if TYPE_CHECKING:
 
 class SubscriptionPlan(str, Enum):
     """Subscription plan enumeration."""
-    STARTER = "starter"
-    STANDARD = "standard"
-    PREMIUM = "premium"
+    TRIAL = "trial"
+    BASIC = "basic"
+    PRO = "pro"
 
 
 class SubscriptionStatus(str, Enum):

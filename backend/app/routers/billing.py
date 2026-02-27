@@ -33,9 +33,9 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 # Plan pricing (KRW per year)
 PLAN_PRICING = {
-    SubscriptionPlan.STARTER: Decimal("99000"),
-    SubscriptionPlan.STANDARD: Decimal("199000"),
-    SubscriptionPlan.PREMIUM: Decimal("399000"),
+    SubscriptionPlan.TRIAL: Decimal("0"),
+    SubscriptionPlan.BASIC: Decimal("588000"),
+    SubscriptionPlan.PRO: Decimal("1188000"),
 }
 
 
@@ -139,6 +139,13 @@ async def confirm_payment(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="구독 정보를 찾을 수 없어요",
+        )
+
+    # Trial 플랜은 결제 불필요
+    if subscription.plan == SubscriptionPlan.TRIAL:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="무료 체험 플랜은 결제가 필요하지 않아요",
         )
 
     # Validate amount against plan pricing

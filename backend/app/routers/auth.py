@@ -1,5 +1,5 @@
 """인증 API 라우터."""
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -431,6 +431,30 @@ async def register(request: RegisterRequest, db: DBSession):
         organization_id=org.id,
     )
     db.add(user)
+    await db.flush()
+
+    # Subscription 생성
+    from app.models.billing import Subscription, SubscriptionPlan, SubscriptionStatus
+    try:
+        plan_enum = SubscriptionPlan(request.plan)
+    except ValueError:
+        plan_enum = SubscriptionPlan.TRIAL
+
+    now = datetime.utcnow()
+    if plan_enum == SubscriptionPlan.TRIAL:
+        expires_at = now + timedelta(days=30)
+    else:
+        # 유료 플랜: billing/confirm 호출 시 +365일 연장됨
+        expires_at = now
+
+    subscription = Subscription(
+        organization_id=org.id,
+        plan=plan_enum,
+        status=SubscriptionStatus.ACTIVE,
+        started_at=now,
+        expires_at=expires_at,
+    )
+    db.add(subscription)
     await db.commit()
     await db.refresh(user)
 
