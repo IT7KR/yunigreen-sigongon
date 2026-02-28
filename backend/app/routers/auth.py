@@ -237,6 +237,8 @@ async def send_otp(request: OtpSendRequest, db: DBSession):
     sms = get_sms_service()
     try:
         request_id = await sms.send_otp(request.phone, db)
+    except ValueError as e:
+        raise HTTPException(status_code=429, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     return APIResponse.ok(

@@ -45,8 +45,28 @@ class SMSService(ABC):
 
 # ── 공통 OTP DB 헬퍼 ─────────────────────────────────────────────────────────
 
+_OTP_RESEND_COOLDOWN_SECONDS = 60
+
+
 async def _create_otp_record(phone: str, db: AsyncSession) -> tuple[str, str]:
-    """6자리 OTP 생성 후 DB 저장. (request_id, code) 반환."""
+    """6자리 OTP 생성 후 DB 저장. (request_id, code) 반환.
+
+    동일 phone에 60초 이내 재발송 시 ValueError 발생.
+    """
+    # rate limit: 동일 phone의 미사용 OTP가 60초 이내에 있으면 차단
+    cooldown_boundary = datetime.utcnow() - timedelta(seconds=_OTP_RESEND_COOLDOWN_SECONDS)
+    result = await db.execute(
+        select(OtpRecord)
+        .where(OtpRecord.phone == phone)
+        .where(OtpRecord.is_used == False)
+        .where(OtpRecord.created_at > cooldown_boundary)
+        .order_by(OtpRecord.created_at.desc())
+        .limit(1)
+    )
+    recent = result.scalar_one_or_none()
+    if recent is not None:
+        raise ValueError("인증번호를 너무 자주 요청했습니다. 잠시 후 다시 시도해주세요.")
+
     code = f"{random.randint(0, 999999):06d}"
     request_id = f"otp_{random.randint(100000, 999999)}_{int(time.time())}"
     record = OtpRecord(
