@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     aligo_user_id: Optional[str] = None
     aligo_sender: Optional[str] = None
     aligo_is_mock: bool = True
+    aligo_testmode: bool = False  # True이면 실제 발송 없이 Aligo 서버 테스트 (과금 없음)
 
     # Modusign (전자서명)
     modusign_api_key: Optional[str] = None
