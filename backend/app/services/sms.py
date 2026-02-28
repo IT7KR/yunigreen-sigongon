@@ -210,7 +210,7 @@ def get_sms_service() -> SMSService:
                 api_key=settings.aligo_api_key,
                 user_id=settings.aligo_user_id or "",
                 sender=settings.aligo_sender or "",
-                testmode=getattr(settings, "aligo_testmode", False),
+                testmode=settings.aligo_testmode,
             )
     return _sms_service
 
