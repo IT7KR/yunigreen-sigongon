@@ -235,7 +235,10 @@ async def get_me(
 async def send_otp(request: OtpSendRequest, db: DBSession):
     """OTP 인증번호 발송."""
     sms = get_sms_service()
-    request_id = await sms.send_otp(request.phone, db)
+    try:
+        request_id = await sms.send_otp(request.phone, db)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     return APIResponse.ok(
         OtpSendResponse(
             request_id=request_id,

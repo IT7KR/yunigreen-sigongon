@@ -127,6 +127,7 @@ class AligoSMSService(SMSService):
         result = await self.send_sms(phone, message)
         if not result.get("success"):
             self._logger.error(f"OTP SMS 발송 실패: {result}")
+            raise RuntimeError(f"SMS 발송에 실패했습니다. 잠시 후 다시 시도해주세요.")
         return request_id
 
     async def verify_otp(self, request_id: str, code: str, db: AsyncSession) -> bool:
