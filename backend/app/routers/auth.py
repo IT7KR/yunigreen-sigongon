@@ -232,10 +232,10 @@ async def get_me(
 
 
 @router.post("/otp/send", response_model=APIResponse[OtpSendResponse])
-async def send_otp(request: OtpSendRequest):
+async def send_otp(request: OtpSendRequest, db: DBSession):
     """OTP 인증번호 발송."""
     sms = get_sms_service()
-    request_id = await sms.send_otp(request.phone)
+    request_id = await sms.send_otp(request.phone, db)
     return APIResponse.ok(
         OtpSendResponse(
             request_id=request_id,
@@ -245,10 +245,10 @@ async def send_otp(request: OtpSendRequest):
 
 
 @router.post("/otp/verify", response_model=APIResponse[OtpVerifyResponse])
-async def verify_otp(request: OtpVerifyRequest):
+async def verify_otp(request: OtpVerifyRequest, db: DBSession):
     """OTP 인증번호 검증."""
     sms = get_sms_service()
-    verified = await sms.verify_otp(request.request_id, request.code)
+    verified = await sms.verify_otp(request.request_id, request.code, db)
     if not verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -295,7 +295,7 @@ async def request_password_reset(request: PasswordResetRequest, db: DBSession):
         )
 
     sms = get_sms_service()
-    request_id = await sms.send_otp(user.phone)
+    request_id = await sms.send_otp(user.phone, db)
 
     # 휴대전화 마스킹 (010-****-5678)
     phone = user.phone.replace("-", "")
@@ -317,7 +317,7 @@ async def request_password_reset(request: PasswordResetRequest, db: DBSession):
 async def confirm_password_reset(request: PasswordResetConfirm, db: DBSession):
     """OTP 검증 후 비밀번호 재설정."""
     sms = get_sms_service()
-    verified = await sms.verify_otp(request.request_id, request.code)
+    verified = await sms.verify_otp(request.request_id, request.code, db)
     if not verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
