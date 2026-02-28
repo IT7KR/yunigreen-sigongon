@@ -17,6 +17,7 @@ from app.core.security import (
     decode_token,
     get_current_user,
 )
+from app.models.otp import OtpRecord
 from app.models.user import User, UserLogin, Token, UserRead, UserRole, OrganizationRead
 from app.schemas.response import APIResponse
 from app.services.sms import get_sms_service
@@ -334,8 +335,33 @@ async def confirm_password_reset(request: PasswordResetConfirm, db: DBSession):
             detail="인증번호가 올바르지 않거나 만료되었어요.",
         )
 
-    # 비밀번호 업데이트 (실제 구현 시 request_id에서 사용자 정보 조회 필요)
-    # 현재는 OTP 서비스에서 phone 정보를 저장하고 있다고 가정
+    # OtpRecord에서 phone 조회
+    otp_result = await db.execute(
+        select(OtpRecord).where(OtpRecord.request_id == request.request_id)
+    )
+    otp_record = otp_result.scalar_one_or_none()
+    if not otp_record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="유효하지 않은 요청입니다.",
+        )
+
+    # phone으로 User 조회
+    user_result = await db.execute(
+        select(User).where(User.phone == otp_record.phone)
+    )
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다.",
+        )
+
+    # 비밀번호 변경
+    user.password_hash = get_password_hash(request.new_password)
+    db.add(user)
+    await db.commit()
+
     return APIResponse.ok(
         OtpVerifyResponse(
             verified=True,
