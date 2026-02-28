@@ -300,7 +300,12 @@ async def request_password_reset(request: PasswordResetRequest, db: DBSession):
         )
 
     sms = get_sms_service()
-    request_id = await sms.send_otp(user.phone, db)
+    try:
+        request_id = await sms.send_otp(user.phone, db)
+    except ValueError as e:
+        raise HTTPException(status_code=429, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     # 휴대전화 마스킹 (010-****-5678)
     phone = user.phone.replace("-", "")
