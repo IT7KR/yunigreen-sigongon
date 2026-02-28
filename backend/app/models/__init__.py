@@ -147,6 +147,7 @@ from app.models.device_token import (
     DeviceTokenCreate,
     DeviceTokenRead,
 )
+from app.models.otp import OtpRecord
 
 __all__ = [
     # Base
@@ -330,4 +331,6 @@ __all__ = [
     "DeviceToken",
     "DeviceTokenCreate",
     "DeviceTokenRead",
+    # OTP
+    "OtpRecord",
 ]

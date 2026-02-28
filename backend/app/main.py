@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.database import init_db, close_db
 from app.core.exceptions import SigongCoreException
 from app.core.snowflake import set_snowflake_worker
+from app.models.otp import OtpRecord  # noqa: F401
 
 
 @asynccontextmanager
