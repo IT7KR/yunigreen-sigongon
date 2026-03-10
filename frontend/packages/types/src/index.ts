@@ -463,6 +463,18 @@ export interface WarrantyInfo {
   }>
 }
 
+export interface MaterialMaster {
+  id: string
+  name: string
+  unit: string
+  unit_price: number
+  is_active: boolean
+  created_by_user_id?: string | null
+  updated_by_user_id?: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface MaterialOrder {
   id: string
   project_id: string
@@ -489,6 +501,7 @@ export interface MaterialOrder {
 
 export interface MaterialOrderItem {
   id: string
+  material_master_id?: string | null
   catalog_item_id?: string | null
   pricebook_revision_id?: string | null
   price_source?: string

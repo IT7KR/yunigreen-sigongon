@@ -59,6 +59,7 @@ import type {
   DiagnosisCaseImage,
   VisionResultDetail,
   DiagnosisCaseEstimate,
+  MaterialMaster,
   MaterialOrder,
   MaterialOrderItem,
   MaterialOrderMobileSummary,
@@ -454,7 +455,7 @@ export class APIClient {
     contact_name?: string;
     contact_phone?: string;
     contact_position?: string;
-    plan: string;
+    plan?: string;
   }) {
     const response = await this.client.post<
       APIResponse<{ tenant_id: string; user_id: string; access_token: string }>
@@ -1488,14 +1489,24 @@ export class APIClient {
     payment_key: string;
     order_id: string;
     amount: number;
+    plan?: SubscriptionPlan;
   }) {
     const response = await this.client.post<
       APIResponse<{
-        payment_id: string;
-        subscription_id: string;
+        id: number;
+        subscription_id: number;
+        organization_id: number;
+        payment_key: string;
+        order_id: string;
+        amount: number;
+        method?: string | null;
         status: string;
-        expires_at: string;
-        message: string;
+        paid_at?: string | null;
+        failed_at?: string | null;
+        failure_reason?: string | null;
+        receipt_url?: string | null;
+        created_at: string;
+        updated_at: string;
       }>
     >("/billing/confirm", data);
     return response.data;
@@ -2313,11 +2324,18 @@ export class APIClient {
     const response = await this.client.get<
       APIResponse<{
         plan: string;
-        interval: "monthly" | "yearly";
-        next_billing_at: string;
+        subscription_start_date?: string | null;
+        subscription_end_date: string;
+        days_remaining: number;
+        is_custom_trial: boolean;
+        billing_amount: number;
         seats_used: number;
         seats_total: number;
-        payment_method: {
+        scheduled_plan?: string | null;
+        scheduled_plan_date?: string | null;
+        trial_source?: string | null;
+        trial_months?: number;
+        payment_method?: {
           brand: string;
           last4: string;
           expires: string;
@@ -2450,11 +2468,12 @@ export class APIClient {
       PaginatedResponse<{
         id: string;
         name: string;
-        plan: "trial" | "basic" | "pro";
+        plan: string;
         users_count: number;
         projects_count: number;
         created_at: string;
         billing_amount?: number;
+        status?: "active" | "inactive";
       }>
     >("/admin/tenants", { params });
     return response.data;
@@ -2465,7 +2484,7 @@ export class APIClient {
       APIResponse<{
         id: string;
         name: string;
-        plan: "trial" | "basic" | "pro";
+        plan: string;
         users_count: number;
         projects_count: number;
         created_at: string;
@@ -2481,25 +2500,58 @@ export class APIClient {
         is_custom_trial: boolean;
         billing_amount: number;
         is_active?: boolean;
+        trial_override_enabled?: boolean | null;
+        trial_override_months?: number | null;
+        trial_override_reason?: string | null;
+        effective_trial_enabled?: boolean;
+        effective_trial_months?: number;
+        trial_source?: string | null;
       }>
     >(`/admin/tenants/${tenantId}`);
     return response.data;
   }
 
-  async setCustomTrialPeriod(
+  async getTrialPolicy() {
+    const response = await this.client.get<
+      APIResponse<{
+        default_trial_enabled: boolean;
+        default_trial_months: number;
+      }>
+    >("/admin/billing/trial-policy");
+    return response.data;
+  }
+
+  async updateTrialPolicy(data: {
+    default_trial_enabled: boolean;
+    default_trial_months: number;
+  }) {
+    const response = await this.client.put<
+      APIResponse<{
+        default_trial_enabled: boolean;
+        default_trial_months: number;
+      }>
+    >("/admin/billing/trial-policy", data);
+    return response.data;
+  }
+
+  async setTenantTrialPolicy(
     tenantId: string,
     data: {
-      end_date: string;
+      trial_enabled: boolean;
+      trial_months: number;
       reason?: string;
     },
   ) {
-    const response = await this.client.post<
+    const response = await this.client.put<
       APIResponse<{
         id: string;
+        trial_enabled: boolean;
+        trial_months: number;
+        reason?: string | null;
         subscription_end_date: string;
         is_custom_trial: boolean;
       }>
-    >(`/admin/tenants/${tenantId}/custom-trial`, data);
+    >(`/admin/tenants/${tenantId}/trial-policy`, data);
     return response.data;
   }
 
@@ -3379,6 +3431,44 @@ export class APIClient {
   // Material Orders (자재 발주)
   // ============================================
 
+  async getMaterialMasters() {
+    const response = await this.client.get<APIResponse<MaterialMaster[]>>(
+      "/material-masters",
+    );
+    return response.data;
+  }
+
+  async getAdminMaterialMasters() {
+    const response = await this.client.get<APIResponse<MaterialMaster[]>>(
+      "/admin/material-masters",
+    );
+    return response.data;
+  }
+
+  async createMaterialMaster(data: {
+    name: string;
+    unit: string;
+    unit_price: number;
+    is_active?: boolean;
+  }) {
+    const response = await this.client.post<APIResponse<MaterialMaster>>(
+      "/admin/material-masters",
+      data,
+    );
+    return response.data;
+  }
+
+  async updateMaterialMaster(
+    materialMasterId: string,
+    data: Partial<Pick<MaterialMaster, "name" | "unit" | "unit_price" | "is_active">>,
+  ) {
+    const response = await this.client.patch<APIResponse<MaterialMaster>>(
+      `/admin/material-masters/${materialMasterId}`,
+      data,
+    );
+    return response.data;
+  }
+
   async getMaterialOrders(projectId: string) {
     const response = await this.client.get<APIResponse<MaterialOrder[]>>(
       `/projects/${projectId}/material-orders`,
@@ -3405,6 +3495,7 @@ export class APIClient {
             | "specification"
             | "unit"
             | "unit_price"
+            | "material_master_id"
             | "catalog_item_id"
             | "pricebook_revision_id"
             | "override_reason"
@@ -3426,8 +3517,15 @@ export class APIClient {
     >(`/projects/${projectId}/material-orders`, {
       ...data,
       items: data.items.map((item) => {
+        const rawMaterialMasterId = item.material_master_id;
         const rawCatalogId = item.catalog_item_id;
         const rawRevisionId = item.pricebook_revision_id;
+        const parsedMaterialMasterId =
+          rawMaterialMasterId === undefined ||
+          rawMaterialMasterId === null ||
+          rawMaterialMasterId === ""
+            ? undefined
+            : Number(rawMaterialMasterId);
         const parsedCatalogId =
           rawCatalogId === undefined ||
           rawCatalogId === null ||
@@ -3443,6 +3541,9 @@ export class APIClient {
 
         return {
           ...item,
+          material_master_id: Number.isFinite(parsedMaterialMasterId)
+            ? parsedMaterialMasterId
+            : undefined,
           catalog_item_id: Number.isFinite(parsedCatalogId)
             ? parsedCatalogId
             : undefined,
