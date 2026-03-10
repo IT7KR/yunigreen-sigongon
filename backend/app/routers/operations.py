@@ -34,7 +34,14 @@ from app.core.permissions import (
     get_project_for_user,
 )
 from app.core.security import get_current_user, get_password_hash, verify_password
-from app.models.billing import Payment, PaymentStatus, Subscription, SubscriptionPlan, SubscriptionStatus
+from app.models.billing import (
+    OrganizationTrialOverride,
+    Payment,
+    PaymentStatus,
+    Subscription,
+    SubscriptionPlan,
+    SubscriptionStatus,
+)
 from app.models.consent import ConsentRecord
 from app.models.contract import LaborContract, LaborContractStatus
 from app.models.diagnosis import AIDiagnosis
@@ -47,6 +54,7 @@ from app.models.operations import (
     InsuranceRate,
     Invitation,
     InvitationStatus,
+    MaterialMaster,
     MaterialOrder,
     MaterialOrderItem,
     MaterialOrderStatus,
@@ -80,6 +88,13 @@ from app.services.labor_codebook import (
     normalize_code,
 )
 from app.services.storage import storage_service
+from app.services.trial_policy import (
+    add_months,
+    get_or_create_signup_trial_policy,
+    get_trial_override,
+    normalize_trial_months,
+    resolve_trial_policy,
+)
 
 router = APIRouter()
 
@@ -167,6 +182,23 @@ def _require_worker_document_review_role(user: User) -> None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="근로자 서류 검토/통제 권한이 없어요.",
+        )
+
+
+def _require_material_master_access_role(user: User) -> None:
+    role = _role_value(user)
+    if role == ROLE_WORKER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="자재 마스터를 조회할 권한이 없어요.",
+        )
+
+
+def _require_super_admin(user: User) -> None:
+    if _role_value(user) != ROLE_SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="최고 관리자만 처리할 수 있는 작업이에요.",
         )
 
 
@@ -446,6 +478,12 @@ def _require_material_order_status_permission(
 ) -> None:
     role = _role_value(user)
 
+    if target_status == MaterialOrderStatus.INVOICE_RECEIVED.value and role != ROLE_SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="발주 확인은 최고 관리자만 처리할 수 있어요.",
+        )
+
     if target_status in _MATERIAL_ORDER_FINANCE_STATUSES and role not in {
         ROLE_COMPANY_ADMIN,
         ROLE_SUPER_ADMIN,
@@ -465,6 +503,7 @@ def _require_material_order_status_permission(
 def _serialize_material_order_item(item: MaterialOrderItem) -> dict:
     return {
         "id": str(item.id),
+        "material_master_id": str(item.material_master_id) if item.material_master_id else None,
         "catalog_item_id": str(item.catalog_item_id) if item.catalog_item_id else None,
         "pricebook_revision_id": str(item.pricebook_revision_id) if item.pricebook_revision_id else None,
         "price_source": item.price_source,
@@ -502,6 +541,24 @@ def _serialize_material_order(order: MaterialOrder, items: list[MaterialOrderIte
         "created_at": order.created_at.isoformat(),
         "updated_at": order.updated_at.isoformat(),
         "items": [_serialize_material_order_item(item) for item in items],
+    }
+
+
+def _serialize_material_master(material_master: MaterialMaster) -> dict:
+    return {
+        "id": str(material_master.id),
+        "name": material_master.name,
+        "unit": material_master.unit,
+        "unit_price": float(material_master.unit_price),
+        "is_active": material_master.is_active,
+        "created_by_user_id": (
+            str(material_master.created_by) if material_master.created_by else None
+        ),
+        "updated_by_user_id": (
+            str(material_master.updated_by) if material_master.updated_by else None
+        ),
+        "created_at": material_master.created_at.isoformat(),
+        "updated_at": material_master.updated_at.isoformat(),
     }
 
 
@@ -1344,6 +1401,7 @@ async def patch_utility_status(
 
 
 class MaterialOrderItemInput(BaseModel):
+    material_master_id: Optional[int] = None
     catalog_item_id: Optional[int] = None
     pricebook_revision_id: Optional[int] = None
     description: Optional[str] = None
@@ -1366,6 +1424,139 @@ class MaterialOrderStatusPatchRequest(BaseModel):
     invoice_number: Optional[str] = None
     invoice_amount: Optional[int] = None
     invoice_file_url: Optional[str] = None
+
+
+class MaterialMasterCreateRequest(BaseModel):
+    name: str
+    unit: str
+    unit_price: Decimal
+    is_active: bool = True
+
+
+class MaterialMasterUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    unit: Optional[str] = None
+    unit_price: Optional[Decimal] = None
+    is_active: Optional[bool] = None
+
+
+def _validate_material_master_name(raw_value: Optional[str]) -> str:
+    value = (raw_value or "").strip()
+    if not value:
+        raise HTTPException(status_code=400, detail="품목명을 입력해 주세요.")
+    return value
+
+
+def _validate_material_master_unit(raw_value: Optional[str]) -> str:
+    value = (raw_value or "").strip()
+    if not value:
+        raise HTTPException(status_code=400, detail="단위를 입력해 주세요.")
+    return value
+
+
+def _validate_material_master_price(raw_value: Optional[Decimal]) -> Decimal:
+    if raw_value is None or raw_value <= 0:
+        raise HTTPException(status_code=400, detail="단가는 0보다 커야 해요.")
+    return raw_value
+
+
+@router.get("/material-masters", response_model=APIResponse[list[dict]])
+async def list_material_masters(
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _require_material_master_access_role(current_user)
+
+    material_masters = (
+        await db.execute(
+            select(MaterialMaster)
+            .where(MaterialMaster.is_active == True)
+            .order_by(MaterialMaster.name.asc(), MaterialMaster.id.asc())
+        )
+    ).scalars().all()
+
+    return APIResponse.ok(
+        [_serialize_material_master(material_master) for material_master in material_masters]
+    )
+
+
+@router.get("/admin/material-masters", response_model=APIResponse[list[dict]])
+async def list_admin_material_masters(
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _require_super_admin(current_user)
+
+    material_masters = (
+        await db.execute(
+            select(MaterialMaster).order_by(
+                MaterialMaster.updated_at.desc(),
+                MaterialMaster.name.asc(),
+            )
+        )
+    ).scalars().all()
+
+    return APIResponse.ok(
+        [_serialize_material_master(material_master) for material_master in material_masters]
+    )
+
+
+@router.post("/admin/material-masters", response_model=APIResponse[dict], status_code=status.HTTP_201_CREATED)
+async def create_material_master(
+    payload: MaterialMasterCreateRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _require_super_admin(current_user)
+
+    now = datetime.utcnow()
+    material_master = MaterialMaster(
+        name=_validate_material_master_name(payload.name),
+        unit=_validate_material_master_unit(payload.unit),
+        unit_price=_validate_material_master_price(payload.unit_price),
+        is_active=payload.is_active,
+        created_by=current_user.id,
+        updated_by=current_user.id,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(material_master)
+    await db.flush()
+
+    return APIResponse.ok(_serialize_material_master(material_master))
+
+
+@router.patch("/admin/material-masters/{material_master_id}", response_model=APIResponse[dict])
+async def update_material_master(
+    material_master_id: int,
+    payload: MaterialMasterUpdateRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _require_super_admin(current_user)
+
+    material_master = (
+        await db.execute(
+            select(MaterialMaster).where(MaterialMaster.id == material_master_id)
+        )
+    ).scalar_one_or_none()
+    if not material_master:
+        raise NotFoundException("material_master", material_master_id)
+
+    if payload.name is not None:
+        material_master.name = _validate_material_master_name(payload.name)
+    if payload.unit is not None:
+        material_master.unit = _validate_material_master_unit(payload.unit)
+    if payload.unit_price is not None:
+        material_master.unit_price = _validate_material_master_price(payload.unit_price)
+    if payload.is_active is not None:
+        material_master.is_active = payload.is_active
+
+    material_master.updated_by = current_user.id
+    material_master.updated_at = datetime.utcnow()
+    await db.flush()
+
+    return APIResponse.ok(_serialize_material_master(material_master))
 
 
 @router.get("/projects/{project_id}/material-orders", response_model=APIResponse[list[dict]])
@@ -1475,17 +1666,57 @@ async def create_material_order(
     for row in payload.items:
         if row.quantity <= 0:
             raise HTTPException(status_code=400, detail="수량은 0보다 커야 해요")
+        if row.material_master_id is not None and row.catalog_item_id is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="자재 마스터와 카탈로그 품목은 동시에 선택할 수 없어요.",
+            )
 
         resolved_description = (row.description or "").strip()
         resolved_specification = (row.specification or "").strip() or None
         resolved_unit = (row.unit or "").strip()
         resolved_unit_price: Optional[Decimal] = row.unit_price
+        resolved_material_master_id = row.material_master_id
         resolved_catalog_item_id = row.catalog_item_id
         resolved_revision_id = row.pricebook_revision_id
         price_source = "catalog_revision"
         override_reason = (row.override_reason or "").strip() or None
 
-        if row.catalog_item_id is not None:
+        if row.material_master_id is not None:
+            material_master = (
+                await db.execute(
+                    select(MaterialMaster).where(
+                        MaterialMaster.id == row.material_master_id
+                    )
+                )
+            ).scalar_one_or_none()
+            if not material_master or not material_master.is_active:
+                raise HTTPException(
+                    status_code=400,
+                    detail="선택한 자재 마스터를 찾을 수 없어요.",
+                )
+
+            resolved_description = material_master.name
+            resolved_unit = material_master.unit
+            resolved_unit_price = material_master.unit_price
+            resolved_catalog_item_id = None
+            resolved_revision_id = None
+            price_source = "material_master"
+
+            if row.unit_price is not None and row.unit_price != material_master.unit_price:
+                if not can_override_price:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="단가 수동 변경은 대표자 또는 최고관리자만 할 수 있어요.",
+                    )
+                if not override_reason:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="단가를 수동 변경할 때는 사유를 입력해 주세요.",
+                    )
+                resolved_unit_price = row.unit_price
+                price_source = "manual_override"
+        elif row.catalog_item_id is not None:
             if resolved_revision_id is None:
                 resolved_revision_id = project.pricebook_revision_id
             if resolved_revision_id is None:
@@ -1568,6 +1799,7 @@ async def create_material_order(
         db.add(
             MaterialOrderItem(
                 material_order_id=order.id,
+                material_master_id=resolved_material_master_id,
                 catalog_item_id=resolved_catalog_item_id,
                 pricebook_revision_id=resolved_revision_id,
                 price_source=price_source,
@@ -5005,9 +5237,31 @@ class PaymentMethodRequest(BaseModel):
     expiry: str
 
 
-class CustomTrialRequest(BaseModel):
-    end_date: str
+class TrialPolicyRequest(BaseModel):
+    default_trial_enabled: bool
+    default_trial_months: int = 0
+
+
+class TenantTrialOverrideRequest(BaseModel):
+    trial_enabled: bool
+    trial_months: int = 0
     reason: Optional[str] = None
+
+
+def _billing_plan_label(plan: SubscriptionPlan) -> str:
+    return {
+        SubscriptionPlan.TRIAL: "무료 체험",
+        SubscriptionPlan.BASIC: "Basic",
+        SubscriptionPlan.PRO: "Pro",
+    }[plan]
+
+
+def _billing_seat_limit(plan: SubscriptionPlan) -> int:
+    return {
+        SubscriptionPlan.TRIAL: 2,
+        SubscriptionPlan.BASIC: 5,
+        SubscriptionPlan.PRO: 999,
+    }[plan]
 
 
 @router.get("/billing/overview", response_model=APIResponse[dict])
@@ -5017,7 +5271,12 @@ async def get_billing_overview(
 ):
     org_id = _require_org_id(current_user)
 
-    subscription = (await db.execute(select(Subscription).where(Subscription.organization_id == org_id))).scalar_one_or_none()
+    subscription = (
+        await db.execute(
+            select(Subscription).where(Subscription.organization_id == org_id)
+        )
+    ).scalar_one_or_none()
+    trial_override = await get_trial_override(db, org_id)
     if not subscription:
         return APIResponse.ok(
             {
@@ -5025,10 +5284,18 @@ async def get_billing_overview(
                 "subscription_start_date": None,
                 "subscription_end_date": "",
                 "days_remaining": 0,
-                "is_custom_trial": True,
+                "is_custom_trial": False,
                 "billing_amount": 0,
                 "seats_used": 0,
                 "seats_total": 0,
+                "scheduled_plan": None,
+                "scheduled_plan_date": None,
+                "trial_source": "override"
+                if trial_override and trial_override.trial_enabled
+                else None,
+                "trial_months": trial_override.trial_months
+                if trial_override and trial_override.trial_enabled
+                else 0,
                 "history": [],
             }
         )
@@ -5040,14 +5307,14 @@ async def get_billing_overview(
         .limit(20)
     )).scalars().all()
 
-    plan_label = {
-        SubscriptionPlan.STARTER: "STARTER",
-        SubscriptionPlan.STANDARD: "STANDARD",
-        SubscriptionPlan.PREMIUM: "PREMIUM",
-    }.get(subscription.plan, subscription.plan.value)
-
     now = datetime.utcnow()
     days_remaining = max(0, (subscription.expires_at.date() - now.date()).days)
+    trial_resolution = (
+        await resolve_trial_policy(db, org_id)
+        if subscription.plan == SubscriptionPlan.TRIAL
+        else None
+    )
+    plan_label = _billing_plan_label(subscription.plan)
 
     return APIResponse.ok(
         {
@@ -5055,12 +5322,30 @@ async def get_billing_overview(
             "subscription_start_date": subscription.started_at.isoformat(),
             "subscription_end_date": subscription.expires_at.isoformat(),
             "days_remaining": days_remaining,
-            "is_custom_trial": subscription.plan == SubscriptionPlan.STARTER and not subscription.billing_key,
-            "billing_amount": int(_safe_decimal_to_int(next((p.amount for p in payments if p.status == PaymentStatus.PAID), 0))),
+            "is_custom_trial": (
+                subscription.plan == SubscriptionPlan.TRIAL
+                and trial_resolution is not None
+                and trial_resolution.source == "override"
+            ),
+            "billing_amount": int(
+                _safe_decimal_to_int(
+                    next((p.amount for p in payments if p.status == PaymentStatus.PAID), 0)
+                )
+            ),
             "seats_used": 0,
-            "seats_total": 999,
+            "seats_total": _billing_seat_limit(subscription.plan),
             "scheduled_plan": None,
             "scheduled_plan_date": None,
+            "trial_source": (
+                trial_resolution.source
+                if subscription.plan == SubscriptionPlan.TRIAL and trial_resolution
+                else None
+            ),
+            "trial_months": (
+                trial_resolution.months
+                if subscription.plan == SubscriptionPlan.TRIAL and trial_resolution
+                else 0
+            ),
             "history": [
                 {
                     "id": str(p.id),
@@ -5089,6 +5374,7 @@ async def change_payment_method(
 
     subscription.billing_key = f"manual_{payload.card_number[-4:]}_{payload.expiry}"
     subscription.updated_at = datetime.utcnow()
+    await db.commit()
 
     return APIResponse.ok(
         {
@@ -5099,6 +5385,53 @@ async def change_payment_method(
                 "expires": payload.expiry,
             },
             "message": "결제수단을 변경했어요.",
+        }
+    )
+
+
+@router.get("/admin/billing/trial-policy", response_model=APIResponse[dict])
+async def get_signup_trial_policy(
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _require_super_admin(current_user)
+
+    policy = await get_or_create_signup_trial_policy(db)
+    return APIResponse.ok(
+        {
+            "default_trial_enabled": policy.default_trial_enabled,
+            "default_trial_months": policy.default_trial_months,
+        }
+    )
+
+
+@router.put("/admin/billing/trial-policy", response_model=APIResponse[dict])
+async def update_signup_trial_policy(
+    payload: TrialPolicyRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    _require_super_admin(current_user)
+
+    months = normalize_trial_months(
+        payload.default_trial_months if payload.default_trial_enabled else 0
+    )
+    if payload.default_trial_enabled and months <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="무료 체험을 제공할 때는 개월 수를 1 이상으로 설정해 주세요.",
+        )
+
+    policy = await get_or_create_signup_trial_policy(db)
+    policy.default_trial_enabled = payload.default_trial_enabled
+    policy.default_trial_months = months
+    policy.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return APIResponse.ok(
+        {
+            "default_trial_enabled": policy.default_trial_enabled,
+            "default_trial_months": policy.default_trial_months,
         }
     )
 
@@ -5169,7 +5502,7 @@ async def get_sa_dashboard(
                 {
                     "id": str(org.id),
                     "company_name": org.name,
-                    "plan": "starter",
+                    "plan": "trial",
                     "created_at": org.created_at.isoformat(),
                 }
                 for org in recent_orgs
@@ -5219,16 +5552,11 @@ async def get_expiring_subscriptions(
     items = []
     for sub, org in expiring_subs:
         days_remaining = max(0, (sub.expires_at.date() - datetime.utcnow().date()).days)
-        plan_map = {
-            SubscriptionPlan.STARTER: "스타터",
-            SubscriptionPlan.STANDARD: "스탠다드",
-            SubscriptionPlan.PREMIUM: "프리미엄",
-        }
         items.append(
             {
                 "id": str(sub.id),
                 "company_name": org.name,
-                "plan": plan_map.get(sub.plan, sub.plan.value),
+                "plan": _billing_plan_label(sub.plan),
                 "expires_at": sub.expires_at.strftime("%Y-%m-%d"),
                 "days_remaining": days_remaining,
             }
@@ -5261,28 +5589,45 @@ async def list_tenants(
 
     items = []
     for org in orgs:
-        users_count = (await db.execute(select(func.count()).select_from(User).where(User.organization_id == org.id))).scalar() or 0
-        projects_count = (await db.execute(select(func.count()).select_from(Project).where(Project.organization_id == org.id))).scalar() or 0
-        subscription = (await db.execute(select(Subscription).where(Subscription.organization_id == org.id))).scalar_one_or_none()
-
-        plan = "trial"
-        if subscription:
-            if subscription.plan == SubscriptionPlan.STARTER:
-                plan = "basic"
-            elif subscription.plan == SubscriptionPlan.STANDARD:
-                plan = "pro"
-            elif subscription.plan == SubscriptionPlan.PREMIUM:
-                plan = "pro"
+        users_count = (
+            await db.execute(
+                select(func.count()).select_from(User).where(User.organization_id == org.id)
+            )
+        ).scalar() or 0
+        projects_count = (
+            await db.execute(
+                select(func.count())
+                .select_from(Project)
+                .where(Project.organization_id == org.id)
+            )
+        ).scalar() or 0
+        subscription = (
+            await db.execute(
+                select(Subscription).where(Subscription.organization_id == org.id)
+            )
+        ).scalar_one_or_none()
+        latest_paid_amount = (
+            await db.execute(
+                select(Payment.amount)
+                .where(
+                    Payment.organization_id == org.id,
+                    Payment.status == PaymentStatus.PAID,
+                )
+                .order_by(Payment.created_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
 
         items.append(
             {
                 "id": str(org.id),
                 "name": org.name,
-                "plan": plan,
+                "plan": subscription.plan.value if subscription else "none",
                 "users_count": users_count,
                 "projects_count": projects_count,
                 "created_at": org.created_at.isoformat(),
-                "billing_amount": 0,
+                "billing_amount": int(_safe_decimal_to_int(latest_paid_amount or 0)),
+                "status": "active" if org.is_active else "inactive",
             }
         )
 
@@ -5302,28 +5647,49 @@ async def get_tenant(
     if not org:
         raise NotFoundException("tenant", tenant_id)
 
-    users_count = (await db.execute(select(func.count()).select_from(User).where(User.organization_id == org.id))).scalar() or 0
-    projects_count = (await db.execute(select(func.count()).select_from(Project).where(Project.organization_id == org.id))).scalar() or 0
+    users_count = (
+        await db.execute(
+            select(func.count()).select_from(User).where(User.organization_id == org.id)
+        )
+    ).scalar() or 0
+    projects_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(Project)
+            .where(Project.organization_id == org.id)
+        )
+    ).scalar() or 0
 
-    subscription = (await db.execute(select(Subscription).where(Subscription.organization_id == org.id))).scalar_one_or_none()
+    subscription = (
+        await db.execute(
+            select(Subscription).where(Subscription.organization_id == org.id)
+        )
+    ).scalar_one_or_none()
+    trial_override = await get_trial_override(db, org.id)
+    trial_resolution = await resolve_trial_policy(db, org.id)
 
-    now = datetime.utcnow()
     if subscription:
-        plan = "basic" if subscription.plan == SubscriptionPlan.STARTER else "pro"
+        plan = subscription.plan.value
         start_date = subscription.started_at.isoformat()
         end_date = subscription.expires_at.isoformat()
-        billing_amount = int(
-            _safe_decimal_to_int(
-                (await db.execute(
-                    select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.organization_id == org.id)
-                )).scalar() or 0
-            )
-        )
     else:
-        plan = "trial"
-        start_date = org.created_at.isoformat()
-        end_date = (org.created_at + timedelta(days=30)).isoformat()
-        billing_amount = 0
+        plan = "none"
+        start_date = ""
+        end_date = ""
+
+    billing_amount = int(
+        _safe_decimal_to_int(
+            (
+                await db.execute(
+                    select(func.coalesce(func.sum(Payment.amount), 0)).where(
+                        Payment.organization_id == org.id,
+                        Payment.status == PaymentStatus.PAID,
+                    )
+                )
+            ).scalar()
+            or 0
+        )
+    )
 
     return APIResponse.ok(
         {
@@ -5342,48 +5708,132 @@ async def get_tenant(
             "contact_position": org.contact_position,
             "subscription_start_date": start_date,
             "subscription_end_date": end_date,
-            "is_custom_trial": plan == "trial",
+            "is_custom_trial": (
+                subscription is not None
+                and subscription.plan == SubscriptionPlan.TRIAL
+                and trial_resolution.source == "override"
+            ),
             "billing_amount": billing_amount,
             "is_active": org.is_active,
+            "trial_override_enabled": (
+                trial_override.trial_enabled if trial_override is not None else None
+            ),
+            "trial_override_months": (
+                trial_override.trial_months if trial_override is not None else None
+            ),
+            "trial_override_reason": (
+                trial_override.reason if trial_override is not None else None
+            ),
+            "effective_trial_enabled": trial_resolution.enabled,
+            "effective_trial_months": trial_resolution.months,
+            "trial_source": (
+                trial_resolution.source
+                if subscription is not None
+                and subscription.plan == SubscriptionPlan.TRIAL
+                else None
+            ),
         }
     )
 
 
-@router.post("/admin/tenants/{tenant_id}/custom-trial", response_model=APIResponse[dict])
-async def set_custom_trial_period(
+@router.put("/admin/tenants/{tenant_id}/trial-policy", response_model=APIResponse[dict])
+async def set_tenant_trial_policy(
     tenant_id: int,
-    payload: CustomTrialRequest,
+    payload: TenantTrialOverrideRequest,
     db: DBSession,
     current_user: CurrentUser,
 ):
-    if _role_value(current_user) != "super_admin":
-        raise HTTPException(status_code=403, detail="슈퍼관리자만 접근 가능해요")
+    _require_super_admin(current_user)
 
-    org = (await db.execute(select(Organization).where(Organization.id == tenant_id))).scalar_one_or_none()
+    org = (
+        await db.execute(select(Organization).where(Organization.id == tenant_id))
+    ).scalar_one_or_none()
     if not org:
         raise NotFoundException("tenant", tenant_id)
 
-    end_date = datetime.fromisoformat(payload.end_date.replace("Z", "+00:00")).replace(tzinfo=None)
-
-    sub = (await db.execute(select(Subscription).where(Subscription.organization_id == org.id))).scalar_one_or_none()
-    if not sub:
-        sub = Subscription(
-            organization_id=org.id,
-            plan=SubscriptionPlan.STARTER,
-            status=SubscriptionStatus.ACTIVE,
-            started_at=datetime.utcnow(),
-            expires_at=end_date,
+    months = normalize_trial_months(payload.trial_months if payload.trial_enabled else 0)
+    if payload.trial_enabled and months <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="무료 체험을 부여할 때는 개월 수를 1 이상으로 설정해 주세요.",
         )
-        db.add(sub)
-        await db.flush()
+
+    now = datetime.utcnow()
+    override = await get_trial_override(db, org.id)
+    if override is None:
+        override = OrganizationTrialOverride(
+            organization_id=org.id,
+            created_at=now,
+        )
+        db.add(override)
+
+    override.trial_enabled = payload.trial_enabled
+    override.trial_months = months
+    override.reason = (payload.reason or "").strip() or None
+    override.updated_by_user_id = current_user.id
+    override.updated_at = now
+
+    sub = (
+        await db.execute(
+            select(Subscription).where(Subscription.organization_id == org.id)
+        )
+    ).scalar_one_or_none()
+    paid_payment_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(Payment)
+            .where(
+                Payment.organization_id == org.id,
+                Payment.status == PaymentStatus.PAID,
+            )
+        )
+    ).scalar() or 0
+
+    if payload.trial_enabled:
+        if paid_payment_count > 0 and sub and sub.plan != SubscriptionPlan.TRIAL:
+            raise HTTPException(
+                status_code=400,
+                detail="이미 유료 구독 이력이 있는 고객사에는 무료 체험 정책을 적용할 수 없어요.",
+            )
+
+        trial_end = add_months(now, months)
+        if not sub:
+            sub = Subscription(
+                organization_id=org.id,
+                plan=SubscriptionPlan.TRIAL,
+                status=SubscriptionStatus.ACTIVE,
+                started_at=now,
+                expires_at=trial_end,
+            )
+            db.add(sub)
+            await db.flush()
+        else:
+            sub.plan = SubscriptionPlan.TRIAL
+            sub.status = SubscriptionStatus.ACTIVE
+            sub.started_at = now
+            sub.expires_at = trial_end
+            sub.cancelled_at = None
+            sub.billing_key = None
+            sub.updated_at = now
     else:
-        sub.expires_at = end_date
-        sub.updated_at = datetime.utcnow()
+        if sub and sub.plan == SubscriptionPlan.TRIAL:
+            sub.status = SubscriptionStatus.EXPIRED
+            sub.expires_at = now
+            sub.updated_at = now
+
+    await db.commit()
 
     return APIResponse.ok(
         {
             "id": str(org.id),
-            "subscription_end_date": end_date.isoformat(),
-            "is_custom_trial": True,
+            "trial_enabled": override.trial_enabled,
+            "trial_months": override.trial_months,
+            "reason": override.reason,
+            "subscription_end_date": (
+                sub.expires_at.isoformat()
+                if sub and sub.plan == SubscriptionPlan.TRIAL
+                else ""
+            ),
+            "is_custom_trial": override.trial_enabled,
         }
     )

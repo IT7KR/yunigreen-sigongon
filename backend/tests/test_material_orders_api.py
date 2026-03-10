@@ -12,7 +12,7 @@ from httpx import AsyncClient
 from app.core.database import get_async_db
 from app.core.security import get_current_user
 from app.main import app
-from app.models.operations import ProjectAccessPolicy
+from app.models.operations import MaterialMaster, ProjectAccessPolicy
 from app.models.pricebook import (
     CatalogItem,
     CatalogItemPrice,
@@ -27,7 +27,17 @@ from app.models.user import Organization, User, UserRole
 
 @pytest.fixture
 async def material_order_context(test_db):
+    super_admin = User(
+        username="material_super_admin",
+        name="플랫폼관리자",
+        role=UserRole.SUPER_ADMIN,
+        organization_id=None,
+        phone="010-1000-0000",
+        password_hash="hash",
+        is_active=True,
+    )
     org = Organization(name="자재발주조직", business_number="111-22-33333")
+    test_db.add(super_admin)
     test_db.add(org)
     await test_db.flush()
 
@@ -100,6 +110,15 @@ async def material_order_context(test_db):
         unit_price=Decimal("15000"),
     )
     test_db.add(catalog_price)
+    material_master = MaterialMaster(
+        name="플랫폼 방수 시트",
+        unit="롤",
+        unit_price=Decimal("42000"),
+        is_active=True,
+        created_by=super_admin.id,
+        updated_by=super_admin.id,
+    )
+    test_db.add(material_master)
     await test_db.commit()
 
     def _auth_user_for(user: User) -> SimpleNamespace:
@@ -131,11 +150,13 @@ async def material_order_context(test_db):
         "set_user": lambda user: current_user_holder.__setitem__(
             "user", _auth_user_for(user)
         ),
+        "super_admin": super_admin,
         "company_admin": company_admin,
         "site_manager": site_manager,
         "project": project,
         "revision": revision,
         "catalog_item": catalog_item,
+        "material_master": material_master,
     }
 
     app.dependency_overrides.pop(get_current_user, None)
@@ -169,8 +190,10 @@ async def test_material_order_lifecycle_sets_expected_fields(
     async_client: AsyncClient,
     material_order_context,
 ):
+    set_user = material_order_context["set_user"]
     project = material_order_context["project"]
     catalog_item = material_order_context["catalog_item"]
+    super_admin = material_order_context["super_admin"]
 
     created = await _create_order(
         async_client,
@@ -188,6 +211,7 @@ async def test_material_order_lifecycle_sets_expected_fields(
     assert requested.status_code == 200
     assert requested.json()["data"]["status"] == "requested"
 
+    set_user(super_admin)
     invoice_received = await async_client.patch(
         f"/api/v1/material-orders/{order_id}",
         json={
@@ -280,6 +304,7 @@ async def test_site_manager_can_mark_delivered_but_not_closed(
 ):
     set_user = material_order_context["set_user"]
     site_manager = material_order_context["site_manager"]
+    super_admin = material_order_context["super_admin"]
     project = material_order_context["project"]
     catalog_item = material_order_context["catalog_item"]
 
@@ -294,6 +319,7 @@ async def test_site_manager_can_mark_delivered_but_not_closed(
         f"/api/v1/material-orders/{order_id}",
         json={"status": "requested"},
     )
+    set_user(super_admin)
     await async_client.patch(
         f"/api/v1/material-orders/{order_id}",
         json={"status": "invoice_received"},
@@ -418,3 +444,92 @@ async def test_site_manager_cannot_override_catalog_price(
         },
     )
     assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_super_admin_can_manage_material_masters(
+    async_client: AsyncClient,
+    material_order_context,
+):
+    set_user = material_order_context["set_user"]
+    super_admin = material_order_context["super_admin"]
+    company_admin = material_order_context["company_admin"]
+
+    set_user(company_admin)
+    forbidden = await async_client.get("/api/v1/admin/material-masters")
+    assert forbidden.status_code == 403
+
+    set_user(super_admin)
+    created = await async_client.post(
+        "/api/v1/admin/material-masters",
+        json={
+            "name": "수성 실리콘",
+            "unit": "개",
+            "unit_price": 6500,
+            "is_active": True,
+        },
+    )
+    assert created.status_code == 201
+    created_payload = created.json()["data"]
+    assert created_payload["name"] == "수성 실리콘"
+    assert created_payload["unit"] == "개"
+    assert created_payload["unit_price"] == 6500
+    assert created_payload["is_active"] is True
+
+    list_response = await async_client.get("/api/v1/admin/material-masters")
+    assert list_response.status_code == 200
+    names = [row["name"] for row in list_response.json()["data"]]
+    assert "수성 실리콘" in names
+
+    updated = await async_client.patch(
+        f"/api/v1/admin/material-masters/{created_payload['id']}",
+        json={
+            "unit_price": 7000,
+            "is_active": False,
+        },
+    )
+    assert updated.status_code == 200
+    updated_payload = updated.json()["data"]
+    assert updated_payload["unit_price"] == 7000
+    assert updated_payload["is_active"] is False
+
+    active_list = await async_client.get("/api/v1/material-masters")
+    assert active_list.status_code == 200
+    active_names = [row["name"] for row in active_list.json()["data"]]
+    assert "수성 실리콘" not in active_names
+
+
+@pytest.mark.asyncio
+async def test_material_order_can_use_material_master_price(
+    async_client: AsyncClient,
+    material_order_context,
+):
+    project = material_order_context["project"]
+    material_master = material_order_context["material_master"]
+
+    response = await async_client.post(
+        f"/api/v1/projects/{project.id}/material-orders",
+        json={
+            "items": [
+                {
+                    "material_master_id": material_master.id,
+                    "quantity": 3,
+                }
+            ],
+            "notes": "현장 요청 자재",
+        },
+    )
+    assert response.status_code == 201
+    created = response.json()["data"]
+    assert created["status"] == "draft"
+    assert created["total_amount"] == 126000
+
+    detail = await async_client.get(f"/api/v1/material-orders/{created['id']}")
+    assert detail.status_code == 200
+    payload = detail.json()["data"]
+    assert payload["items"][0]["material_master_id"] == str(material_master.id)
+    assert payload["items"][0]["catalog_item_id"] is None
+    assert payload["items"][0]["description"] == material_master.name
+    assert payload["items"][0]["unit"] == material_master.unit
+    assert payload["items"][0]["unit_price"] == 42000
+    assert payload["items"][0]["amount"] == 126000
