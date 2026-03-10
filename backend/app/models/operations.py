@@ -106,6 +106,20 @@ class UtilityTimeline(SQLModel, table=True):
     message: str = Field(max_length=255)
 
 
+class MaterialMaster(SQLModel, table=True):
+    __tablename__ = "material_master"
+
+    id: int = Field(default_factory=generate_snowflake_id, sa_column=Column(BigInteger, primary_key=True))
+    name: str = Field(max_length=255, index=True)
+    unit: str = Field(max_length=20)
+    unit_price: Decimal = Field(default=Decimal("0"), max_digits=15, decimal_places=2)
+    is_active: bool = Field(default=True, index=True)
+    created_by: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
+    updated_by: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class MaterialOrder(SQLModel, table=True):
     __tablename__ = "material_order"
 
@@ -137,6 +151,7 @@ class MaterialOrderItem(SQLModel, table=True):
 
     id: int = Field(default_factory=generate_snowflake_id, sa_column=Column(BigInteger, primary_key=True))
     material_order_id: int = Field(sa_column=Column(BigInteger, nullable=False, index=True))
+    material_master_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
     catalog_item_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
     pricebook_revision_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
     price_source: str = Field(default="catalog_revision", max_length=30)

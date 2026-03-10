@@ -35,6 +35,31 @@ class PaymentStatus(str, Enum):
     REFUNDED = "refunded"
 
 
+class SignupTrialPolicy(SQLModel, table=True):
+    """Global trial policy applied at signup time."""
+    __tablename__ = "signup_trial_policy"
+
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    default_trial_enabled: bool = Field(default=True)
+    default_trial_months: int = Field(default=1, ge=0)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class OrganizationTrialOverride(SQLModel, table=True):
+    """Per-organization trial override managed by super admins."""
+    __tablename__ = "organization_trial_override"
+
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    organization_id: int = Field(sa_type=BigInteger, unique=True, index=True)
+    trial_enabled: bool = Field(default=False)
+    trial_months: int = Field(default=0, ge=0)
+    reason: Optional[str] = Field(default=None, max_length=500)
+    updated_by_user_id: Optional[int] = Field(default=None, sa_type=BigInteger, index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 # Subscription Models
 class SubscriptionBase(SQLModel):
     """Subscription base fields."""

@@ -76,6 +76,7 @@ from app.models.price_staging import PriceStaging, StagingStatus, ConfidenceLeve
 from app.models.billing import (
     Subscription, SubscriptionPlan, SubscriptionStatus,
     Payment, PaymentStatus,
+    SignupTrialPolicy, OrganizationTrialOverride,
     SubscriptionCreate, SubscriptionRead, SubscriptionUpdate,
     PaymentCreate, PaymentRead
 )
@@ -109,6 +110,7 @@ from app.models.operations import (
     UtilityTimeline,
     UtilityStatus,
     UtilityDocStatus,
+    MaterialMaster,
     MaterialOrder,
     MaterialOrderItem,
     MaterialOrderStatus,
@@ -263,6 +265,8 @@ __all__ = [
     "SubscriptionStatus",
     "Payment",
     "PaymentStatus",
+    "SignupTrialPolicy",
+    "OrganizationTrialOverride",
     "SubscriptionCreate",
     "SubscriptionRead",
     "SubscriptionUpdate",
@@ -297,6 +301,7 @@ __all__ = [
     "UtilityTimeline",
     "UtilityStatus",
     "UtilityDocStatus",
+    "MaterialMaster",
     "MaterialOrder",
     "MaterialOrderItem",
     "MaterialOrderStatus",
