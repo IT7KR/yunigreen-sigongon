@@ -24,8 +24,8 @@ export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (href: string, exact?: boolean) =>
+    exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
   // 역할별 탭 구성
   const tabsByRole = () => {
@@ -39,7 +39,7 @@ export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
     }
     if (user?.role === "super_admin") {
       return [
-        { href: "/sa", icon: BarChart3, label: "플랫폼현황" },
+        { href: "/sa", icon: BarChart3, label: "플랫폼현황", exact: true },
         { href: "/sa/tenants", icon: Building2, label: "고객사" },
         { href: "/sa/labor", icon: HardHat, label: "노무" },
       ];
@@ -64,7 +64,7 @@ export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white pb-safe lg:hidden">
       <div className="flex h-16 items-center justify-around px-2">
         {tabs.map((tab) => {
-          const active = isActive(tab.href);
+          const active = isActive(tab.href, (tab as any).exact);
           return (
             <AppLink
               key={tab.href}
