@@ -9,6 +9,8 @@ import {
   CardTitle,
   MotionNumber,
   Skeleton,
+  formatDate,
+  StatCard,
 } from "@sigongcore/ui";
 import {
   Building2,
@@ -217,120 +219,58 @@ export default function SADashboardPage() {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-              <Card>
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm text-slate-500">전체 고객사</p>
-                      <MotionNumber
-                        value={stats.total_tenants}
-                        className="mt-1 text-2xl sm:text-3xl font-bold text-slate-900"
-                      />
-                      <div className="mt-2 flex items-center gap-1 text-sm">
-                        <ArrowUp className="h-3 w-3 text-green-600" />
-                        <span className="font-medium text-green-600">
-                          {stats.tenants_growth}%
-                        </span>
-                        <span className="text-slate-500">vs 지난달</span>
-                      </div>
-                    </div>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                      <Building2 className="h-5 w-5 text-blue-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StatCard
+                title="전체 고객사"
+                value={stats.total_tenants}
+                icon={Building2}
+                color="blue"
+                trend={{ value: stats.tenants_growth, direction: "up" }}
+              />
 
-              <Card>
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm text-slate-500">활성 사용자</p>
-                      <MotionNumber
-                        value={stats.total_users}
-                        className="mt-1 text-2xl sm:text-3xl font-bold text-slate-900"
-                      />
-                      <div className="mt-2 flex items-center gap-1 text-sm">
-                        <ArrowUp className="h-3 w-3 text-green-600" />
-                        <span className="font-medium text-green-600">
-                          {stats.users_growth}%
-                        </span>
-                        <span className="text-slate-500">vs 지난달</span>
-                      </div>
-                    </div>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                      <Users className="h-5 w-5 text-purple-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StatCard
+                title="활성 사용자"
+                value={stats.total_users}
+                icon={Users}
+                color="purple"
+                trend={{ value: stats.users_growth, direction: "up" }}
+              />
 
-              <Card>
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm text-slate-500">이번달 매출</p>
-                      <div className="mt-1 text-2xl sm:text-3xl font-bold text-slate-900">
-                        {(stats.monthly_revenue / 10000).toFixed(0)}만원
-                      </div>
-                      <div className="mt-2 flex items-center gap-1 text-sm">
-                        <ArrowUp className="h-3 w-3 text-green-600" />
-                        <span className="font-medium text-green-600">
-                          {stats.revenue_growth}%
-                        </span>
-                        <span className="text-slate-500">vs 지난달</span>
-                      </div>
-                    </div>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                      <DollarSign className="h-5 w-5 text-green-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StatCard
+                title="이번달 매출"
+                value={Math.round(stats.monthly_revenue / 10000)}
+                suffix="만원"
+                icon={DollarSign}
+                color="green"
+                trend={{ value: stats.revenue_growth, direction: "up" }}
+              />
 
-              <Card>
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm text-slate-500">신규 가입</p>
-                      <MotionNumber
-                        value={stats.new_signups}
-                        className="mt-1 text-2xl sm:text-3xl font-bold text-slate-900"
-                      />
-                      <div className="mt-2 flex items-center gap-1 text-sm">
-                        <ArrowUp className="h-3 w-3 text-green-600" />
-                        <span className="font-medium text-green-600">
-                          {stats.signups_growth}%
-                        </span>
-                        <span className="text-slate-500">vs 지난달</span>
-                      </div>
-                    </div>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
-                      <TrendingUp className="h-5 w-5 text-amber-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StatCard
+                title="신규 가입"
+                value={stats.new_signups}
+                icon={TrendingUp}
+                color="amber"
+                trend={{ value: stats.signups_growth, direction: "up" }}
+              />
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
+              <Card className="border-0 shadow-none bg-transparent md:border md:border-slate-100 md:bg-white md:shadow-sm">
+                <CardHeader className="px-1 pt-0 md:px-4 md:pt-4">
                   <CardTitle>월별 매출 추이</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="px-0 pb-0 md:px-4 md:pb-4">
+                  <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4 md:border-0 md:p-0">
                     {monthlyRevenue.map((item) => (
                       <div key={item.month}>
-                        <div className="mb-1 flex items-center justify-between text-sm">
-                          <span className="text-slate-600">{item.month}</span>
-                          <span className="font-medium text-slate-900">
+                        <div className="mb-1.5 flex items-center justify-between text-sm">
+                          <span className="font-medium text-slate-600">{item.month}</span>
+                          <span className="font-bold text-slate-900">
                             {(item.amount / 10000).toFixed(0)}만원
                           </span>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-slate-100">
+                        <div className="h-1.5 w-full rounded-full bg-slate-100">
                           <div
-                            className="h-2 rounded-full bg-brand-point-500"
+                            className="h-1.5 rounded-full bg-brand-point-500"
                             style={{
                               width: `${(item.amount / maxRevenue) * 100}%`,
                             }}
@@ -342,18 +282,18 @@ export default function SADashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
+              <Card className="border-0 shadow-none bg-transparent md:border md:border-slate-100 md:bg-white md:shadow-sm">
+                <CardHeader className="px-1 pt-0 md:px-4 md:pt-4">
                   <CardTitle>요금제별 분포</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                <CardContent className="px-0 pb-0 md:px-4 md:pb-4">
+                  <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-4 md:border-0 md:p-0">
                     {planDistribution.map((item, idx) => (
                       <div key={item.plan}>
-                        <div className="mb-1 flex items-center justify-between">
+                        <div className="mb-1.5 flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div
-                              className={`h-3 w-3 rounded-full ${
+                              className={`h-2.5 w-2.5 rounded-full ${
                                 idx === 0
                                   ? "bg-slate-400"
                                   : idx === 1
@@ -361,22 +301,22 @@ export default function SADashboardPage() {
                                     : "bg-purple-600"
                               }`}
                             />
-                            <span className="text-sm font-medium text-slate-900">
+                            <span className="text-sm font-semibold text-slate-900">
                               {item.plan}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-slate-600">
+                            <span className="text-xs text-slate-500">
                               {item.count}개
                             </span>
-                            <span className="text-sm font-medium text-slate-900">
+                            <span className="text-sm font-bold text-slate-900">
                               {item.percentage.toFixed(1)}%
                             </span>
                           </div>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-slate-100">
+                        <div className="h-1.5 w-full rounded-full bg-slate-100">
                           <div
-                            className={`h-2 rounded-full ${
+                            className={`h-1.5 rounded-full ${
                               idx === 0
                                 ? "bg-slate-400"
                                 : idx === 1
@@ -395,14 +335,14 @@ export default function SADashboardPage() {
 
             {/* Expiring Subscriptions Alert */}
             {expiringSubscriptions.length > 0 && (
-              <Card>
-                <CardHeader>
+              <Card className="border-0 shadow-none bg-transparent md:border md:border-slate-100 md:bg-white md:shadow-sm">
+                <CardHeader className="px-1 pt-0 md:px-4 md:pt-4">
                   <CardTitle className="flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-amber-500" />
                     구독 만료 임박 업체
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-0 pb-0 md:px-4 md:pb-4">
                   <div className="space-y-3">
                     {expiringSubscriptions.map((sub) => (
                       <div
@@ -462,11 +402,11 @@ export default function SADashboardPage() {
               </Card>
             )}
 
-            <Card>
-              <CardHeader>
+            <Card className="border-0 shadow-none bg-transparent md:border md:border-slate-100 md:bg-white md:shadow-sm">
+              <CardHeader className="px-1 pt-0 md:px-4 md:pt-4">
                 <CardTitle>최근 활동</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-0 pb-0 md:px-4 md:pb-4">
                 {recentActivity.length > 0 ? (
                   <div className="space-y-3">
                     {recentActivity.map((activity) => (
@@ -507,8 +447,8 @@ export default function SADashboardPage() {
                             {activity.description}
                           </p>
                         </div>
-                        <span className="text-sm text-slate-500">
-                          {activity.timestamp}
+                        <span className="text-xs text-slate-500">
+                          {formatDate(activity.timestamp)}
                         </span>
                       </div>
                     ))}
