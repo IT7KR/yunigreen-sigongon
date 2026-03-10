@@ -40,7 +40,7 @@ const StatCard = forwardRef<HTMLDivElement, StatCardProps>(
       <div
         ref={ref}
         className={cn(
-          "rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md",
+          "rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm transition-shadow hover:shadow-md",
           className
         )}
         {...props}
@@ -56,10 +56,10 @@ const StatCard = forwardRef<HTMLDivElement, StatCardProps>(
                 {animate && typeof value === "number" ? (
                   <MotionNumber
                     value={value}
-                    className="text-3xl font-bold text-slate-900"
+                    className="text-2xl sm:text-3xl font-bold text-slate-900"
                   />
                 ) : (
-                  <span className="text-3xl font-bold text-slate-900">{value}</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-slate-900">{value}</span>
                 )}
                 {suffix && <span className="text-lg font-medium text-slate-500">{suffix}</span>}
               </div>

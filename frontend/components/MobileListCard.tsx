@@ -30,7 +30,7 @@ export function MobileListCard({
   return (
     <div
       className={cn(
-        "rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-transform duration-150",
+        "rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-transform duration-150",
         onClick && "cursor-pointer active:scale-[0.98]",
         className,
       )}
