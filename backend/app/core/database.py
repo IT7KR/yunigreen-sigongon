@@ -49,6 +49,15 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+def get_session():
+    """Legacy sync dependency shim.
+
+    Some older routers still import `get_session`. Keep the import path alive so
+    the app can start, but fail fast if a sync session is actually requested.
+    """
+    raise RuntimeError("Synchronous DB sessions are no longer supported. Use get_async_db().")
+
+
 async def init_db() -> None:
     """데이터베이스 테이블 초기화.
     
