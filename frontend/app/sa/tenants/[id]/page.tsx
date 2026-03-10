@@ -20,17 +20,16 @@ import {
 } from "@sigongcore/ui";
 import {
   Building2,
-  Users,
-  FolderKanban,
-  CreditCard,
   Calendar,
   CheckCircle,
-  XCircle,
+  CreditCard,
+  FolderKanban,
   Loader2,
+  Sparkles,
   ToggleLeft,
   ToggleRight,
-  X,
-  Check,
+  Users,
+  XCircle,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { MobileListCard } from "@/components/MobileListCard";
@@ -45,11 +44,10 @@ interface TenantDetail {
   contact_name?: string;
   contact_phone?: string;
   contact_position?: string;
-  plan: "trial" | "basic" | "pro";
+  plan: string;
   users_count: number;
   projects_count: number;
   created_at: string;
-  // 구독 관련 필드
   subscription_start_date: string;
   subscription_end_date: string;
   is_custom_trial: boolean;
@@ -76,16 +74,13 @@ interface TenantDetail {
     total: number;
   };
   is_active: boolean;
+  trial_override_enabled?: boolean | null;
+  trial_override_months?: number | null;
+  trial_override_reason?: string | null;
+  effective_trial_enabled?: boolean;
+  effective_trial_months?: number;
+  trial_source?: string | null;
 }
-
-const planConfig: Record<
-  "trial" | "basic" | "pro",
-  { label: string; yearlyPrice: number }
-> = {
-  trial: { label: "무료 체험", yearlyPrice: 0 },
-  basic: { label: "Basic", yearlyPrice: 588000 },
-  pro: { label: "Pro", yearlyPrice: 1188000 },
-};
 
 const roleLabels: Record<string, string> = {
   super_admin: "슈퍼관리자",
@@ -96,21 +91,60 @@ const roleLabels: Record<string, string> = {
   manager: "매니저",
 };
 
+function getPlanPresentation(plan: string) {
+  switch (plan) {
+    case "basic":
+      return {
+        label: "Basic",
+        badgeClass: "bg-blue-100 text-blue-700",
+        yearlyPrice: 588000,
+      };
+    case "pro":
+      return {
+        label: "Pro",
+        badgeClass: "bg-purple-100 text-purple-700",
+        yearlyPrice: 1188000,
+      };
+    case "trial":
+      return {
+        label: "무료 체험",
+        badgeClass: "bg-amber-100 text-amber-700",
+        yearlyPrice: 0,
+      };
+    default:
+      return {
+        label: "미선택",
+        badgeClass: "bg-slate-100 text-slate-700",
+        yearlyPrice: 0,
+      };
+  }
+}
+
+function getTrialSourceLabel(source?: string | null) {
+  switch (source) {
+    case "override":
+      return "개별 정책";
+    case "default":
+      return "기본 정책";
+    default:
+      return "미적용";
+  }
+}
+
 export default function TenantDetailPage() {
   const params = useParams();
   const tenantId = params.id as string;
   const [tenant, setTenant] = useState<TenantDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // 커스텀 무료 기간 설정 상태
-  const [showCustomTrialModal, setShowCustomTrialModal] = useState(false);
-  const [customEndDate, setCustomEndDate] = useState("");
-  const [customTrialReason, setCustomTrialReason] = useState("");
-  const [isSettingCustomTrial, setIsSettingCustomTrial] = useState(false);
+  const [showTrialPolicyModal, setShowTrialPolicyModal] = useState(false);
+  const [trialEnabled, setTrialEnabled] = useState(false);
+  const [trialMonths, setTrialMonths] = useState(1);
+  const [trialReason, setTrialReason] = useState("");
+  const [isSavingTrialPolicy, setIsSavingTrialPolicy] = useState(false);
   const { confirm } = useConfirmDialog();
 
   useEffect(() => {
-    loadTenantDetail();
+    void loadTenantDetail();
   }, [tenantId]);
 
   async function loadTenantDetail() {
@@ -119,22 +153,22 @@ export default function TenantDetailPage() {
       const response = await api.getTenant(tenantId);
 
       if (response.success && response.data) {
-        const tenantData = response.data;
-        const tenantAny = tenantData as any;
-        // 남은 일수 계산
+        const tenantData = response.data as unknown as TenantDetail;
+        const tenantAny = tenantData as unknown as Record<string, unknown>;
+        const endDateValue = tenantData.subscription_end_date || "";
         const now = new Date();
-        const endDate = new Date(tenantData.subscription_end_date);
-        const diffTime = endDate.getTime() - now.getTime();
-        const daysRemaining = Math.max(
-          0,
-          Math.ceil(diffTime / (1000 * 60 * 60 * 24)),
-        );
+        const endDate = endDateValue ? new Date(endDateValue) : null;
+        const daysRemaining = endDate
+          ? Math.max(
+              0,
+              Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+            )
+          : 0;
 
-        // API가 상세 필드를 제공하지 않는 경우를 고려한 안전 매핑
         const mappedDetail: TenantDetail = {
           id: tenantData.id,
           name: tenantData.name,
-          plan: tenantData.plan as "trial" | "basic" | "pro",
+          plan: tenantData.plan,
           users_count: tenantData.users_count,
           projects_count: tenantData.projects_count,
           created_at: tenantData.created_at,
@@ -144,13 +178,16 @@ export default function TenantDetailPage() {
           billing_amount: tenantData.billing_amount || 0,
           days_remaining: daysRemaining,
           business_number:
-            tenantAny.business_number || tenantAny.businessNumber || "-",
-          representative: tenantAny.representative || "미등록",
-          rep_phone: tenantAny.rep_phone || "-",
-          rep_email: tenantAny.rep_email || "-",
-          contact_name: tenantAny.contact_name,
-          contact_phone: tenantAny.contact_phone,
-          contact_position: tenantAny.contact_position,
+            (tenantAny.business_number as string | undefined) ||
+            (tenantAny.businessNumber as string | undefined) ||
+            "-",
+          representative:
+            (tenantAny.representative as string | undefined) || "미등록",
+          rep_phone: (tenantAny.rep_phone as string | undefined) || "-",
+          rep_email: (tenantAny.rep_email as string | undefined) || "-",
+          contact_name: tenantAny.contact_name as string | undefined,
+          contact_phone: tenantAny.contact_phone as string | undefined,
+          contact_position: tenantAny.contact_position as string | undefined,
           payment_history:
             (tenantData.billing_amount || 0) > 0
               ? [
@@ -159,7 +196,7 @@ export default function TenantDetailPage() {
                     date:
                       tenantData.subscription_start_date?.slice(0, 10) || "-",
                     amount: tenantData.billing_amount || 0,
-                    status: "paid" as const,
+                    status: "paid",
                   },
                 ]
               : [],
@@ -170,44 +207,62 @@ export default function TenantDetailPage() {
             completed: tenantData.projects_count,
             total: tenantData.projects_count,
           },
-          is_active: tenantAny.is_active ?? true,
+          is_active: (tenantAny.is_active as boolean | undefined) ?? true,
+          trial_override_enabled: tenantData.trial_override_enabled,
+          trial_override_months: tenantData.trial_override_months,
+          trial_override_reason: tenantData.trial_override_reason,
+          effective_trial_enabled: tenantData.effective_trial_enabled,
+          effective_trial_months: tenantData.effective_trial_months,
+          trial_source: tenantData.trial_source,
         };
+
         setTenant(mappedDetail);
+        setTrialEnabled(
+          tenantData.trial_override_enabled ??
+            tenantData.effective_trial_enabled ??
+            false,
+        );
+        setTrialMonths(
+          tenantData.trial_override_months ??
+            tenantData.effective_trial_months ??
+            1,
+        );
+        setTrialReason(tenantData.trial_override_reason || "");
       }
     } catch (err) {
       console.error("Failed to load tenant detail:", err);
+      toast.error("고객사 정보를 불러오지 못했습니다.");
     } finally {
       setIsLoading(false);
     }
   }
 
-  async function handleSetCustomTrial() {
-    if (!customEndDate) {
-      toast.error("종료일을 선택해 주세요");
+  async function handleSaveTrialPolicy() {
+    if (trialEnabled && trialMonths < 1) {
+      toast.error("무료 체험 개월 수를 1 이상으로 입력해 주세요.");
       return;
     }
 
-    setIsSettingCustomTrial(true);
+    setIsSavingTrialPolicy(true);
     try {
-      const response = await api.setCustomTrialPeriod(tenantId, {
-        end_date: new Date(customEndDate).toISOString(),
-        reason: customTrialReason,
+      const response = await api.setTenantTrialPolicy(tenantId, {
+        trial_enabled: trialEnabled,
+        trial_months: trialEnabled ? trialMonths : 0,
+        reason: trialReason.trim() || undefined,
       });
 
       if (response.success) {
-        toast.success("커스텀 무료 기간이 설정되었어요");
-        setShowCustomTrialModal(false);
-        setCustomEndDate("");
-        setCustomTrialReason("");
-        loadTenantDetail(); // 리로드
+        toast.success("고객사 무료 체험 정책을 저장했어요.");
+        setShowTrialPolicyModal(false);
+        await loadTenantDetail();
       } else {
-        toast.error(response.error?.message || "설정에 실패했어요");
+        toast.error(response.error?.message || "정책 저장에 실패했어요.");
       }
     } catch (err) {
-      console.error("Failed to set custom trial:", err);
-      toast.error("설정에 실패했어요");
+      console.error("Failed to save tenant trial policy:", err);
+      toast.error("정책 저장에 실패했어요.");
     } finally {
-      setIsSettingCustomTrial(false);
+      setIsSavingTrialPolicy(false);
     }
   }
 
@@ -223,7 +278,6 @@ export default function TenantDetailPage() {
       return;
     }
 
-    // Mock toggle
     setTenant({ ...tenant, is_active: !tenant.is_active });
     toast.success(`계정을 ${tenant.is_active ? "비활성화" : "활성화"}했어요.`);
   }
@@ -246,7 +300,20 @@ export default function TenantDetailPage() {
     );
   }
 
-  const plan = planConfig[tenant.plan];
+  const plan = getPlanPresentation(tenant.plan);
+  const trialSourceLabel = getTrialSourceLabel(tenant.trial_source);
+  const trialOverrideSummary =
+    tenant.trial_override_enabled == null
+      ? "없음"
+      : tenant.trial_override_enabled
+        ? `${tenant.trial_override_months || 0}개월 제공`
+        : "미제공";
+  const remainingLabel =
+    tenant.plan === "none"
+      ? "요금제 미선택"
+      : tenant.days_remaining > 0
+        ? `${tenant.days_remaining}일`
+        : "만료됨";
 
   return (
     <AdminLayout>
@@ -284,9 +351,7 @@ export default function TenantDetailPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-sm text-slate-500">회사명</span>
-                <span className="font-medium text-slate-900">
-                  {tenant.name}
-                </span>
+                <span className="font-medium text-slate-900">{tenant.name}</span>
               </div>
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-sm text-slate-500">사업자번호</span>
@@ -370,51 +435,53 @@ export default function TenantDetailPage() {
                 <span className="text-sm text-slate-500">요금제</span>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                      tenant.plan === "pro"
-                        ? "bg-purple-100 text-purple-700"
-                        : tenant.plan === "basic"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-slate-100 text-slate-700"
-                    }`}
+                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${plan.badgeClass}`}
                   >
                     {plan.label}
                   </span>
                   {tenant.is_custom_trial && (
-                    <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
-                      커스텀 무료
-                    </span>
+                    <Badge variant="warning">개별 무료 체험</Badge>
                   )}
                 </div>
               </div>
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-sm text-slate-500">연간 요금</span>
                 <span className="font-medium text-slate-900">
-                  {tenant.is_custom_trial
-                    ? "무료"
-                    : `${plan.yearlyPrice.toLocaleString()}원`}
+                  {tenant.plan === "none"
+                    ? "미결제"
+                    : plan.yearlyPrice === 0
+                      ? "무료"
+                      : `${plan.yearlyPrice.toLocaleString()}원`}
                 </span>
               </div>
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-sm text-slate-500">구독 시작일</span>
                 <span className="font-medium text-slate-900">
-                  {tenant.subscription_start_date?.slice(0, 10) || "-"}
+                  {tenant.subscription_start_date
+                    ? tenant.subscription_start_date.slice(0, 10)
+                    : "-"}
                 </span>
               </div>
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-sm text-slate-500">구독 만료일</span>
                 <span className="font-medium text-slate-900">
-                  {tenant.subscription_end_date?.slice(0, 10) || "-"}
+                  {tenant.subscription_end_date
+                    ? tenant.subscription_end_date.slice(0, 10)
+                    : "-"}
                 </span>
               </div>
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-sm text-slate-500">남은 기간</span>
                 <span
-                  className={`font-medium ${tenant.days_remaining <= 7 ? "text-red-600" : tenant.days_remaining <= 30 ? "text-amber-600" : "text-slate-900"}`}
+                  className={`font-medium ${
+                    tenant.days_remaining <= 7 && tenant.plan !== "none"
+                      ? "text-red-600"
+                      : tenant.days_remaining <= 30 && tenant.plan !== "none"
+                        ? "text-amber-600"
+                        : "text-slate-900"
+                  }`}
                 >
-                  {tenant.days_remaining > 0
-                    ? `${tenant.days_remaining}일`
-                    : "만료됨"}
+                  {remainingLabel}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -423,17 +490,121 @@ export default function TenantDetailPage() {
                   {tenant.is_active ? "활성" : "비활성"}
                 </Badge>
               </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              {/* 커스텀 무료 기간 설정 버튼 */}
-              <div className="pt-4 border-t border-slate-100">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowCustomTrialModal(true)}
-                  className="w-full"
-                >
-                  <Calendar className="h-4 w-4" />
-                  커스텀 무료 기간 설정
-                </Button>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>무료 체험 정책</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+                    <Sparkles className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900">실효 정책</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {tenant.effective_trial_enabled
+                        ? `${tenant.effective_trial_months || 0}개월 제공`
+                        : "무료 체험 미제공"}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      적용 기준: {trialSourceLabel}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                    <CreditCard className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900">개별 override</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {trialOverrideSummary}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {tenant.trial_override_reason || "사유 없음"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => setShowTrialPolicyModal(true)}
+              >
+                <Calendar className="h-4 w-4" />
+                고객사 무료 체험 정책 설정
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>사용 통계</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+                      <Users className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500">사용자</p>
+                      <p className="text-2xl font-bold text-slate-900">
+                        {tenant.users_count}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                      <FolderKanban className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500">총 프로젝트</p>
+                      <p className="text-2xl font-bold text-slate-900">
+                        {tenant.project_stats.total}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+                      <Calendar className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500">진행중</p>
+                      <p className="text-2xl font-bold text-slate-900">
+                        {tenant.project_stats.in_progress}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500">완료</p>
+                      <p className="text-2xl font-bold text-slate-900">
+                        {tenant.project_stats.completed}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -441,72 +612,9 @@ export default function TenantDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>사용 통계</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border border-slate-200 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                    <Users className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">사용자</p>
-                    <p className="text-2xl font-bold text-slate-900">
-                      {tenant.users_count}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-lg border border-slate-200 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                    <FolderKanban className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">총 프로젝트</p>
-                    <p className="text-2xl font-bold text-slate-900">
-                      {tenant.project_stats.total}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-lg border border-slate-200 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
-                    <Calendar className="h-5 w-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">진행중</p>
-                    <p className="text-2xl font-bold text-slate-900">
-                      {tenant.project_stats.in_progress}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-lg border border-slate-200 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">완료</p>
-                    <p className="text-2xl font-bold text-slate-900">
-                      {tenant.project_stats.completed}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
             <CardTitle>사용자 목록</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* 모바일 뷰 */}
             <div className="space-y-3 md:hidden">
               {tenant.users.length === 0 ? (
                 <p className="py-6 text-center text-sm text-slate-400">
@@ -529,8 +637,7 @@ export default function TenantDetailPage() {
                 ))
               )}
             </div>
-            {/* 데스크탑 뷰 */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
@@ -571,7 +678,6 @@ export default function TenantDetailPage() {
             <CardTitle>결제 이력</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* 모바일 뷰 */}
             <div className="space-y-3 md:hidden">
               {tenant.payment_history.length === 0 ? (
                 <p className="py-6 text-center text-sm text-slate-400">
@@ -605,8 +711,7 @@ export default function TenantDetailPage() {
                 ))
               )}
             </div>
-            {/* 데스크탑 뷰 */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
@@ -658,67 +763,79 @@ export default function TenantDetailPage() {
         </Card>
       </div>
 
-      {/* 커스텀 무료 기간 설정 모달 */}
       <Modal
-        isOpen={showCustomTrialModal}
-        onClose={() => {
-          setShowCustomTrialModal(false);
-          setCustomEndDate("");
-          setCustomTrialReason("");
-        }}
-        title="커스텀 무료 기간 설정"
-        description="이 고객사에 특별 무료 이용 기간을 부여합니다. 설정 시 기존 결제 금액과 관계없이 무료로 전환됩니다."
+        isOpen={showTrialPolicyModal}
+        onClose={() => setShowTrialPolicyModal(false)}
+        title="고객사 무료 체험 정책 설정"
+        description="기본 정책보다 우선하는 고객사별 무료 체험 override를 설정합니다."
       >
         <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button
+              variant={trialEnabled ? "primary" : "secondary"}
+              onClick={() => setTrialEnabled(true)}
+              className="w-full"
+            >
+              무료 체험 제공
+            </Button>
+            <Button
+              variant={!trialEnabled ? "primary" : "secondary"}
+              onClick={() => setTrialEnabled(false)}
+              className="w-full"
+            >
+              무료 체험 미제공
+            </Button>
+          </div>
+
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              종료일 <span className="text-red-500">*</span>
+              무료 체험 개월 수
             </label>
             <PrimitiveInput
-              type="date"
-              value={customEndDate}
-              onChange={(e) => setCustomEndDate(e.target.value)}
-              min={new Date().toISOString().slice(0, 10)}
+              type="number"
+              min={1}
+              max={24}
+              value={String(trialMonths)}
+              onChange={(event) =>
+                setTrialMonths(Math.max(1, Number(event.target.value) || 1))
+              }
+              disabled={!trialEnabled}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
             />
+            <p className="mt-1 text-xs text-slate-500">
+              1개월 단위로 입력하며 최대 24개월까지 지원합니다.
+            </p>
           </div>
+
           <Textarea
             label="사유 (선택)"
-            value={customTrialReason}
-            onChange={(e) => setCustomTrialReason(e.target.value)}
-            placeholder="예: 파트너십 계약, 데모 기간 연장 등"
+            value={trialReason}
+            onChange={(event) => setTrialReason(event.target.value)}
+            placeholder="예: 파트너십 계약, 온보딩 지원, 데모 연장"
             rows={3}
           />
         </div>
         <div className="mt-6 flex gap-3">
           <Button
             variant="secondary"
-            onClick={() => {
-              setShowCustomTrialModal(false);
-              setCustomEndDate("");
-              setCustomTrialReason("");
-            }}
+            onClick={() => setShowTrialPolicyModal(false)}
             className="flex-1"
-            disabled={isSettingCustomTrial}
+            disabled={isSavingTrialPolicy}
           >
-            <X className="h-4 w-4" />
             취소
           </Button>
           <Button
-            onClick={handleSetCustomTrial}
+            onClick={handleSaveTrialPolicy}
             className="flex-1"
-            disabled={isSettingCustomTrial || !customEndDate}
+            disabled={isSavingTrialPolicy}
           >
-            {isSettingCustomTrial ? (
+            {isSavingTrialPolicy ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                적용 중...
+                저장 중...
               </>
             ) : (
-              <>
-                <Check className="h-4 w-4" />
-                적용
-              </>
+              "저장"
             )}
           </Button>
         </div>

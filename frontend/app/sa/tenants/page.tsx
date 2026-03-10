@@ -33,7 +33,7 @@ import { MobileListCard } from "@/components/MobileListCard";
 interface TenantItem {
   id: string;
   name: string;
-  plan: "trial" | "basic" | "pro";
+  plan: string;
   users_count: number;
   projects_count: number;
   created_at: string;
@@ -41,14 +41,18 @@ interface TenantItem {
   status?: "active" | "inactive";
 }
 
-const planConfig: Record<
-  "trial" | "basic" | "pro",
-  { label: string; color: string }
-> = {
-  trial: { label: "무료 체험", color: "bg-slate-100 text-slate-700" },
-  basic: { label: "Basic", color: "bg-blue-100 text-blue-700" },
-  pro: { label: "Pro", color: "bg-purple-100 text-purple-700" },
-};
+function getPlanPresentation(plan: string) {
+  switch (plan) {
+    case "trial":
+      return { label: "무료 체험", color: "bg-slate-100 text-slate-700" };
+    case "basic":
+      return { label: "Basic", color: "bg-blue-100 text-blue-700" };
+    case "pro":
+      return { label: "Pro", color: "bg-purple-100 text-purple-700" };
+    default:
+      return { label: "미선택", color: "bg-amber-100 text-amber-700" };
+  }
+}
 
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<TenantItem[]>([]);
@@ -75,11 +79,7 @@ export default function TenantsPage() {
       setIsLoading(true);
       const response = await api.getTenants({ page: currentPage });
       if (response.success && response.data) {
-        const tenantsWithStatus = response.data.map((t: TenantItem) => ({
-          ...t,
-          status: "active" as const,
-        }));
-        setTenants(tenantsWithStatus);
+        setTenants(response.data as TenantItem[]);
         if (response.meta) {
           setTotalPages(response.meta.total_pages);
         }
@@ -139,6 +139,7 @@ export default function TenantsPage() {
                   className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 >
                   <option value="all">모든 요금제</option>
+                  <option value="none">미선택</option>
                   <option value="trial">무료 체험</option>
                   <option value="basic">Basic</option>
                   <option value="pro">Pro</option>
@@ -172,7 +173,7 @@ export default function TenantsPage() {
                 </div>
               ) : (
                 filteredTenants.map((tenant) => {
-                  const plan = planConfig[tenant.plan];
+                  const plan = getPlanPresentation(tenant.plan);
                   return (
                     <MobileListCard
                       key={tenant.id}
@@ -243,7 +244,7 @@ export default function TenantsPage() {
                         </TableRow>
                       ) : (
                         filteredTenants.map((tenant) => {
-                          const plan = planConfig[tenant.plan];
+                          const plan = getPlanPresentation(tenant.plan);
 
                           return (
                             <TableRow key={tenant.id}>
