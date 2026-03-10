@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   AppLink,
   Button,
@@ -139,24 +140,55 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
         본문으로 건너뛰기
       </a>
 
+      {/* Swipe Overlay - Mobile Only */}
+      <div 
+        className="fixed inset-y-0 right-0 z-[55] w-6 lg:hidden"
+        style={{ pointerEvents: sidebarOpen ? 'none' : 'auto' }}
+        onPointerDown={(e) => {
+          // This invisible edge area captures the initial swipe to open
+          // But it shouldn't block content when sidebar is open
+        }}
+      />
+
       {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="메뉴 닫기"
-          role="button"
-          tabIndex={-1}
-        />
-      )}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[60] bg-black/50 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="메뉴 닫기"
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
-      <aside
+      <motion.aside
         id="main-sidebar"
         aria-label="주 메뉴"
+        initial={false}
+        animate={{ 
+          x: sidebarOpen ? 0 : "100%",
+        }}
+        transition={{ 
+          type: "spring", 
+          damping: 25, 
+          stiffness: 200,
+          mass: 0.8
+        }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={{ left: 0, right: 0.1 }}
+        onDragEnd={(_, info) => {
+          if (info.offset.x > 80) {
+            setSidebarOpen(false);
+          }
+        }}
         className={cn(
-          "fixed inset-y-0 right-0 z-[60] flex w-64 transform flex-col bg-white shadow-lg transition-transform lg:left-0 lg:right-auto lg:translate-x-0 lg:shadow-none",
-          sidebarOpen ? "translate-x-0" : "translate-x-full",
+          "fixed inset-y-0 right-0 z-[60] flex w-64 flex-col bg-white shadow-lg lg:left-0 lg:right-auto lg:translate-x-0 lg:shadow-none",
         )}
       >
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
@@ -168,9 +200,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
               height={40}
               className="object-contain"
             />
-            <span className="font-semibold text-slate-900">
-              시공코어 관리자
-            </span>
+            <span className="font-semibold text-slate-900">시공코어</span>
           </AppLink>
 
           <PrimitiveButton
@@ -179,6 +209,44 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
           >
             <X className="h-5 w-5" />
           </PrimitiveButton>
+        </div>
+
+        {/* User Profile Card - Mobile Only */}
+        <div className="border-b border-slate-100 bg-slate-50/50 p-5 lg:hidden">
+          <div className="flex items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-lg font-bold text-slate-900">
+                {user?.name}
+              </p>
+              <p className="text-sm font-medium text-brand-point-600">
+                {user?.role === "super_admin"
+                  ? "최고관리자"
+                  : user?.role === "company_admin"
+                    ? "대표"
+                    : user?.role === "site_manager"
+                      ? "현장소장"
+                      : "작업자"}
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 flex gap-2">
+            <AppLink
+              href="/mypage"
+              onClick={() => setSidebarOpen(false)}
+              className="flex flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 active:scale-[0.98] transition-transform"
+            >
+              내 정보
+            </AppLink>
+            <button
+              onClick={() => {
+                setSidebarOpen(false);
+                logout();
+              }}
+              className="flex flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-red-600 active:scale-[0.98] transition-transform"
+            >
+              로그아웃
+            </button>
+          </div>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
@@ -299,7 +367,8 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
           )}
         </nav>
 
-        <div className="shrink-0 border-t border-slate-200 p-4 pb-24 lg:pb-4">
+        {/* Desktop Sidebar Footer */}
+        <div className="mt-auto hidden shrink-0 border-t border-slate-200 p-4 lg:block">
           <AppLink
             href="/mypage"
             onClick={() => setSidebarOpen(false)}
@@ -326,7 +395,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
           <Button
             variant="ghost"
             fullWidth
-            className="justify-start gap-3"
+            className="justify-start gap-3 text-red-600 hover:bg-red-50 hover:text-red-700"
             onClick={() => {
               start();
               logout();
@@ -336,7 +405,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
             로그아웃
           </Button>
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Main content */}
       <main className="lg:ml-64 pb-nav-safe lg:pb-0">
