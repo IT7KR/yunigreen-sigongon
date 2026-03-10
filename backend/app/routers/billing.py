@@ -45,6 +45,7 @@ class ConfirmPaymentRequest(BaseModel):
     payment_key: str
     order_id: str
     amount: Decimal
+    plan: Optional[SubscriptionPlan] = None
 
 
 class IssueBillingKeyRequest(BaseModel):
@@ -135,21 +136,22 @@ async def confirm_payment(
     )
     subscription = sub_result.scalar_one_or_none()
 
-    if not subscription:
+    target_plan = payment_data.plan or (subscription.plan if subscription else None)
+    if target_plan is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="구독 정보를 찾을 수 없어요",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="결제할 요금제를 선택해 주세요.",
         )
 
     # Trial 플랜은 결제 불필요
-    if subscription.plan == SubscriptionPlan.TRIAL:
+    if target_plan == SubscriptionPlan.TRIAL:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="무료 체험 플랜은 결제가 필요하지 않아요",
         )
 
     # Validate amount against plan pricing
-    expected_amount = PLAN_PRICING.get(subscription.plan)
+    expected_amount = PLAN_PRICING.get(target_plan)
     if not expected_amount:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -189,6 +191,20 @@ async def confirm_payment(
             detail=f"결제 승인 실패: {str(e)}",
         )
 
+    now = datetime.utcnow()
+    if subscription is None:
+        subscription = Subscription(
+            organization_id=organization.id,
+            plan=target_plan,
+            status=SubscriptionStatus.ACTIVE,
+            started_at=now,
+            expires_at=now,
+        )
+        db.add(subscription)
+        await db.flush()
+    else:
+        subscription.plan = target_plan
+
     payment = Payment(
         subscription_id=subscription.id,
         organization_id=organization.id,
@@ -196,7 +212,7 @@ async def confirm_payment(
         order_id=payment_data.order_id,
         amount=payment_data.amount,
         status=PaymentStatus.PAID,
-        paid_at=datetime.utcnow(),
+        paid_at=now,
         receipt_url=receipt_url,
         method=method,
     )
@@ -204,15 +220,15 @@ async def confirm_payment(
     db.add(payment)
 
     # Update subscription expiry
-    if subscription.expires_at < datetime.utcnow():
+    if subscription.expires_at < now:
         # Expired subscription - start from now
-        subscription.expires_at = datetime.utcnow() + timedelta(days=365)
+        subscription.expires_at = now + timedelta(days=365)
     else:
         # Active subscription - extend from current expiry
         subscription.expires_at = subscription.expires_at + timedelta(days=365)
 
     subscription.status = SubscriptionStatus.ACTIVE
-    subscription.updated_at = datetime.utcnow()
+    subscription.updated_at = now
 
     await db.commit()
     await db.refresh(payment)

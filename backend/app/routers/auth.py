@@ -1,5 +1,5 @@
 """인증 API 라우터."""
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -21,6 +21,7 @@ from app.models.otp import OtpRecord
 from app.models.user import User, UserLogin, Token, UserRead, UserRole, OrganizationRead
 from app.schemas.response import APIResponse
 from app.services.sms import get_sms_service
+from app.services.trial_policy import add_months, resolve_trial_policy
 
 router = APIRouter()
 
@@ -89,7 +90,7 @@ class RegisterRequest(BaseModel):
     contact_name: str | None = None
     contact_phone: str | None = None
     contact_position: str | None = None
-    plan: str = "trial"
+    plan: str | None = None
 
 
 @router.post("/login", response_model=APIResponse[LoginResponse])
@@ -442,7 +443,7 @@ async def register(request: RegisterRequest, db: DBSession):
         )
 
     # Organization 생성
-    from app.models.user import Organization, OrganizationCreate
+    from app.models.user import Organization
     org = Organization(
         name=request.company_name,
         business_number=request.business_number,
@@ -471,26 +472,39 @@ async def register(request: RegisterRequest, db: DBSession):
 
     # Subscription 생성
     from app.models.billing import Subscription, SubscriptionPlan, SubscriptionStatus
-    try:
-        plan_enum = SubscriptionPlan(request.plan)
-    except ValueError:
-        plan_enum = SubscriptionPlan.TRIAL
-
     now = datetime.utcnow()
-    if plan_enum == SubscriptionPlan.TRIAL:
-        expires_at = now + timedelta(days=30)
-    else:
-        # 유료 플랜: billing/confirm 호출 시 +365일 연장됨
-        expires_at = now
+    requested_plan: SubscriptionPlan | None = None
+    if request.plan:
+        try:
+            requested_plan = SubscriptionPlan(request.plan)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="플랜 값이 올바르지 않아요.",
+            ) from exc
 
-    subscription = Subscription(
-        organization_id=org.id,
-        plan=plan_enum,
-        status=SubscriptionStatus.ACTIVE,
-        started_at=now,
-        expires_at=expires_at,
-    )
-    db.add(subscription)
+    subscription: Subscription | None = None
+    if requested_plan in {SubscriptionPlan.BASIC, SubscriptionPlan.PRO}:
+        subscription = Subscription(
+            organization_id=org.id,
+            plan=requested_plan,
+            status=SubscriptionStatus.ACTIVE,
+            started_at=now,
+            expires_at=now,
+        )
+    else:
+        trial_policy = await resolve_trial_policy(db, org.id)
+        if trial_policy.enabled:
+            subscription = Subscription(
+                organization_id=org.id,
+                plan=SubscriptionPlan.TRIAL,
+                status=SubscriptionStatus.ACTIVE,
+                started_at=now,
+                expires_at=add_months(now, trial_policy.months),
+            )
+
+    if subscription is not None:
+        db.add(subscription)
     await db.commit()
     await db.refresh(user)
 
