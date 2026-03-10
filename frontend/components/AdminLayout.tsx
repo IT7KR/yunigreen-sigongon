@@ -155,8 +155,8 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
         id="main-sidebar"
         aria-label="주 메뉴"
         className={cn(
-          "fixed inset-y-0 left-0 z-[60] flex w-64 transform flex-col bg-white shadow-lg transition-transform lg:translate-x-0 lg:shadow-none",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          "fixed inset-y-0 right-0 z-[60] flex w-64 transform flex-col bg-white shadow-lg transition-transform lg:left-0 lg:right-auto lg:translate-x-0 lg:shadow-none",
+          sidebarOpen ? "translate-x-0" : "translate-x-full",
         )}
       >
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
@@ -299,7 +299,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
           )}
         </nav>
 
-        <div className="shrink-0 border-t border-slate-200 p-4">
+        <div className="shrink-0 border-t border-slate-200 p-4 pb-24 lg:pb-4">
           <AppLink
             href="/mypage"
             onClick={() => setSidebarOpen(false)}
@@ -341,7 +341,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
       {/* Main content */}
       <main className="lg:ml-64 pb-nav-safe lg:pb-0">
         <ContentTransitionBoundary
-          className="mx-auto max-w-7xl lg:p-8"
+          className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 sm:pt-8 lg:p-8"
           loadingOverlay={<AdminContentLoadingOverlay />}
         >
           <div id="main-content">{children}</div>
