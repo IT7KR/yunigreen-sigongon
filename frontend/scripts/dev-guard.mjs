@@ -3,15 +3,19 @@
  * dev-guard.mjs
  *
  * Pre-dev script to check and clean up stale processes on dev ports.
- * Prevents EADDRINUSE errors by ensuring ports are free before starting.
+ * Prevents EADDRINUSE errors and stale Next.js lock failures before starting.
  *
  * Only kills processes that match our SigongCore project path.
  */
 
 import { execSync } from "child_process";
+import { existsSync, rmSync } from "fs";
+import path from "path";
 
 const DEV_PORTS = [3033]; // admin
-const PROJECT_IDENTIFIER = "SigongCore-dev/frontend";
+const PROJECT_ROOT = process.cwd();
+const PROJECT_IDENTIFIER = PROJECT_ROOT.replaceAll("\\", "/");
+const NEXT_DEV_LOCK = path.join(PROJECT_ROOT, ".next", "dev", "lock");
 
 /**
  * Get process info using a port
@@ -70,7 +74,7 @@ function isOurProcess(processInfo) {
   if (!processInfo) return false;
 
   // Check if the command contains our project identifier
-  if (processInfo.command.includes(PROJECT_IDENTIFIER)) {
+  if (processInfo.command.replaceAll("\\", "/").includes(PROJECT_IDENTIFIER)) {
     return true;
   }
 
@@ -92,6 +96,68 @@ function isOurProcess(processInfo) {
       return false;
     }
   }
+}
+
+/**
+ * Find an active Next.js process for this project, even if it isn't listening on our dev port.
+ * This prevents false "port is free" results when a lock is still legitimately held.
+ * @returns {{ pid: number, command: string } | null}
+ */
+function getProjectNextProcess() {
+  try {
+    const output = execSync("ps -eo pid=,args=", {
+      encoding: "utf-8",
+    });
+
+    for (const line of output.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      const match = trimmed.match(/^(\d+)\s+(.*)$/);
+      if (!match) continue;
+
+      const pid = parseInt(match[1], 10);
+      const command = match[2];
+
+      if (!command.includes("next")) continue;
+
+      const processInfo = { pid, command };
+      if (isOurProcess(processInfo)) {
+        return processInfo;
+      }
+    }
+  } catch {
+    // Ignore process scan failures and fall back to lock-only behavior
+  }
+
+  return null;
+}
+
+/**
+ * Remove a stale Next.js dev lock when no project process is alive.
+ * @returns {boolean} true when the lock is still legitimately held and startup should stop
+ */
+function cleanupNextLock() {
+  if (!existsSync(NEXT_DEV_LOCK)) {
+    return false;
+  }
+
+  const nextProcess = getProjectNextProcess();
+  if (nextProcess) {
+    console.log(
+      `  \x1b[31m[BLOCKED]\x1b[0m Next.js lock is held by another sigongcore process:`,
+    );
+    console.log(`    PID: ${nextProcess.pid}`);
+    console.log(`    Command: ${nextProcess.command}`);
+    console.log(`  \x1b[33m[TIP]\x1b[0m Stop that process before starting a new dev server.`);
+    return true;
+  }
+
+  rmSync(NEXT_DEV_LOCK, { force: true });
+  console.log(
+    `  \x1b[33m[CLEANING]\x1b[0m Removed stale Next.js lock at ${path.relative(PROJECT_ROOT, NEXT_DEV_LOCK)}`,
+  );
+  return false;
 }
 
 /**
@@ -155,6 +221,10 @@ for (const port of DEV_PORTS) {
     console.log(`  \x1b[33m[TIP]\x1b[0m Run: kill ${processInfo.pid}`);
     hasErrors = true;
   }
+}
+
+if (!hasErrors && cleanupNextLock()) {
+  hasErrors = true;
 }
 
 if (hasErrors) {

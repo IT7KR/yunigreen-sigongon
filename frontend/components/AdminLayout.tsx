@@ -19,6 +19,8 @@ import {
   Calculator,
   UserCheck,
   UserPlus,
+  Package,
+  CreditCard,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -80,12 +82,14 @@ const navItems = [
 const saNavItems = [
   { href: "/sa", icon: BarChart3, label: "플랫폼 현황", exact: true },
   { href: "/sa/tenants", icon: Building2, label: "고객사 관리" },
+  { href: "/sa/billing-policy", icon: CreditCard, label: "체험/결제 정책" },
   { href: "/sa/users", icon: Users, label: "전체 사용자" },
   {
     href: "/sa/estimation-governance",
     icon: FileSpreadsheet,
     label: "적산 운영",
   },
+  { href: "/sa/material-masters", icon: Package, label: "자재 마스터" },
   { href: "/sa/labor", icon: HardHat, label: "노무 모니터링" },
 ];
 

@@ -102,7 +102,7 @@ test.describe("결제 관련 플로우", () => {
     test("결제 체크아웃 페이지에 플랜 파라미터로 접근 가능하다", async ({
       page,
     }) => {
-      await page.goto("/billing/checkout?plan=STARTER");
+      await page.goto("/billing/checkout?plan=basic");
 
       // Page should load (not redirect back immediately)
       await page.waitForTimeout(1000);

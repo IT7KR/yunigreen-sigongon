@@ -93,7 +93,7 @@ export interface Tenant {
   id: string;
   name: string;
   businessNumber?: string; // 사업자등록번호
-  plan: "trial" | "basic" | "pro"; // 'free' → 'trial'로 변경
+  plan: "trial" | "basic" | "pro" | "none";
   users_count: number;
   projects_count: number;
   created_at: string;
@@ -110,12 +110,14 @@ export type SubscriptionStatus =
   | "active"
   | "trial"
   | "expired"
-  | "custom_trial";
+  | "custom_trial"
+  | "pending_payment";
 
 export function getSubscriptionStatus(tenant: Tenant): SubscriptionStatus {
   const now = new Date();
   const endDate = new Date(tenant.subscription_end_date);
 
+  if (tenant.plan === "none") return "pending_payment";
   if (now > endDate) return "expired";
   if (tenant.is_custom_trial) return "custom_trial";
   if (tenant.plan === "trial") return "trial";

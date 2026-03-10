@@ -39,6 +39,7 @@ import type {
   DiagnosisCaseImage,
   VisionResultDetail,
   DiagnosisCaseEstimate,
+  MaterialMaster,
 } from "@sigongcore/types";
 import {
   mockDb,
@@ -292,6 +293,49 @@ export class MockAPIClient {
   private projectContractIds: Record<string, string[]> = {};
 
   private laborContractsByProject: Record<string, LaborContractListItem[]> = {};
+  private signupTrialPolicy = {
+    default_trial_enabled: true,
+    default_trial_months: 1,
+  };
+  private tenantTrialOverrides: Record<
+    string,
+    { trial_enabled: boolean; trial_months: number; reason?: string | null }
+  > = {};
+  private materialMasters: MaterialMaster[] = [
+    {
+      id: "mm_1001",
+      name: "방수 시트",
+      unit: "롤",
+      unit_price: 45000,
+      is_active: true,
+      created_by_user_id: "u_super_admin",
+      updated_by_user_id: "u_super_admin",
+      created_at: "2026-01-05T09:00:00Z",
+      updated_at: "2026-01-05T09:00:00Z",
+    },
+    {
+      id: "mm_1002",
+      name: "우레탄 방수재",
+      unit: "통",
+      unit_price: 120000,
+      is_active: true,
+      created_by_user_id: "u_super_admin",
+      updated_by_user_id: "u_super_admin",
+      created_at: "2026-01-05T09:00:00Z",
+      updated_at: "2026-01-05T09:00:00Z",
+    },
+    {
+      id: "mm_1003",
+      name: "실리콘 코킹제",
+      unit: "개",
+      unit_price: 5000,
+      is_active: true,
+      created_by_user_id: "u_super_admin",
+      updated_by_user_id: "u_super_admin",
+      created_at: "2026-01-05T09:00:00Z",
+      updated_at: "2026-01-05T09:00:00Z",
+    },
+  ];
   private materialOrdersByProject: Record<string, any[]> = {};
   private materialOrdersById: Record<string, any> = {};
   private warrantyRequestsByProject: Record<
@@ -1035,6 +1079,52 @@ export class MockAPIClient {
   private getCurrentOrganizationId() {
     const user = this.getCurrentUser() || this.getStoredUsers()[0];
     return user.organization_id || "org_1";
+  }
+
+  private addMonths(date: Date, months: number) {
+    const next = new Date(date);
+    const originalDay = next.getDate();
+    next.setMonth(next.getMonth() + months, 1);
+    const lastDay = new Date(
+      next.getFullYear(),
+      next.getMonth() + 1,
+      0,
+    ).getDate();
+    next.setDate(Math.min(originalDay, lastDay));
+    return next;
+  }
+
+  private resolveTenantTrialPolicy(tenantId: string) {
+    const override = this.tenantTrialOverrides[tenantId];
+    if (override) {
+      return {
+        enabled: override.trial_enabled && override.trial_months > 0,
+        months: override.trial_enabled ? override.trial_months : 0,
+        source: "override" as const,
+        reason: override.reason ?? null,
+      };
+    }
+
+    return {
+      enabled:
+        this.signupTrialPolicy.default_trial_enabled &&
+        this.signupTrialPolicy.default_trial_months > 0,
+      months: this.signupTrialPolicy.default_trial_enabled
+        ? this.signupTrialPolicy.default_trial_months
+        : 0,
+      source: this.signupTrialPolicy.default_trial_enabled
+        ? ("default" as const)
+        : ("none" as const),
+      reason: null,
+    };
+  }
+
+  private requireSuperAdmin() {
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    if (currentUser.role !== "super_admin") {
+      return fail("FORBIDDEN", "최고 관리자만 처리할 수 있어요");
+    }
+    return null;
   }
 
   private getWorkerDocumentLabel(documentType: WorkerDocumentType) {
@@ -3585,12 +3675,41 @@ export class MockAPIClient {
     if (!tenant) {
       return delay(
         ok({
-          plan: "무료 체험",
+          plan: "",
+          subscription_start_date: "",
           subscription_end_date: "",
           days_remaining: 0,
           is_custom_trial: false,
+          billing_amount: 0,
           seats_used: 0,
-          seats_total: 2,
+          seats_total: 0,
+          scheduled_plan: null,
+          scheduled_plan_date: null,
+          trial_source: null,
+          trial_months: 0,
+          payment_method: null,
+          history: [],
+        }),
+      );
+    }
+
+    if (tenant.plan === "none") {
+      const effectivePolicy = this.resolveTenantTrialPolicy(tenant.id);
+      return delay(
+        ok({
+          plan: "",
+          subscription_start_date: tenant.subscription_start_date || "",
+          subscription_end_date: tenant.subscription_end_date || "",
+          days_remaining: 0,
+          is_custom_trial: false,
+          billing_amount: 0,
+          seats_used: tenant.users_count,
+          seats_total: 0,
+          scheduled_plan: null,
+          scheduled_plan_date: null,
+          trial_source:
+            effectivePolicy.source === "none" ? null : effectivePolicy.source,
+          trial_months: effectivePolicy.enabled ? effectivePolicy.months : 0,
           payment_method: null,
           history: [],
         }),
@@ -3611,6 +3730,7 @@ export class MockAPIClient {
       trial: "무료 체험",
       basic: "Basic",
       pro: "Pro",
+      none: "",
     };
 
     // 좌석 제한 (플랜별)
@@ -3618,7 +3738,11 @@ export class MockAPIClient {
       trial: 2,
       basic: 5,
       pro: 999, // 무제한
+      none: 0,
     };
+    const effectivePolicy = this.resolveTenantTrialPolicy(tenant.id);
+    const isCustomTrial =
+      tenant.plan === "trial" && effectivePolicy.source === "override";
 
     return delay(
       ok({
@@ -3626,12 +3750,16 @@ export class MockAPIClient {
         subscription_start_date: tenant.subscription_start_date,
         subscription_end_date: tenant.subscription_end_date,
         days_remaining: daysRemaining,
-        is_custom_trial: tenant.is_custom_trial,
+        is_custom_trial: isCustomTrial,
         billing_amount: tenant.billing_amount || 0,
         seats_used: tenant.users_count,
         seats_total: seatLimits[tenant.plan] || 2,
+        scheduled_plan: null,
+        scheduled_plan_date: null,
+        trial_source: tenant.plan === "trial" ? effectivePolicy.source : null,
+        trial_months: tenant.plan === "trial" ? effectivePolicy.months : 0,
         payment_method:
-          tenant.plan !== "trial" && !tenant.is_custom_trial
+          tenant.plan !== "trial" && !isCustomTrial
             ? {
                 brand: "현대카드",
                 last4: "1234",
@@ -3639,7 +3767,7 @@ export class MockAPIClient {
               }
             : null,
         history:
-          tenant.plan !== "trial" && !tenant.is_custom_trial
+          tenant.plan !== "trial" && !isCustomTrial
             ? [
                 {
                   id: "h1",
@@ -4746,7 +4874,7 @@ export class MockAPIClient {
     contact_name?: string;
     contact_phone?: string;
     contact_position?: string;
-    plan: "trial" | "basic" | "pro";
+    plan?: "trial" | "basic" | "pro";
   }) {
     const tenant_id = randomId("tenant");
     const user_id = randomId("u");
@@ -4755,35 +4883,37 @@ export class MockAPIClient {
     const startDate = now.toISOString();
 
     // 구독 종료일 계산
-    let endDate: Date;
-    let billingAmount: number;
+    let endDate = "";
+    let billingAmount = 0;
+    let tenantPlan: "trial" | "basic" | "pro" | "none" = "none";
 
-    const DEFAULT_TRIAL_DAYS = 30;
     const PLAN_PRICES: Record<string, number> = {
       trial: 0,
       basic: 588000, // 49,000 × 12 (연간)
       pro: 1188000, // 99,000 × 12 (연간)
     };
 
-    if (data.plan === "trial") {
-      endDate = new Date(now);
-      endDate.setDate(endDate.getDate() + DEFAULT_TRIAL_DAYS);
-      billingAmount = 0;
-    } else {
-      endDate = new Date(now);
-      endDate.setFullYear(endDate.getFullYear() + 1); // 1년 후
+    if (data.plan === "basic" || data.plan === "pro") {
+      tenantPlan = data.plan;
+      endDate = now.toISOString();
       billingAmount = PLAN_PRICES[data.plan] || 0;
+    } else {
+      const effectivePolicy = this.resolveTenantTrialPolicy(tenant_id);
+      if (effectivePolicy.enabled) {
+        tenantPlan = "trial";
+        endDate = this.addMonths(now, effectivePolicy.months).toISOString();
+      }
     }
 
     const newTenant: Tenant = {
       id: tenant_id,
       name: data.company_name,
-      plan: data.plan,
+      plan: tenantPlan,
       users_count: 1,
       projects_count: 0,
       created_at: startDate,
       subscription_start_date: startDate,
-      subscription_end_date: endDate.toISOString(),
+      subscription_end_date: endDate,
       is_custom_trial: false,
       billing_amount: billingAmount,
     };
@@ -4830,12 +4960,16 @@ export class MockAPIClient {
     payment_key: string;
     order_id: string;
     amount: number;
+    plan?: "trial" | "basic" | "pro";
   }) {
     const payment_id = randomId("pay");
     const receipt_url = `mock://receipt/${payment_id}`;
+    const paidAt = nowIso();
+    const currentUser = mockDb.get("currentUser");
+    let subscriptionId = randomId("sub");
+    let organizationId = 0;
 
     // Mock: 현재 사용자의 테넌트 플랜 업데이트
-    const currentUser = mockDb.get("currentUser");
     if (currentUser?.organization_id) {
       const tenants = mockDb.get("tenants");
       const tenantIdx = tenants.findIndex(
@@ -4844,15 +4978,23 @@ export class MockAPIClient {
 
       if (tenantIdx >= 0) {
         const tenant = tenants[tenantIdx];
+        subscriptionId = `sub_${tenant.id}`;
+        organizationId = Number(String(tenant.id).replace(/\D/g, "")) || 1;
         const now = new Date();
-        const endDate = new Date(now);
+        const currentEndDate = tenant.subscription_end_date
+          ? new Date(tenant.subscription_end_date)
+          : now;
+        const baseDate = currentEndDate > now ? currentEndDate : now;
+        const endDate = new Date(baseDate);
         endDate.setFullYear(endDate.getFullYear() + 1);
 
         // 금액에 따라 플랜 결정 (연간 결제 금액 기준)
         // Basic: ₩588,000 (49,000/월 × 12)
         // Pro: ₩1,188,000 (99,000/월 × 12)
-        let newPlan: "trial" | "basic" | "pro" = "basic";
-        if (data.amount === 588000) {
+        let newPlan: "basic" | "pro" = "basic";
+        if (data.plan === "basic" || data.plan === "pro") {
+          newPlan = data.plan;
+        } else if (data.amount === 588000) {
           newPlan = "basic";
         } else if (data.amount === 1188000) {
           newPlan = "pro";
@@ -4878,13 +5020,21 @@ export class MockAPIClient {
 
     return delay(
       ok({
-        payment_id,
-        status: "completed" as const,
-        receipt_url,
+        id: Number(String(payment_id).replace(/\D/g, "")) || 1,
+        subscription_id:
+          Number(String(subscriptionId).replace(/\D/g, "")) || 1,
+        organization_id: organizationId,
         payment_key: data.payment_key,
         order_id: data.order_id,
         amount: data.amount,
-        approved_at: nowIso(),
+        method: "카드",
+        status: "paid" as const,
+        paid_at: paidAt,
+        failed_at: null,
+        failure_reason: null,
+        receipt_url,
+        created_at: paidAt,
+        updated_at: paidAt,
       }),
     );
   }
@@ -4893,21 +5043,13 @@ export class MockAPIClient {
     return this.getBillingOverview();
   }
 
-  async changePlan(plan: "STARTER" | "STANDARD" | "PREMIUM") {
+  async changePlan(plan: "basic" | "pro") {
     const currentUser = mockDb.get("currentUser");
     if (!currentUser?.organization_id) {
       return delay(
         fail<{ message: string }>("UNAUTHORIZED", "인증이 필요합니다"),
       );
     }
-
-    const planMapping: Record<string, "trial" | "basic" | "pro"> = {
-      STARTER: "trial",
-      STANDARD: "basic",
-      PREMIUM: "pro",
-    };
-
-    const tenantPlan = planMapping[plan];
     const tenants = mockDb.get("tenants");
     const tenantIdx = tenants.findIndex(
       (t) => t.id === currentUser.organization_id,
@@ -4925,14 +5067,13 @@ export class MockAPIClient {
     endDate.setFullYear(endDate.getFullYear() + 1);
 
     const billingAmounts: Record<string, number> = {
-      STARTER: 99000,
-      STANDARD: 199000,
-      PREMIUM: 399000,
+      basic: 588000,
+      pro: 1188000,
     };
 
     const updatedTenant = {
       ...tenant,
-      plan: tenantPlan,
+      plan,
       subscription_start_date: now.toISOString(),
       subscription_end_date: endDate.toISOString(),
       billing_amount: billingAmounts[plan],
@@ -5011,7 +5152,10 @@ export class MockAPIClient {
     const total = tenants.length;
     const total_pages = Math.max(1, Math.ceil(total / per_page));
     const start = (page - 1) * per_page;
-    const pageItems = tenants.slice(start, start + per_page);
+    const pageItems = tenants.slice(start, start + per_page).map((tenant) => ({
+      ...tenant,
+      status: "active" as const,
+    }));
 
     return delay(okPage(pageItems, { page, per_page, total, total_pages }));
   }
@@ -5022,13 +5166,45 @@ export class MockAPIClient {
       return delay(fail<Tenant>("NOT_FOUND", "테넌트를 찾을 수 없어요"));
     }
 
-    return delay(ok(tenant));
+    const effectivePolicy = this.resolveTenantTrialPolicy(tenantId);
+    const override = this.tenantTrialOverrides[tenantId];
+
+    return delay(
+      ok({
+        ...tenant,
+        trial_override_enabled: override?.trial_enabled ?? null,
+        trial_override_months: override?.trial_months ?? null,
+        trial_override_reason: override?.reason ?? null,
+        effective_trial_enabled: effectivePolicy.enabled,
+        effective_trial_months: effectivePolicy.months,
+        trial_source: tenant.plan === "trial" ? effectivePolicy.source : null,
+      }),
+    );
   }
 
-  async setCustomTrialPeriod(
+  async getTrialPolicy() {
+    return delay(ok(this.signupTrialPolicy));
+  }
+
+  async updateTrialPolicy(data: {
+    default_trial_enabled: boolean;
+    default_trial_months: number;
+  }) {
+    this.signupTrialPolicy = {
+      default_trial_enabled: data.default_trial_enabled,
+      default_trial_months: data.default_trial_enabled
+        ? Math.max(1, data.default_trial_months)
+        : 0,
+    };
+
+    return delay(ok(this.signupTrialPolicy));
+  }
+
+  async setTenantTrialPolicy(
     tenantId: string,
     data: {
-      end_date: string; // ISO date
+      trial_enabled: boolean;
+      trial_months: number;
       reason?: string;
     },
   ) {
@@ -5039,18 +5215,39 @@ export class MockAPIClient {
       return delay(
         fail<{
           id: string;
+          trial_enabled: boolean;
+          trial_months: number;
+          reason?: string | null;
           subscription_end_date: string;
           is_custom_trial: boolean;
         }>("NOT_FOUND", "테넌트를 찾을 수 없어요"),
       );
     }
 
-    const updated = {
-      ...tenants[idx],
-      subscription_end_date: data.end_date,
-      is_custom_trial: true,
-      billing_amount: 0, // 무료
+    const months = data.trial_enabled ? Math.max(1, data.trial_months) : 0;
+    this.tenantTrialOverrides[tenantId] = {
+      trial_enabled: data.trial_enabled,
+      trial_months: months,
+      reason: data.reason ?? null,
     };
+    const tenant = tenants[idx];
+    const now = new Date();
+    const updated = data.trial_enabled
+      ? {
+          ...tenant,
+          plan: "trial" as const,
+          subscription_start_date: now.toISOString(),
+          subscription_end_date: this.addMonths(now, months).toISOString(),
+          is_custom_trial: true,
+          billing_amount: 0,
+        }
+      : {
+          ...tenant,
+          plan: "none" as const,
+          subscription_end_date: "",
+          billing_amount: 0,
+          is_custom_trial: false,
+        };
 
     mockDb.set(
       "tenants",
@@ -5060,8 +5257,11 @@ export class MockAPIClient {
     return delay(
       ok({
         id: tenantId,
-        subscription_end_date: data.end_date,
-        is_custom_trial: true,
+        trial_enabled: data.trial_enabled,
+        trial_months: months,
+        reason: data.reason ?? null,
+        subscription_end_date: updated.subscription_end_date,
+        is_custom_trial: data.trial_enabled,
       }),
     );
   }
@@ -6172,6 +6372,83 @@ export class MockAPIClient {
   // Material Orders (자재 발주)
   // ============================================
 
+  async getMaterialMasters() {
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    if (currentUser.role === "worker") {
+      return delay(fail("FORBIDDEN", "자재 마스터를 조회할 권한이 없습니다"));
+    }
+
+    return delay(ok(this.materialMasters.filter((item) => item.is_active)));
+  }
+
+  async getAdminMaterialMasters() {
+    const forbidden = this.requireSuperAdmin();
+    if (forbidden) {
+      return delay(forbidden);
+    }
+
+    return delay(
+      ok(
+        [...this.materialMasters].sort((a, b) =>
+          b.updated_at.localeCompare(a.updated_at),
+        ),
+      ),
+    );
+  }
+
+  async createMaterialMaster(data: {
+    name: string;
+    unit: string;
+    unit_price: number;
+    is_active?: boolean;
+  }) {
+    const forbidden = this.requireSuperAdmin();
+    if (forbidden) {
+      return delay(forbidden);
+    }
+
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    const materialMaster: MaterialMaster = {
+      id: randomId("mm"),
+      name: data.name.trim(),
+      unit: data.unit.trim(),
+      unit_price: Number(data.unit_price),
+      is_active: data.is_active ?? true,
+      created_by_user_id: currentUser.id,
+      updated_by_user_id: currentUser.id,
+      created_at: nowIso(),
+      updated_at: nowIso(),
+    };
+    this.materialMasters.unshift(materialMaster);
+
+    return delay(ok(materialMaster));
+  }
+
+  async updateMaterialMaster(
+    materialMasterId: string,
+    data: Partial<Pick<MaterialMaster, "name" | "unit" | "unit_price" | "is_active">>,
+  ) {
+    const forbidden = this.requireSuperAdmin();
+    if (forbidden) {
+      return delay(forbidden);
+    }
+
+    const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
+    const target = this.materialMasters.find((item) => item.id === materialMasterId);
+    if (!target) {
+      return delay(fail("NOT_FOUND", "자재 마스터를 찾을 수 없습니다"));
+    }
+
+    if (typeof data.name === "string") target.name = data.name.trim();
+    if (typeof data.unit === "string") target.unit = data.unit.trim();
+    if (typeof data.unit_price === "number") target.unit_price = data.unit_price;
+    if (typeof data.is_active === "boolean") target.is_active = data.is_active;
+    target.updated_by_user_id = currentUser.id;
+    target.updated_at = nowIso();
+
+    return delay(ok(target));
+  }
+
   async getMaterialOrders(projectId: string) {
     // Initialize sample orders if not exists
     if (!this.materialOrdersByProject[projectId]) {
@@ -6184,9 +6461,10 @@ export class MockAPIClient {
           items: [
             {
               id: randomId("item"),
+              material_master_id: "mm_1001",
               catalog_item_id: "mat_1001",
               pricebook_revision_id: "rev_2026_01",
-              price_source: "catalog_revision",
+              price_source: "material_master",
               description: "방수 시트",
               specification: "1.5mm 두께",
               unit: "롤",
@@ -6196,6 +6474,7 @@ export class MockAPIClient {
             },
             {
               id: randomId("item"),
+              material_master_id: "mm_1003",
               description: "실리콘 코킹제",
               specification: "300ml",
               unit: "개",
@@ -6227,9 +6506,10 @@ export class MockAPIClient {
           items: [
             {
               id: randomId("item"),
+              material_master_id: "mm_1002",
               catalog_item_id: "mat_2001",
               pricebook_revision_id: "rev_2026_01",
-              price_source: "catalog_revision",
+              price_source: "material_master",
               description: "우레탄 방수재",
               specification: "20kg",
               unit: "통",
@@ -6315,6 +6595,7 @@ export class MockAPIClient {
         unit?: string;
         quantity: number;
         unit_price?: number;
+        material_master_id?: string | number | null;
         catalog_item_id?: string | number | null;
         pricebook_revision_id?: string | number | null;
         override_reason?: string;
@@ -6326,22 +6607,38 @@ export class MockAPIClient {
     const orderId = randomId("mo");
     const orderNumber = `MO-2026-${String(Object.keys(this.materialOrdersById).length + 1).padStart(3, "0")}`;
 
-    const items = data.items.map((item) => ({
-      id: randomId("item"),
-      catalog_item_id: item.catalog_item_id ?? null,
-      pricebook_revision_id: item.pricebook_revision_id ?? null,
-      price_source:
-        item.catalog_item_id && item.pricebook_revision_id
-          ? "catalog_revision"
-          : "manual_override",
-      override_reason: item.override_reason,
-      description: item.description || "신규 품목",
-      specification: item.specification,
-      unit: item.unit || "개",
-      quantity: item.quantity,
-      unit_price: item.unit_price ?? 0,
-      amount: item.quantity * (item.unit_price ?? 0),
-    }));
+    const items = data.items.map((item) => {
+      const materialMaster =
+        item.material_master_id === undefined ||
+        item.material_master_id === null ||
+        item.material_master_id === ""
+          ? null
+          : this.materialMasters.find(
+              (master) => master.id === String(item.material_master_id),
+            ) || null;
+      const unitPrice = materialMaster?.unit_price ?? (item.unit_price ?? 0);
+      const description = materialMaster?.name || item.description || "신규 품목";
+      const unit = materialMaster?.unit || item.unit || "개";
+
+      return {
+        id: randomId("item"),
+        material_master_id: materialMaster?.id ?? null,
+        catalog_item_id: item.catalog_item_id ?? null,
+        pricebook_revision_id: item.pricebook_revision_id ?? null,
+        price_source: materialMaster
+          ? "material_master"
+          : item.catalog_item_id && item.pricebook_revision_id
+            ? "catalog_revision"
+            : "manual_override",
+        override_reason: item.override_reason,
+        description,
+        specification: item.specification,
+        unit,
+        quantity: item.quantity,
+        unit_price: unitPrice,
+        amount: item.quantity * unitPrice,
+      };
+    });
 
     const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
 
