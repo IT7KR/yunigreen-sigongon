@@ -1,16 +1,14 @@
 "use client";
 
-import { use, useEffect, useMemo, useState, type ComponentType } from "react";
+import Link from "next/link";
+import { use, useMemo, useState, type ComponentType } from "react";
 import {
   Plus,
   Package,
   CheckCircle,
   Clock,
-  Truck,
   AlertCircle,
-  FileText,
-  Receipt,
-  CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Card,
@@ -24,6 +22,7 @@ import {
   TableCell,
   Modal,
   Input,
+  PrimitiveSelect,
   Textarea,
   cn,
   toast,
@@ -31,7 +30,11 @@ import {
 import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
-import type { MaterialOrder, MaterialOrderStatus } from "@sigongcore/types";
+import type {
+  MaterialMaster,
+  MaterialOrder,
+  MaterialOrderStatus,
+} from "@sigongcore/types";
 
 type StatusBadgeMeta = {
   icon: ComponentType<{ className?: string }>;
@@ -40,31 +43,35 @@ type StatusBadgeMeta = {
 };
 
 const STATUS_META: Record<string, StatusBadgeMeta> = {
-  draft: { icon: Clock, color: "bg-slate-100 text-slate-700", label: "초안" },
+  draft: {
+    icon: Clock,
+    color: "bg-slate-100 text-slate-700",
+    label: "임시 저장",
+  },
   requested: {
     icon: AlertCircle,
     color: "bg-blue-100 text-blue-700",
     label: "발주 요청",
   },
   invoice_received: {
-    icon: FileText,
-    color: "bg-amber-100 text-amber-700",
-    label: "계산서 접수",
+    icon: ShieldCheck,
+    color: "bg-emerald-100 text-emerald-700",
+    label: "관리자 확인",
   },
   payment_completed: {
-    icon: CreditCard,
+    icon: CheckCircle,
     color: "bg-violet-100 text-violet-700",
-    label: "입금 완료",
+    label: "외부 입금",
   },
   shipped: {
-    icon: Truck,
+    icon: CheckCircle,
     color: "bg-cyan-100 text-cyan-700",
-    label: "배송 중",
+    label: "외부 배송",
   },
   delivered: {
     icon: CheckCircle,
     color: "bg-emerald-100 text-emerald-700",
-    label: "수령 완료",
+    label: "현장 수령",
   },
   closed: {
     icon: CheckCircle,
@@ -77,9 +84,9 @@ const STATUS_META: Record<string, StatusBadgeMeta> = {
     label: "취소",
   },
   confirmed: {
-    icon: Receipt,
-    color: "bg-amber-100 text-amber-700",
-    label: "계산서 접수(구버전)",
+    icon: ShieldCheck,
+    color: "bg-emerald-100 text-emerald-700",
+    label: "관리자 확인(구버전)",
   },
 };
 
@@ -88,26 +95,16 @@ const NEXT_STATUS_BY_CURRENT: Partial<
 > = {
   draft: "requested",
   requested: "invoice_received",
-  invoice_received: "payment_completed",
-  payment_completed: "shipped",
-  shipped: "delivered",
-  delivered: "closed",
-  confirmed: "payment_completed",
 };
 
 const NEXT_LABEL_BY_STATUS: Partial<Record<MaterialOrderStatus, string>> = {
   draft: "발주 요청",
-  requested: "계산서 접수",
-  invoice_received: "입금 완료",
-  payment_completed: "배송 시작",
-  shipped: "수령 확인",
-  delivered: "발주 종료",
-  confirmed: "입금 완료",
+  requested: "최고 관리자 확인",
+  confirmed: "최고 관리자 확인",
 };
 
 const SITE_MANAGER_ALLOWED_TARGETS = new Set<MaterialOrderStatus>([
   "requested",
-  "delivered",
 ]);
 
 function normalizeStatus(status: MaterialOrderStatus): MaterialOrderStatus {
@@ -140,10 +137,13 @@ function nextLabelFor(status: MaterialOrderStatus): string {
 function canAdvanceByRole(status: MaterialOrderStatus, role?: string): boolean {
   const next = nextStatusFor(status);
   if (!next) return false;
+  if (next === "invoice_received") {
+    return role === "super_admin";
+  }
   if (role === "site_manager") {
     return SITE_MANAGER_ALLOWED_TARGETS.has(next);
   }
-  return true;
+  return role === "company_admin" || role === "super_admin";
 }
 
 export default function MaterialOrdersPage({
@@ -157,18 +157,23 @@ export default function MaterialOrdersPage({
   const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [invoiceNumberDraft, setInvoiceNumberDraft] = useState("");
-  const [invoiceAmountDraft, setInvoiceAmountDraft] = useState<number | "">("");
-  const [invoiceFileUrlDraft, setInvoiceFileUrlDraft] = useState("");
 
   const { data: ordersResponse, isLoading } = useQuery({
     queryKey: ["material-orders", projectId],
     queryFn: () => api.getMaterialOrders(projectId),
   });
+  const { data: materialMastersResponse, isLoading: isMaterialMastersLoading } =
+    useQuery({
+      queryKey: ["material-masters"],
+      queryFn: () => api.getMaterialMasters(),
+    });
 
   const orders = (
     ordersResponse?.success ? ordersResponse.data : []
   ) as MaterialOrder[];
+  const materialMasters = (
+    materialMastersResponse?.success ? materialMastersResponse.data : []
+  ) as MaterialMaster[];
 
   const { data: selectedOrderResponse } = useQuery({
     queryKey: ["material-order", selectedOrderId],
@@ -180,32 +185,22 @@ export default function MaterialOrdersPage({
     selectedOrderResponse?.success ? selectedOrderResponse.data : null
   ) as MaterialOrder | null;
 
-  useEffect(() => {
-    if (!selectedOrder) return;
-    setInvoiceNumberDraft(selectedOrder.invoice_number || "");
-    setInvoiceAmountDraft(selectedOrder.invoice_amount ?? "");
-    setInvoiceFileUrlDraft(selectedOrder.invoice_file_url || "");
-  }, [selectedOrder?.id]);
-
   const updateStatusMutation = useMutation({
     mutationFn: (payload: {
       orderId: string;
       status: MaterialOrderStatus;
       reason?: string;
-      invoice_number?: string;
-      invoice_amount?: number;
-      invoice_file_url?: string;
     }) =>
       api.updateMaterialOrderStatus(payload.orderId, {
         status: payload.status,
         reason: payload.reason,
-        invoice_number: payload.invoice_number,
-        invoice_amount: payload.invoice_amount,
-        invoice_file_url: payload.invoice_file_url,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["material-orders", projectId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["material-orders-mobile", projectId],
       });
       queryClient.invalidateQueries({
         queryKey: ["material-order", selectedOrderId],
@@ -235,10 +230,7 @@ export default function MaterialOrdersPage({
   const handleAdvance = (order: MaterialOrder) => {
     const next = nextStatusFor(order.status);
     if (!next) return;
-    if (
-      user?.role === "site_manager" &&
-      !SITE_MANAGER_ALLOWED_TARGETS.has(next)
-    ) {
+    if (!canAdvanceByRole(order.status, user?.role)) {
       toast.info("이 단계는 관리자 권한이 필요합니다.");
       return;
     }
@@ -246,23 +238,10 @@ export default function MaterialOrdersPage({
     const payload: {
       orderId: string;
       status: MaterialOrderStatus;
-      invoice_number?: string;
-      invoice_amount?: number;
-      invoice_file_url?: string;
     } = {
       orderId: order.id,
       status: next,
     };
-
-    if (next === "invoice_received" || next === "payment_completed") {
-      if (invoiceNumberDraft.trim())
-        payload.invoice_number = invoiceNumberDraft.trim();
-      if (typeof invoiceAmountDraft === "number" && invoiceAmountDraft > 0) {
-        payload.invoice_amount = invoiceAmountDraft;
-      }
-      if (invoiceFileUrlDraft.trim())
-        payload.invoice_file_url = invoiceFileUrlDraft.trim();
-    }
 
     updateStatusMutation.mutate(payload);
   };
@@ -296,7 +275,8 @@ export default function MaterialOrdersPage({
         <div>
           <h2 className="text-xl font-bold text-slate-900">자재 발주</h2>
           <p className="mt-1 text-sm text-slate-600">
-            모바일 현장 요청과 웹 정산 단계를 함께 관리합니다.
+            자재 마스터 기준으로 품목을 선택하고, 요청 후 최고 관리자가
+            확인합니다.
           </p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
@@ -318,6 +298,31 @@ export default function MaterialOrdersPage({
           </p>
         </Card>
       </div>
+
+      <Card className="border-blue-200 bg-blue-50/70 p-4">
+        <p className="text-sm font-medium text-blue-900">
+          발주 요청 후 최고 관리자가 확인하며, 이후 처리 단계는 우선 플랫폼
+          외부에서 진행합니다.
+        </p>
+        {materialMasters.length === 0 && !isMaterialMastersLoading && (
+          <p className="mt-2 text-sm text-blue-800">
+            등록된 자재 마스터가 없습니다.{" "}
+            {user?.role === "super_admin" ? (
+              <>
+                <Link
+                  href="/sa/material-masters"
+                  className="font-semibold underline underline-offset-2"
+                >
+                  자재 마스터 관리
+                </Link>
+                에서 품목을 먼저 등록해 주세요.
+              </>
+            ) : (
+              "최고 관리자에게 자재 마스터 등록을 요청해 주세요."
+            )}
+          </p>
+        )}
+      </Card>
 
       {orders.length > 0 ? (
         <>
@@ -444,9 +449,16 @@ export default function MaterialOrdersPage({
                   <Card key={item.id} className="p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h4 className="font-medium text-slate-900">
-                          {item.description}
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-slate-900">
+                            {item.description}
+                          </h4>
+                          {item.material_master_id && (
+                            <Badge className="bg-emerald-100 text-emerald-700">
+                              마스터 품목
+                            </Badge>
+                          )}
+                        </div>
                         {item.specification && (
                           <p className="text-sm text-slate-600">
                             {item.specification}
@@ -473,34 +485,6 @@ export default function MaterialOrdersPage({
                     </div>
                   </Card>
                 ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Input
-                label="계산서 번호"
-                placeholder="예: INV-2026-0001"
-                value={invoiceNumberDraft}
-                onChange={(e) => setInvoiceNumberDraft(e.target.value)}
-              />
-              <Input
-                label="계산서 금액"
-                type="number"
-                min="0"
-                value={invoiceAmountDraft}
-                onChange={(e) =>
-                  setInvoiceAmountDraft(
-                    e.target.value ? Number(e.target.value) : "",
-                  )
-                }
-              />
-              <div className="sm:col-span-2">
-                <Input
-                  label="계산서 파일 URL"
-                  placeholder="https://..."
-                  value={invoiceFileUrlDraft}
-                  onChange={(e) => setInvoiceFileUrlDraft(e.target.value)}
-                />
               </div>
             </div>
 
@@ -531,7 +515,7 @@ export default function MaterialOrdersPage({
                 )}
                 {selectedOrder.confirmed_at && (
                   <p>
-                    계산서 접수:{" "}
+                    최고 관리자 확인:{" "}
                     {new Date(selectedOrder.confirmed_at).toLocaleString()}
                   </p>
                 )}
@@ -560,6 +544,13 @@ export default function MaterialOrdersPage({
                 )}
               </div>
             </div>
+
+            {normalizeStatus(selectedOrder.status) === "invoice_received" && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                최고 관리자 확인이 완료되었습니다. 이후 발주 진행은 현재 플랫폼
+                외부에서 처리합니다.
+              </div>
+            )}
 
             {selectedOrder.notes && (
               <div>
@@ -607,7 +598,7 @@ export default function MaterialOrdersPage({
 
             {user?.role === "site_manager" && (
               <p className="text-xs text-slate-500">
-                현장소장은 발주 요청/수령 확인 단계만 수행할 수 있습니다.
+                현장소장은 발주 요청 단계만 수행할 수 있습니다.
               </p>
             )}
           </div>
@@ -618,10 +609,14 @@ export default function MaterialOrdersPage({
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         projectId={projectId}
+        materialMasters={materialMasters}
         onSuccess={() => {
           setIsCreateModalOpen(false);
           queryClient.invalidateQueries({
             queryKey: ["material-orders", projectId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["material-orders-mobile", projectId],
           });
           toast.success("발주를 생성했습니다.");
         }}
@@ -631,68 +626,49 @@ export default function MaterialOrdersPage({
 }
 
 type CreateItem = {
-  catalog_item_id: string;
-  pricebook_revision_id: string;
-  description: string;
-  specification: string;
-  unit: string;
+  material_master_id: string;
   quantity: number;
-  unit_price: number;
-  override_reason: string;
 };
 
 function isItemSubmittable(item: CreateItem): boolean {
-  if (item.catalog_item_id && item.quantity > 0) {
-    return true;
-  }
-  return Boolean(
-    item.description &&
-    item.unit &&
-    item.quantity > 0 &&
-    item.unit_price > 0 &&
-    item.override_reason,
-  );
+  return Boolean(item.material_master_id && item.quantity > 0);
 }
 
 function CreateOrderModal({
   isOpen,
   onClose,
   projectId,
+  materialMasters,
   onSuccess,
 }: {
   isOpen: boolean;
   onClose: () => void;
   projectId: string;
+  materialMasters: MaterialMaster[];
   onSuccess: () => void;
 }) {
-  const [vendorId, setVendorId] = useState("");
+  const { user } = useAuth();
   const [items, setItems] = useState<CreateItem[]>([
     {
-      catalog_item_id: "",
-      pricebook_revision_id: "",
-      description: "",
-      specification: "",
-      unit: "개",
+      material_master_id: "",
       quantity: 1,
-      unit_price: 0,
-      override_reason: "",
     },
   ]);
   const [notes, setNotes] = useState("");
+  const materialMasterMap = useMemo(
+    () =>
+      new Map(
+        materialMasters.map((materialMaster) => [materialMaster.id, materialMaster]),
+      ),
+    [materialMasters],
+  );
 
   const createMutation = useMutation({
     mutationFn: () =>
       api.createMaterialOrder(projectId, {
-        vendor_id: vendorId ? Number(vendorId) : undefined,
         items: items.map((item) => ({
-          catalog_item_id: item.catalog_item_id || undefined,
-          pricebook_revision_id: item.pricebook_revision_id || undefined,
-          description: item.description || undefined,
-          specification: item.specification || undefined,
-          unit: item.unit || undefined,
+          material_master_id: item.material_master_id || undefined,
           quantity: item.quantity,
-          unit_price: item.unit_price || undefined,
-          override_reason: item.override_reason || undefined,
         })),
         notes: notes || undefined,
       }),
@@ -708,14 +684,8 @@ function CreateOrderModal({
     setItems((prev) => [
       ...prev,
       {
-        catalog_item_id: "",
-        pricebook_revision_id: "",
-        description: "",
-        specification: "",
-        unit: "개",
+        material_master_id: "",
         quantity: 1,
-        unit_price: 0,
-        override_reason: "",
       },
     ]);
   };
@@ -737,131 +707,131 @@ function CreateOrderModal({
   };
 
   const totalAmount = items.reduce(
-    (sum, item) => sum + item.quantity * (item.unit_price || 0),
+    (sum, item) =>
+      sum + item.quantity * (materialMasterMap.get(item.material_master_id)?.unit_price || 0),
     0,
   );
 
-  const canSubmit = items.length > 0 && items.every(isItemSubmittable);
+  const canSubmit =
+    materialMasters.length > 0 && items.length > 0 && items.every(isItemSubmittable);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="새 발주 만들기" size="xl">
       <div className="space-y-6">
-        <Input
-          label="협력사 ID (선택)"
-          placeholder="예: 1001"
-          value={vendorId}
-          onChange={(e) => setVendorId(e.target.value)}
-        />
+        {materialMasters.length === 0 ? (
+          <Card className="border-dashed border-slate-300 p-6 text-center">
+            <h4 className="text-base font-semibold text-slate-900">
+              등록된 자재 마스터가 없습니다
+            </h4>
+            <p className="mt-2 text-sm text-slate-600">
+              자재 발주를 만들려면 최고 관리자가 품목명, 단위, 단가를 먼저
+              등록해야 합니다.
+            </p>
+            {user?.role === "super_admin" && (
+              <Button className="mt-4" asChild>
+                <Link href="/sa/material-masters">자재 마스터 관리로 이동</Link>
+              </Button>
+            )}
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {items.map((item, index) => {
+              const selectedMaterialMaster = materialMasterMap.get(
+                item.material_master_id,
+              );
 
-        <div className="space-y-4">
-          {items.map((item, index) => (
-            <Card key={index} className="p-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-slate-900">
-                    품목 {index + 1}
-                  </h4>
-                  {items.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeItem(index)}
-                    >
-                      삭제
-                    </Button>
-                  )}
-                </div>
+              return (
+                <Card key={index} className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-slate-900">
+                        품목 {index + 1}
+                      </h4>
+                      {items.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeItem(index)}
+                        >
+                          삭제
+                        </Button>
+                      )}
+                    </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Input
-                    label="카탈로그 품목 ID"
-                    placeholder="선택 시 자동단가"
-                    value={item.catalog_item_id}
-                    onChange={(e) =>
-                      updateItem(index, "catalog_item_id", e.target.value)
-                    }
-                  />
-                  <Input
-                    label="단가표 Revision ID"
-                    placeholder="프로젝트 리비전"
-                    value={item.pricebook_revision_id}
-                    onChange={(e) =>
-                      updateItem(index, "pricebook_revision_id", e.target.value)
-                    }
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-700">
+                        자재 품목
+                      </label>
+                      <PrimitiveSelect
+                        value={item.material_master_id}
+                        onChange={(e) =>
+                          updateItem(index, "material_master_id", e.target.value)
+                        }
+                        className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+                      >
+                        <option value="">품목을 선택해 주세요</option>
+                        {materialMasters.map((materialMaster) => (
+                          <option
+                            key={materialMaster.id}
+                            value={materialMaster.id}
+                          >
+                            {materialMaster.name} / {materialMaster.unit} /{" "}
+                            {materialMaster.unit_price.toLocaleString()}원
+                          </option>
+                        ))}
+                      </PrimitiveSelect>
+                    </div>
 
-                <Input
-                  label="품목명 (수동 입력 시 필수)"
-                  placeholder="예: 방수 시트"
-                  value={item.description}
-                  onChange={(e) =>
-                    updateItem(index, "description", e.target.value)
-                  }
-                />
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500">단위</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          {selectedMaterialMaster?.unit || "-"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500">단가</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          {selectedMaterialMaster
+                            ? `${selectedMaterialMaster.unit_price.toLocaleString()}원`
+                            : "-"}
+                        </p>
+                      </div>
+                      <Input
+                        label="수량"
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          updateItem(index, "quantity", Number(e.target.value) || 1)
+                        }
+                      />
+                    </div>
 
-                <Input
-                  label="규격 (선택)"
-                  placeholder="예: 1.5mm 두께"
-                  value={item.specification}
-                  onChange={(e) =>
-                    updateItem(index, "specification", e.target.value)
-                  }
-                />
+                    <div className="text-right text-sm">
+                      <span className="text-slate-600">금액: </span>
+                      <span className="font-semibold text-slate-900">
+                        {selectedMaterialMaster
+                          ? (
+                              item.quantity * selectedMaterialMaster.unit_price
+                            ).toLocaleString()
+                          : "0"}
+                        원
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
 
-                <div className="grid grid-cols-3 gap-3">
-                  <Input
-                    label="수량"
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateItem(index, "quantity", Number(e.target.value) || 1)
-                    }
-                  />
-                  <Input
-                    label="단위"
-                    placeholder="개"
-                    value={item.unit}
-                    onChange={(e) => updateItem(index, "unit", e.target.value)}
-                  />
-                  <Input
-                    label="단가 (수동 시)"
-                    type="number"
-                    min="0"
-                    value={item.unit_price}
-                    onChange={(e) =>
-                      updateItem(
-                        index,
-                        "unit_price",
-                        Number(e.target.value) || 0,
-                      )
-                    }
-                  />
-                </div>
-
-                <Input
-                  label="수동 입력 사유"
-                  placeholder="카탈로그 외 품목/긴급 대체 등"
-                  value={item.override_reason}
-                  onChange={(e) =>
-                    updateItem(index, "override_reason", e.target.value)
-                  }
-                />
-
-                <div className="text-right text-sm">
-                  <span className="text-slate-600">금액: </span>
-                  <span className="font-semibold text-slate-900">
-                    {(item.quantity * (item.unit_price || 0)).toLocaleString()}
-                    원
-                  </span>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        <Button variant="secondary" onClick={addItem} fullWidth>
+        <Button
+          variant="secondary"
+          onClick={addItem}
+          fullWidth
+          disabled={materialMasters.length === 0}
+        >
           + 품목 추가
         </Button>
 
