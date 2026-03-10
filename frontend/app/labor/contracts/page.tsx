@@ -8,6 +8,7 @@ import {
   Button,
   Badge,
   toast,
+  Skeleton,
 } from "@sigongcore/ui";
 import { Plus, FileDown } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -143,9 +144,65 @@ export default function LaborContractsPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="py-6 text-center text-sm text-slate-400">
-                불러오는 중...
-              </div>
+              <>
+                {/* 모바일: 스켈레톤 리스트 */}
+                <div className="space-y-3 md:hidden">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3 bg-white">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-24" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                        <Skeleton className="h-6 w-16 rounded-full" />
+                      </div>
+                      <div className="grid gap-2 pt-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-4 w-28" />
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <Skeleton className="h-8 w-16 rounded-lg" />
+                        <Skeleton className="h-8 w-20 rounded-lg" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* 데스크톱: 스켈레톤 테이블 */}
+                <div className="overflow-x-auto hidden md:block">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                        <th className="pb-3 font-medium">근로자명</th>
+                        <th className="pb-3 font-medium">프로젝트</th>
+                        <th className="pb-3 font-medium">근무일자</th>
+                        <th className="pb-3 font-medium">일당</th>
+                        <th className="pb-3 font-medium">상태</th>
+                        <th className="pb-3 font-medium">작성일</th>
+                        <th className="pb-3 font-medium">작업</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <tr key={i} className="border-b border-slate-100 last:border-0">
+                          <td className="py-4"><Skeleton className="h-4 w-16" /></td>
+                          <td className="py-4"><Skeleton className="h-4 w-32" /></td>
+                          <td className="py-4"><Skeleton className="h-4 w-24" /></td>
+                          <td className="py-4"><Skeleton className="h-4 w-20" /></td>
+                          <td className="py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                          <td className="py-4"><Skeleton className="h-4 w-24" /></td>
+                          <td className="py-4">
+                            <div className="flex gap-2">
+                              <Skeleton className="h-8 w-12 rounded-lg" />
+                              <Skeleton className="h-8 w-16 rounded-lg" />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : filteredContracts.length === 0 ? (
               <div className="py-6 text-center text-sm text-slate-400">
                 {filter === "all"

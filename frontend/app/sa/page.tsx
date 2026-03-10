@@ -58,6 +58,99 @@ interface ExpiringSubscription {
   expires_at: string;
   days_remaining: number;
 }
+const DashboardSkeleton = () => (
+  <div className="flex flex-col gap-8">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      {[1, 2, 3, 4].map((i) => (
+        <Card key={i}>
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2.5 w-full mr-4">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+              <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+
+    <div className="grid gap-6 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-32" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i}>
+                <div className="mb-1 flex items-center justify-between">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+                <div className="h-2 w-full rounded-full bg-slate-100/50 flex">
+                  <Skeleton className="h-2 w-full shrink-0" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-32" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i}>
+                <div className="mb-1 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-3 w-3 rounded-full shrink-0" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                </div>
+                <div className="h-2 w-full rounded-full bg-slate-100/50 flex">
+                  <Skeleton className="h-2 w-full shrink-0" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-6 w-32" />
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="flex items-start gap-4 rounded-lg border border-slate-100 p-4"
+            >
+              <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+              <div className="flex-1 space-y-2 py-1">
+                <Skeleton className="h-5 w-1/3" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+              <Skeleton className="h-4 w-20 py-1" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
 
 export default function SADashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
@@ -120,26 +213,18 @@ export default function SADashboardPage() {
         </div>
 
         {isLoading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i}>
-                <CardContent className="p-6">
-                  <Skeleton className="h-20 w-full" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <DashboardSkeleton />
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-slate-500">전체 고객사</p>
                       <MotionNumber
                         value={stats.total_tenants}
-                        className="mt-1 text-3xl font-bold text-slate-900"
+                        className="mt-1 text-2xl sm:text-3xl font-bold text-slate-900"
                       />
                       <div className="mt-2 flex items-center gap-1 text-sm">
                         <ArrowUp className="h-3 w-3 text-green-600" />
@@ -157,13 +242,13 @@ export default function SADashboardPage() {
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-slate-500">활성 사용자</p>
                       <MotionNumber
                         value={stats.total_users}
-                        className="mt-1 text-3xl font-bold text-slate-900"
+                        className="mt-1 text-2xl sm:text-3xl font-bold text-slate-900"
                       />
                       <div className="mt-2 flex items-center gap-1 text-sm">
                         <ArrowUp className="h-3 w-3 text-green-600" />
@@ -181,11 +266,11 @@ export default function SADashboardPage() {
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-slate-500">이번달 매출</p>
-                      <div className="mt-1 text-3xl font-bold text-slate-900">
+                      <div className="mt-1 text-2xl sm:text-3xl font-bold text-slate-900">
                         {(stats.monthly_revenue / 10000).toFixed(0)}만원
                       </div>
                       <div className="mt-2 flex items-center gap-1 text-sm">
@@ -204,13 +289,13 @@ export default function SADashboardPage() {
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-slate-500">신규 가입</p>
                       <MotionNumber
                         value={stats.new_signups}
-                        className="mt-1 text-3xl font-bold text-slate-900"
+                        className="mt-1 text-2xl sm:text-3xl font-bold text-slate-900"
                       />
                       <div className="mt-2 flex items-center gap-1 text-sm">
                         <ArrowUp className="h-3 w-3 text-green-600" />

@@ -13,6 +13,7 @@ import {
   CardTitle,
   Badge,
   formatDate,
+  Skeleton,
 } from "@sigongcore/ui";
 import type { DiagnosisCase, SeasonInfo } from "@sigongcore/types";
 import { Plus, Sparkles } from "lucide-react";
@@ -100,7 +101,50 @@ export default function CasesPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-sm text-slate-500">불러오는 중...</p>
+              <>
+                {/* 모바일 뷰 스켈레톤 */}
+                <div className="space-y-3 md:hidden">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3 bg-white">
+                      <div className="flex justify-between items-start">
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-6 w-16 rounded-full" />
+                      </div>
+                      <div className="grid gap-2 pt-2">
+                        <Skeleton className="h-4 w-40" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* 데스크톱 테이블 스켈레톤 */}
+                <div className="hidden md:block">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                          <th className="pb-3 font-medium">케이스 ID</th>
+                          <th className="pb-3 font-medium">시즌 ID</th>
+                          <th className="pb-3 font-medium">상태</th>
+                          <th className="pb-3 font-medium">생성일</th>
+                          <th className="pb-3 font-medium" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <tr key={i} className="border-b border-slate-100 last:border-0">
+                            <td className="py-3"><Skeleton className="h-4 w-24" /></td>
+                            <td className="py-3"><Skeleton className="h-4 w-32" /></td>
+                            <td className="py-3"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                            <td className="py-3"><Skeleton className="h-4 w-24" /></td>
+                            <td className="py-3 text-right"><Skeleton className="h-4 w-8 ml-auto" /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
             ) : cases.length === 0 ? (
               <p className="text-sm text-slate-500">
                 등록된 케이스가 없습니다.

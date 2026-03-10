@@ -26,6 +26,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Skeleton,
   formatCurrency,
   formatDate,
 } from "@sigongcore/ui";
@@ -154,9 +155,60 @@ export default function EstimatesPage() {
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-              </div>
+              <>
+                {/* 모바일: 스켈레톤 리스트 */}
+                <div className="space-y-3 p-4 md:hidden">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3 bg-white">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-40" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                        <Skeleton className="h-6 w-16 rounded-full" />
+                      </div>
+                      <div className="grid gap-1 pt-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* 데스크톱: 스켈레톤 테이블 */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>견적서</TableHead>
+                        <TableHead>프로젝트</TableHead>
+                        <TableHead>고객</TableHead>
+                        <TableHead>상태</TableHead>
+                        <TableHead className="text-right">금액</TableHead>
+                        <TableHead>생성일</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Skeleton className="h-4 w-4" />
+                              <Skeleton className="h-4 w-12" />
+                            </div>
+                          </TableCell>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             ) : error ? (
               <div className="py-12 text-center text-slate-500">
                 데이터를 불러오는데 실패했어요

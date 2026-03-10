@@ -32,6 +32,7 @@ import {
   PrimitiveInput,
   PrimitiveSelect,
   toast,
+  Skeleton,
 } from "@sigongcore/ui";
 import { api } from "@/lib/api";
 import type {
@@ -1016,9 +1017,76 @@ export default function DailyWorkersPage() {
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-              </div>
+              <>
+                {/* 모바일: 스켈레톤 리스트 */}
+                <div className="space-y-3 p-4 md:hidden">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3 bg-white">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-32" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                        <Skeleton className="h-6 w-16 rounded-full" />
+                      </div>
+                      <div className="grid gap-2 pt-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* 데스크톱: 스켈레톤 테이블 */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                        <th className="px-4 py-3 font-medium">No.</th>
+                        <th className="px-4 py-3 font-medium">성명</th>
+                        <th className="px-4 py-3 font-medium">직종</th>
+                        <th className="px-4 py-3 font-medium">소속반</th>
+                        <th className="px-4 py-3 font-medium">일당</th>
+                        <th className="px-4 py-3 font-medium">연락처</th>
+                        <th className="px-4 py-3 font-medium">외국인</th>
+                        <th className="px-4 py-3 font-medium">계좌정보</th>
+                        <th className="px-4 py-3 font-medium">통제</th>
+                        <th className="px-4 py-3 font-medium">작업</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <tr key={i} className="border-b border-slate-100 last:border-0">
+                          <td className="px-4 py-4"><Skeleton className="h-4 w-8" /></td>
+                          <td className="px-4 py-4">
+                            <div className="space-y-2">
+                              <Skeleton className="h-4 w-24" />
+                              <Skeleton className="h-3 w-32" />
+                            </div>
+                          </td>
+                          <td className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
+                          <td className="px-4 py-4"><Skeleton className="h-4 w-16" /></td>
+                          <td className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
+                          <td className="px-4 py-4"><Skeleton className="h-4 w-32" /></td>
+                          <td className="px-4 py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                          <td className="px-4 py-4">
+                            <div className="space-y-2">
+                              <Skeleton className="h-4 w-16" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                          </td>
+                          <td className="px-4 py-4"><Skeleton className="h-8 w-20 rounded-lg" /></td>
+                          <td className="px-4 py-4">
+                            <div className="flex gap-2">
+                              <Skeleton className="h-8 w-16 rounded-lg" />
+                              <Skeleton className="h-8 w-16 rounded-lg" />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : filteredWorkers.length === 0 ? (
               <div className="py-12 text-center text-slate-500">
                 {search ? "검색 결과가 없습니다." : "등록된 근로자가 없습니다."}

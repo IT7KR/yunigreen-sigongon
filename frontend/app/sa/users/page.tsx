@@ -12,6 +12,7 @@ import {
   Pagination,
   PrimitiveButton,
   PrimitiveInput,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -187,10 +188,76 @@ export default function SAUsersPage() {
         </Card>
 
         {isLoading ? (
-          <LoadingOverlay
-            variant="inline"
-            text="사용자 목록을 불러오는 중..."
-          />
+          <>
+            {/* 모바일: 스켈레톤 리스트 */}
+            <div className="space-y-3 md:hidden">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-1 w-2/3">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-4 w-40" />
+                    </div>
+                    <Skeleton className="h-6 w-12 rounded-full" />
+                  </div>
+                  <div className="flex flex-col gap-2 pt-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* 데스크톱: 스켈레톤 테이블 */}
+            <div className="hidden md:block">
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>사용자</TableHead>
+                        <TableHead>역할</TableHead>
+                        <TableHead>소속 고객사</TableHead>
+                        <TableHead>마지막 로그인</TableHead>
+                        <TableHead>가입일</TableHead>
+                        <TableHead>상태</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-10 w-10 rounded-full" />
+                              <div className="space-y-2">
+                                <Skeleton className="h-4 w-24" />
+                                <div className="flex gap-2">
+                                  <Skeleton className="h-3 w-32" />
+                                  <Skeleton className="h-3 w-24" />
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-12 rounded-full" /></TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Skeleton className="h-8 w-8 rounded-lg" />
+                              <Skeleton className="h-8 w-8 rounded-lg" />
+                              <Skeleton className="h-8 w-8 rounded-lg" />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          </>
         ) : (
           <>
             {/* 모바일 카드 뷰 */}

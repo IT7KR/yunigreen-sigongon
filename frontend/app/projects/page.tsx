@@ -28,6 +28,7 @@ import {
   PrimitiveButton,
   PrimitiveInput,
   Select,
+  Skeleton,
   StatusBadge,
   Table,
   TableBody,
@@ -300,7 +301,63 @@ export default function ProjectsPage() {
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
-              <LoadingOverlay variant="inline" />
+              <>
+                {/* 모바일: 스켈레톤 리스트 */}
+                <div className="space-y-3 p-4 md:hidden">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3 bg-white">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-40" />
+                          <Skeleton className="h-4 w-48" />
+                        </div>
+                        <Skeleton className="h-6 w-16 rounded-full" />
+                      </div>
+                      <div className="grid gap-1 pt-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-[200px]" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* 데스크톱: 스켈레톤 테이블 */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>프로젝트</TableHead>
+                        <TableHead>카테고리</TableHead>
+                        <TableHead>상태</TableHead>
+                        <TableHead>고객</TableHead>
+                        <TableHead>방문</TableHead>
+                        <TableHead>견적</TableHead>
+                        <TableHead>등록일</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Skeleton className="h-4 w-32" />
+                              <Skeleton className="h-4 w-48" />
+                            </div>
+                          </TableCell>
+                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             ) : error ? (
               <EmptyState
                 icon={AlertCircle}

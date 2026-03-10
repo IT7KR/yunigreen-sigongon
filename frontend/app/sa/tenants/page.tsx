@@ -11,6 +11,7 @@ import {
   Pagination,
   PrimitiveInput,
   PrimitiveSelect,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -160,9 +161,64 @@ export default function TenantsPage() {
         </Card>
 
         {isLoading ? (
-          <div className="flex h-64 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-brand-point-500" />
-          </div>
+          <>
+            {/* 모바일: 스켈레톤 리스트 */}
+            <div className="space-y-3 md:hidden">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3 bg-white">
+                  <div className="flex justify-between items-start">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </div>
+                  <div className="grid gap-2 pt-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* 데스크톱: 스켈레톤 테이블 */}
+            <div className="hidden md:block">
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>회사명</TableHead>
+                        <TableHead>요금제</TableHead>
+                        <TableHead>요금 금액</TableHead>
+                        <TableHead>사용자 수</TableHead>
+                        <TableHead>프로젝트 수</TableHead>
+                        <TableHead>가입일</TableHead>
+                        <TableHead>상태</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-10 w-10 rounded-full" />
+                              <Skeleton className="h-4 w-32" />
+                            </div>
+                          </TableCell>
+                          <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-12 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          </>
         ) : (
           <>
             {/* Mobile card view */}

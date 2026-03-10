@@ -26,6 +26,84 @@ import {
 import { useDashboardStats } from "@/hooks";
 import type { ProjectStatus } from "@sigongcore/types";
 
+const DashboardSkeleton = ({ statCards }: { statCards: any[] }) => (
+  <div className="space-y-8">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      {statCards.map((stat) => (
+        <StatCard
+          key={stat.title}
+          title={stat.title}
+          value={0}
+          icon={stat.icon}
+          color="brand"
+          loading
+        />
+      ))}
+    </div>
+
+    <Card className="border-0 shadow-none bg-transparent md:border md:border-slate-100 md:bg-white md:shadow-sm">
+      <CardHeader className="px-1 pt-0 md:px-4 md:pt-4">
+        <CardTitle>최근 프로젝트</CardTitle>
+      </CardHeader>
+      <CardContent className="px-0 pb-0 md:px-4 md:pb-4">
+        {/* Mobile Skeleton */}
+        <div className="space-y-3 md:hidden">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-1/2" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Skeleton */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                <th className="pb-3 font-medium"><Skeleton className="h-4 w-20" /></th>
+                <th className="pb-3 font-medium"><Skeleton className="h-4 w-16" /></th>
+                <th className="pb-3 font-medium"><Skeleton className="h-4 w-16" /></th>
+                <th className="pb-3 font-medium"><Skeleton className="h-4 w-24" /></th>
+              </tr>
+            </thead>
+            <tbody>
+              {[1, 2, 3].map((i) => (
+                <tr key={i} className="border-b border-slate-100 last:border-0">
+                  <td className="py-4"><Skeleton className="h-4 w-32" /></td>
+                  <td className="py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                  <td className="py-4"><Skeleton className="h-4 w-24" /></td>
+                  <td className="py-4"><Skeleton className="h-4 w-24" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+
+    <Card className="border-0 shadow-none bg-transparent md:border md:border-slate-100 md:bg-white md:shadow-sm">
+      <CardHeader className="px-1 pt-0 md:px-4 md:pt-4">
+        <CardTitle className="flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-amber-500" />
+          주의가 필요한 항목
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-0 pb-0 md:px-4 md:pb-4">
+        <div className="space-y-3">
+          <Skeleton className="h-[60px] w-full rounded-lg" />
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
+
 export default function DashboardPage() {
   const router = useRouter();
   const { stats, recentProjects, isLoading, error } = useDashboardStats();
@@ -59,32 +137,7 @@ export default function DashboardPage() {
         <PageHeader title="대시보드" description="오늘의 현황을 확인하세요" />
 
         {isLoading ? (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {statCards.map((stat) => (
-                <StatCard
-                  key={stat.title}
-                  title={stat.title}
-                  value={0}
-                  icon={stat.icon}
-                  color="brand"
-                  loading
-                />
-              ))}
-            </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>최근 프로젝트</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </>
+          <DashboardSkeleton statCards={statCards} />
         ) : error ? (
           <Card>
             <CardContent>
@@ -98,7 +151,7 @@ export default function DashboardPage() {
           </Card>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               {statCards.map((stat) => (
                 <StatCard
                   key={stat.title}
@@ -110,11 +163,11 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            <Card>
-              <CardHeader>
+            <Card className="border-0 shadow-none bg-transparent md:border md:border-slate-100 md:bg-white md:shadow-sm">
+              <CardHeader className="px-1 pt-0 md:px-4 md:pt-4">
                 <CardTitle>최근 프로젝트</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-0 pb-0 md:px-4 md:pb-4">
                 {recentProjects.length > 0 ? (
                   <>
                     {/* Mobile card list */}
@@ -196,14 +249,14 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
+            <Card className="border-0 shadow-none bg-transparent md:border md:border-slate-100 md:bg-white md:shadow-sm">
+              <CardHeader className="px-1 pt-0 md:px-4 md:pt-4">
                 <CardTitle className="flex items-center gap-2">
                   <AlertCircle className="h-5 w-5 text-amber-500" />
                   주의가 필요한 항목
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-0 pb-0 md:px-4 md:pb-4">
                 <div className="space-y-3">
                   {stats.inProgress > 0 && (
                     <AlertBox

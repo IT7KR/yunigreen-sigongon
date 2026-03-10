@@ -13,6 +13,7 @@ import {
   Select,
   toast,
   useConfirmDialog,
+  Skeleton,
 } from "@sigongcore/ui";
 import {
   Check,
@@ -532,9 +533,21 @@ export default function CustomersPage() {
         {/* Mobile card list */}
         <div className="space-y-3 md:hidden">
           {isLoading ? (
-            <p className="py-6 text-center text-sm text-slate-400">
-              불러오는 중...
-            </p>
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                  <Skeleton className="h-6 w-12 rounded-full" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              </div>
+            ))
           ) : filteredCustomers.length === 0 ? (
             <p className="py-6 text-center text-sm text-slate-400">
               {searchTerm
@@ -604,14 +617,25 @@ export default function CustomersPage() {
                 </thead>
                 <tbody>
                   {isLoading ? (
-                    <tr>
-                      <td
-                        colSpan={9}
-                        className="px-6 py-6 text-center text-sm text-slate-400"
-                      >
-                        불러오는 중...
-                      </td>
-                    </tr>
+                    Array.from({ length: 5 }).map((_, idx) => (
+                      <tr key={idx} className="border-b border-slate-100 last:border-0">
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-12" /></td>
+                        <td className="px-6 py-4">
+                          <Skeleton className="h-4 w-16 mb-1" />
+                          <Skeleton className="h-3 w-20" />
+                        </td>
+                        <td className="px-6 py-4">
+                          <Skeleton className="h-4 w-16 mb-1" />
+                          <Skeleton className="h-3 w-20" />
+                        </td>
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-28" /></td>
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+                        <td className="px-6 py-4"><Skeleton className="h-6 w-12 rounded-full" /></td>
+                        <td className="px-6 py-4 text-right"><Skeleton className="h-8 w-16 ml-auto" /></td>
+                      </tr>
+                    ))
                   ) : filteredCustomers.length === 0 ? (
                     <tr>
                       <td
