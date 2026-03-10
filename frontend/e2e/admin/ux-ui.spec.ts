@@ -4,9 +4,7 @@ test.describe("Admin UX Smoke", () => {
   test("login form should be clear and interactive", async ({ page }) => {
     await page.goto("/login");
 
-    await expect(
-      page.getByRole("heading", { name: /시공코어 관리자/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /시공코어/ })).toBeVisible();
     await expect(page.getByLabel(/아이디/)).toBeVisible();
 
     const passwordInput = page.locator(

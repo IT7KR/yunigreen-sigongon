@@ -53,9 +53,9 @@ test.describe("권한 및 접근 제어", () => {
       await page.goto("/login");
 
       await expect(page).toHaveURL(/\/login/);
-      await expect(
-        page.getByRole("heading", { name: /시공코어 관리자/ }),
-      ).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole("heading", { name: /시공코어/ })).toBeVisible(
+        { timeout: 5000 },
+      );
     });
 
     test("회원가입 페이지는 비인증 상태에서도 접근 가능하다", async ({
