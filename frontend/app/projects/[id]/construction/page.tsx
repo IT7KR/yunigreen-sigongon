@@ -182,7 +182,7 @@ export default function ConstructionPage({
                   </p>
                 </div>
                 <Button size="sm" variant="secondary" asChild>
-                  <Link href={`/projects/${id}/reports`}>
+                  <Link href={`/projects/${id}/start`}>
                     상세보기
                     <ArrowRight className="ml-1 h-4 w-4" />
                   </Link>
@@ -192,7 +192,7 @@ export default function ConstructionPage({
               <div className="py-8 text-center">
                 <p className="mb-4 text-slate-500">아직 착공계가 없습니다.</p>
                 <Button asChild>
-                  <Link href={`/projects/${id}/reports`}>착공계 작성</Link>
+                  <Link href={`/projects/${id}/start`}>착공계 작성</Link>
                 </Button>
               </div>
             )}

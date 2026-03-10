@@ -138,7 +138,7 @@ export default function StartReportPage({
           await api.submitConstructionReport(response.data.id);
         }
       }
-      router.push(`/projects/${id}/reports`);
+      router.push(`/projects/${id}/start`);
     } catch (err) {
       console.error(err);
       toast.error("오류가 발생했어요");
@@ -154,7 +154,7 @@ export default function StartReportPage({
         await api.createStartReport(id, payload);
       }
       toast.success("저장했어요");
-      router.push(`/projects/${id}/reports`);
+      router.push(`/projects/${id}/start`);
     } catch (err) {
       console.error(err);
       toast.error("오류가 발생했어요");
@@ -172,7 +172,7 @@ export default function StartReportPage({
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="secondary" size="sm" asChild>
-          <Link href={`/projects/${id}/reports`}>
+          <Link href={`/projects/${id}/start`}>
             <ArrowLeft className="h-4 w-4" />
             뒤로
           </Link>

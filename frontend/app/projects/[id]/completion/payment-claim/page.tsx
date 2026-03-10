@@ -153,7 +153,7 @@ export default function PaymentClaimPage({
         </CardHeader>
         <CardContent className="grid gap-2 md:grid-cols-2">
           <Button className="w-full justify-between" asChild>
-            <Link href={`/projects/${projectId}/reports/completion`}>
+            <Link href={`/projects/${projectId}/completion`}>
               준공계 확인
               <ArrowRight className="h-4 w-4" />
             </Link>

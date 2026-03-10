@@ -6,13 +6,11 @@ import { usePathname } from "next/navigation";
 import {
   ArrowLeft,
   MapPin,
-  Menu as MenuIcon,
-  X,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { cn, StatusBadge, Button, formatDate } from "@sigongcore/ui";
+import { cn, Button } from "@sigongcore/ui";
 import { PROJECT_CATEGORIES } from "@sigongcore/types";
 import { useProject } from "@/hooks";
 import { useQuery } from "@tanstack/react-query";
@@ -61,12 +59,13 @@ export default function ProjectDetailLayout({
       category: "field",
     },
     { name: "자재발주", href: `/projects/${id}/orders`, category: "finance" },
+    { name: "착공", href: `/projects/${id}/start`, category: "field" },
+    { name: "준공", href: `/projects/${id}/completion`, category: "field" },
     {
       name: "작업일지",
       href: `/projects/${id}/construction/daily-reports`,
       category: "field",
     },
-    { name: "보고서", href: `/projects/${id}/reports`, category: "field" },
     {
       name: "수도광열비",
       href: `/projects/${id}/utilities`,
@@ -164,15 +163,9 @@ export default function ProjectDetailLayout({
               </div>
             ) : project ? (
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h1 className="truncate text-xl font-bold text-slate-900 sm:text-2xl">
-                    {project.name}
-                  </h1>
-                  <StatusBadge
-                    status={project.status}
-                    className="inline-flex"
-                  />
-                </div>
+                <h1 className="truncate text-xl font-bold text-slate-900 sm:text-2xl">
+                  {project.name}
+                </h1>
 
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 sm:text-sm">
                   <span className="flex items-center gap-1">
@@ -220,6 +213,7 @@ export default function ProjectDetailLayout({
                   <Link
                     key={tab.name}
                     href={tab.href}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
                       "whitespace-nowrap border-b-2 py-3 text-sm font-medium transition-colors",
                       isActive
@@ -244,6 +238,7 @@ export default function ProjectDetailLayout({
                     key={tab.name}
                     href={tab.href}
                     onClick={() => setIsMobileMenuOpen(false)}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
                       "flex-1 border-b-2 py-3 text-center text-sm font-medium transition-colors",
                       isActive
@@ -304,6 +299,7 @@ export default function ProjectDetailLayout({
                               <Link
                                 key={tab.name}
                                 href={tab.href}
+                                aria-current={isActive ? "page" : undefined}
                                 className={cn(
                                   "flex items-center justify-center rounded-lg border py-3 text-sm font-medium transition-colors",
                                   isActive

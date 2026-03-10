@@ -25,7 +25,6 @@ import {
   CardHeader,
   CardTitle,
   Skeleton,
-  StatusBadge,
   cn,
   formatDate,
 } from "@sigongcore/ui";
@@ -50,18 +49,6 @@ interface OverviewAction {
   icon: ReactNode;
   primary?: boolean;
 }
-
-const PROJECT_PHASE_LABELS: Record<ProjectStatus, string> = {
-  draft: "현장 준비",
-  diagnosing: "진단 진행",
-  estimating: "견적 작성",
-  quoted: "견적 협의",
-  contracted: "착공 준비",
-  in_progress: "시공 진행",
-  completed: "준공 완료",
-  warranty: "하자보증",
-  closed: "완결",
-};
 
 function buildOverviewActions(
   projectId: string,
@@ -94,8 +81,8 @@ function buildOverviewActions(
       icon: <ClipboardCheck className="h-5 w-5" />,
     },
     {
-      label: "보고서",
-      href: `/projects/${projectId}/reports`,
+      label: "착공",
+      href: `/projects/${projectId}/start`,
       icon: <FileCheck2 className="h-5 w-5" />,
     },
     {
@@ -127,7 +114,7 @@ function buildOverviewActions(
   else if (!hasContract)
     primaryIndex = 3; // 계약관리
   else if (projectStatus === "contracted")
-    primaryIndex = 4; // 보고서(착공계)
+    primaryIndex = 4; // 착공
   else if (projectStatus === "in_progress")
     primaryIndex = 5; // 작업일지
   else if (["completed", "warranty", "closed"].includes(projectStatus))
@@ -246,10 +233,12 @@ export default function ProjectDetailPage({
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex flex-col items-center gap-2 sm:items-start">
-              <StatusBadge status={project.status} className="scale-110" />
               <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-                {PROJECT_PHASE_LABELS[project.status]}
+                다음 업무를 바로 시작하세요
               </h2>
+              <p className="text-sm text-slate-600">
+                현재 진행 상황에 맞는 핵심 작업으로 바로 이동합니다.
+              </p>
             </div>
           </div>
           <Button
@@ -363,7 +352,9 @@ export default function ProjectDetailPage({
         <CollapsibleCard
           title="진행 타임라인"
           icon={<CalendarDays className="h-5 w-5 text-slate-400" />}
-          summary={`현재: ${PROJECT_PHASE_LABELS[project.status]}`}
+          summary={
+            startReports.length > 0 ? `착공계 ${startReports.length}건` : undefined
+          }
           defaultOpen={true}
         >
           <div className="py-2">

@@ -115,7 +115,7 @@ export default function CompletionReportPage({
           await api.submitConstructionReport(response.data.id);
         }
       }
-      router.push(`/projects/${id}/reports`);
+      router.push(`/projects/${id}/completion`);
     } catch (err) {
       console.error(err);
       toast.error("오류가 발생했어요");
@@ -135,7 +135,7 @@ export default function CompletionReportPage({
         await api.createCompletionReport(id, normalizedData);
       }
       toast.success("저장했어요");
-      router.push(`/projects/${id}/reports`);
+      router.push(`/projects/${id}/completion`);
     } catch (err) {
       console.error(err);
       toast.error("오류가 발생했어요");
@@ -151,7 +151,7 @@ export default function CompletionReportPage({
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <p className="text-red-500">{error}</p>
         <Button asChild>
-          <Link href={`/projects/${id}/reports`}>뒤로 가기</Link>
+          <Link href={`/projects/${id}/completion`}>뒤로 가기</Link>
         </Button>
       </div>
     );
@@ -165,7 +165,7 @@ export default function CompletionReportPage({
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="secondary" size="sm" asChild>
-          <Link href={`/projects/${id}/reports`}>
+          <Link href={`/projects/${id}/completion`}>
             <ArrowLeft className="h-4 w-4" />
             뒤로
           </Link>
