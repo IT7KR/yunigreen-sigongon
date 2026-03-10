@@ -1,11 +1,11 @@
 "use client";
 
 import {
+  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  Button,
   toast,
 } from "@sigongcore/ui";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -13,39 +13,39 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { useTossPayments } from "@/hooks/useTossPayments";
 
+type PaidPlan = "basic" | "pro";
+
+const planDetails: Record<
+  PaidPlan,
+  { name: string; price: number; description: string }
+> = {
+  basic: {
+    name: "Basic",
+    price: 588000,
+    description: "소규모 건설사를 위한 필수 운영 패키지",
+  },
+  pro: {
+    name: "Pro",
+    price: 1188000,
+    description: "중대형 건설사를 위한 확장형 운영 패키지",
+  },
+};
+
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const plan = searchParams.get("plan") as
-    | "STARTER"
-    | "STANDARD"
-    | "PREMIUM"
-    | null;
+  const requestedPlan = searchParams.get("plan");
+  const plan =
+    requestedPlan === "basic" || requestedPlan === "pro"
+      ? requestedPlan
+      : null;
   const [isProcessing, setIsProcessing] = useState(false);
+  const [orderId] = useState(
+    () => `ORDER_${Date.now()}_${requestedPlan ?? "plan"}`,
+  );
   const { requestPayment } = useTossPayments();
 
-  const planDetails: Record<
-    "STARTER" | "STANDARD" | "PREMIUM",
-    { name: string; price: number; description: string }
-  > = {
-    STARTER: {
-      name: "스타터",
-      price: 99000,
-      description: "소규모 프로젝트에 적합한 기본 플랜",
-    },
-    STANDARD: {
-      name: "스탠다드",
-      price: 199000,
-      description: "중소규모 프로젝트를 위한 추천 플랜",
-    },
-    PREMIUM: {
-      name: "프리미엄",
-      price: 399000,
-      description: "대규모 프로젝트를 위한 완전한 솔루션",
-    },
-  };
-
-  if (!plan || !planDetails[plan]) {
+  if (!plan) {
     return (
       <AdminLayout>
         <div className="flex flex-col items-center justify-center py-12">
@@ -59,7 +59,6 @@ function CheckoutContent() {
   }
 
   const selectedPlan = planDetails[plan];
-  const orderId = `ORDER_${Date.now()}_${plan}`;
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -69,8 +68,8 @@ function CheckoutContent() {
         orderId,
         orderName: `${selectedPlan.name} 플랜 연간 구독`,
         customerName: "구독자",
-        successUrl: `${window.location.origin}/billing/success`,
-        failUrl: `${window.location.origin}/billing/fail`,
+        successUrl: `${window.location.origin}/billing/success?plan=${plan}`,
+        failUrl: `${window.location.origin}/billing/fail?plan=${plan}`,
       });
     } catch (error) {
       console.error("결제 요청 실패:", error);
@@ -86,7 +85,7 @@ function CheckoutContent() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">결제하기</h1>
           <p className="mt-2 text-slate-600">
-            선택하신 플랜의 결제를 진행합니다.
+            선택하신 플랜의 연간 구독 결제를 진행합니다.
           </p>
         </div>
 

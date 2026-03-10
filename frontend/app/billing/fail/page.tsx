@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, Button } from "@sigongcore/ui";
+import { Button, Card, CardContent } from "@sigongcore/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -12,6 +12,11 @@ function FailContent() {
 
   const errorCode = searchParams.get("code");
   const errorMessage = searchParams.get("message");
+  const requestedPlan = searchParams.get("plan");
+  const plan =
+    requestedPlan === "basic" || requestedPlan === "pro"
+      ? requestedPlan
+      : null;
 
   const getErrorDetails = (code: string | null) => {
     const errorMap: Record<string, { title: string; description: string }> = {
@@ -54,6 +59,7 @@ function FailContent() {
   };
 
   const errorDetails = getErrorDetails(errorCode);
+  const retryPath = plan ? `/billing/checkout?plan=${plan}` : "/billing";
 
   return (
     <AdminLayout>
@@ -100,10 +106,7 @@ function FailContent() {
               >
                 결제 관리로 이동
               </Button>
-              <Button
-                className="flex-1"
-                onClick={() => router.push("/billing/checkout")}
-              >
+              <Button className="flex-1" onClick={() => router.push(retryPath)}>
                 다시 시도하기
               </Button>
             </div>

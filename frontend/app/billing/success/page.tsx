@@ -1,11 +1,13 @@
 "use client";
 
-import { Card, CardContent, Button } from "@sigongcore/ui";
+import { Button, Card, CardContent } from "@sigongcore/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { CheckCircle } from "lucide-react";
 import { api } from "@/lib/api";
+
+type PaidPlan = "basic" | "pro";
 
 function SuccessContent() {
   const router = useRouter();
@@ -16,10 +18,15 @@ function SuccessContent() {
   const paymentKey = searchParams.get("paymentKey");
   const orderId = searchParams.get("orderId");
   const amount = searchParams.get("amount");
+  const requestedPlan = searchParams.get("plan");
+  const plan =
+    requestedPlan === "basic" || requestedPlan === "pro"
+      ? requestedPlan
+      : null;
 
   useEffect(() => {
     const confirmPayment = async () => {
-      if (!paymentKey || !orderId || !amount) {
+      if (!paymentKey || !orderId || !amount || !plan) {
         setError("결제 정보가 올바르지 않습니다.");
         setIsConfirming(false);
         return;
@@ -30,6 +37,7 @@ function SuccessContent() {
           payment_key: paymentKey,
           order_id: orderId,
           amount: parseInt(amount, 10),
+          plan,
         });
 
         if (response.success) {
@@ -45,8 +53,8 @@ function SuccessContent() {
       }
     };
 
-    confirmPayment();
-  }, [paymentKey, orderId, amount]);
+    void confirmPayment();
+  }, [amount, orderId, paymentKey, plan]);
 
   if (isConfirming) {
     return (
@@ -60,6 +68,8 @@ function SuccessContent() {
   }
 
   if (error) {
+    const retryPath = plan ? `/billing/checkout?plan=${plan}` : "/billing";
+
     return (
       <AdminLayout>
         <div className="mx-auto max-w-2xl space-y-6">
@@ -82,10 +92,7 @@ function SuccessContent() {
                 >
                   결제 관리로 이동
                 </Button>
-                <Button
-                  className="flex-1"
-                  onClick={() => router.push("/billing/checkout")}
-                >
+                <Button className="flex-1" onClick={() => router.push(retryPath)}>
                   다시 시도
                 </Button>
               </div>
@@ -95,6 +102,8 @@ function SuccessContent() {
       </AdminLayout>
     );
   }
+
+  const planLabel = plan === "pro" ? "Pro" : "Basic";
 
   return (
     <AdminLayout>
@@ -110,10 +119,14 @@ function SuccessContent() {
               결제가 완료되었습니다
             </h2>
             <p className="mb-6 text-slate-600">
-              구독이 활성화되었습니다. 이제 모든 기능을 사용하실 수 있습니다.
+              {planLabel} 구독이 활성화되었습니다. 이제 모든 기능을 사용하실 수 있습니다.
             </p>
 
             <div className="mb-6 space-y-2 rounded-lg bg-slate-50 p-4 text-left">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">플랜</span>
+                <span className="font-medium text-slate-900">{planLabel}</span>
+              </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">주문번호</span>
                 <span className="font-medium text-slate-900">{orderId}</span>
@@ -138,7 +151,10 @@ function SuccessContent() {
               >
                 결제 내역 확인
               </Button>
-              <Button className="flex-1" onClick={() => router.push("/")}>
+              <Button
+                className="flex-1"
+                onClick={() => router.push("/dashboard")}
+              >
                 대시보드로 이동
               </Button>
             </div>

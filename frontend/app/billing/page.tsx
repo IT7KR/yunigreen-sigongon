@@ -28,6 +28,8 @@ interface BillingOverview {
   /** 변경 예약된 플랜 (현재 구독 종료 후 적용) */
   scheduled_plan?: string | null;
   scheduled_plan_date?: string | null;
+  trial_source?: string | null;
+  trial_months?: number;
   history: Array<{
     id: string;
     date: string;
@@ -48,6 +50,8 @@ const initialOverview: BillingOverview = {
   seats_total: 0,
   scheduled_plan: null,
   scheduled_plan_date: null,
+  trial_source: null,
+  trial_months: 0,
   history: [],
 };
 
@@ -82,7 +86,7 @@ export default function BillingPage() {
     fetchData();
   }, []);
 
-  const handlePlanSelect = (plan: "STARTER" | "STANDARD" | "PREMIUM") => {
+  const handlePlanSelect = (plan: "basic" | "pro") => {
     router.push(`/billing/checkout?plan=${plan}`);
   };
 
@@ -104,9 +108,16 @@ export default function BillingPage() {
         {showPlanSelector ? (
           <div>
             <p className="mb-6 text-slate-600">
-              서비스를 계속 이용하시려면 플랜을 선택해주세요.
+              {!overview.plan
+                ? "회원가입이 완료되었습니다. 서비스를 시작하려면 요금제를 선택해주세요."
+                : overview.plan === "무료 체험"
+                  ? `무료 체험이 ${overview.days_remaining}일 남아 있습니다. 필요할 때 유료 플랜으로 전환할 수 있어요.`
+                  : "이용 중인 요금제를 변경할 수 있습니다."}
             </p>
-            <PlanSelector currentPlan={null} onSelectPlan={handlePlanSelect} />
+            <PlanSelector
+              currentPlan={overview.plan || null}
+              onSelectPlan={handlePlanSelect}
+            />
           </div>
         ) : (
           <>
@@ -208,10 +219,6 @@ export default function BillingPage() {
                   <PlanSelector
                     currentPlan={overview.plan}
                     onSelectPlan={handlePlanSelect}
-                    scheduledPlan={overview.scheduled_plan}
-                    reservationMode={
-                      !!overview.plan && overview.plan !== "무료 체험"
-                    }
                   />
                 </CardContent>
               </Card>
