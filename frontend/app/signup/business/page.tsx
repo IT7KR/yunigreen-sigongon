@@ -123,7 +123,7 @@ export default function BusinessPage() {
     }
 
     saveSignupData(data);
-    router.push("/signup/plan");
+    router.push("/signup/complete");
   };
 
   const handleBack = () => {

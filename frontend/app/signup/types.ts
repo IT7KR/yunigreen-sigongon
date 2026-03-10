@@ -32,24 +32,14 @@ export interface SignupData {
   contactPhone: string;
   contactPosition: string;
 
-  // Step 3: Plan (연간 결제만 지원)
-  planType: "trial" | "basic" | "pro";
-
-  // Step 4: Payment
-  cardNumber?: string;
-  cardExpiry?: string;
-  cardCvc?: string;
-
-  // Post-payment
+  // Post-signup
   accessToken?: string;
-  paymentCompleted?: boolean;
 }
 
 export const STEPS = [
   { label: "기본 정보", description: "아이디 및 인증" },
   { label: "사업자 인증", description: "사업자등록증" },
-  { label: "요금제 선택", description: "플랜 선택" },
-  { label: "결제", description: "결제 정보 입력" },
+  { label: "가입 완료", description: "로그인 후 결제" },
 ];
 
 export const PLANS = [
@@ -115,7 +105,6 @@ export function getInitialSignupData(): SignupData {
     contactName: "",
     contactPhone: "",
     contactPosition: "",
-    planType: "trial",
   };
 }
 
