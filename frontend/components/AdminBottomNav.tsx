@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   FolderKanban,
   HardHat,
-  Menu,
   BarChart3,
   Building2,
   FileText,
@@ -19,11 +18,7 @@ import { useAuth } from "@/lib/auth";
 import { useUnreadCount } from "@/hooks/useNotifications";
 import { NavBadge } from "./NavBadge";
 
-interface AdminBottomNavProps {
-  onOpenSidebar: () => void;
-}
-
-export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
+export function AdminBottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const unreadCount = useUnreadCount();
@@ -47,14 +42,14 @@ export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
         { href: "/sa", icon: BarChart3, label: "플랫폼현황", exact: true },
         { href: "/sa/tenants", icon: Building2, label: "고객사" },
         { href: "/sa/labor", icon: HardHat, label: "노무" },
-        { href: "/sa/notifications", icon: Bell, label: "알림", isNotif: true },
+        { href: "/mypage", icon: User, label: "내 정보" },
       ];
     }
     if (user?.role === "site_manager") {
       return [
         { href: "/dashboard", icon: LayoutDashboard, label: "대시보드" },
         { href: "/projects", icon: FolderKanban, label: "프로젝트" },
-        { href: "/notifications", icon: Bell, label: "알림", isNotif: true },
+        { href: "/mypage", icon: User, label: "내 정보" },
       ];
     }
     // company_admin (기본)
@@ -62,7 +57,7 @@ export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
       { href: "/dashboard", icon: LayoutDashboard, label: "대시보드" },
       { href: "/projects", icon: FolderKanban, label: "프로젝트" },
       { href: "/labor", icon: HardHat, label: "노무관리" },
-      { href: "/notifications", icon: Bell, label: "알림", isNotif: true },
+      { href: "/mypage", icon: User, label: "내 정보" },
     ];
   };
 
@@ -98,18 +93,6 @@ export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
           );
         })}
 
-        {/* 더보기 탭 - worker 역할 제외 */}
-        {user?.role !== "worker" && (
-          <button
-            type="button"
-            onClick={onOpenSidebar}
-            className="relative flex flex-col items-center gap-1 flex-1 py-2 text-slate-500 active:scale-95 transition-transform duration-150"
-            aria-label="메뉴 열기"
-          >
-            <Menu className="h-6 w-6" />
-            <span className="text-xs font-medium">더보기</span>
-          </button>
-        )}
       </div>
     </nav>
   );

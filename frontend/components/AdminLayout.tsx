@@ -456,16 +456,25 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
             />
             <span className="font-semibold text-slate-900">시공코어</span>
           </AppLink>
-          <AppLink
-            href={user?.role === "super_admin" ? "/sa/notifications" : "/notifications"}
-            className="relative flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-600"
-            aria-label="알림"
-          >
-            <Bell className="h-5 w-5" />
-            {unreadCount > 0 && (
-              <NavBadge count={unreadCount} />
-            )}
-          </AppLink>
+          <div className="flex items-center gap-1">
+            <AppLink
+              href={user?.role === "super_admin" ? "/sa/notifications" : "/notifications"}
+              className="relative flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-600"
+              aria-label="알림"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <NavBadge count={unreadCount} />
+              )}
+            </AppLink>
+            <PrimitiveButton
+              onClick={() => setSidebarOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-600"
+              aria-label="메뉴 열기"
+            >
+              <Menu className="h-5 w-5" />
+            </PrimitiveButton>
+          </div>
         </div>
         <ContentTransitionBoundary
           className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 sm:pt-8 lg:p-8"
@@ -474,7 +483,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
           <div id="main-content">{children}</div>
         </ContentTransitionBoundary>
       </main>
-      <AdminBottomNav onOpenSidebar={() => setSidebarOpen(true)} />
+      <AdminBottomNav />
     </div>
   );
 }
