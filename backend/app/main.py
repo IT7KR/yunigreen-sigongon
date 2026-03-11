@@ -139,6 +139,7 @@ from app.routers.dashboard import router as dashboard_router
 from app.routers.device_tokens import router as device_tokens_router
 from app.routers.cost_calculations import router as cost_calculations_router
 from app.routers.construction_rates import router as construction_rates_router
+from app.routers.construction_plans import router as construction_plans_router
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["인증"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["사용자 관리"])
@@ -170,3 +171,4 @@ app.include_router(dashboard_router, prefix="/api/v1", tags=["대시보드"])
 app.include_router(device_tokens_router, prefix="/api/v1", tags=["FCM 디바이스 토큰"])
 app.include_router(cost_calculations_router, prefix="/api/v1", tags=["원가계산서"])
 app.include_router(construction_rates_router, prefix="/api/v1", tags=["건설 원가 요율"])
+app.include_router(construction_plans_router, prefix="/api/v1", tags=["시공계획서"])

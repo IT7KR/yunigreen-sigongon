@@ -67,6 +67,19 @@ from app.models.construction_report import (
     ConstructionReportCreate, ConstructionReportRead,
     ConstructionReportUpdate, ConstructionReportSubmit
 )
+from app.models.construction_plan import (
+    ConstructionPlan,
+    ConstructionPhase,
+    PhaseStatus,
+    ConstructionPlanCreate,
+    ConstructionPlanUpdate,
+    ConstructionPhaseCreate,
+    ConstructionPhaseUpdate,
+    ConstructionPhaseRead,
+    ConstructionPlanRead,
+    PlanSummary,
+    ConstructionPlanDetail,
+)
 from app.models.tax_invoice import (
     TaxInvoice, TaxInvoiceStatus, TaxInvoiceType,
     TaxInvoiceCreate, TaxInvoiceRead, TaxInvoiceUpdate, TaxInvoiceIssue
@@ -245,6 +258,18 @@ __all__ = [
     "ConstructionReportRead",
     "ConstructionReportUpdate",
     "ConstructionReportSubmit",
+    # Construction Plan (시공계획서)
+    "ConstructionPlan",
+    "ConstructionPhase",
+    "PhaseStatus",
+    "ConstructionPlanCreate",
+    "ConstructionPlanUpdate",
+    "ConstructionPhaseCreate",
+    "ConstructionPhaseUpdate",
+    "ConstructionPhaseRead",
+    "ConstructionPlanRead",
+    "PlanSummary",
+    "ConstructionPlanDetail",
     # Tax Invoice
     "TaxInvoice",
     "TaxInvoiceStatus",

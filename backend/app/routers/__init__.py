@@ -9,6 +9,7 @@ from app.routers.pricebooks import router as pricebooks_router
 from app.routers.rag import router as rag_router
 from app.routers.cases import router as cases_router
 from app.routers.harness import router as harness_router
+from app.routers.construction_plans import router as construction_plans_router
 
 __all__ = [
     "auth_router",
@@ -21,4 +22,5 @@ __all__ = [
     "rag_router",
     "cases_router",
     "harness_router",
+    "construction_plans_router",
 ]
