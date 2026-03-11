@@ -19,6 +19,12 @@ import {
   Ban,
   CheckCircle2,
   Eye,
+  Users,
+  FileText,
+  AlertCircle,
+  Clock,
+  RotateCw,
+  LayoutGrid,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { MobileListCard } from "@/components/MobileListCard";
@@ -33,6 +39,10 @@ import {
   PrimitiveSelect,
   toast,
   Skeleton,
+  StatCard,
+  PageHeader,
+  Reveal,
+  cn,
 } from "@sigongcore/ui";
 import { api } from "@/lib/api";
 import type {
@@ -898,130 +908,164 @@ export default function DailyWorkersPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">근로자 관리</h1>
-            <p className="mt-1 text-slate-500">
-              검색/필터 결과 {filteredWorkers.length}명 · 전체 {workers.length}
-              명
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => openDownloadModal("kwdi")}
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              근로복지공단 양식
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => openDownloadModal("tax")}
-            >
-              <Download className="h-4 w-4" />
-              국세청 양식
-            </Button>
-            <Button onClick={() => setShowInviteModal(true)}>
-              <MessageSquare className="h-4 w-4" />
-              근로자 초대
-            </Button>
-            <Button onClick={() => setShowRegisterModal(true)}>
-              <Plus className="h-4 w-4" />
-              근로자 등록
-            </Button>
-          </div>
+      <div className="space-y-8 pb-10">
+        <Reveal>
+          <PageHeader
+            title="근로자 관리"
+            description={`검색/필터 결과 ${filteredWorkers.length}명 · 전체 ${workers.length}명`}
+            actions={
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => openDownloadModal("kwdi")}
+                  className="hidden sm:inline-flex"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  근로복지공단
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => openDownloadModal("tax")}
+                  className="hidden sm:inline-flex"
+                >
+                  <Download className="h-4 w-4" />
+                  국세청
+                </Button>
+                <Button size="sm" onClick={() => setShowInviteModal(true)}>
+                  <MessageSquare className="h-4 w-4" />
+                  초대
+                </Button>
+                <Button size="sm" onClick={() => setShowRegisterModal(true)}>
+                  <Plus className="h-4 w-4" />
+                  등록
+                </Button>
+              </div>
+            }
+          />
+        </Reveal>
+
+        {/* Action Dashboard - Stat Grid */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            title="전체 근로자"
+            value={workers.length}
+            icon={Users}
+            color="brand"
+            className={cn(
+              "cursor-pointer border-2 transition-all",
+              workerFilter === "all" ? "border-brand-point-500 ring-2 ring-brand-point-100" : "border-slate-100"
+            )}
+            onClick={() => setWorkerFilter("all")}
+          />
+          <StatCard
+            title="서류 미완"
+            value={docsPendingCount}
+            icon={FileText}
+            color="amber"
+            className={cn(
+              "cursor-pointer border-2 transition-all",
+              workerFilter === "docs_pending" ? "border-amber-500 ring-2 ring-amber-100" : "border-slate-100"
+            )}
+            onClick={() => setWorkerFilter("docs_pending")}
+          />
+          <StatCard
+            title="검토 필요"
+            value={needsReviewCount}
+            icon={ShieldCheck}
+            color="blue"
+            className={cn(
+              "cursor-pointer border-2 transition-all",
+              workerFilter === "needs_review" ? "border-blue-500 ring-2 ring-blue-100" : "border-slate-100"
+            )}
+            onClick={() => setWorkerFilter("needs_review")}
+          />
+          <StatCard
+            title="투입 차단"
+            value={blockedWorkerCount}
+            icon={Ban}
+            color="red"
+            className={cn(
+              "cursor-pointer border-2 transition-all",
+              workerFilter === "blocked" ? "border-red-500 ring-2 ring-red-100" : "border-slate-100"
+            )}
+            onClick={() => setWorkerFilter("blocked")}
+          />
         </div>
 
-        {/* Search + Quick Filters */}
-        <Card>
-          <CardContent className="space-y-3 p-4">
-            <div className="relative">
+        {/* Evidence Document Management Section */}
+        <Reveal delay={0.1}>
+          <Card className="overflow-hidden border-brand-point-100 bg-brand-point-50/30 shadow-sm">
+            <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-brand-point-100">
+                  <ShieldCheck className="h-6 w-6 text-brand-point-500" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900">증빙 서류 관리</h3>
+                  <div className="mt-1 flex gap-3 text-xs font-medium text-slate-500">
+                    <span className="flex items-center gap-1.5">
+                      <div className="h-2 w-2 rounded-full bg-blue-500" />
+                      대기 {reviewSummary.pending_review}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <div className="h-2 w-2 rounded-full bg-brand-point-500" />
+                      승인 {reviewSummary.approved}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <div className="h-2 w-2 rounded-full bg-red-500" />
+                      반려 {reviewSummary.rejected}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="h-10 border-brand-point-200 bg-white text-brand-point-700 hover:bg-brand-point-50"
+                  onClick={handleOpenReviewQueue}
+                >
+                  승인 대기열 확인
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-10 w-10 p-0 text-slate-400 hover:bg-white hover:text-brand-point-500"
+                  onClick={() => void fetchReviewSummary()}
+                  title="새로고침"
+                >
+                  <Clock className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </Reveal>
+
+        {/* Search & List Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative flex-1 max-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <PrimitiveInput
                 type="search"
-                placeholder="성명, 연락처로 검색..."
+                placeholder="근로자 명 또는 전화번호 검색..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-4 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+                className="h-11 w-full rounded-2xl border-slate-200 bg-white pl-10 shadow-sm transition-all focus:border-brand-point-500 focus:ring-4 focus:ring-brand-point-100"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant={workerFilter === "all" ? "secondary" : "ghost"}
-                onClick={() => setWorkerFilter("all")}
-              >
-                전체 {workers.length}
-              </Button>
-              <Button
-                size="sm"
-                variant={
-                  workerFilter === "docs_pending" ? "secondary" : "ghost"
-                }
-                onClick={() => setWorkerFilter("docs_pending")}
-              >
-                서류 미완 {docsPendingCount}
-              </Button>
-              <Button
-                size="sm"
-                variant={workerFilter === "blocked" ? "secondary" : "ghost"}
-                onClick={() => setWorkerFilter("blocked")}
-              >
-                투입 차단 {blockedWorkerCount}
-              </Button>
-              <Button
-                size="sm"
-                variant={
-                  workerFilter === "needs_review" ? "secondary" : "ghost"
-                }
-                onClick={() => setWorkerFilter("needs_review")}
-              >
-                검토 필요 {needsReviewCount}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Review Summary */}
-        <Card>
-          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-base font-semibold text-slate-900">
-                서류 검토 현황
-              </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                <Badge variant="default">
-                  검토대기 {reviewSummary.pending_review}건
-                </Badge>
-                <Badge variant="success">승인 {reviewSummary.approved}건</Badge>
-                <Badge variant="warning">반려 {reviewSummary.rejected}건</Badge>
-                <Badge variant="error">
-                  격리 {reviewSummary.quarantined}건
-                </Badge>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={handleOpenReviewQueue}>
-                서류 검토 열기
-              </Button>
-              <Button variant="ghost" onClick={() => void fetchReviewSummary()}>
-                요약 새로고침
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Worker List Table */}
-        <Card>
+        <Card className="overflow-hidden border-slate-200 shadow-xl bg-white/80 backdrop-blur-sm">
           <CardContent className="p-0">
             {isLoading ? (
               <>
                 {/* 모바일: 스켈레톤 리스트 */}
                 <div className="space-y-3 p-4 md:hidden">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3 bg-white">
+                    <div key={i} className="rounded-2xl border border-slate-100 p-4 space-y-3 bg-white">
                       <div className="flex justify-between items-start">
                         <div className="space-y-2">
                           <Skeleton className="h-5 w-32" />
@@ -1030,8 +1074,8 @@ export default function DailyWorkersPage() {
                         <Skeleton className="h-6 w-16 rounded-full" />
                       </div>
                       <div className="grid gap-2 pt-2">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-48 shadow-sm" />
+                        <Skeleton className="h-4 w-32 shadow-sm" />
                       </div>
                     </div>
                   ))}
@@ -1040,47 +1084,29 @@ export default function DailyWorkersPage() {
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                        <th className="px-4 py-3 font-medium">No.</th>
-                        <th className="px-4 py-3 font-medium">성명</th>
-                        <th className="px-4 py-3 font-medium">직종</th>
-                        <th className="px-4 py-3 font-medium">소속반</th>
-                        <th className="px-4 py-3 font-medium">일당</th>
-                        <th className="px-4 py-3 font-medium">연락처</th>
-                        <th className="px-4 py-3 font-medium">외국인</th>
-                        <th className="px-4 py-3 font-medium">계좌정보</th>
-                        <th className="px-4 py-3 font-medium">통제</th>
-                        <th className="px-4 py-3 font-medium">작업</th>
+                      <tr className="border-b border-slate-100 bg-slate-50/50 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        <th className="px-6 py-4 font-semibold">No.</th>
+                        <th className="px-6 py-4 font-semibold">근로자 정보</th>
+                        <th className="px-6 py-4 font-semibold">직종/매칭</th>
+                        <th className="px-6 py-4 font-semibold">보수 정보</th>
+                        <th className="px-6 py-4 font-semibold">연락처/계좌</th>
+                        <th className="px-6 py-4 font-semibold text-center">작업</th>
                       </tr>
                     </thead>
                     <tbody>
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <tr key={i} className="border-b border-slate-100 last:border-0">
-                          <td className="px-4 py-4"><Skeleton className="h-4 w-8" /></td>
-                          <td className="px-4 py-4">
-                            <div className="space-y-2">
-                              <Skeleton className="h-4 w-24" />
-                              <Skeleton className="h-3 w-32" />
+                        <tr key={i} className="border-b border-slate-50">
+                          <td className="px-6 py-5"><Skeleton className="h-4 w-6" /></td>
+                          <td className="px-6 py-5">
+                            <div className="flex flex-col gap-2">
+                              <Skeleton className="h-5 w-32" />
+                              <Skeleton className="h-3 w-40" />
                             </div>
                           </td>
-                          <td className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
-                          <td className="px-4 py-4"><Skeleton className="h-4 w-16" /></td>
-                          <td className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
-                          <td className="px-4 py-4"><Skeleton className="h-4 w-32" /></td>
-                          <td className="px-4 py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
-                          <td className="px-4 py-4">
-                            <div className="space-y-2">
-                              <Skeleton className="h-4 w-16" />
-                              <Skeleton className="h-3 w-24" />
-                            </div>
-                          </td>
-                          <td className="px-4 py-4"><Skeleton className="h-8 w-20 rounded-lg" /></td>
-                          <td className="px-4 py-4">
-                            <div className="flex gap-2">
-                              <Skeleton className="h-8 w-16 rounded-lg" />
-                              <Skeleton className="h-8 w-16 rounded-lg" />
-                            </div>
-                          </td>
+                          <td className="px-6 py-5"><Skeleton className="h-4 w-24" /></td>
+                          <td className="px-6 py-5"><Skeleton className="h-4 w-28" /></td>
+                          <td className="px-6 py-5"><Skeleton className="h-8 w-40" /></td>
+                          <td className="px-6 py-5 text-center"><Skeleton className="mx-auto h-9 w-24 rounded-xl" /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -1088,91 +1114,72 @@ export default function DailyWorkersPage() {
                 </div>
               </>
             ) : filteredWorkers.length === 0 ? (
-              <div className="py-12 text-center text-slate-500">
-                {search ? "검색 결과가 없습니다." : "등록된 근로자가 없습니다."}
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-50 mb-4">
+                  <Search className="h-10 w-10 opacity-20" />
+                </div>
+                <p className="text-lg font-medium">{search ? "검색 결과가 없습니다." : "등록된 근로자가 없습니다."}</p>
+                {workerFilter !== 'all' && (
+                  <Button variant="ghost" onClick={() => setWorkerFilter('all')} className="mt-2 text-brand-point-600">
+                    전체 목록 보기
+                  </Button>
+                )}
               </div>
             ) : (
-              <>
-                {/* 모바일: 카드 리스트 */}
-                <div className="space-y-3 p-4 md:hidden">
+              <Reveal delay={0.2} direction="up">
+                {/* 모바일: 전용 카드 리스트 */}
+                <div className="space-y-4 p-4 md:hidden bg-slate-50/30">
                   {filteredWorkers.map((worker) => {
                     const nationalityLabel = worker.nationality_code
-                      ? (nationalityCodes[worker.nationality_code] ??
-                        worker.nationality_code)
+                      ? (nationalityCodes[worker.nationality_code] ?? worker.nationality_code)
                       : undefined;
-                    const workerBadge = worker.is_blocked_for_labor ? (
-                      <Badge variant="error">투입 차단</Badge>
-                    ) : isWorkerDocumentIncomplete(worker) ? (
-                      <Badge variant="warning">서류 미완</Badge>
-                    ) : worker.is_foreign ? (
-                      <Badge variant="info">외국인</Badge>
-                    ) : null;
+                    
+                    const statusBadge = (
+                      <div className="flex flex-col items-end gap-1">
+                        {worker.is_blocked_for_labor ? (
+                          <Badge variant="error" className="shadow-sm">차단됨</Badge>
+                        ) : isWorkerDocumentIncomplete(worker) ? (
+                          <Badge variant="warning" className="shadow-sm">서류 미완</Badge>
+                        ) : (
+                          <Badge variant="success" className="shadow-sm">정상</Badge>
+                        )}
+                      </div>
+                    );
+
                     return (
                       <MobileListCard
                         key={worker.id}
-                        title={worker.name}
-                        subtitle={worker.phone || undefined}
-                        badge={workerBadge ?? undefined}
+                        title={<span className="text-base font-bold">{worker.name}</span>}
+                        subtitle={<span className="font-mono text-xs">{worker.phone}</span>}
+                        badge={statusBadge}
+                        className="border-none shadow-sm ring-1 ring-slate-200/50 hover:ring-brand-point-300 transition-all"
                         metadata={[
-                          { label: "직종", value: worker.job_type || "-" },
-                          {
-                            label: "일당",
-                            value: formatCurrency(worker.daily_rate),
-                          },
-                          ...(nationalityLabel
-                            ? [{ label: "국적", value: nationalityLabel }]
-                            : []),
-                          ...(worker.hire_date
-                            ? [{ label: "입사일", value: worker.hire_date }]
-                            : []),
-                          ...(worker.block_reason
-                            ? [
-                                {
-                                  label: "차단사유",
-                                  value: (
-                                    <span className="text-red-600">
-                                      {worker.block_reason}
-                                    </span>
-                                  ),
-                                },
-                              ]
-                            : []),
+                          { label: "직종", value: <span className="font-medium text-slate-700">{worker.job_type || "-"}</span> },
+                          { label: "일당", value: <span className="font-bold text-brand-primary">{formatCurrency(worker.daily_rate)}</span> },
+                          ...(nationalityLabel ? [{ label: "국적", value: nationalityLabel }] : []),
                         ]}
                         actions={
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              size="sm"
-                              variant={
-                                worker.is_blocked_for_labor
-                                  ? "secondary"
-                                  : "ghost"
-                              }
-                              onClick={() => handleWorkerControl(worker)}
-                              disabled={
-                                workerActionKey ===
-                                `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`
-                              }
-                            >
-                              <Ban className="h-3.5 w-3.5" />
-                              {worker.is_blocked_for_labor
-                                ? "차단해제"
-                                : "차단"}
-                            </Button>
-                            <Button
-                              size="sm"
+                          <div className="grid w-full grid-cols-2 gap-2 mt-2">
+                             <Button
                               variant="secondary"
+                              size="sm"
+                              className="w-full bg-slate-50 font-semibold"
                               onClick={() => void handleEdit(worker)}
                             >
                               <Edit2 className="h-3.5 w-3.5" />
-                              수정
+                              정보 수정
                             </Button>
                             <Button
+                              variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
                               size="sm"
-                              variant="ghost"
-                              onClick={() => handleDelete(worker)}
+                              className={cn(
+                                "w-full font-semibold",
+                                worker.is_blocked_for_labor ? "text-amber-600" : "text-slate-500"
+                              )}
+                              onClick={() => handleWorkerControl(worker)}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              삭제
+                              <Ban className="h-3.5 w-3.5" />
+                              {worker.is_blocked_for_labor ? "차단 해제" : "입임 차단"}
                             </Button>
                           </div>
                         }
@@ -1181,131 +1188,110 @@ export default function DailyWorkersPage() {
                   })}
                 </div>
 
-                {/* 데스크톱: 기존 테이블 */}
+                {/* 데스크톱: 데이터 테이블 */}
                 <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                        <th className="px-4 py-3 font-medium">No.</th>
-                        <th className="px-4 py-3 font-medium">성명</th>
-                        <th className="px-4 py-3 font-medium">직종</th>
-                        <th className="px-4 py-3 font-medium">소속반</th>
-                        <th className="px-4 py-3 font-medium">일당</th>
-                        <th className="px-4 py-3 font-medium">연락처</th>
-                        <th className="px-4 py-3 font-medium">외국인</th>
-                        <th className="px-4 py-3 font-medium">계좌정보</th>
-                        <th className="px-4 py-3 font-medium">통제</th>
-                        <th className="px-4 py-3 font-medium">작업</th>
+                      <tr className="border-b border-slate-100 bg-slate-50/30 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                        <th className="px-6 py-4">#</th>
+                        <th className="px-6 py-4">근로자 기본 정보</th>
+                        <th className="px-6 py-4">직종 / 소속</th>
+                        <th className="px-6 py-4">지급 기준</th>
+                        <th className="px-6 py-4">연락처 / 계좌</th>
+                        <th className="px-6 py-4">상태 및 제어</th>
+                        <th className="px-6 py-4 text-center">작업</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-100">
                       {filteredWorkers.map((worker, index) => (
                         <tr
                           key={worker.id}
-                          className="border-b border-slate-100 last:border-0"
+                          className="group transition-all hover:bg-brand-point-50/30"
                         >
-                          <td className="px-4 py-4 text-slate-500">
-                            {index + 1}
+                          <td className="px-6 py-6 text-xs font-mono text-slate-400">
+                            {(index + 1).toString().padStart(2, '0')}
                           </td>
-                          <td className="px-4 py-4">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-slate-900">
+                          <td className="px-6 py-6">
+                            <div className="flex flex-col">
+                              <span className="text-base font-bold text-slate-900 group-hover:text-brand-primary">
                                 {worker.name}
-                              </p>
-                              {isWorkerDocumentIncomplete(worker) && (
-                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                                  서류 미완
-                                </span>
-                              )}
-                              {worker.is_blocked_for_labor && (
-                                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                                  투입 차단
-                                </span>
-                              )}
+                              </span>
+                              <span className="mt-1 font-mono text-[11px] text-slate-500 tracking-tighter">
+                                {formatMaskedSSN(worker.birth_date, worker.gender)}
+                              </span>
                             </div>
-                            <p className="text-xs text-slate-500">
-                              {formatMaskedSSN(
-                                worker.birth_date,
-                                worker.gender,
-                              )}
-                            </p>
-                            {worker.block_reason && (
-                              <p className="mt-1 text-xs text-red-600">
-                                사유: {worker.block_reason}
-                              </p>
-                            )}
                           </td>
-                          <td className="px-4 py-4 text-slate-600">
-                            {worker.job_type}
+                          <td className="px-6 py-6">
+                            <div className="flex flex-col gap-1">
+                              <Badge variant="default" className="w-fit bg-slate-100 text-slate-700">
+                                {worker.job_type}
+                              </Badge>
+                              <span className="text-xs text-slate-500">{worker.team || "소속 없음"}</span>
+                            </div>
                           </td>
-                          <td className="px-4 py-4 text-slate-600">
-                            {worker.team}
+                          <td className="px-6 py-6">
+                            <span className="text-sm font-bold text-brand-primary">
+                              {formatCurrency(worker.daily_rate)}
+                            </span>
                           </td>
-                          <td className="px-4 py-4 text-slate-900 font-medium">
-                            {formatCurrency(worker.daily_rate)}
+                          <td className="px-6 py-6">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-slate-700">{worker.phone}</span>
+                              <span className="text-[11px] text-slate-400">
+                                {worker.bank_name} {worker.account_number}
+                              </span>
+                            </div>
                           </td>
-                          <td className="px-4 py-4 text-slate-600">
-                            {worker.phone}
-                          </td>
-                          <td className="px-4 py-4">
-                            {worker.is_foreign ? (
-                              <div>
-                                <Badge variant="info">외국인</Badge>
-                                {worker.visa_status && (
-                                  <p className="mt-1 text-xs text-slate-500">
-                                    {worker.visa_status}
-                                  </p>
+                          <td className="px-6 py-6">
+                             <div className="flex items-center gap-2">
+                                {worker.is_blocked_for_labor ? (
+                                  <Badge variant="error" className="animate-pulse">투입 불가</Badge>
+                                ) : isWorkerDocumentIncomplete(worker) ? (
+                                  <Badge variant="warning">서류 보완</Badge>
+                                ) : (
+                                  <Badge variant="success">투입 가능</Badge>
                                 )}
-                              </div>
-                            ) : (
-                              <span className="text-slate-400">-</span>
-                            )}
+                                {worker.is_foreign && (
+                                  <Badge variant="info" className="bg-blue-50 text-blue-600 border-blue-100">F</Badge>
+                                )}
+                             </div>
+                             {worker.block_reason && (
+                               <div className="mt-2 text-[10px] text-red-500 font-medium">
+                                 🚨 {worker.block_reason}
+                               </div>
+                             )}
                           </td>
-                          <td className="px-4 py-4">
-                            <p className="text-sm text-slate-900">
-                              {worker.bank_name}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {worker.account_number}
-                            </p>
-                          </td>
-                          <td className="px-4 py-4">
-                            <Button
-                              size="sm"
-                              variant={
-                                worker.is_blocked_for_labor
-                                  ? "secondary"
-                                  : "ghost"
-                              }
-                              onClick={() => handleWorkerControl(worker)}
-                              disabled={
-                                workerActionKey ===
-                                `${worker.id}:${worker.is_blocked_for_labor ? "unblock" : "block"}`
-                              }
-                            >
-                              <Ban className="h-3.5 w-3.5" />
-                              {worker.is_blocked_for_labor
-                                ? "차단해제"
-                                : "차단"}
-                            </Button>
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="flex gap-2">
+                          <td className="px-6 py-6">
+                            <div className="flex items-center justify-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                               <Button
                                 size="sm"
-                                variant="secondary"
+                                variant="ghost"
+                                className="h-9 w-9 p-0 text-slate-400 hover:text-brand-primary hover:bg-white shadow-sm"
                                 onClick={() => void handleEdit(worker)}
+                                title="수정"
                               >
-                                <Edit2 className="h-3.5 w-3.5" />
-                                수정
+                                <Edit2 className="h-4 w-4" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleDelete(worker)}
+                                className={cn(
+                                  "h-9 w-9 p-0 shadow-sm transition-colors",
+                                  worker.is_blocked_for_labor ? "text-amber-500 hover:bg-amber-50" : "text-slate-400 hover:text-amber-500 hover:bg-amber-50"
+                                )}
+                                onClick={() => handleWorkerControl(worker)}
+                                title={worker.is_blocked_for_labor ? "차단 해제" : "차단"}
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                삭제
+                                <Ban className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-9 w-9 p-0 text-slate-400 hover:text-red-500 hover:bg-red-50 shadow-sm"
+                                onClick={() => handleDelete(worker)}
+                                title="삭제"
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </td>
@@ -1314,7 +1300,7 @@ export default function DailyWorkersPage() {
                     </tbody>
                   </table>
                 </div>
-              </>
+              </Reveal>
             )}
           </CardContent>
         </Card>
@@ -1325,43 +1311,45 @@ export default function DailyWorkersPage() {
             <h2 className="mb-3 text-sm font-semibold text-slate-700">
               대기중 초대 ({pendingInvitations.length}명)
             </h2>
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               {pendingInvitations.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex items-center justify-between border-b border-slate-100 px-4 py-3 last:border-b-0"
+                  className="flex items-center justify-between border-b border-slate-100 px-4 py-3 last:border-b-0 transition-colors hover:bg-slate-50"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-900 truncate">
                       {inv.name}
                     </p>
-                    <p className="text-xs text-slate-500">{inv.phone}</p>
-                    <p className="text-xs text-slate-400">
-                      만료:{" "}
-                      {new Date(inv.expires_at).toLocaleDateString("ko-KR")}
-                    </p>
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                      <span className="font-mono">{inv.phone}</span>
+                      <span className="h-1 w-1 rounded-full bg-slate-300" />
+                      <span>만료: {new Date(inv.expires_at).toLocaleDateString("ko-KR")}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 text-xs bg-white border-slate-200"
                       onClick={async () => {
                         try {
                           const invToken = inv.id;
                           const inviteUrl = `${window.location.origin}/onboarding/worker/consent?token=${invToken}`;
-                          await (api as any).resendWorkerInvitation(
-                            inv.id,
-                            inviteUrl,
-                          );
+                          await (api as any).resendWorkerInvitation(inv.id, inviteUrl);
                           toast.success(`${inv.name}님에게 재발송했습니다.`);
                           await fetchPendingInvitations();
                         } catch {
                           toast.error("재발송에 실패했습니다.");
                         }
                       }}
-                      className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
                     >
                       재발송
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-xs text-red-500 hover:bg-red-50 hover:text-red-600"
                       onClick={async () => {
                         try {
                           await (api as any).revokeWorkerInvitation(inv.id);
@@ -1371,10 +1359,9 @@ export default function DailyWorkersPage() {
                           toast.error("초대 취소에 실패했습니다.");
                         }
                       }}
-                      className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
                     >
                       취소
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -1387,14 +1374,15 @@ export default function DailyWorkersPage() {
       <Modal
         isOpen={isReviewQueueOpen}
         onClose={handleCloseReviewQueue}
-        title="서류 검토 큐"
-        description="신분증/안전교육 이수증 업로드 파일을 검토하고 이상 건을 제어합니다."
+        title="서류 승인 대기열"
+        description="근로자가 업로드한 자격 증명 서류를 검토하고 승인 여부를 결정합니다."
         size="xl"
       >
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm text-slate-500">
-              현재 필터 결과 {reviewQueue.length}건
+        <div className="space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm font-semibold text-slate-900">조회 결과</span>
+              <span className="text-sm font-mono text-brand-point-600">{reviewQueue.length}건</span>
             </div>
             <div className="flex items-center gap-2">
               <PrimitiveSelect
@@ -1406,23 +1394,27 @@ export default function DailyWorkersPage() {
                   setReviewFilter(next);
                   void fetchReviewQueue(next);
                 }}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium shadow-sm transition-all focus:border-brand-point-500 focus:ring-4 focus:ring-brand-point-100"
               >
-                <option value="pending_review">검토대기</option>
-                <option value="approved">승인</option>
-                <option value="rejected">반려</option>
-                <option value="quarantined">격리</option>
-                <option value="all">전체</option>
+                <option value="pending_review">승인대기</option>
+                <option value="approved">승인완료</option>
+                <option value="rejected">반려내역</option>
+                <option value="quarantined">심사보류</option>
+                <option value="all">전체보기</option>
               </PrimitiveSelect>
               <Button
-                variant="secondary"
+                variant="outline"
+                className="h-10 shrink-0 whitespace-nowrap bg-white border-slate-200 text-slate-600 hover:text-brand-point-500 hover:border-brand-point-200"
                 onClick={handleRefreshReviewQueue}
                 disabled={isReviewLoading}
               >
                 {isReviewLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  "새로고침"
+                  <>
+                    <RotateCw className="h-4 w-4" />
+                    새로고침
+                  </>
                 )}
               </Button>
             </div>
@@ -1433,76 +1425,89 @@ export default function DailyWorkersPage() {
               검토 목록을 불러오는 중...
             </div>
           ) : reviewQueue.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">
-              검토할 서류가 없습니다.
+            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-100 py-16 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-50">
+                <ShieldCheck className="h-7 w-7 text-slate-200" />
+              </div>
+              <p className="text-sm font-medium text-slate-400">승인 대기 중인 서류가 없습니다.</p>
             </div>
           ) : (
             <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
-              {reviewQueue.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-lg border border-slate-200 p-3"
-                >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {item.worker_name} · {item.document_name}
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {item.original_filename || "파일명 없음"} ·{" "}
-                        {formatFileSize(item.file_size_bytes)}
-                      </p>
-                      {!!item.anomaly_flags?.length && (
-                        <p className="mt-1 text-xs text-amber-700">
-                          이상 플래그: {item.anomaly_flags.join(", ")}
-                        </p>
-                      )}
-                      {!!item.review_reason && (
-                        <p className="mt-1 text-xs text-red-600">
-                          사유: {item.review_reason}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {renderReviewBadge(item.review_status)}
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleDownloadDocument(item)}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        보기
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleReviewAction(item, "approve")}
-                        disabled={reviewActionKey === `${item.id}:approve`}
-                      >
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        승인
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleReviewAction(item, "reject")}
-                        disabled={reviewActionKey === `${item.id}:reject`}
-                      >
-                        <CircleX className="h-3.5 w-3.5" />
-                        반려
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleReviewAction(item, "quarantine")}
-                        disabled={reviewActionKey === `${item.id}:quarantine`}
-                      >
-                        <ShieldAlert className="h-3.5 w-3.5" />
-                        격리
-                      </Button>
+              <div className="grid gap-4">
+                {reviewQueue.map((item) => (
+                  <div
+                    key={item.id}
+                    className="group rounded-2xl border border-slate-100 bg-slate-50/50 p-5 transition-all hover:bg-white hover:shadow-xl hover:ring-1 hover:ring-brand-point-200"
+                  >
+                    <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-base font-extrabold text-slate-900 truncate">
+                            {item.worker_name}
+                          </p>
+                          <Badge variant="info" className="bg-slate-100 text-slate-600 border-none text-[10px]">
+                            {item.document_name}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                          <FileText className="h-3 w-3" />
+                          <span className="truncate">{item.original_filename || "파일명 없음"}</span>
+                          <span>·</span>
+                          <span>{formatFileSize(item.file_size_bytes)}</span>
+                        </div>
+                        {item.anomaly_flags && item.anomaly_flags.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-1">
+                            {item.anomaly_flags.map((flag, idx) => (
+                              <span key={idx} className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 border border-amber-100 uppercase tracking-tighter">
+                                {flag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {item.review_reason && (
+                          <div className="mt-3 flex items-start gap-2 rounded-xl bg-red-50/50 p-3 border border-red-50">
+                            <ShieldAlert className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
+                            <p className="text-[11px] font-medium text-red-600 leading-relaxed">
+                              {item.review_reason}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-10 px-4 bg-white border border-slate-200 text-slate-600 hover:text-brand-primary"
+                          onClick={() => handleDownloadDocument(item)}
+                        >
+                          <Eye className="h-4 w-4" />
+                          보기
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-10 px-5 shadow-md shadow-brand-point-50"
+                          onClick={() => handleReviewAction(item, "approve")}
+                          disabled={!!reviewActionKey && reviewActionKey === `${item.id}:approve`}
+                          loading={!!reviewActionKey && reviewActionKey === `${item.id}:approve`}
+                        >
+                          {(!reviewActionKey || !reviewActionKey.includes('approve')) && <ShieldCheck className="h-4 w-4" />}
+                          승인
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-10 px-4 text-red-500 hover:bg-red-50 border border-transparent hover:border-red-100"
+                          onClick={() => handleReviewAction(item, "reject")}
+                          disabled={reviewActionKey === `${item.id}:reject`}
+                        >
+                          <CircleX className="h-4 w-4" />
+                          반려
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -1515,63 +1520,84 @@ export default function DailyWorkersPage() {
         title="근로자 초대"
         size="md"
       >
-        <div className="space-y-4">
-          <Input
-            label="근로자 이름"
-            placeholder="홍길동"
-            value={workerName}
-            onChange={(e) => setWorkerName(e.target.value)}
-            error={inviteErrors.name}
-          />
-          <Input
-            label="휴대폰 번호"
-            placeholder="010-0000-0000"
-            value={workerPhone}
-            onChange={(e) => setWorkerPhone(handlePhoneFormat(e.target.value))}
-            maxLength={13}
-            error={inviteErrors.phone}
-          />
+        <div className="space-y-6 pt-2">
+          <div className="space-y-4">
+            <Input
+              label="근로자 이름"
+              placeholder="성함을 입력하세요 (예: 홍길동)"
+              value={workerName}
+              onChange={(e) => setWorkerName(e.target.value)}
+              error={inviteErrors.name}
+              className="h-12 text-base"
+            />
+            <Input
+              label="휴대폰 번호"
+              placeholder="010-0000-0000"
+              value={workerPhone}
+              onChange={(e) => setWorkerPhone(handlePhoneFormat(e.target.value))}
+              maxLength={13}
+              error={inviteErrors.phone}
+              className="h-12 font-mono text-base tracking-wider"
+            />
+          </div>
 
           {inviteErrors.submit && (
-            <p className="text-sm text-red-500">{inviteErrors.submit}</p>
+            <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-600 animate-in fade-in slide-in-from-top-1">
+              ⚠️ {inviteErrors.submit}
+            </div>
           )}
 
           {inviteSuccess && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-              <p className="text-sm font-medium text-emerald-700">
-                알림톡 발송이 완료되었습니다.
-              </p>
-              <p className="mt-1 break-all text-xs text-emerald-600">
-                {inviteSuccess.inviteUrl}
-              </p>
+            <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 shadow-inner animate-in zoom-in-95 duration-300">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
+                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                </div>
+                <p className="font-bold text-emerald-800">알림톡 발송 완료</p>
+              </div>
+              
+              <div className="rounded-xl bg-white/60 p-3 border border-emerald-100">
+                <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Invitation Link</p>
+                <p className="break-all font-mono text-xs text-emerald-700 leading-relaxed">
+                  {inviteSuccess.inviteUrl}
+                </p>
+              </div>
+              
               <Button
                 size="sm"
-                variant="secondary"
-                className="mt-2"
+                variant="outline"
+                className="mt-4 w-full bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
                 onClick={handleCopyInviteLink}
               >
-                <Copy className="h-3.5 w-3.5" />
-                {copied ? "복사 완료" : "링크 복사"}
+                {copied ? (
+                  <>
+                    <ShieldCheck className="h-4 w-4" />
+                    복사되었습니다
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    초대 링크 복사하기
+                  </>
+                )}
               </Button>
             </div>
           )}
 
-          <div className="flex gap-3 pt-1">
-            <Button variant="secondary" onClick={closeInviteModal} fullWidth>
-              <X className="h-4 w-4" />
-              닫기
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" onClick={closeInviteModal} className="h-12 flex-1 font-bold text-slate-500">
+              취소
             </Button>
             <Button
               onClick={handleInviteWorker}
-              fullWidth
+              className="h-12 flex-1 font-bold shadow-lg shadow-brand-point-100"
               disabled={isInviting}
+              loading={isInviting}
             >
-              {isInviting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
+              {!isInviting && (
                 <>
-                  <MessageSquare className="h-4 w-4" />
-                  알림톡 발송
+                  <MessageSquare className="h-5 w-5" />
+                  초대장 발송
                 </>
               )}
             </Button>
