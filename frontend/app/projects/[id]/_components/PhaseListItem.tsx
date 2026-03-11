@@ -31,6 +31,11 @@ export function PhaseListItem({ phase, index, projectId }: Props) {
 
   const config = statusConfig[phase.status];
   const Icon = config.icon;
+  const today = new Date();
+  const isActuallyDelayed = phase.is_delayed || (
+    phase.status !== "completed" && 
+    new Date(phase.planned_end).getTime() < today.setHours(0,0,0,0)
+  );
 
   const toggleMutation = useMutation({
     mutationFn: () => api.toggleConstructionPhase(projectId, phase.id),
@@ -74,17 +79,21 @@ export function PhaseListItem({ phase, index, projectId }: Props) {
     <>
       <div
         className={cn(
-          "flex items-center gap-3 rounded-xl border p-3 transition-all",
-          config.bg,
-          phase.status === "completed" && "opacity-70",
+          "group relative flex items-center gap-4 rounded-2xl border p-4 transition-all duration-200",
+          phase.status === "completed" 
+            ? "bg-slate-50/50 border-slate-100 opacity-60" 
+            : cn(config.bg, "shadow-sm hover:shadow-md border-opacity-50")
         )}
       >
-        {/* Checkbox */}
+        {/* Checkbox / Status Icon */}
         <button
           onClick={() => toggleMutation.mutate(undefined)}
           disabled={toggleMutation.isPending}
-          className="shrink-0 transition-transform active:scale-90"
-          aria-label={phase.status === "completed" ? "완료 취소" : "완료 표시"}
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all active:scale-95",
+            phase.status === "completed" ? "bg-green-100" : "bg-white shadow-sm ring-1 ring-slate-100"
+          )}
+          aria-label={phase.status === "completed" ? "완료를 취소할까요?" : "완료로 표시할까요?"}
         >
           <Icon className={cn("h-6 w-6", config.color)} />
         </button>
@@ -94,55 +103,58 @@ export function PhaseListItem({ phase, index, projectId }: Props) {
           <div className="flex items-center gap-2">
             <span
               className={cn(
-                "text-sm font-semibold text-slate-800",
+                "text-base font-bold text-slate-800",
                 phase.status === "completed" && "line-through text-slate-400",
               )}
             >
               {index + 1}. {phase.name}
             </span>
             {phase.is_delayed && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black uppercase text-red-600 ring-1 ring-red-200">
                 <AlertCircle className="h-3 w-3" />
-                +{phase.delay_days}일
+                지연 {phase.delay_days}일
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {formatDate(phase.planned_start)} ~ {formatDate(phase.planned_end)}{" "}
-            <span className="text-slate-400">({phase.planned_days}일)</span>
-          </p>
+          <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-slate-400">
+            <Clock className="h-3 w-3 shrink-0" />
+            <span>{formatDate(phase.planned_start)} ~ {formatDate(phase.planned_end)}</span>
+          </div>
           {phase.notes && (
-            <p className="mt-0.5 truncate text-xs text-slate-400">{phase.notes}</p>
+            <p className="mt-2 line-clamp-1 text-xs text-slate-400 italic">“{phase.notes}”</p>
           )}
         </div>
 
-        {/* Status badge */}
-        <div className="shrink-0 text-xs font-medium text-slate-400">
-          {phase.status === "completed" && <span className="text-green-600">완료</span>}
-          {phase.status === "in_progress" && <span className="text-blue-600">진행중</span>}
-          {phase.status === "pending" && !phase.is_delayed && <span>대기</span>}
-          {phase.is_delayed && phase.status !== "completed" && (
-            <span className="text-red-600">지연</span>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex shrink-0 gap-1">
+        {/* Actions Overlay for Desktop */}
+        <div className="flex shrink-0 items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             onClick={() => setIsEditing(true)}
-            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-            aria-label="수정"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm ring-1 ring-slate-200 hover:text-primary-500 hover:ring-primary-200"
+            aria-label="공정 수정하기"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="h-4 w-4" />
           </button>
           <button
             onClick={() => deleteMutation.mutate()}
             disabled={deleteMutation.isPending}
-            className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
-            aria-label="삭제"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm ring-1 ring-slate-200 hover:text-red-500 hover:ring-red-200"
+            aria-label="공정 삭제하기"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-4 w-4" />
           </button>
+        </div>
+
+        {/* Status Text - Enlarged for better visibility */}
+        <div className="shrink-0 text-xs font-bold tracking-tight sm:text-sm">
+          {isActuallyDelayed ? (
+            <span className="text-red-500">지연</span>
+          ) : (
+            <>
+              {phase.status === "completed" && <span className="text-green-600">완료</span>}
+              {phase.status === "in_progress" && <span className="text-blue-600">진행중</span>}
+              {phase.status === "pending" && <span className="text-slate-400">대기</span>}
+            </>
+          )}
         </div>
       </div>
 

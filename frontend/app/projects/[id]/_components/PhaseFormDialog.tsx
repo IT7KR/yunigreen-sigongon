@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Button } from "@sigongcore/ui";
+import { Button, cn } from "@sigongcore/ui";
 import type { ConstructionPhaseRead } from "@sigongcore/types";
 
 interface Props {
@@ -71,83 +71,86 @@ export function PhaseFormDialog({ open, onOpenChange, projectId, mode, phase }: 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="mb-5 text-lg font-bold text-slate-900">
-          {mode === "add" ? "공정 추가" : "공정 수정"}
+        <h2 className="mb-6 text-xl font-bold text-slate-900 tracking-tight">
+          {mode === "add" ? "새로운 공정을 만들까요?" : "공정 정보를 수정할까요?"}
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-bold text-slate-700">
               공정명 <span className="text-red-500">*</span>
             </label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="예: 철거공사"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand-point-400 focus:ring-2 focus:ring-brand-point-100"
+              placeholder="예: 철거공사, 우레탄 방수 등"
+              className={cn(
+                "w-full rounded-xl border px-4 py-3 text-sm transition-all focus:ring-4 focus:ring-primary-50",
+                errors.name ? "border-red-300 bg-red-50" : "border-slate-200 focus:border-primary-400"
+              )}
             />
             {errors.name && (
-              <p className="mt-1 text-xs text-red-500">{errors.name}</p>
+              <p className="px-1 text-xs font-medium text-red-500">지정된 이름을 확인해 주세요</p>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                시작일 <span className="text-red-500">*</span>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-bold text-slate-700">
+                시작 날짜 <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={plannedStart}
                 onChange={(e) => setPlannedStart(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand-point-400 focus:ring-2 focus:ring-brand-point-100"
+                className={cn(
+                  "w-full rounded-xl border px-4 py-3 text-sm focus:ring-4 focus:ring-primary-50",
+                  errors.plannedStart ? "border-red-300 bg-red-50" : "border-slate-200 focus:border-primary-400"
+                )}
               />
-              {errors.plannedStart && (
-                <p className="mt-1 text-xs text-red-500">{errors.plannedStart}</p>
-              )}
             </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                종료일 <span className="text-red-500">*</span>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-bold text-slate-700">
+                종료 날짜 <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={plannedEnd}
                 onChange={(e) => setPlannedEnd(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand-point-400 focus:ring-2 focus:ring-brand-point-100"
+                className={cn(
+                  "w-full rounded-xl border px-4 py-3 text-sm focus:ring-4 focus:ring-primary-50",
+                  errors.plannedEnd ? "border-red-300 bg-red-50" : "border-slate-200 focus:border-primary-400"
+                )}
               />
-              {errors.plannedEnd && (
-                <p className="mt-1 text-xs text-red-500">{errors.plannedEnd}</p>
-              )}
             </div>
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">메모</label>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-bold text-slate-700">메모 (선택)</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="지연사유, 특이사항 등"
-              rows={2}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand-point-400 focus:ring-2 focus:ring-brand-point-100"
+              placeholder="현장 상황이나 참고할 내용을 적어주세요"
+              rows={3}
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary-400 focus:ring-4 focus:ring-primary-50"
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-4">
             <Button
               type="button"
               variant="outline"
-              className="flex-1"
+              className="flex-1 rounded-xl h-12 text-slate-500 hover:bg-slate-50"
               onClick={() => onOpenChange(false)}
             >
               취소
             </Button>
             <Button
               type="submit"
-              className="flex-1"
+              className="flex-1 rounded-xl h-12 shadow-lg shadow-primary-100"
               disabled={mutation.isPending}
             >
-              {mode === "add" ? "추가" : "저장"}
+              {mutation.isPending ? "저장 중..." : mode === "add" ? "추가하기" : "저장하기"}
             </Button>
           </div>
         </form>
