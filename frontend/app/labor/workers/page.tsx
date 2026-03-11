@@ -1432,8 +1432,7 @@ export default function DailyWorkersPage() {
               <p className="text-sm font-medium text-slate-400">승인 대기 중인 서류가 없습니다.</p>
             </div>
           ) : (
-            <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
-              <div className="grid gap-4">
+            <div className="grid gap-4">
                 {reviewQueue.map((item) => (
                   <div
                     key={item.id}
@@ -1508,7 +1507,6 @@ export default function DailyWorkersPage() {
                   </div>
                 ))}
               </div>
-            </div>
           )}
         </div>
       </Modal>
