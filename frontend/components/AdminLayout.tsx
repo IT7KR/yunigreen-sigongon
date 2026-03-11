@@ -23,6 +23,7 @@ import {
   CreditCard,
   ChevronDown,
   ChevronRight,
+  Bell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -38,6 +39,8 @@ import { useAuth } from "@/lib/auth";
 import Image from "next/image";
 import { AdminContentLoadingOverlay } from "./AdminContentLoadingOverlay";
 import { AdminBottomNav } from "./AdminBottomNav";
+import { useUnreadCount } from "@/hooks/useNotifications";
+import { NavBadge } from "./NavBadge";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -114,6 +117,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
   const { logout, user } = useAuth();
   const { start } = useNavigationProgress();
   const isTablet = useIsTablet();
+  const unreadCount = useUnreadCount();
   const router = useRouter();
 
   // Workers should never see AdminLayout — redirect them immediately
@@ -213,12 +217,27 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
             <span className="font-semibold text-slate-900">시공코어</span>
           </AppLink>
 
-          <PrimitiveButton
-            onClick={() => setSidebarOpen(false)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 lg:hidden"
-          >
-            <X className="h-5 w-5" />
-          </PrimitiveButton>
+          <div className="flex items-center gap-1">
+            {/* 벨 아이콘 - 데스크톱에서만 표시 (모바일은 X 버튼과 겹침) */}
+            <AppLink
+              href={user?.role === "super_admin" ? "/sa/notifications" : "/notifications"}
+              onClick={() => setSidebarOpen(false)}
+              className="relative hidden lg:flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-600"
+              aria-label="알림"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <NavBadge count={unreadCount} />
+              )}
+            </AppLink>
+
+            <PrimitiveButton
+              onClick={() => setSidebarOpen(false)}
+              className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 lg:hidden"
+            >
+              <X className="h-5 w-5" />
+            </PrimitiveButton>
+          </div>
         </div>
 
         {/* User Profile Card - Mobile Only */}
@@ -329,13 +348,16 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
                     ? "bg-brand-point-50 text-brand-point-700"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                 )}
               >
-                <item.icon className="h-5 w-5" />
+                <span className="relative">
+                  <item.icon className="h-5 w-5" />
+                  {item.href === "/notifications" && <NavBadge count={unreadCount} />}
+                </span>
                 {item.label}
               </AppLink>
             );
@@ -362,13 +384,16 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
                     href={item.href}
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       isActive
                         ? "bg-purple-50 text-purple-700"
                         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                     )}
                   >
-                    <item.icon className="h-5 w-5" />
+                    <span className="relative">
+                      <item.icon className="h-5 w-5" />
+                      {item.href === "/sa/notifications" && <NavBadge count={unreadCount} />}
+                    </span>
                     {item.label}
                   </AppLink>
                 );
@@ -419,6 +444,29 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
 
       {/* Main content */}
       <main className="lg:ml-64 pb-nav-safe lg:pb-0">
+        {/* 모바일 상단 헤더 */}
+        <div className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
+          <AppLink href="/dashboard" className="flex items-center gap-2">
+            <Image
+              src="/logo-sq.png"
+              alt="시공코어 로고"
+              width={32}
+              height={32}
+              className="object-contain"
+            />
+            <span className="font-semibold text-slate-900">시공코어</span>
+          </AppLink>
+          <AppLink
+            href={user?.role === "super_admin" ? "/sa/notifications" : "/notifications"}
+            className="relative flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-600"
+            aria-label="알림"
+          >
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <NavBadge count={unreadCount} />
+            )}
+          </AppLink>
+        </div>
         <ContentTransitionBoundary
           className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 sm:pt-8 lg:p-8"
           loadingOverlay={<AdminContentLoadingOverlay />}

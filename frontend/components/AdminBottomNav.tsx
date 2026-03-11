@@ -12,9 +12,12 @@ import {
   CreditCard,
   User,
   Home,
+  Bell,
 } from "lucide-react";
 import { AppLink, cn } from "@sigongcore/ui";
 import { useAuth } from "@/lib/auth";
+import { useUnreadCount } from "@/hooks/useNotifications";
+import { NavBadge } from "./NavBadge";
 
 interface AdminBottomNavProps {
   onOpenSidebar: () => void;
@@ -23,6 +26,7 @@ interface AdminBottomNavProps {
 export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const unreadCount = useUnreadCount();
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
@@ -34,6 +38,7 @@ export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
         { href: "/worker/home", icon: Home, label: "홈" },
         { href: "/worker/contracts", icon: FileText, label: "계약" },
         { href: "/worker/paystubs", icon: CreditCard, label: "명세서" },
+        { href: "/worker/notifications", icon: Bell, label: "알림", isNotif: true },
         { href: "/worker/profile", icon: User, label: "내 정보" },
       ];
     }
@@ -42,12 +47,14 @@ export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
         { href: "/sa", icon: BarChart3, label: "플랫폼현황", exact: true },
         { href: "/sa/tenants", icon: Building2, label: "고객사" },
         { href: "/sa/labor", icon: HardHat, label: "노무" },
+        { href: "/sa/notifications", icon: Bell, label: "알림", isNotif: true },
       ];
     }
     if (user?.role === "site_manager") {
       return [
         { href: "/dashboard", icon: LayoutDashboard, label: "대시보드" },
         { href: "/projects", icon: FolderKanban, label: "프로젝트" },
+        { href: "/notifications", icon: Bell, label: "알림", isNotif: true },
       ];
     }
     // company_admin (기본)
@@ -55,6 +62,7 @@ export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
       { href: "/dashboard", icon: LayoutDashboard, label: "대시보드" },
       { href: "/projects", icon: FolderKanban, label: "프로젝트" },
       { href: "/labor", icon: HardHat, label: "노무관리" },
+      { href: "/notifications", icon: Bell, label: "알림", isNotif: true },
     ];
   };
 
@@ -65,6 +73,7 @@ export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
       <div className="flex h-16 items-center justify-around px-2">
         {tabs.map((tab) => {
           const active = isActive(tab.href, (tab as any).exact);
+          const showBadge = (tab as any).isNotif;
           return (
             <AppLink
               key={tab.href}
@@ -80,7 +89,10 @@ export function AdminBottomNav({ onOpenSidebar }: AdminBottomNavProps) {
                   active ? "opacity-100" : "opacity-0",
                 )}
               />
-              <tab.icon className="h-6 w-6" />
+              <span className="relative">
+                <tab.icon className="h-6 w-6" />
+                {showBadge && <NavBadge count={unreadCount} />}
+              </span>
               <span className="text-xs font-medium">{tab.label}</span>
             </AppLink>
           );
