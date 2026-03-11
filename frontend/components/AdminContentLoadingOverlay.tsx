@@ -4,7 +4,7 @@ import { Skeleton } from "@sigongcore/ui";
 
 export function AdminContentLoadingOverlay() {
   return (
-    <div className="h-full rounded-xl bg-slate-50/80 p-4 backdrop-blur-[1px] lg:p-8">
+    <div className="h-full rounded-xl bg-slate-50 p-4 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="space-y-2">
           <Skeleton className="h-7 w-52" />

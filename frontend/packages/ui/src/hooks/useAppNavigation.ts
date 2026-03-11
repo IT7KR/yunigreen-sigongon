@@ -29,7 +29,7 @@ export function useAppNavigation(): AppNavigation {
       navigate: () => void,
       options?: Pick<NavigationOptions, "viewTransition">
     ) => {
-      const shouldUseViewTransition = options?.viewTransition ?? true
+      const shouldUseViewTransition = options?.viewTransition ?? false
 
       start()
 

@@ -38,7 +38,7 @@ export const AppLink = forwardRef<HTMLAnchorElement, AppLinkProps>(
       download,
       scroll,
       prefetchOnIntent = true,
-      viewTransition = true,
+      viewTransition = false,
       ...props
     },
     ref

@@ -194,8 +194,8 @@ export function NavigationProgress({ className }: NavigationProgressProps) {
           ) : (
             <motion.div
               className="h-full origin-left bg-brand-point-500"
-              initial={{ scaleX: 0.12 }}
-              animate={{ scaleX: [0.12, 0.45, 0.72, 0.88] }}
+              initial={{ scaleX: 0.05 }}
+              animate={{ scaleX: 0.85 }}
               exit={{
                 scaleX: 1,
                 transition: {
@@ -204,9 +204,8 @@ export function NavigationProgress({ className }: NavigationProgressProps) {
                 },
               }}
               transition={{
-                duration: 1.2,
-                ease: motionEasings.standard,
-                repeat: Infinity,
+                duration: 4,
+                ease: [0.1, 0.4, 0.6, 0.9],
               }}
             />
           )}

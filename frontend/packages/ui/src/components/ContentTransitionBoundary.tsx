@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion"
 import { usePathname } from "next/navigation"
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, type ReactNode } from "react"
 import { useReducedMotion } from "../hooks"
 import { motionDurations, motionEasings } from "../lib/motion"
 import { cn } from "../lib/utils"
@@ -21,73 +21,52 @@ export function ContentTransitionBoundary({
   className,
   loadingOverlay,
   mode = "wait",
-  overlayDelayMs = 120,
+  overlayDelayMs: _overlayDelayMs = 120,
 }: ContentTransitionBoundaryProps) {
   const pathname = usePathname()
   const prefersReducedMotion = useReducedMotion()
   const { done, isNavigating } = useNavigationProgress()
-  const [showOverlay, setShowOverlay] = useState(false)
   const routeKey = pathname
 
   useEffect(() => {
     done()
   }, [done, routeKey])
 
-  useEffect(() => {
-    if (!isNavigating) {
-      setShowOverlay(false)
-      return
-    }
-
-    if (overlayDelayMs <= 0) {
-      setShowOverlay(true)
-      return
-    }
-
-    const timer = setTimeout(() => {
-      setShowOverlay(true)
-    }, overlayDelayMs)
-
-    return () => {
-      clearTimeout(timer)
-    }
-  }, [isNavigating, overlayDelayMs])
-
   return (
     <div className="relative" data-navigating={isNavigating ? "true" : "false"}>
-      <AnimatePresence mode={mode} initial={false}>
-        <motion.div
-          key={routeKey}
-          className={cn(className)}
-          style={{ willChange: "auto" }}
-          initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
-          animate={{
-            opacity: 1,
-            transition: prefersReducedMotion
-              ? { duration: 0 }
-              : {
-                  duration: motionDurations.base,
-                  ease: motionEasings.entrance,
-                },
-          }}
-          exit={{
-            opacity: prefersReducedMotion ? 1 : 0,
-            transition: prefersReducedMotion
-              ? { duration: 0 }
-              : {
-                  duration: motionDurations.fast,
-                  ease: motionEasings.exit,
-                },
-          }}
-        >
-          {children}
-        </motion.div>
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showOverlay && loadingOverlay ? (
+      {/* 네비게이팅 중 이전 콘텐츠를 즉시 숨기고 skeleton을 표시 */}
+      <div
+        style={{
+          opacity: isNavigating ? 0 : undefined,
+          pointerEvents: isNavigating ? "none" : undefined,
+        }}
+      >
+        <AnimatePresence mode={mode} initial={false}>
           <motion.div
-            key={`overlay-${routeKey}`}
+            key={routeKey}
+            className={cn(className)}
+            style={{ willChange: "auto" }}
+            initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+            animate={{
+              opacity: 1,
+              transition: prefersReducedMotion
+                ? { duration: 0 }
+                : {
+                    duration: motionDurations.base,
+                    ease: motionEasings.entrance,
+                  },
+            }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* 네비게이팅 시 즉시(딜레이 없이) skeleton 표시 */}
+      <AnimatePresence>
+        {isNavigating && loadingOverlay ? (
+          <motion.div
+            key="loading-overlay"
             className="pointer-events-none absolute inset-0 z-20"
             initial={{ opacity: 0 }}
             animate={{
