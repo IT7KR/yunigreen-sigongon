@@ -912,34 +912,44 @@ export default function DailyWorkersPage() {
         <Reveal>
           <PageHeader
             title="근로자 관리"
-            description={`검색/필터 결과 ${filteredWorkers.length}명 · 전체 ${workers.length}명`}
+            description={`필터 결과 ${filteredWorkers.length}명 / 전체 ${workers.length}명`}
             actions={
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => openDownloadModal("kwdi")}
-                  className="hidden sm:inline-flex"
+                  className="hidden md:inline-flex"
                 >
                   <FileSpreadsheet className="h-4 w-4" />
-                  근로복지공단
+                  <span className="hidden lg:inline">근로복지공단</span>
+                  <span className="lg:hidden">공단</span>
                 </Button>
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => openDownloadModal("tax")}
-                  className="hidden sm:inline-flex"
+                  className="hidden md:inline-flex"
                 >
                   <Download className="h-4 w-4" />
-                  국세청
+                  <span className="hidden lg:inline">국세청</span>
                 </Button>
-                <Button size="sm" onClick={() => setShowInviteModal(true)}>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="h-9 px-3 border-brand-point-200 text-brand-point-700 bg-white hover:bg-brand-point-50"
+                  onClick={() => setShowInviteModal(true)}
+                >
                   <MessageSquare className="h-4 w-4" />
-                  초대
+                  <span>초대</span>
                 </Button>
-                <Button size="sm" onClick={() => setShowRegisterModal(true)}>
+                <Button 
+                  size="sm" 
+                  className="h-9 px-3 shadow-sm"
+                  onClick={() => setShowRegisterModal(true)}
+                >
                   <Plus className="h-4 w-4" />
-                  등록
+                  <span>등록</span>
                 </Button>
               </div>
             }
@@ -947,14 +957,14 @@ export default function DailyWorkersPage() {
         </Reveal>
 
         {/* Action Dashboard - Stat Grid */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <StatCard
-            title="전체 근로자"
+            title="전체"
             value={workers.length}
             icon={Users}
             color="brand"
             className={cn(
-              "cursor-pointer border-2 transition-all",
+              "cursor-pointer border-2 transition-all h-full",
               workerFilter === "all" ? "border-brand-point-500 ring-2 ring-brand-point-100" : "border-slate-100"
             )}
             onClick={() => setWorkerFilter("all")}
@@ -965,7 +975,7 @@ export default function DailyWorkersPage() {
             icon={FileText}
             color="amber"
             className={cn(
-              "cursor-pointer border-2 transition-all",
+              "cursor-pointer border-2 transition-all h-full",
               workerFilter === "docs_pending" ? "border-amber-500 ring-2 ring-amber-100" : "border-slate-100"
             )}
             onClick={() => setWorkerFilter("docs_pending")}
@@ -976,7 +986,7 @@ export default function DailyWorkersPage() {
             icon={ShieldCheck}
             color="blue"
             className={cn(
-              "cursor-pointer border-2 transition-all",
+              "cursor-pointer border-2 transition-all h-full",
               workerFilter === "needs_review" ? "border-blue-500 ring-2 ring-blue-100" : "border-slate-100"
             )}
             onClick={() => setWorkerFilter("needs_review")}
@@ -987,7 +997,7 @@ export default function DailyWorkersPage() {
             icon={Ban}
             color="red"
             className={cn(
-              "cursor-pointer border-2 transition-all",
+              "cursor-pointer border-2 transition-all h-full",
               workerFilter === "blocked" ? "border-red-500 ring-2 ring-red-100" : "border-slate-100"
             )}
             onClick={() => setWorkerFilter("blocked")}
@@ -996,46 +1006,48 @@ export default function DailyWorkersPage() {
 
         {/* Evidence Document Management Section */}
         <Reveal delay={0.1}>
-          <Card className="overflow-hidden border-brand-point-100 bg-brand-point-50/30 shadow-sm">
-            <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-brand-point-100">
-                  <ShieldCheck className="h-6 w-6 text-brand-point-500" />
+          <Card className="overflow-hidden border-brand-point-100 bg-brand-point-50/40 shadow-sm">
+            <CardContent className="flex flex-row items-center justify-between gap-4 p-4 sm:p-5">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-brand-point-100 sm:h-12 sm:w-12 sm:rounded-2xl">
+                  <ShieldCheck className="h-5 w-5 text-brand-point-500 sm:h-6 sm:w-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900">증빙 서류 관리</h3>
-                  <div className="mt-1 flex gap-3 text-xs font-medium text-slate-500">
+                  <h3 className="text-sm font-bold text-slate-900 sm:text-base">증빙 서류 관리</h3>
+                  <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-medium text-slate-500 sm:mt-1 sm:text-xs">
                     <span className="flex items-center gap-1.5">
-                      <div className="h-2 w-2 rounded-full bg-blue-500" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-500 sm:h-2 sm:w-2" />
                       대기 {reviewSummary.pending_review}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <div className="h-2 w-2 rounded-full bg-brand-point-500" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-brand-point-500 sm:h-2 sm:w-2" />
                       승인 {reviewSummary.approved}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <div className="h-2 w-2 rounded-full bg-red-500" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-red-500 sm:h-2 sm:w-2" />
                       반려 {reviewSummary.rejected}
                     </span>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <Button
                   variant="outline"
-                  className="h-10 border-brand-point-200 bg-white text-brand-point-700 hover:bg-brand-point-50"
+                  size="sm"
+                  className="h-9 border-brand-point-200 bg-white px-3 text-xs font-semibold text-brand-point-700 hover:bg-brand-point-50 sm:h-10 sm:px-4 sm:text-sm"
                   onClick={handleOpenReviewQueue}
                 >
-                  승인 대기열 확인
+                  <span className="hidden sm:inline">승인 대기열</span>
+                  <span className="sm:hidden">확인</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-10 w-10 p-0 text-slate-400 hover:bg-white hover:text-brand-point-500"
+                  className="h-9 w-9 p-0 text-slate-400 hover:bg-white hover:text-brand-point-500 sm:h-10 sm:w-10"
                   onClick={() => void fetchReviewSummary()}
                   title="새로고침"
                 >
-                  <Clock className="h-4 w-4" />
+                  <RotateCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </CardContent>
@@ -1149,38 +1161,38 @@ export default function DailyWorkersPage() {
                     return (
                       <MobileListCard
                         key={worker.id}
-                        title={<span className="text-base font-bold">{worker.name}</span>}
-                        subtitle={<span className="font-mono text-xs">{worker.phone}</span>}
+                        title={<span className="text-base font-extrabold text-slate-900">{worker.name}</span>}
+                        subtitle={<span className="font-mono text-[11px] text-slate-500">{worker.phone}</span>}
                         badge={statusBadge}
-                        className="border-none shadow-sm ring-1 ring-slate-200/50 hover:ring-brand-point-300 transition-all"
+                        className="overflow-hidden border-none shadow-sm ring-1 ring-slate-200/60 hover:ring-brand-point-300 transition-all active:scale-[0.99] active:shadow-inner"
                         metadata={[
-                          { label: "직종", value: <span className="font-medium text-slate-700">{worker.job_type || "-"}</span> },
-                          { label: "일당", value: <span className="font-bold text-brand-primary">{formatCurrency(worker.daily_rate)}</span> },
-                          ...(nationalityLabel ? [{ label: "국적", value: nationalityLabel }] : []),
+                          { label: "직종", value: <span className="font-bold text-slate-800">{worker.job_type || "-"}</span> },
+                          { label: "일당", value: <span className="font-extrabold text-brand-primary">{formatCurrency(worker.daily_rate)}</span> },
+                          ...(nationalityLabel ? [{ label: "국적", value: <Badge variant="default" className="px-1 py-0 h-4 text-[10px] bg-slate-100 text-slate-600 border-none">{nationalityLabel}</Badge> }] : []),
                         ]}
                         actions={
-                          <div className="grid w-full grid-cols-2 gap-2 mt-2">
+                          <div className="grid w-full grid-cols-2 gap-2 mt-1.5">
                              <Button
-                              variant="secondary"
-                              size="sm"
-                              className="w-full bg-slate-50 font-semibold"
-                              onClick={() => void handleEdit(worker)}
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                              정보 수정
-                            </Button>
-                            <Button
-                              variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
-                              size="sm"
-                              className={cn(
-                                "w-full font-semibold",
-                                worker.is_blocked_for_labor ? "text-amber-600" : "text-slate-500"
-                              )}
-                              onClick={() => handleWorkerControl(worker)}
-                            >
-                              <Ban className="h-3.5 w-3.5" />
-                              {worker.is_blocked_for_labor ? "차단 해제" : "입임 차단"}
-                            </Button>
+                               variant="outline"
+                               size="sm"
+                               className="h-10 w-full border-slate-200 bg-white font-bold text-slate-700 shadow-sm active:bg-slate-50"
+                               onClick={() => void handleEdit(worker)}
+                             >
+                               <Edit2 className="h-4 w-4" />
+                               수정
+                             </Button>
+                             <Button
+                               variant={worker.is_blocked_for_labor ? "secondary" : "ghost"}
+                               size="sm"
+                               className={cn(
+                                 "h-10 w-full font-bold",
+                                 worker.is_blocked_for_labor ? "bg-amber-50 text-amber-600 border-amber-100" : "text-slate-500 hover:bg-slate-50"
+                               )}
+                               onClick={() => handleWorkerControl(worker)}
+                             >
+                               <Ban className="h-4 w-4" />
+                               {worker.is_blocked_for_labor ? "해제" : "차단"}
+                             </Button>
                           </div>
                         }
                       />
