@@ -22,6 +22,7 @@ const ADMIN_PUBLIC_PATH_PREFIXES = [
   "/privacy",
   "/accept-invite",
   "/onboarding/worker",
+  "/worker",
   "/403",
 ];
 

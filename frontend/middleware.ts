@@ -24,6 +24,7 @@ export const middleware = createAuthMiddleware({
   authenticatedRootRedirectPath: "/dashboard",
   forbidWorkerOnPrivateRoutes: true,
   workerRole: "worker",
+  workerAuthenticatedRedirectPath: "/worker/home",
   forbiddenRedirectPath: "/403",
   superAdminRoutePrefix: "/sa",
   superAdminRole: "super_admin",

@@ -15,6 +15,7 @@ export interface CreateAuthMiddlewareOptions {
   authenticatedRootRedirectPath?: string;
   forbidWorkerOnPrivateRoutes?: boolean;
   workerRole?: string;
+  workerAuthenticatedRedirectPath?: string;
   forbiddenRedirectPath?: string;
   superAdminRoutePrefix?: string;
   superAdminRole?: string;
@@ -53,6 +54,7 @@ export function createAuthMiddleware(options: CreateAuthMiddlewareOptions) {
     authenticatedRootRedirectPath,
     forbidWorkerOnPrivateRoutes = false,
     workerRole = "worker",
+    workerAuthenticatedRedirectPath,
     forbiddenRedirectPath = "/403",
     superAdminRoutePrefix,
     superAdminRole = "super_admin",
@@ -72,7 +74,14 @@ export function createAuthMiddleware(options: CreateAuthMiddlewareOptions) {
     const accessToken = request.cookies.get("access_token")?.value;
 
     if (accessToken && isAuthRoute) {
-      return NextResponse.redirect(new URL(authenticatedRedirectPath, request.url));
+      const role = parseJwt(accessToken)?.role;
+      const redirectPath =
+        forbidWorkerOnPrivateRoutes &&
+        role === workerRole &&
+        workerAuthenticatedRedirectPath
+          ? workerAuthenticatedRedirectPath
+          : authenticatedRedirectPath;
+      return NextResponse.redirect(new URL(redirectPath, request.url));
     }
 
     if (

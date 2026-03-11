@@ -55,7 +55,7 @@ function LoginForm() {
   const handleQuickLogin = async (testUsername: string) => {
     setError(null);
     setIsLoading(true);
-    const result = await login(testUsername, "test1234");
+    const result = await login(testUsername, "yuni12!@");
     if (!result.success) {
       setError(result.error || "로그인에 실패했어요");
     }

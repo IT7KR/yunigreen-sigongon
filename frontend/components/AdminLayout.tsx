@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, type ReactNode, useState } from "react";
-import { usePathname } from "next/navigation";
+import { createContext, useContext, type ReactNode, useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -114,6 +114,14 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
   const { logout, user } = useAuth();
   const { start } = useNavigationProgress();
   const isTablet = useIsTablet();
+  const router = useRouter();
+
+  // Workers should never see AdminLayout — redirect them immediately
+  useEffect(() => {
+    if (user?.role === "worker") {
+      router.replace("/worker/home");
+    }
+  }, [user?.role, router]);
 
   const isPathActive = (target: string) =>
     pathname === target || pathname.startsWith(`${target}/`);

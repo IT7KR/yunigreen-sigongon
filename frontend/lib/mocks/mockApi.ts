@@ -1331,7 +1331,7 @@ export class MockAPIClient {
     return this.licenseRecordsByOwner[key];
   }
 
-  async login(username: string, _password: string) {
+  async login(username: string, password: string) {
     if (!username) {
       return delay(
         fail<LoginResponse>("INVALID_CREDENTIALS", "아이디를 입력해 주세요"),
@@ -1346,6 +1346,16 @@ export class MockAPIClient {
     if (!user) {
       return delay(
         fail<LoginResponse>("INVALID_CREDENTIALS", "존재하지 않는 계정입니다"),
+      );
+    }
+
+    // password가 비어있으면 퀵로그인 (검증 스킵), 아니면 검증
+    if (password !== "yuni12!@") {
+      return delay(
+        fail<LoginResponse>(
+          "INVALID_CREDENTIALS",
+          "비밀번호가 올바르지 않습니다",
+        ),
       );
     }
 
