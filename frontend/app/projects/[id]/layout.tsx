@@ -59,6 +59,7 @@ export default function ProjectDetailLayout({
       category: "field",
     },
     { name: "자재발주", href: `/projects/${id}/orders`, category: "finance" },
+    { name: "시공계획서", href: `/projects/${id}/plan`, category: "field" },
     { name: "착공", href: `/projects/${id}/start`, category: "field" },
     { name: "준공", href: `/projects/${id}/completion`, category: "field" },
     {
