@@ -6,6 +6,7 @@ import { AppLink, Card, CardContent, InteractiveCard } from "@sigongcore/ui";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import type { AppNotification } from "@sigongcore/types";
 
 type WorkerContract = {
   id: string;
@@ -24,20 +25,11 @@ type WorkerPaystub = {
   date: string;
 };
 
-type Notification = {
-  id: string;
-  type: "contract" | "paystub" | "notice";
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-};
-
 export default function WorkerHomePage() {
   const { user } = useAuth();
   const [contracts, setContracts] = useState<WorkerContract[]>([]);
   const [paystubs, setPaystubs] = useState<WorkerPaystub[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [workerName, setWorkerName] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -257,7 +249,7 @@ export default function WorkerHomePage() {
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">읽지 않은 알림</h2>
               <AppLink
-                href="/notifications"
+                href="/worker/notifications"
                 className="text-sm text-brand-point-600"
               >
                 전체보기
@@ -268,7 +260,7 @@ export default function WorkerHomePage() {
                 .filter((n) => !n.read)
                 .slice(0, 2)
                 .map((notification) => (
-                  <AppLink key={notification.id} href="/notifications">
+                  <AppLink key={notification.id} href="/worker/notifications">
                     <InteractiveCard>
                       <CardContent className="flex items-start gap-3 p-3">
                         <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-point-100">
