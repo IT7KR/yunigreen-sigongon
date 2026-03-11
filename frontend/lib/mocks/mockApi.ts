@@ -723,6 +723,54 @@ export class MockAPIClient {
         time: "1시간 전",
         read: true,
       },
+      {
+        id: "n3",
+        type: "notice",
+        title: "공지: 안전교육 일정 안내",
+        message: "3월 15일 안전교육이 예정되어 있습니다. 꼭 참석해 주세요.",
+        time: "2시간 전",
+        read: false,
+      },
+      {
+        id: "n4",
+        type: "contract",
+        title: "신규 계약서 발송",
+        message: "강남구 현장 신규 근로계약서가 발송되었습니다.",
+        time: "3시간 전",
+        read: false,
+      },
+      {
+        id: "n5",
+        type: "paystub",
+        title: "12월 지급명세서 발송",
+        message: "2025년 12월분 지급명세서가 도착했습니다.",
+        time: "어제",
+        read: true,
+      },
+      {
+        id: "n6",
+        type: "notice",
+        title: "시스템 점검 안내",
+        message: "3월 20일 02:00~04:00 시스템 점검이 예정되어 있습니다.",
+        time: "2일 전",
+        read: true,
+      },
+      {
+        id: "n7",
+        type: "contract",
+        title: "계약서 서명 완료",
+        message: "서초구 현장 근로계약서 서명이 완료되었습니다.",
+        time: "3일 전",
+        read: true,
+      },
+      {
+        id: "n8",
+        type: "paystub",
+        title: "11월 지급명세서 발송",
+        message: "2025년 11월분 지급명세서가 도착했습니다.",
+        time: "1주일 전",
+        read: true,
+      },
     ];
   }
 
@@ -4821,6 +4869,12 @@ export class MockAPIClient {
     );
     if (target) target.read = true;
     return delay(ok({ id: notificationId, read: true }));
+  }
+
+  async markAllNotificationsRead() {
+    this.ensureNotifications();
+    this.notifications.forEach((n) => { n.read = true; });
+    return delay(ok({ success: true }));
   }
 
   async verifyBusiness(businessNumber: string) {

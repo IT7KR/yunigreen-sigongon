@@ -1552,3 +1552,14 @@ export interface CostCalculationUpdate {
   target_contract_amount?: string | null
   is_visible?: boolean
 }
+
+export type NotificationType = "contract" | "paystub" | "notice"
+
+export interface AppNotification {
+  id: string
+  type: NotificationType
+  title: string
+  message: string
+  time: string
+  read: boolean
+}

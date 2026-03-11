@@ -2790,6 +2790,13 @@ export class APIClient {
     return response.data;
   }
 
+  async markAllNotificationsRead() {
+    const response = await this.client.post<
+      APIResponse<{ success: boolean }>
+    >("/notifications/read-all");
+    return response.data;
+  }
+
   // ============================================
   // MyPage / Account
   // ============================================
