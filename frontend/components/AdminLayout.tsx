@@ -32,6 +32,7 @@ import {
   PrimitiveButton,
   cn,
   useNavigationProgress,
+  useIsTablet,
 } from "@sigongcore/ui";
 import { useAuth } from "@/lib/auth";
 import Image from "next/image";
@@ -112,6 +113,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const { logout, user } = useAuth();
   const { start } = useNavigationProgress();
+  const isTablet = useIsTablet();
 
   const isPathActive = (target: string) =>
     pathname === target || pathname.startsWith(`${target}/`);
@@ -171,7 +173,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
         aria-label="주 메뉴"
         initial={false}
         animate={{ 
-          x: sidebarOpen ? 0 : "100%",
+          x: isTablet ? (sidebarOpen ? 0 : "100%") : 0,
         }}
         transition={{ 
           type: "spring", 
@@ -188,7 +190,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
           }
         }}
         className={cn(
-          "fixed inset-y-0 right-0 z-[60] flex w-64 flex-col bg-white shadow-lg lg:left-0 lg:right-auto lg:translate-x-0 lg:shadow-none",
+          "fixed inset-y-0 right-0 z-[60] flex w-64 flex-col bg-white shadow-lg lg:left-0 lg:right-auto lg:!transform-none lg:shadow-none",
         )}
       >
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
