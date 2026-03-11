@@ -68,6 +68,57 @@ export type PhotoAlbumStatus = "draft" | "published"
 export type ReportType = "start" | "completion"
 export type ReportStatus = "draft" | "submitted" | "approved" | "rejected"
 
+// Construction Plan (시공계획서)
+export type PhaseStatus = "pending" | "in_progress" | "completed"
+
+export interface ConstructionPhaseRead {
+  id: number
+  plan_id: number
+  sort_order: number
+  name: string
+  planned_start: string // ISO date string
+  planned_end: string
+  actual_start: string | null
+  actual_end: string | null
+  status: PhaseStatus
+  notes: string | null
+  completed_at: string | null
+  completed_by: number | null
+  created_at: string
+  updated_at: string
+  // Computed fields from backend
+  planned_days: number
+  actual_days: number | null
+  is_delayed: boolean
+  delay_days: number
+}
+
+export interface ConstructionPlanRead {
+  id: number
+  project_id: number
+  organization_id: number
+  title: string | null
+  notes: string | null
+  created_by: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PlanSummary {
+  total: number
+  completed: number
+  in_progress: number
+  pending: number
+  delayed: number
+  progress_percent: number
+}
+
+export interface ConstructionPlanDetail {
+  plan: ConstructionPlanRead
+  phases: ConstructionPhaseRead[]
+  summary: PlanSummary
+}
+
 // Weather & Daily Reports
 export type WeatherType = "sunny" | "cloudy" | "rain" | "snow" | "wind"
 

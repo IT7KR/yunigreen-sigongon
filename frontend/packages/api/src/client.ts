@@ -69,6 +69,9 @@ import type {
   WorkerDocumentReviewAction,
   WorkerDocumentReviewQueueItem,
   WorkerDocumentType,
+  ConstructionPhaseRead,
+  ConstructionPlanDetail,
+  PhaseStatus,
 } from "@sigongcore/types";
 
 export class NetworkError extends Error {
@@ -3767,6 +3770,103 @@ export class APIClient {
     const response = await this.client.delete<
       APIResponse<{ deleted: boolean }>
     >(`/device-tokens/${encodeURIComponent(token)}`);
+    return response.data;
+  }
+
+  // ============ Construction Plan (시공계획서) ============
+
+  async getConstructionPlan(projectId: string): Promise<APIResponse<ConstructionPlanDetail | null>> {
+    const response = await this.client.get<APIResponse<ConstructionPlanDetail | null>>(
+      `/projects/${projectId}/construction-plan`,
+    );
+    return response.data;
+  }
+
+  async createConstructionPlan(
+    projectId: string,
+    data: { title?: string; notes?: string },
+  ): Promise<APIResponse<ConstructionPlanDetail>> {
+    const response = await this.client.post<APIResponse<ConstructionPlanDetail>>(
+      `/projects/${projectId}/construction-plan`,
+      data,
+    );
+    return response.data;
+  }
+
+  async updateConstructionPlan(
+    projectId: string,
+    data: { title?: string; notes?: string },
+  ): Promise<APIResponse<ConstructionPlanDetail>> {
+    const response = await this.client.patch<APIResponse<ConstructionPlanDetail>>(
+      `/projects/${projectId}/construction-plan`,
+      data,
+    );
+    return response.data;
+  }
+
+  async addConstructionPhase(
+    projectId: string,
+    data: {
+      name: string;
+      planned_start: string;
+      planned_end: string;
+      sort_order?: number;
+      notes?: string;
+    },
+  ): Promise<APIResponse<ConstructionPlanDetail>> {
+    const response = await this.client.post<APIResponse<ConstructionPlanDetail>>(
+      `/projects/${projectId}/construction-plan/phases`,
+      data,
+    );
+    return response.data;
+  }
+
+  async updateConstructionPhase(
+    projectId: string,
+    phaseId: number,
+    data: {
+      name?: string;
+      planned_start?: string;
+      planned_end?: string;
+      sort_order?: number;
+      notes?: string;
+    },
+  ): Promise<APIResponse<ConstructionPlanDetail>> {
+    const response = await this.client.patch<APIResponse<ConstructionPlanDetail>>(
+      `/projects/${projectId}/construction-plan/phases/${phaseId}`,
+      data,
+    );
+    return response.data;
+  }
+
+  async toggleConstructionPhase(
+    projectId: string,
+    phaseId: number,
+  ): Promise<APIResponse<ConstructionPlanDetail>> {
+    const response = await this.client.patch<APIResponse<ConstructionPlanDetail>>(
+      `/projects/${projectId}/construction-plan/phases/${phaseId}/toggle`,
+    );
+    return response.data;
+  }
+
+  async deleteConstructionPhase(
+    projectId: string,
+    phaseId: number,
+  ): Promise<APIResponse<{ deleted: boolean }>> {
+    const response = await this.client.delete<APIResponse<{ deleted: boolean }>>(
+      `/projects/${projectId}/construction-plan/phases/${phaseId}`,
+    );
+    return response.data;
+  }
+
+  async reorderConstructionPhases(
+    projectId: string,
+    phaseIds: number[],
+  ): Promise<APIResponse<ConstructionPlanDetail>> {
+    const response = await this.client.patch<APIResponse<ConstructionPlanDetail>>(
+      `/projects/${projectId}/construction-plan/phases/reorder`,
+      { phase_ids: phaseIds },
+    );
     return response.data;
   }
 }
