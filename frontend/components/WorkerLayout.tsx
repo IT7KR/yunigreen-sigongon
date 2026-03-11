@@ -2,12 +2,13 @@
 
 import { type ReactNode, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Bell, CreditCard, FileText, Home, Menu, User, LogOut, X } from "lucide-react";
+import { CreditCard, FileText, Home, Menu, User, LogOut, X } from "lucide-react";
 import { AppLink, cn, useAppNavigation } from "@sigongcore/ui";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import { useUnreadCount } from "@/hooks/useNotifications";
 import { NavBadge } from "./NavBadge";
+import { NotificationDropdown } from "./NotificationDropdown";
 import Image from "next/image";
 
 interface WorkerLayoutProps {
@@ -142,7 +143,7 @@ export function WorkerLayout({
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-slate-200">
-        <div className="flex h-16 shrink-0 items-center border-b border-slate-200 px-4">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
           <AppLink href="/worker/home" className="flex items-center gap-2">
             <Image
               src="/logo-sq.png"
@@ -153,6 +154,10 @@ export function WorkerLayout({
             />
             <span className="font-semibold text-slate-900">시공코어</span>
           </AppLink>
+          <NotificationDropdown 
+            notificationsHref="/worker/notifications" 
+            align="left"
+          />
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
@@ -191,21 +196,6 @@ export function WorkerLayout({
               <p className="text-xs text-slate-500">근로자</p>
             </div>
           </div>
-          <AppLink
-            href="/worker/notifications"
-            className={cn(
-              "mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              pathname === "/worker/notifications" || pathname.startsWith("/worker/notifications/")
-                ? "bg-brand-point-50 text-brand-point-700"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-            )}
-          >
-            <span className="relative">
-              <Bell className="h-5 w-5" />
-              <NavBadge count={unreadCount} />
-            </span>
-            알림
-          </AppLink>
           <button
             onClick={logout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
@@ -261,14 +251,9 @@ export function WorkerLayout({
             </div>
             <div className="flex items-center gap-1">
               {rightAction && <div>{rightAction}</div>}
-              <AppLink
-                href="/worker/notifications"
-                className="relative flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-600"
-                aria-label="알림"
-              >
-                <Bell className="h-5 w-5" />
-                <NavBadge count={unreadCount} />
-              </AppLink>
+              <NotificationDropdown
+                notificationsHref="/worker/notifications"
+              />
               <button
                 type="button"
                 onClick={() => setDrawerOpen(true)}

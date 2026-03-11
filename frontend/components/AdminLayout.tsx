@@ -23,7 +23,6 @@ import {
   CreditCard,
   ChevronDown,
   ChevronRight,
-  Bell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -41,6 +40,7 @@ import { AdminContentLoadingOverlay } from "./AdminContentLoadingOverlay";
 import { AdminBottomNav } from "./AdminBottomNav";
 import { useUnreadCount } from "@/hooks/useNotifications";
 import { NavBadge } from "./NavBadge";
+import { NotificationDropdown } from "./NotificationDropdown";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -219,17 +219,11 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
 
           <div className="flex items-center gap-1">
             {/* 벨 아이콘 - 데스크톱에서만 표시 (모바일은 X 버튼과 겹침) */}
-            <AppLink
-              href={user?.role === "super_admin" ? "/sa/notifications" : "/notifications"}
-              onClick={() => setSidebarOpen(false)}
-              className="relative hidden lg:flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-600"
-              aria-label="알림"
-            >
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <NavBadge count={unreadCount} />
-              )}
-            </AppLink>
+            <NotificationDropdown
+              notificationsHref={user?.role === "super_admin" ? "/sa/notifications" : "/notifications"}
+              align="left"
+              className="hidden lg:flex"
+            />
 
             <PrimitiveButton
               onClick={() => setSidebarOpen(false)}
@@ -457,16 +451,9 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
             <span className="font-semibold text-slate-900">시공코어</span>
           </AppLink>
           <div className="flex items-center gap-1">
-            <AppLink
-              href={user?.role === "super_admin" ? "/sa/notifications" : "/notifications"}
-              className="relative flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-600"
-              aria-label="알림"
-            >
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <NavBadge count={unreadCount} />
-              )}
-            </AppLink>
+            <NotificationDropdown
+              notificationsHref={user?.role === "super_admin" ? "/sa/notifications" : "/notifications"}
+            />
             <PrimitiveButton
               onClick={() => setSidebarOpen(true)}
               className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-600"
