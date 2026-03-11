@@ -5031,8 +5031,7 @@ export class MockAPIClient {
     return delay(
       ok({
         id: Number(String(payment_id).replace(/\D/g, "")) || 1,
-        subscription_id:
-          Number(String(subscriptionId).replace(/\D/g, "")) || 1,
+        subscription_id: Number(String(subscriptionId).replace(/\D/g, "")) || 1,
         organization_id: organizationId,
         payment_key: data.payment_key,
         order_id: data.order_id,
@@ -6436,7 +6435,9 @@ export class MockAPIClient {
 
   async updateMaterialMaster(
     materialMasterId: string,
-    data: Partial<Pick<MaterialMaster, "name" | "unit" | "unit_price" | "is_active">>,
+    data: Partial<
+      Pick<MaterialMaster, "name" | "unit" | "unit_price" | "is_active">
+    >,
   ) {
     const forbidden = this.requireSuperAdmin();
     if (forbidden) {
@@ -6444,14 +6445,17 @@ export class MockAPIClient {
     }
 
     const currentUser = this.getCurrentUser() || this.getStoredUsers()[0];
-    const target = this.materialMasters.find((item) => item.id === materialMasterId);
+    const target = this.materialMasters.find(
+      (item) => item.id === materialMasterId,
+    );
     if (!target) {
       return delay(fail("NOT_FOUND", "자재 마스터를 찾을 수 없습니다"));
     }
 
     if (typeof data.name === "string") target.name = data.name.trim();
     if (typeof data.unit === "string") target.unit = data.unit.trim();
-    if (typeof data.unit_price === "number") target.unit_price = data.unit_price;
+    if (typeof data.unit_price === "number")
+      target.unit_price = data.unit_price;
     if (typeof data.is_active === "boolean") target.is_active = data.is_active;
     target.updated_by_user_id = currentUser.id;
     target.updated_at = nowIso();
@@ -6626,8 +6630,9 @@ export class MockAPIClient {
           : this.materialMasters.find(
               (master) => master.id === String(item.material_master_id),
             ) || null;
-      const unitPrice = materialMaster?.unit_price ?? (item.unit_price ?? 0);
-      const description = materialMaster?.name || item.description || "신규 품목";
+      const unitPrice = materialMaster?.unit_price ?? item.unit_price ?? 0;
+      const description =
+        materialMaster?.name || item.description || "신규 품목";
       const unit = materialMaster?.unit || item.unit || "개";
 
       return {
@@ -8867,9 +8872,15 @@ export class MockAPIClient {
     const plans = this._getPlans();
     const plan = plans.find((p: any) => p.project_id === projectId);
     if (!plan) return null;
-    const phases = this._getPhases().filter((ph: any) => ph.plan_id === plan.id);
-    const completed = phases.filter((p: any) => p.status === "completed").length;
-    const in_progress = phases.filter((p: any) => p.status === "in_progress").length;
+    const phases = this._getPhases().filter(
+      (ph: any) => ph.plan_id === plan.id,
+    );
+    const completed = phases.filter(
+      (p: any) => p.status === "completed",
+    ).length;
+    const in_progress = phases.filter(
+      (p: any) => p.status === "in_progress",
+    ).length;
     const pending = phases.filter((p: any) => p.status === "pending").length;
     const delayed = phases.filter((p: any) => p.is_delayed).length;
     const summary = {
@@ -8889,7 +8900,10 @@ export class MockAPIClient {
     return delay({ success: true, data: detail, error: null });
   }
 
-  async createConstructionPlan(projectId: string, data: { title?: string; notes?: string }) {
+  async createConstructionPlan(
+    projectId: string,
+    data: { title?: string; notes?: string },
+  ) {
     const plans = this._getPlans();
     const plan = {
       id: Date.now(),
@@ -8904,24 +8918,52 @@ export class MockAPIClient {
     mockDb.set("constructionPlans", [...plans, plan]);
     return delay({
       success: true,
-      data: { plan, phases: [], summary: { total: 0, completed: 0, in_progress: 0, pending: 0, delayed: 0, progress_percent: 0 } },
+      data: {
+        plan,
+        phases: [],
+        summary: {
+          total: 0,
+          completed: 0,
+          in_progress: 0,
+          pending: 0,
+          delayed: 0,
+          progress_percent: 0,
+        },
+      },
       error: null,
     });
   }
 
-  async updateConstructionPlan(projectId: string, data: { title?: string; notes?: string }) {
+  async updateConstructionPlan(
+    projectId: string,
+    data: { title?: string; notes?: string },
+  ) {
     const plans = this._getPlans();
     const idx = plans.findIndex((p: any) => p.project_id === projectId);
     if (idx < 0) return delay({ success: false, data: null, error: null });
     const updated = [...plans];
-    updated[idx] = { ...updated[idx], ...data, updated_at: new Date().toISOString() };
+    updated[idx] = {
+      ...updated[idx],
+      ...data,
+      updated_at: new Date().toISOString(),
+    };
     mockDb.set("constructionPlans", updated);
-    return delay({ success: true, data: this._buildPlanDetail(projectId), error: null });
+    return delay({
+      success: true,
+      data: this._buildPlanDetail(projectId),
+      error: null,
+    });
   }
 
   async addConstructionPhase(
     projectId: string,
-    data: { name: string; planned_start: string; planned_end: string; sort_order?: number; notes?: string },
+    data: {
+      name: string;
+      planned_start: string;
+      planned_end: string;
+      sort_order?: number;
+      notes?: string;
+    },
   ) {
     const plans = this._getPlans();
     const plan = plans.find((p: any) => p.project_id === projectId);
@@ -8930,7 +8972,8 @@ export class MockAPIClient {
     const existingPhases = phases.filter((p: any) => p.plan_id === plan.id);
     const start = new Date(data.planned_start);
     const end = new Date(data.planned_end);
-    const plannedDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const plannedDays =
+      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const phase = {
       id: Date.now(),
       plan_id: plan.id,
@@ -8949,13 +8992,23 @@ export class MockAPIClient {
       delay_days: 0,
     };
     mockDb.set("constructionPhases", [...phases, phase]);
-    return delay({ success: true, data: this._buildPlanDetail(projectId), error: null });
+    return delay({
+      success: true,
+      data: this._buildPlanDetail(projectId),
+      error: null,
+    });
   }
 
   async updateConstructionPhase(
     projectId: string,
     phaseId: number,
-    data: { name?: string; planned_start?: string; planned_end?: string; sort_order?: number; notes?: string },
+    data: {
+      name?: string;
+      planned_start?: string;
+      planned_end?: string;
+      sort_order?: number;
+      notes?: string;
+    },
   ) {
     const phases = this._getPhases();
     const idx = phases.findIndex((p: any) => p.id === phaseId);
@@ -8965,10 +9018,16 @@ export class MockAPIClient {
     if (data.planned_start && data.planned_end) {
       const start = new Date(data.planned_start);
       const end = new Date(data.planned_end);
-      updated[idx].planned_days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      updated[idx].planned_days =
+        Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) +
+        1;
     }
     mockDb.set("constructionPhases", updated);
-    return delay({ success: true, data: this._buildPlanDetail(projectId), error: null });
+    return delay({
+      success: true,
+      data: this._buildPlanDetail(projectId),
+      error: null,
+    });
   }
 
   async toggleConstructionPhase(projectId: string, phaseId: number) {
@@ -8980,10 +9039,15 @@ export class MockAPIClient {
     updated[idx] = {
       ...current,
       status: current.status === "completed" ? "in_progress" : "completed",
-      completed_at: current.status !== "completed" ? new Date().toISOString() : null,
+      completed_at:
+        current.status !== "completed" ? new Date().toISOString() : null,
     };
     mockDb.set("constructionPhases", updated);
-    return delay({ success: true, data: this._buildPlanDetail(projectId), error: null });
+    return delay({
+      success: true,
+      data: this._buildPlanDetail(projectId),
+      error: null,
+    });
   }
 
   async deleteConstructionPhase(projectId: string, phaseId: number) {
@@ -9002,7 +9066,11 @@ export class MockAPIClient {
       return newOrder >= 0 ? { ...p, sort_order: newOrder } : p;
     });
     mockDb.set("constructionPhases", updated);
-    return delay({ success: true, data: this._buildPlanDetail(projectId), error: null });
+    return delay({
+      success: true,
+      data: this._buildPlanDetail(projectId),
+      error: null,
+    });
   }
 }
 
