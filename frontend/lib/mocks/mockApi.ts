@@ -8842,6 +8842,158 @@ export class MockAPIClient {
       error: null,
     });
   }
+
+  // ============ Construction Plan (시공계획서) ============
+
+  private _getPlans(): any[] {
+    return mockDb.get("constructionPlans") as any[];
+  }
+
+  private _getPhases(): any[] {
+    return mockDb.get("constructionPhases") as any[];
+  }
+
+  private _buildPlanDetail(projectId: string) {
+    const plans = this._getPlans();
+    const plan = plans.find((p: any) => p.project_id === projectId);
+    if (!plan) return null;
+    const phases = this._getPhases().filter((ph: any) => ph.plan_id === plan.id);
+    const completed = phases.filter((p: any) => p.status === "completed").length;
+    const in_progress = phases.filter((p: any) => p.status === "in_progress").length;
+    const pending = phases.filter((p: any) => p.status === "pending").length;
+    const delayed = phases.filter((p: any) => p.is_delayed).length;
+    const summary = {
+      total: phases.length,
+      completed,
+      in_progress,
+      pending,
+      delayed,
+      progress_percent:
+        phases.length > 0 ? Math.round((completed / phases.length) * 100) : 0,
+    };
+    return { plan, phases, summary };
+  }
+
+  async getConstructionPlan(projectId: string) {
+    const detail = this._buildPlanDetail(projectId);
+    return delay({ success: true, data: detail, error: null });
+  }
+
+  async createConstructionPlan(projectId: string, data: { title?: string; notes?: string }) {
+    const plans = this._getPlans();
+    const plan = {
+      id: Date.now(),
+      project_id: projectId,
+      organization_id: 1,
+      title: data.title || "시공계획서",
+      notes: data.notes || null,
+      created_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    mockDb.set("constructionPlans", [...plans, plan]);
+    return delay({
+      success: true,
+      data: { plan, phases: [], summary: { total: 0, completed: 0, in_progress: 0, pending: 0, delayed: 0, progress_percent: 0 } },
+      error: null,
+    });
+  }
+
+  async updateConstructionPlan(projectId: string, data: { title?: string; notes?: string }) {
+    const plans = this._getPlans();
+    const idx = plans.findIndex((p: any) => p.project_id === projectId);
+    if (idx < 0) return delay({ success: false, data: null, error: null });
+    const updated = [...plans];
+    updated[idx] = { ...updated[idx], ...data, updated_at: new Date().toISOString() };
+    mockDb.set("constructionPlans", updated);
+    return delay({ success: true, data: this._buildPlanDetail(projectId), error: null });
+  }
+
+  async addConstructionPhase(
+    projectId: string,
+    data: { name: string; planned_start: string; planned_end: string; sort_order?: number; notes?: string },
+  ) {
+    const plans = this._getPlans();
+    const plan = plans.find((p: any) => p.project_id === projectId);
+    if (!plan) return delay({ success: false, data: null, error: null });
+    const phases = this._getPhases();
+    const existingPhases = phases.filter((p: any) => p.plan_id === plan.id);
+    const start = new Date(data.planned_start);
+    const end = new Date(data.planned_end);
+    const plannedDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const phase = {
+      id: Date.now(),
+      plan_id: plan.id,
+      sort_order: data.sort_order ?? existingPhases.length,
+      name: data.name,
+      planned_days: plannedDays,
+      planned_start: data.planned_start,
+      planned_end: data.planned_end,
+      actual_start: null,
+      actual_end: null,
+      status: "pending",
+      notes: data.notes || null,
+      completed_at: null,
+      completed_by: null,
+      is_delayed: false,
+      delay_days: 0,
+    };
+    mockDb.set("constructionPhases", [...phases, phase]);
+    return delay({ success: true, data: this._buildPlanDetail(projectId), error: null });
+  }
+
+  async updateConstructionPhase(
+    projectId: string,
+    phaseId: number,
+    data: { name?: string; planned_start?: string; planned_end?: string; sort_order?: number; notes?: string },
+  ) {
+    const phases = this._getPhases();
+    const idx = phases.findIndex((p: any) => p.id === phaseId);
+    if (idx < 0) return delay({ success: false, data: null, error: null });
+    const updated = [...phases];
+    updated[idx] = { ...updated[idx], ...data };
+    if (data.planned_start && data.planned_end) {
+      const start = new Date(data.planned_start);
+      const end = new Date(data.planned_end);
+      updated[idx].planned_days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    }
+    mockDb.set("constructionPhases", updated);
+    return delay({ success: true, data: this._buildPlanDetail(projectId), error: null });
+  }
+
+  async toggleConstructionPhase(projectId: string, phaseId: number) {
+    const phases = this._getPhases();
+    const idx = phases.findIndex((p: any) => p.id === phaseId);
+    if (idx < 0) return delay({ success: false, data: null, error: null });
+    const updated = [...phases];
+    const current = updated[idx];
+    updated[idx] = {
+      ...current,
+      status: current.status === "completed" ? "in_progress" : "completed",
+      completed_at: current.status !== "completed" ? new Date().toISOString() : null,
+    };
+    mockDb.set("constructionPhases", updated);
+    return delay({ success: true, data: this._buildPlanDetail(projectId), error: null });
+  }
+
+  async deleteConstructionPhase(projectId: string, phaseId: number) {
+    const phases = this._getPhases();
+    mockDb.set(
+      "constructionPhases",
+      phases.filter((p: any) => p.id !== phaseId),
+    );
+    return delay({ success: true, data: { deleted: true }, error: null });
+  }
+
+  async reorderConstructionPhases(projectId: string, phaseIds: number[]) {
+    const phases = this._getPhases();
+    const updated = phases.map((p: any) => {
+      const newOrder = phaseIds.indexOf(p.id);
+      return newOrder >= 0 ? { ...p, sort_order: newOrder } : p;
+    });
+    mockDb.set("constructionPhases", updated);
+    return delay({ success: true, data: this._buildPlanDetail(projectId), error: null });
+  }
 }
 
 export const mockApiClient = new MockAPIClient();
