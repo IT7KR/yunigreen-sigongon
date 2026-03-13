@@ -150,7 +150,10 @@ secrets/
 .env.dev
 .env.test
 .env.prod
+.env.deploy
 
 sample/
 
 .omx/
+
+docs/superpowers/

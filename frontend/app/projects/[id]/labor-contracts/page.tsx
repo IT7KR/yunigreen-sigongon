@@ -45,7 +45,7 @@ export default function ProjectLaborContractsPage({
     enabled: !!projectId,
   });
 
-  const contracts = response?.success ? response.data : [];
+  const contracts = response?.success ? response.data ?? [] : [];
 
   const sendMutation = useMutation({
     mutationFn: (contractId: string) => api.sendLaborContractForSignature(contractId),

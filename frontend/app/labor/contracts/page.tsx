@@ -36,7 +36,7 @@ export default function LaborContractsPage() {
     queryFn: () => api.getLaborContracts(selectedProjectId),
     enabled: !!selectedProjectId,
   });
-  const allContracts = contractsResponse?.success ? contractsResponse.data : [];
+  const allContracts = contractsResponse?.success ? contractsResponse.data ?? [] : [];
   const contracts = statusFilter === "all"
     ? allContracts
     : allContracts.filter((c) => c.status === statusFilter);

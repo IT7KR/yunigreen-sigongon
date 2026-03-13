@@ -936,6 +936,7 @@ export class MockAPIClient {
             daily_rate: "250000",
             status: "signed",
             signed_at: new Date(Date.now() - 86400000 * 9).toISOString(),
+            worker_id_number_masked: null,
           },
           {
             id: `lc_${pid}_2`,
@@ -947,6 +948,7 @@ export class MockAPIClient {
             daily_rate: "280000",
             status: "signed",
             signed_at: new Date(Date.now() - 86400000 * 9).toISOString(),
+            worker_id_number_masked: null,
           },
         ];
 
@@ -2941,6 +2943,7 @@ export class MockAPIClient {
       daily_rate: data.daily_rate,
       status: "draft",
       signed_at: undefined,
+      worker_id_number_masked: null,
     };
     this.laborContractsByProject[projectId] = [
       ...(this.laborContractsByProject[projectId] || []),
