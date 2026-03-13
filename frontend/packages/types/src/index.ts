@@ -971,6 +971,8 @@ export interface LaborContractListItem {
   daily_rate: string
   status: LaborContractStatus
   signed_at?: string
+  worker_id_number_masked: string | null
+  worker_id_number?: string | null   // super_admin only, may be absent
 }
 
 export interface ProjectPhotoAlbum {
