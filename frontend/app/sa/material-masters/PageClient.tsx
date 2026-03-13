@@ -25,6 +25,7 @@ import { api } from "@/lib/api";
 
 type MaterialMasterFormState = {
   name: string;
+  specification: string | null;
   unit: string;
   unit_price: string;
   is_active: boolean;
@@ -32,6 +33,7 @@ type MaterialMasterFormState = {
 
 const EMPTY_FORM: MaterialMasterFormState = {
   name: "",
+  specification: null,
   unit: "",
   unit_price: "",
   is_active: true,
@@ -43,6 +45,7 @@ function normalizeFormState(
   if (!materialMaster) return EMPTY_FORM;
   return {
     name: materialMaster.name,
+    specification: materialMaster.specification,
     unit: materialMaster.unit,
     unit_price: String(materialMaster.unit_price),
     is_active: materialMaster.is_active,
@@ -81,6 +84,7 @@ export default function MaterialMastersPage() {
     mutationFn: async () => {
       const payload = {
         name: form.name.trim(),
+        specification: form.specification || null,
         unit: form.unit.trim(),
         unit_price: Number(form.unit_price),
         is_active: form.is_active,
@@ -224,6 +228,11 @@ export default function MaterialMastersPage() {
                           {materialMaster.is_active ? "사용 중" : "비활성"}
                         </Badge>
                       </div>
+                      {materialMaster.specification && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          규격: {materialMaster.specification}
+                        </p>
+                      )}
                       <p className="mt-2 text-sm text-slate-600">
                         {materialMaster.unit} /{" "}
                         {materialMaster.unit_price.toLocaleString()}원
@@ -247,6 +256,7 @@ export default function MaterialMastersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>품목명</TableHead>
+                    <TableHead>규격</TableHead>
                     <TableHead>단위</TableHead>
                     <TableHead>단가</TableHead>
                     <TableHead>상태</TableHead>
@@ -258,6 +268,9 @@ export default function MaterialMastersPage() {
                     <TableRow key={materialMaster.id}>
                       <TableCell className="font-medium">
                         {materialMaster.name}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {materialMaster.specification ?? "-"}
                       </TableCell>
                       <TableCell>{materialMaster.unit}</TableCell>
                       <TableCell>
@@ -306,6 +319,22 @@ export default function MaterialMastersPage() {
               }
               placeholder="예: 방수 시트"
             />
+            <div className="space-y-1">
+              <label className="text-sm font-medium">규격</label>
+              <Input
+                placeholder="예: 4/16 (1제+2제 KG 비율), 단일 성분은 비워두세요"
+                value={form.specification ?? ""}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    specification: e.target.value || null,
+                  }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                2성분 제품(주재료+경화제)의 경우 "주재료KG/경화제KG" 형식으로 입력
+              </p>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Input
                 label="단위"

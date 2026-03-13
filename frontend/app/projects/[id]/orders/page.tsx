@@ -674,6 +674,7 @@ export default function MaterialOrdersPage({
 type CreateItem = {
   material_master_id: string;
   quantity: number;
+  specification: string | null;
 };
 
 function isItemSubmittable(item: CreateItem): boolean {
@@ -698,6 +699,7 @@ function CreateOrderModal({
     {
       material_master_id: "",
       quantity: 1,
+      specification: null,
     },
   ]);
   const [notes, setNotes] = useState("");
@@ -723,6 +725,7 @@ function CreateOrderModal({
         items: items.map((item) => ({
           material_master_id: item.material_master_id || undefined,
           quantity: item.quantity,
+          specification: item.specification || undefined,
         })),
         notes: notes || undefined,
         order_date: orderDate || null,
@@ -748,6 +751,7 @@ function CreateOrderModal({
       {
         material_master_id: "",
         quantity: 1,
+        specification: null,
       },
     ]);
   };
@@ -759,7 +763,7 @@ function CreateOrderModal({
   const updateItem = (
     index: number,
     field: keyof CreateItem,
-    value: string | number,
+    value: string | number | null,
   ) => {
     setItems((prev) => {
       const next = [...prev];
@@ -869,6 +873,24 @@ function CreateOrderModal({
                         }
                       />
                     </div>
+
+                    {selectedMaterialMaster?.specification && (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500">기본 규격</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          {selectedMaterialMaster.specification}
+                        </p>
+                      </div>
+                    )}
+
+                    <Input
+                      label="규격 (선택)"
+                      placeholder="예: 4/16"
+                      value={item.specification ?? ""}
+                      onChange={(e) =>
+                        updateItem(index, "specification", e.target.value || null)
+                      }
+                    />
 
                     <div className="text-right text-sm">
                       <span className="text-slate-600">금액: </span>

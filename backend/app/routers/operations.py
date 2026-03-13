@@ -556,6 +556,7 @@ def _serialize_material_master(material_master: MaterialMaster) -> dict:
     return {
         "id": str(material_master.id),
         "name": material_master.name,
+        "specification": material_master.specification,
         "unit": material_master.unit,
         "unit_price": float(material_master.unit_price),
         "is_active": material_master.is_active,
@@ -1448,6 +1449,7 @@ class MaterialMasterCreateRequest(BaseModel):
     unit: str
     unit_price: Decimal
     is_active: bool = True
+    specification: Optional[str] = None
 
 
 class MaterialMasterUpdateRequest(BaseModel):
@@ -1455,6 +1457,7 @@ class MaterialMasterUpdateRequest(BaseModel):
     unit: Optional[str] = None
     unit_price: Optional[Decimal] = None
     is_active: Optional[bool] = None
+    specification: Optional[str] = None
 
 
 def _validate_material_master_name(raw_value: Optional[str]) -> str:
@@ -1529,6 +1532,7 @@ async def create_material_master(
     now = datetime.utcnow()
     material_master = MaterialMaster(
         name=_validate_material_master_name(payload.name),
+        specification=payload.specification or None,
         unit=_validate_material_master_unit(payload.unit),
         unit_price=_validate_material_master_price(payload.unit_price),
         is_active=payload.is_active,
@@ -1568,6 +1572,8 @@ async def update_material_master(
         material_master.unit_price = _validate_material_master_price(payload.unit_price)
     if payload.is_active is not None:
         material_master.is_active = payload.is_active
+    if "specification" in payload.model_fields_set:
+        material_master.specification = payload.specification or None
 
     material_master.updated_by = current_user.id
     material_master.updated_at = datetime.utcnow()

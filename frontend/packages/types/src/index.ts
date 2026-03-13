@@ -517,6 +517,7 @@ export interface WarrantyInfo {
 export interface MaterialMaster {
   id: string
   name: string
+  specification: string | null
   unit: string
   unit_price: number
   is_active: boolean
