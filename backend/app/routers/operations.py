@@ -538,6 +538,14 @@ def _serialize_material_order(order: MaterialOrder, items: list[MaterialOrderIte
         "received_by_user_id": str(order.received_by_user_id) if order.received_by_user_id else None,
         "closed_at": _to_iso(order.closed_at),
         "notes": order.notes,
+        "order_date": order.order_date.isoformat() if order.order_date else None,
+        "arrival_date": order.arrival_date.isoformat() if order.arrival_date else None,
+        "arrival_time": order.arrival_time,
+        "delivery_address": order.delivery_address,
+        "delivery_terms": order.delivery_terms,
+        "payment_terms": order.payment_terms,
+        "site_manager_name": order.site_manager_name,
+        "site_manager_phone": order.site_manager_phone,
         "created_at": order.created_at.isoformat(),
         "updated_at": order.updated_at.isoformat(),
         "items": [_serialize_material_order_item(item) for item in items],
@@ -1416,6 +1424,15 @@ class MaterialOrderCreateRequest(BaseModel):
     items: list[MaterialOrderItemInput]
     notes: Optional[str] = None
     vendor_id: Optional[int] = None
+    # 발주 상세 정보 (신규)
+    order_date: Optional[date] = None
+    arrival_date: Optional[date] = None
+    arrival_time: Optional[str] = None
+    delivery_address: Optional[str] = None
+    delivery_terms: Optional[str] = None
+    payment_terms: Optional[str] = None
+    site_manager_name: Optional[str] = None
+    site_manager_phone: Optional[str] = None
 
 
 class MaterialOrderStatusPatchRequest(BaseModel):
@@ -1656,6 +1673,14 @@ async def create_material_order(
         vendor_id=payload.vendor_id,
         notes=payload.notes,
         created_by=current_user.id,
+        order_date=payload.order_date,
+        arrival_date=payload.arrival_date,
+        arrival_time=payload.arrival_time,
+        delivery_address=payload.delivery_address,
+        delivery_terms=payload.delivery_terms,
+        payment_terms=payload.payment_terms,
+        site_manager_name=payload.site_manager_name,
+        site_manager_phone=payload.site_manager_phone,
     )
     db.add(order)
     await db.flush()
