@@ -8727,6 +8727,16 @@ export class MockAPIClient {
     });
   }
 
+  async downloadLaborTaxReport(
+    projectId: number | string,
+    month: string,
+  ): Promise<Blob> {
+    console.log("[MockAPI] downloadLaborTaxReport:", projectId, month);
+    return new Blob(["mock-excel-content"], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+  }
+
   // ============================================
   // Device Tokens (FCM 푸시 알림)
   // ============================================

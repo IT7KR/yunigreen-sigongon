@@ -396,3 +396,75 @@ async def get_labor_contracts_summary(
         },
         "error": None,
     }
+
+
+@project_labor_router.get("/tax-report")
+async def download_labor_tax_report(
+    project_id: int,
+    db: DBSession,
+    current_user: CurrentUser,
+    month: str = Query(..., description="YYYY-MM 형식"),
+):
+    """월별 일용근로소득 지급명세서 Excel 다운로드."""
+    await get_project_for_user(db, project_id, current_user)
+
+    # Validate month format
+    try:
+        parts = month.split("-")
+        if len(parts) != 2:
+            raise ValueError
+        year, mon = int(parts[0]), int(parts[1])
+        if not (1 <= mon <= 12):
+            raise ValueError
+    except ValueError:
+        raise HTTPException(status_code=400, detail="month는 YYYY-MM 형식이어야 합니다.")
+
+    # Query non-draft contracts for the project
+    result = await db.execute(
+        select(LaborContract)
+        .where(
+            LaborContract.project_id == project_id,
+            LaborContract.status != LaborContractStatus.DRAFT,
+        )
+        .order_by(LaborContract.worker_name)
+    )
+    contracts = result.scalars().all()
+
+    # Build Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"{month} 지급명세서"
+
+    headers = ["근로자명", "주민등록번호", "근무일수", "지급액(원)", "원천징수세액(원)", "실지급액(원)"]
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = Font(bold=True)
+
+    for row_idx, contract in enumerate(contracts, 2):
+        daily_amount = int(contract.daily_rate or 0)
+        # 일용근로소득 원천징수세율: 일당 × 2.7% (소득세 2% + 지방세 0.7%)
+        # 단, 일 150,000원 근로소득공제 적용
+        taxable = max(0, daily_amount - 150000)
+        tax = int(taxable * Decimal("0.027"))
+
+        ws.cell(row=row_idx, column=1, value=contract.worker_name)
+        ws.cell(
+            row=row_idx,
+            column=2,
+            value=mask_ssn(contract.worker_id_number) if contract.worker_id_number else "미입력",
+        )
+        ws.cell(row=row_idx, column=3, value=1)
+        ws.cell(row=row_idx, column=4, value=daily_amount)
+        ws.cell(row=row_idx, column=5, value=tax)
+        ws.cell(row=row_idx, column=6, value=daily_amount - tax)
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    filename = quote(f"{month}_일용근로소득_지급명세서.xlsx")
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
+    )

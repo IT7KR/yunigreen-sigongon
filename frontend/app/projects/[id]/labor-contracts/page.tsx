@@ -34,6 +34,10 @@ export default function ProjectLaborContractsPage({
   const { id: projectId } = use(params);
   const queryClient = useQueryClient();
   const [visibleSSN, setVisibleSSN] = useState<string | null>(null);
+  const [reportMonth, setReportMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
 
   const { data: response, isLoading } = useQuery({
     queryKey: ["labor-contracts", projectId],
@@ -68,15 +72,44 @@ export default function ProjectLaborContractsPage({
     }
   };
 
+  const handleTaxReportDownload = async () => {
+    try {
+      const blob = await api.downloadLaborTaxReport(projectId, reportMonth);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${reportMonth}_일용근로소득_지급명세서.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("지급명세서 다운로드에 실패했어요.");
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-slate-900">근로계약 관리</h2>
-        <Button asChild>
-          <Link href={`/projects/${projectId}/labor-contracts/new`}>
-            <Plus className="mr-2 h-4 w-4" />새 계약 작성
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="month"
+              value={reportMonth}
+              onChange={(e) => setReportMonth(e.target.value)}
+              className="rounded border border-slate-200 px-2 py-1 text-sm"
+            />
+            <Button variant="outline" size="sm" onClick={handleTaxReportDownload}>
+              <FileDown className="mr-1 h-4 w-4" />지급명세서 다운로드
+            </Button>
+          </div>
+          <Button asChild>
+            <Link href={`/projects/${projectId}/labor-contracts/new`}>
+              <Plus className="mr-2 h-4 w-4" />새 계약 작성
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card>

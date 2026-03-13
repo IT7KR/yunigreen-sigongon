@@ -3759,6 +3759,17 @@ export class APIClient {
     return response.data;
   }
 
+  async downloadLaborTaxReport(
+    projectId: number | string,
+    month: string,
+  ): Promise<Blob> {
+    const response = await this.client.get<Blob>(
+      `/projects/${projectId}/labor-contracts/tax-report`,
+      { responseType: "blob", params: { month } },
+    );
+    return response.data;
+  }
+
   // ============================================
   // Device Tokens (FCM 푸시 알림)
   // ============================================
