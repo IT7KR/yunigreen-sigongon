@@ -77,7 +77,7 @@ export default function NewProjectLaborContractPage({
     while (cur <= end) {
       const day = cur.getDay();
       if (!excludeWeekend || (day !== 0 && day !== 6)) {
-        const iso = cur.toISOString().slice(0, 10);
+        const iso = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
         if (!workDates.includes(iso)) result.push(iso);
       }
       cur.setDate(cur.getDate() + 1);
