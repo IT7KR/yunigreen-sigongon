@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { Button } from "@sigongcore/ui";
-import { useAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 
 export default function ForbiddenPage() {
-  const { user } = useAuth();
-  const backHref = user?.role === "worker" ? "/worker/home" : "/dashboard";
+  const router = useRouter();
+  const handleBack = () => router.back();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -24,9 +23,7 @@ export default function ForbiddenPage() {
           이 페이지에 접근할 권한이 없습니다.
         </p>
         <div className="mt-8">
-          <Button asChild>
-            <Link href={backHref}>돌아가기</Link>
-          </Button>
+          <Button onClick={handleBack}>돌아가기</Button>
         </div>
       </div>
     </div>
