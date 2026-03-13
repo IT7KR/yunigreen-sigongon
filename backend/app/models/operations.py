@@ -7,6 +7,7 @@ from typing import Optional
 from sqlalchemy import BigInteger, Column, JSON, UniqueConstraint, Text
 from sqlmodel import SQLModel, Field
 
+from app.core.encryption import EncryptedString
 from app.core.snowflake import generate_snowflake_id
 
 
@@ -269,6 +270,14 @@ class DailyWorker(SQLModel, table=True):
     block_reason: Optional[str] = Field(default=None, max_length=500)
     blocked_by_user_id: Optional[int] = Field(default=None, sa_column=Column(BigInteger, nullable=True, index=True))
     blocked_at: Optional[datetime] = Field(default=None)
+    id_number_encrypted: Optional[str] = Field(
+        default=None,
+        sa_column=Column(EncryptedString(500), nullable=True)
+    )
+    account_holder_name: Optional[str] = Field(default=None, max_length=50)
+    safety_cert_number: Optional[str] = Field(default=None, max_length=100)
+    safety_cert_issue_date: Optional[date] = Field(default=None)
+    safety_cert_issuer: Optional[str] = Field(default=None, max_length=100)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

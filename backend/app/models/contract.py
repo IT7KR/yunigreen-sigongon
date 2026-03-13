@@ -4,9 +4,10 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional, List, TYPE_CHECKING
 
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, Column
 from sqlmodel import SQLModel, Field, Relationship
 
+from app.core.encryption import EncryptedString
 from app.core.snowflake import generate_snowflake_id
 
 if TYPE_CHECKING:
@@ -365,8 +366,11 @@ class LaborContract(LaborContractBase, table=True):
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
     project_id: int = Field(sa_type=BigInteger, index=True)
 
-    # Worker info (sensitive - should be encrypted in production)
-    worker_id_number: Optional[str] = Field(default=None, max_length=20)  # 주민등록번호
+    # Worker info (encrypted)
+    worker_id_number: Optional[str] = Field(
+        default=None,
+        sa_column=Column(EncryptedString(500), nullable=True)
+    )  # 주민등록번호
 
     # Status
     status: LaborContractStatus = Field(default=LaborContractStatus.DRAFT)
