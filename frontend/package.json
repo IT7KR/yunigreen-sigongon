@@ -7,7 +7,7 @@
     "predev": "node scripts/dev-guard.mjs",
     "dev": "node scripts/dev-server.mjs",
     "start": "next start --port 3033",
-    "prebuild": "turbo build --filter='./packages/*'",
+    "prebuild": "node scripts/check-app-router-special-files.mjs && turbo build --filter='./packages/*'",
     "build": "next build",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
