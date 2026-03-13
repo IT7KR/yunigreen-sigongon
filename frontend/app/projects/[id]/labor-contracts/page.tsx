@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { Plus, FileDown, Send } from "lucide-react";
@@ -33,6 +33,7 @@ export default function ProjectLaborContractsPage({
 }) {
   const { id: projectId } = use(params);
   const queryClient = useQueryClient();
+  const [visibleSSN, setVisibleSSN] = useState<string | null>(null);
 
   const { data: response, isLoading } = useQuery({
     queryKey: ["labor-contracts", projectId],
@@ -112,6 +113,9 @@ export default function ProjectLaborContractsPage({
                       badge={<Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>}
                       metadata={[
                         { label: "일당", value: `${Number(contract.daily_rate).toLocaleString()}원` },
+                        ...(contract.worker_id_number_masked
+                          ? [{ label: "주민등록번호", value: contract.worker_id_number_masked }]
+                          : []),
                       ]}
                       actions={
                         <>
@@ -143,6 +147,7 @@ export default function ProjectLaborContractsPage({
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
                       <th className="pb-3 font-medium">근로자명</th>
+                      <th className="pb-3 font-medium">주민등록번호</th>
                       <th className="pb-3 font-medium">근무일자</th>
                       <th className="pb-3 font-medium">일당</th>
                       <th className="pb-3 font-medium">직종</th>
@@ -156,6 +161,32 @@ export default function ProjectLaborContractsPage({
                       return (
                         <tr key={contract.id} className="border-b border-slate-100 last:border-0">
                           <td className="py-4 font-medium text-slate-900">{contract.worker_name}</td>
+                          <td className="py-4">
+                            {contract.worker_id_number_masked ? (
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm text-slate-700">
+                                  {visibleSSN === String(contract.id)
+                                    ? contract.worker_id_number
+                                    : contract.worker_id_number_masked}
+                                </span>
+                                {contract.worker_id_number && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      setVisibleSSN(
+                                        visibleSSN === String(contract.id) ? null : String(contract.id)
+                                      )
+                                    }
+                                  >
+                                    {visibleSSN === String(contract.id) ? "숨기기" : "전체 보기"}
+                                  </Button>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">미입력</span>
+                            )}
+                          </td>
                           <td className="py-4 text-slate-500">{contract.work_date}</td>
                           <td className="py-4 text-slate-500">{Number(contract.daily_rate).toLocaleString()}원</td>
                           <td className="py-4 text-slate-500">{contract.work_type ?? "-"}</td>

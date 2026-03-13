@@ -3,17 +3,22 @@ import io
 import pathlib
 import tempfile
 import urllib.parse
+from urllib.parse import quote
+
+from openpyxl import Workbook
+from openpyxl.styles import Font
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.core.database import get_async_db
+from app.core.encryption import mask_ssn
 from app.core.permissions import get_project_for_user
 from app.core.security import get_current_user, get_password_hash
 from app.schemas.response import APIResponse
@@ -303,6 +308,29 @@ async def verify_project_access(
     await get_project_for_user(db, project_id, current_user)
 
 
+def _serialize_labor_contract(contract: LaborContract, requester_role: UserRole) -> dict:
+    """근로계약 데이터를 직렬화하며 SSN 마스킹을 적용합니다."""
+    data: dict = {
+        "id": contract.id,
+        "project_id": contract.project_id,
+        "worker_name": contract.worker_name,
+        "worker_phone": contract.worker_phone,
+        "work_date": str(contract.work_date) if contract.work_date else None,
+        "work_type": contract.work_type,
+        "daily_rate": str(contract.daily_rate),
+        "hours_worked": str(contract.hours_worked) if contract.hours_worked else None,
+        "status": contract.status,
+        "signed_at": contract.signed_at.isoformat() if contract.signed_at else None,
+        "created_at": contract.created_at.isoformat() if contract.created_at else None,
+        "worker_id_number_masked": mask_ssn(contract.worker_id_number),
+    }
+    if requester_role == UserRole.SUPER_ADMIN:
+        data["worker_id_number"] = contract.worker_id_number
+    else:
+        data["worker_id_number"] = None
+    return data
+
+
 @project_labor_router.get("", response_model=APIResponse)
 async def get_project_labor_contracts(
     project_id: int,
@@ -310,9 +338,13 @@ async def get_project_labor_contracts(
     current_user: CurrentUser,
 ):
     await verify_project_access(project_id, db, current_user)
+    result = await db.execute(
+        select(LaborContract).where(LaborContract.project_id == project_id)
+    )
+    contracts = result.scalars().all()
     return {
         "success": True,
-        "data": [],
+        "data": [_serialize_labor_contract(c, current_user.role) for c in contracts],
         "error": None,
     }
 
