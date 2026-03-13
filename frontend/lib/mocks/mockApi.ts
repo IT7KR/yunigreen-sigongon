@@ -2961,6 +2961,23 @@ export class MockAPIClient {
     );
   }
 
+  async batchSendLaborContracts(projectId: string, contractIds: string[]) {
+    return delay(
+      ok({
+        sent_count: contractIds.length,
+        workers: [
+          {
+            worker_name: "근로자",
+            contract_ids: contractIds.map(Number),
+            dates: [],
+            signature_url: `mock://labor-batch-sign/${projectId}`,
+            message: `${contractIds.length}건의 계약서를 발송했어요.`,
+          },
+        ],
+      }),
+    );
+  }
+
   async getLaborContractsSummary(projectId: string) {
     const items = this.laborContractsByProject[projectId] || [];
     const by_status: Record<LaborContractStatus, number> = {
