@@ -706,7 +706,7 @@ function CreateOrderModal({
   const [arrivalTime, setArrivalTime] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryTerms, setDeliveryTerms] = useState("");
-  const [paymentTerms, setPaymentTerms] = useState("")
+  const [paymentTerms, setPaymentTerms] = useState("");
   const [siteManagerName, setSiteManagerName] = useState("");
   const [siteManagerPhone, setSiteManagerPhone] = useState("");
   const materialMasterMap = useMemo(
