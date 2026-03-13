@@ -1111,6 +1111,27 @@ export class APIClient {
     return response.data;
   }
 
+  async batchSendLaborContracts(
+    projectId: string,
+    contractIds: string[],
+  ) {
+    const response = await this.client.post<
+      APIResponse<{
+        sent_count: number;
+        workers: Array<{
+          worker_name: string;
+          contract_ids: number[];
+          dates: string[];
+          signature_url: string;
+          message: string;
+        }>;
+      }>
+    >(`/projects/${projectId}/labor-contracts/batch-send`, {
+      contract_ids: contractIds.map(Number),
+    });
+    return response.data;
+  }
+
   async signLaborContract(laborContractId: string, signatureData: string) {
     const response = await this.client.post<
       APIResponse<{

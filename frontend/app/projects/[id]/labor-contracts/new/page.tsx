@@ -107,16 +107,22 @@ export default function NewProjectLaborContractPage({
       );
       const results = await Promise.all(promises);
 
-      // 발송 요청인 경우 생성된 계약 모두 send
+      // 발송 요청인 경우 batch-send (근로자별 묶음 발송)
       if (status === "send") {
-        const sendPromises = results
+        const contractIds = results
           .filter((r) => r.success)
-          .map((r) => api.sendLaborContractForSignature(r.data!.id));
-        await Promise.all(sendPromises);
+          .map((r) => r.data!.id);
+        if (contractIds.length > 0) {
+          await api.batchSendLaborContracts(projectId, contractIds);
+        }
       }
     },
     onSuccess: (_, status) => {
-      toast.success(status === "draft" ? "임시저장했어요." : "계약서를 발송했어요.");
+      toast.success(
+        status === "draft"
+          ? "임시저장했어요."
+          : `계약서를 발송했어요. 근로자별로 서명 요청 1건씩 전송됩니다.`
+      );
       queryClient.invalidateQueries({ queryKey: ["labor-contracts", projectId] });
       router.push(`/projects/${projectId}/labor-contracts`);
     },

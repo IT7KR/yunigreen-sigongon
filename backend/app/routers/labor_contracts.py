@@ -311,6 +311,58 @@ async def verify_project_access(
     await get_project_for_user(db, project_id, current_user)
 
 
+class BatchSendRequest(BaseModel):
+    contract_ids: list[int]
+
+
+@project_labor_router.post("/batch-send", response_model=APIResponse)
+async def batch_send_labor_contracts(
+    project_id: int,
+    request: BatchSendRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """근로자별로 묶어서 서명 요청 1건씩 발송."""
+    await verify_project_access(project_id, db, current_user)
+
+    # 계약 조회 및 프로젝트 소속 확인
+    contracts = []
+    for cid in request.contract_ids:
+        contract = await db.get(LaborContract, cid)
+        if contract and contract.project_id == project_id:
+            contracts.append(contract)
+
+    # worker_phone(없으면 worker_name)으로 그룹핑
+    from collections import defaultdict
+    groups: dict[str, list[LaborContract]] = defaultdict(list)
+    for c in contracts:
+        key = c.worker_phone or c.worker_name or str(c.id)
+        groups[key].append(c)
+
+    # 그룹별 1건 발송 (현재는 stub — 실제 알림 연동 시 확장)
+    results = []
+    for worker_key, group_contracts in groups.items():
+        worker_name = group_contracts[0].worker_name
+        dates = sorted([str(c.work_date) for c in group_contracts])
+        results.append({
+            "worker_name": worker_name,
+            "worker_key": worker_key,
+            "contract_ids": [c.id for c in group_contracts],
+            "dates": dates,
+            "signature_url": f"https://sign.sigongcore.com/batch/{project_id}/{worker_key}",
+            "message": f"{worker_name}님에게 서명 요청을 보냈어요 ({len(dates)}일분)",
+        })
+
+    return {
+        "success": True,
+        "data": {
+            "sent_count": len(results),
+            "workers": results,
+        },
+        "error": None,
+    }
+
+
 def _serialize_labor_contract(contract: LaborContract, requester_role: UserRole) -> dict:
     """근로계약 데이터를 직렬화하며 SSN 마스킹을 적용합니다."""
     data: dict = {
