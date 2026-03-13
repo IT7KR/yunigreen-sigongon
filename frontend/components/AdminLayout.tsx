@@ -59,6 +59,7 @@ const navItems = [
     label: "노무관리",
     children: [
       { href: "/labor/workers", label: "근로자 관리", icon: UserCheck },
+      { href: "/labor/contracts", label: "근로계약", icon: FileText },
       { href: "/labor/payroll", label: "급여/근무 관리", icon: Calculator },
       { href: "/labor/settings", label: "보험요율 설정", icon: Settings },
     ],
