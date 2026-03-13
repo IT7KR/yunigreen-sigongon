@@ -980,7 +980,7 @@ export interface LaborContractListItem {
   status: LaborContractStatus
   signed_at?: string
   worker_id_number_masked: string | null
-  worker_id_number?: string | null   // super_admin only, may be absent
+  worker_id_number?: string | null   // company_admin·site_manager만 조회 가능, 그 외 역할은 null
 }
 
 export interface ProjectPhotoAlbum {

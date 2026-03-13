@@ -369,7 +369,7 @@ class LaborContract(LaborContractBase, table=True):
     # Worker info (encrypted)
     worker_id_number: Optional[str] = Field(
         default=None,
-        sa_column=Column(EncryptedString(500), nullable=True)
+        sa_column=Column(EncryptedString(), nullable=True)
     )  # 주민등록번호
 
     # Status

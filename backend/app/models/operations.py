@@ -281,7 +281,7 @@ class DailyWorker(SQLModel, table=True):
     blocked_at: Optional[datetime] = Field(default=None)
     id_number_encrypted: Optional[str] = Field(
         default=None,
-        sa_column=Column(EncryptedString(500), nullable=True)
+        sa_column=Column(EncryptedString(), nullable=True)
     )
     account_holder_name: Optional[str] = Field(default=None, max_length=50)
     safety_cert_number: Optional[str] = Field(default=None, max_length=100)

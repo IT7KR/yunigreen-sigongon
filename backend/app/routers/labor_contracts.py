@@ -413,6 +413,12 @@ async def download_labor_tax_report(
     """월별 일용근로소득 지급명세서 Excel 다운로드."""
     await get_project_for_user(db, project_id, current_user)
 
+    if current_user.role not in (UserRole.COMPANY_ADMIN, UserRole.SITE_MANAGER):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="지급명세서는 고객사 관리자 및 현장소장만 다운로드할 수 있습니다.",
+        )
+
     # Validate month format
     try:
         parts = month.split("-")
@@ -470,7 +476,7 @@ async def download_labor_tax_report(
     # Fix 2: Excel row per worker (aggregated)
     for row_idx, (_, data) in enumerate(sorted(worker_data.items()), 2):
         daily_amount = int(data["total_amount"])
-        # 일용근로소득 원천징수세율: 일당 합계 × 2.7% (소득세 2% + 지방세 0.7%)
+        # 일용근로소득 원천징수: 소득세 2.7% (지방소득세 별도 신고)
         # 단, 월 150,000원 근로소득공제 1회 적용 (비과세 한도)
         taxable = max(0, daily_amount - 150000)
         tax = int(Decimal(str(taxable)) * Decimal("0.027"))
