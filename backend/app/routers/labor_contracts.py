@@ -1,15 +1,18 @@
 """일용 계약 관리 API 라우터."""
+import calendar
 import io
 import pathlib
 import tempfile
 import urllib.parse
+from collections import defaultdict
+from datetime import date as date_type
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Annotated, Optional
 from urllib.parse import quote
 
 from openpyxl import Workbook
 from openpyxl.styles import Font
-from datetime import date, datetime
-from decimal import Decimal
-from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -419,16 +422,38 @@ async def download_labor_tax_report(
     except ValueError:
         raise HTTPException(status_code=400, detail="month는 YYYY-MM 형식이어야 합니다.")
 
-    # Query non-draft contracts for the project
+    # Fix 3: Month filtering range
+    first_day = date_type(year, mon, 1)
+    last_day = date_type(year, mon, calendar.monthrange(year, mon)[1])
+
+    # Query non-draft contracts for the project filtered by month
     result = await db.execute(
         select(LaborContract)
         .where(
             LaborContract.project_id == project_id,
             LaborContract.status != LaborContractStatus.DRAFT,
+            LaborContract.work_date >= first_day,
+            LaborContract.work_date <= last_day,
         )
         .order_by(LaborContract.worker_name)
     )
     contracts = result.scalars().all()
+
+    # Fix 2: Aggregate by worker
+    worker_data: dict[str, dict] = defaultdict(lambda: {
+        "worker_name": "",
+        "worker_id_number": None,
+        "work_days": 0,
+        "total_amount": Decimal("0"),
+    })
+
+    for contract in contracts:
+        key = contract.worker_name
+        worker_data[key]["worker_name"] = contract.worker_name
+        if contract.worker_id_number and worker_data[key]["worker_id_number"] is None:
+            worker_data[key]["worker_id_number"] = contract.worker_id_number
+        worker_data[key]["work_days"] += 1
+        worker_data[key]["total_amount"] += Decimal(str(contract.daily_rate or 0))
 
     # Build Excel
     wb = Workbook()
@@ -440,20 +465,17 @@ async def download_labor_tax_report(
         cell = ws.cell(row=1, column=col, value=h)
         cell.font = Font(bold=True)
 
-    for row_idx, contract in enumerate(contracts, 2):
-        daily_amount = int(contract.daily_rate or 0)
-        # 일용근로소득 원천징수세율: 일당 × 2.7% (소득세 2% + 지방세 0.7%)
-        # 단, 일 150,000원 근로소득공제 적용
-        taxable = max(0, daily_amount - 150000)
-        tax = int(taxable * Decimal("0.027"))
+    # Fix 2: Excel row per worker (aggregated)
+    for row_idx, (_, data) in enumerate(sorted(worker_data.items()), 2):
+        daily_amount = int(data["total_amount"])
+        # 일용근로소득 원천징수세율: 일당 합계 × 2.7% (소득세 2% + 지방세 0.7%)
+        # 단, 일 150,000원 근로소득공제 × 근무일수 적용
+        taxable = max(0, daily_amount - 150000 * data["work_days"])
+        tax = int(Decimal(str(taxable)) * Decimal("0.027"))
 
-        ws.cell(row=row_idx, column=1, value=contract.worker_name)
-        ws.cell(
-            row=row_idx,
-            column=2,
-            value=mask_ssn(contract.worker_id_number) if contract.worker_id_number else "미입력",
-        )
-        ws.cell(row=row_idx, column=3, value=1)
+        ws.cell(row=row_idx, column=1, value=data["worker_name"])
+        ws.cell(row=row_idx, column=2, value=mask_ssn(data["worker_id_number"]) or "미입력")
+        ws.cell(row=row_idx, column=3, value=data["work_days"])
         ws.cell(row=row_idx, column=4, value=daily_amount)
         ws.cell(row=row_idx, column=5, value=tax)
         ws.cell(row=row_idx, column=6, value=daily_amount - tax)
@@ -462,7 +484,8 @@ async def download_labor_tax_report(
     wb.save(buffer)
     buffer.seek(0)
 
-    filename = quote(f"{month}_일용근로소득_지급명세서.xlsx")
+    # Fix 4: quote with safe="" for consistent URL encoding
+    filename = quote(f"{month}_일용근로소득_지급명세서.xlsx", safe="")
     return StreamingResponse(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
