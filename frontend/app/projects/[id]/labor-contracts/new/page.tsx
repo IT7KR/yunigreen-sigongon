@@ -40,6 +40,12 @@ export default function NewProjectLaborContractPage({
   const [workStartTime, setWorkStartTime] = useState("08:00");
   const [workEndTime, setWorkEndTime] = useState("17:00");
 
+  // 연속일 추가 관련 state
+  const [dateTab, setDateTab] = useState<"single" | "range">("single");
+  const [rangeStart, setRangeStart] = useState("");
+  const [rangeEnd, setRangeEnd] = useState("");
+  const [excludeWeekend, setExcludeWeekend] = useState(false);
+
   const addWorkerRow = () =>
     setWorkers([...workers, { name: "", phone: "", work_type: "", daily_rate: 0 }]);
 
@@ -49,6 +55,12 @@ export default function NewProjectLaborContractPage({
   const updateWorker = (idx: number, field: keyof SelectedWorker, value: string | number) =>
     setWorkers(workers.map((w, i) => (i === idx ? { ...w, [field]: value } : w)));
 
+  const DAYS = ['일','월','화','수','목','금','토'] as const;
+  const formatDateTag = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return `${d.getMonth() + 1}/${d.getDate()} (${DAYS[d.getDay()]})`;
+  };
+
   const addDate = () => {
     if (!dateInput || workDates.includes(dateInput)) return;
     setWorkDates([...workDates, dateInput].sort());
@@ -56,6 +68,24 @@ export default function NewProjectLaborContractPage({
   };
 
   const removeDate = (d: string) => setWorkDates(workDates.filter((x) => x !== d));
+
+  const applyRange = () => {
+    if (!rangeStart || !rangeEnd || rangeStart > rangeEnd) return;
+    const result: string[] = [];
+    const cur = new Date(rangeStart + 'T00:00:00');
+    const end = new Date(rangeEnd + 'T00:00:00');
+    while (cur <= end) {
+      const day = cur.getDay();
+      if (!excludeWeekend || (day !== 0 && day !== 6)) {
+        const iso = cur.toISOString().slice(0, 10);
+        if (!workDates.includes(iso)) result.push(iso);
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    if (result.length > 0) {
+      setWorkDates([...workDates, ...result].sort());
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: async (status: "draft" | "send") => {
@@ -163,25 +193,89 @@ export default function NewProjectLaborContractPage({
               <CardTitle>근무일</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <Input
-                    type="date"
-                    value={dateInput}
-                    onChange={(e) => setDateInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addDate()}
-                  />
-                  <Button variant="secondary" onClick={addDate}>추가</Button>
+              <div className="space-y-4">
+                {/* 탭 전환 */}
+                <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setDateTab("single")}
+                    className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      dateTab === "single"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    단건 추가
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDateTab("range")}
+                    className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      dateTab === "range"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    연속일 추가
+                  </button>
                 </div>
+
+                {/* 단건 추가 탭 */}
+                {dateTab === "single" && (
+                  <div className="flex gap-2">
+                    <Input
+                      type="date"
+                      value={dateInput}
+                      onChange={(e) => setDateInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addDate()}
+                    />
+                    <Button variant="secondary" onClick={addDate}>추가</Button>
+                  </div>
+                )}
+
+                {/* 연속일 추가 탭 */}
+                {dateTab === "range" && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="date"
+                        value={rangeStart}
+                        onChange={(e) => setRangeStart(e.target.value)}
+                        className="flex-1"
+                      />
+                      <span className="text-slate-400 text-sm shrink-0">~</span>
+                      <Input
+                        type="date"
+                        value={rangeEnd}
+                        onChange={(e) => setRangeEnd(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={excludeWeekend}
+                        onChange={(e) => setExcludeWeekend(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      주말 제외 (토·일 자동 제외)
+                    </label>
+                    <Button variant="secondary" onClick={applyRange} className="w-full">
+                      날짜 적용
+                    </Button>
+                  </div>
+                )}
+
+                {/* 선택된 날짜 태그 */}
                 {workDates.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 pt-1">
                     {workDates.map((d) => (
                       <button
                         key={d}
                         onClick={() => removeDate(d)}
                         className="flex items-center gap-1 rounded-full bg-brand-point-100 px-3 py-1 text-sm text-brand-point-700 hover:bg-brand-point-200"
                       >
-                        {d} <X className="h-3 w-3" />
+                        {formatDateTag(d)} <X className="h-3 w-3" />
                       </button>
                     ))}
                   </div>
