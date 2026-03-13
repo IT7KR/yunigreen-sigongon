@@ -1,0 +1,27 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+.next
+**/dist
+**/.turbo
+
+# Dev/test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+coverage
+
+# Misc
+.git
+.gitignore
+*.md
+.env
+.env.*
+!.env.production
+
+# Docker
+Dockerfile
+.dockerignore

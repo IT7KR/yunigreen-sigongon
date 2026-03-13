@@ -24,6 +24,10 @@ COPY middleware.ts next.config.ts capacitor.config.ts ./
 COPY postcss.config.mjs eslint.config.mjs tsconfig.json next-env.d.ts ./
 COPY scripts ./scripts
 ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_USE_MOCKS=false
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_USE_MOCKS=$NEXT_PUBLIC_USE_MOCKS
 RUN pnpm build
 
 # ──────────────────────────────────────────────────────────────
