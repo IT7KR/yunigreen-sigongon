@@ -6670,6 +6670,14 @@ export class MockAPIClient {
       }>;
       notes?: string;
       vendor_id?: number;
+      order_date?: string | null;
+      arrival_date?: string | null;
+      arrival_time?: string | null;
+      delivery_address?: string | null;
+      delivery_terms?: string | null;
+      payment_terms?: string | null;
+      site_manager_name?: string | null;
+      site_manager_phone?: string | null;
     },
   ) {
     const orderId = randomId("mo");
@@ -6720,6 +6728,14 @@ export class MockAPIClient {
       total_amount: totalAmount,
       vendor_id: data.vendor_id ?? null,
       notes: data.notes,
+      order_date: data.order_date ?? null,
+      arrival_date: data.arrival_date ?? null,
+      arrival_time: data.arrival_time ?? null,
+      delivery_address: data.delivery_address ?? null,
+      delivery_terms: data.delivery_terms ?? null,
+      payment_terms: data.payment_terms ?? null,
+      site_manager_name: data.site_manager_name ?? null,
+      site_manager_phone: data.site_manager_phone ?? null,
       created_at: nowIso(),
       updated_at: nowIso(),
     };

@@ -565,6 +565,50 @@ export default function MaterialOrdersPage({
               </div>
             )}
 
+            {(selectedOrder.order_date || selectedOrder.arrival_date || selectedOrder.delivery_address || selectedOrder.delivery_terms || selectedOrder.payment_terms || selectedOrder.site_manager_name) && (
+              <div>
+                <label className="text-sm font-medium text-slate-700">발주 상세 정보</label>
+                <div className="mt-2 space-y-2 rounded-lg border border-slate-200 p-3">
+                  {selectedOrder.order_date && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">발주일자</span>
+                      <span>{selectedOrder.order_date}</span>
+                    </div>
+                  )}
+                  {selectedOrder.arrival_date && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">도착예정</span>
+                      <span>{selectedOrder.arrival_date}{selectedOrder.arrival_time ? ` ${selectedOrder.arrival_time}` : ""}</span>
+                    </div>
+                  )}
+                  {selectedOrder.delivery_address && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">납품주소</span>
+                      <span className="text-right max-w-[60%]">{selectedOrder.delivery_address}</span>
+                    </div>
+                  )}
+                  {selectedOrder.delivery_terms && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">인도조건</span>
+                      <span>{selectedOrder.delivery_terms}</span>
+                    </div>
+                  )}
+                  {selectedOrder.payment_terms && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">대금조건</span>
+                      <span className="text-right max-w-[60%]">{selectedOrder.payment_terms}</span>
+                    </div>
+                  )}
+                  {selectedOrder.site_manager_name && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">현장담당</span>
+                      <span>{selectedOrder.site_manager_name}{selectedOrder.site_manager_phone ? ` (${selectedOrder.site_manager_phone})` : ""}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4">
               <Button
                 variant="secondary"
@@ -657,6 +701,14 @@ function CreateOrderModal({
     },
   ]);
   const [notes, setNotes] = useState("");
+  const [orderDate, setOrderDate] = useState("");
+  const [arrivalDate, setArrivalDate] = useState("");
+  const [arrivalTime, setArrivalTime] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryTerms, setDeliveryTerms] = useState("");
+  const [paymentTerms, setPaymentTerms] = useState("")
+  const [siteManagerName, setSiteManagerName] = useState("");
+  const [siteManagerPhone, setSiteManagerPhone] = useState("");
   const materialMasterMap = useMemo(
     () =>
       new Map(
@@ -673,6 +725,14 @@ function CreateOrderModal({
           quantity: item.quantity,
         })),
         notes: notes || undefined,
+        order_date: orderDate || null,
+        arrival_date: arrivalDate || null,
+        arrival_time: arrivalTime || null,
+        delivery_address: deliveryAddress || null,
+        delivery_terms: deliveryTerms || null,
+        payment_terms: paymentTerms || null,
+        site_manager_name: siteManagerName || null,
+        site_manager_phone: siteManagerPhone || null,
       }),
     onSuccess,
     onError: (error: unknown) => {
@@ -844,6 +904,103 @@ function CreateOrderModal({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
+
+        {/* 발주 상세 정보 */}
+        <div className="border-t border-slate-200 pt-4 space-y-3">
+          <p className="text-sm font-medium text-muted-foreground">발주 상세 정보</p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">발주일자</label>
+              <input
+                type="date"
+                value={orderDate}
+                onChange={(e) => setOrderDate(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">도착일자</label>
+              <input
+                type="date"
+                value={arrivalDate}
+                onChange={(e) => setArrivalDate(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">도착시간</label>
+              <input
+                type="time"
+                placeholder="07:00"
+                value={arrivalTime}
+                onChange={(e) => setArrivalTime(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">인도조건</label>
+              <PrimitiveSelect
+                value={deliveryTerms}
+                onChange={(e) => setDeliveryTerms(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              >
+                <option value="">선택</option>
+                <option value="현장인수">현장인수</option>
+                <option value="공장인수">공장인수</option>
+                <option value="배달">배달</option>
+              </PrimitiveSelect>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">도착(납품)주소</label>
+            <input
+              type="text"
+              placeholder="서울시 ..."
+              value={deliveryAddress}
+              onChange={(e) => setDeliveryAddress(e.target.value)}
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">대금조건</label>
+            <input
+              type="text"
+              placeholder="세금계산서 발주(발주일날 입금 원칙)"
+              value={paymentTerms}
+              onChange={(e) => setPaymentTerms(e.target.value)}
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">현장 담당자</label>
+              <input
+                type="text"
+                placeholder="홍길동"
+                value={siteManagerName}
+                onChange={(e) => setSiteManagerName(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">전화번호</label>
+              <input
+                type="text"
+                placeholder="010-0000-0000"
+                value={siteManagerPhone}
+                onChange={(e) => setSiteManagerPhone(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
+              />
+            </div>
+          </div>
+        </div>
 
         <div className="flex items-center justify-between border-t border-slate-200 pt-4">
           <span className="font-semibold text-slate-900">총 금액</span>

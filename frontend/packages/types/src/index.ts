@@ -546,6 +546,14 @@ export interface MaterialOrder {
   received_by_user_id?: string | null
   closed_at?: string
   notes?: string
+  order_date?: string | null
+  arrival_date?: string | null
+  arrival_time?: string | null
+  delivery_address?: string | null
+  delivery_terms?: string | null
+  payment_terms?: string | null
+  site_manager_name?: string | null
+  site_manager_phone?: string | null
   created_at: string
   updated_at?: string
 }
