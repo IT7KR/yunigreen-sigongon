@@ -469,8 +469,8 @@ async def download_labor_tax_report(
     for row_idx, (_, data) in enumerate(sorted(worker_data.items()), 2):
         daily_amount = int(data["total_amount"])
         # 일용근로소득 원천징수세율: 일당 합계 × 2.7% (소득세 2% + 지방세 0.7%)
-        # 단, 일 150,000원 근로소득공제 × 근무일수 적용
-        taxable = max(0, daily_amount - 150000 * data["work_days"])
+        # 단, 월 150,000원 근로소득공제 1회 적용 (비과세 한도)
+        taxable = max(0, daily_amount - 150000)
         tax = int(Decimal(str(taxable)) * Decimal("0.027"))
 
         ws.cell(row=row_idx, column=1, value=data["worker_name"])
