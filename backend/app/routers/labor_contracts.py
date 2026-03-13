@@ -327,10 +327,12 @@ def _serialize_labor_contract(contract: LaborContract, requester_role: UserRole)
         "created_at": contract.created_at.isoformat() if contract.created_at else None,
         "worker_id_number_masked": mask_ssn(contract.worker_id_number),
     }
-    if requester_role == UserRole.SUPER_ADMIN:
+    # 테넌트 데이터 주권 원칙: 근로계약 당사자인 company_admin·site_manager만 전체 SSN 조회 가능.
+    # super_admin은 플랫폼 운영자로서 계약 당사자가 아니므로 개인정보보호법 최소처리 원칙에 따라 조회 불가.
+    if requester_role in (UserRole.COMPANY_ADMIN, UserRole.SITE_MANAGER):
         data["worker_id_number"] = contract.worker_id_number
     else:
-        data["worker_id_number"] = None
+        data["worker_id_number"] = None  # super_admin 포함 나머지 역할은 전체 SSN 조회 불가
     return data
 
 
