@@ -219,12 +219,26 @@ async def download_labor_contract_hwpx(
     )
 
 
+async def _get_contract_and_verify(
+    labor_contract_id: int,
+    db: AsyncSession,
+    current_user: User,
+) -> LaborContract:
+    """계약서 조회 + 프로젝트 접근 권한 동시 검증."""
+    contract = await db.get(LaborContract, labor_contract_id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="근로계약서를 찾을 수 없습니다")
+    await get_project_for_user(db, contract.project_id, current_user)
+    return contract
+
+
 @router.post("/{labor_contract_id}/send", response_model=APIResponse)
 async def send_labor_contract_for_signature(
     labor_contract_id: int,
     db: DBSession,
     current_user: CurrentUser,
 ):
+    await _get_contract_and_verify(labor_contract_id, db, current_user)
     return {
         "success": True,
         "data": {
@@ -244,6 +258,10 @@ async def sign_labor_contract(
     db: DBSession,
     current_user: CurrentUser,
 ):
+    # 서명은 근로자(worker)가 하므로 프로젝트 권한 체크 없이 계약 존재만 확인
+    contract = await db.get(LaborContract, labor_contract_id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="근로계약서를 찾을 수 없습니다")
     return {
         "success": True,
         "data": {
@@ -264,6 +282,7 @@ async def update_labor_contract(
     status: Optional[LaborContractStatus] = None,
     hours_worked: Optional[Decimal] = None,
 ):
+    await _get_contract_and_verify(labor_contract_id, db, current_user)
     return {
         "success": True,
         "data": {
