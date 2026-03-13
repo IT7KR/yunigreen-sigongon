@@ -16,7 +16,7 @@ class ConsentRecord(SQLModel, table=True):
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
     user_id: Optional[int] = Field(default=None, sa_type=BigInteger, index=True)
     invite_token: Optional[str] = Field(default=None, index=True, max_length=255)  # 미가입 근로자
-    consent_type: str = Field(index=True, max_length=100)  # "privacy_collection" | "third_party_sharing" | "sensitive_info"
+    consent_type: str = Field(index=True, max_length=100)  # "privacy_collection" | "third_party_sharing" | "sensitive_info" | "ssn_collection"
     consented: bool = Field(default=False)
     consented_at: datetime = Field(default_factory=datetime.utcnow)
     ip_address: Optional[str] = Field(default=None, max_length=45)
