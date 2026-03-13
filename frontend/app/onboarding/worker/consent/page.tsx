@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Card, CardContent, PrimitiveButton } from "@sigongcore/ui";
+import { Button, Card, CardContent, PrimitiveButton, toast } from "@sigongcore/ui";
 import {
   CheckCircle2,
   ArrowRight,
@@ -39,6 +39,7 @@ function WorkerConsentContent() {
     privacy: false,
     ssn: false,
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   const allAgreed = agreements.privacy && agreements.ssn;
 
@@ -53,6 +54,7 @@ function WorkerConsentContent() {
   const handleProceed = async () => {
     if (!allAgreed) return;
 
+    setIsLoading(true);
     try {
       const { api } = await import("@/lib/api");
       await api.saveConsentRecords({
@@ -62,12 +64,12 @@ function WorkerConsentContent() {
         ],
         invite_token: token || undefined,
       });
+      router.push(`/onboarding/worker/${token}?step=documents`);
     } catch (e) {
-      console.error("[Consent] API 저장 실패 (계속 진행):", e);
-      // Non-blocking: proceed even if API fails
+      console.error("[Consent] API 저장 실패:", e);
+      toast.error("동의 기록 저장에 실패했습니다. 다시 시도해주세요.");
+      setIsLoading(false);
     }
-
-    router.push(`/onboarding/worker/${token}?step=documents`);
   };
 
   if (!token) {
@@ -177,6 +179,8 @@ function WorkerConsentContent() {
               onClick={handleAgreeAll}
             >
               <div
+                role="checkbox"
+                aria-checked={allAgreed}
                 className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${
                   allAgreed ? "bg-brand-point-600" : "border-2 border-slate-300"
                 }`}
@@ -210,11 +214,20 @@ function WorkerConsentContent() {
 
             <Button
               className="mt-6 w-full"
-              disabled={!allAgreed}
+              disabled={!allAgreed || isLoading}
               onClick={handleProceed}
             >
-              동의하고 계속하기
-              <ArrowRight className="ml-2 h-4 w-4" />
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  처리 중...
+                </>
+              ) : (
+                <>
+                  동의하고 계속하기
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -243,6 +256,8 @@ function ConsentItem({ title, description, checked, onCheck }: ConsentItemProps)
         className="flex w-full items-start gap-3 text-left"
       >
         <div
+          role="checkbox"
+          aria-checked={checked}
           className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded ${
             checked ? "bg-brand-point-600" : "border-2 border-slate-300"
           }`}
