@@ -37,6 +37,8 @@ import {
   getRepresentativeById,
 } from "@/lib/fieldRepresentatives";
 
+export const dynamic = 'force-dynamic';
+
 interface RepresentativeInfo {
   name: string;
   phone: string;

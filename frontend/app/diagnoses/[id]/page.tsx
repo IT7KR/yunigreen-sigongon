@@ -31,6 +31,8 @@ import { useDiagnosis } from "@/hooks";
 import { api } from "@/lib/api";
 import type { DiagnosisStatus } from "@sigongcore/types";
 
+export const dynamic = 'force-dynamic';
+
 interface DiagnosisDetailPageProps {
   params: Promise<{ id: string }>;
 }

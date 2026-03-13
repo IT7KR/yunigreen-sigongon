@@ -24,6 +24,8 @@ import {
 import { useDiagnoses } from "@/hooks";
 import type { DiagnosisStatus } from "@sigongcore/types";
 
+export const dynamic = 'force-dynamic';
+
 const statusConfig: Record<
   DiagnosisStatus,
   {

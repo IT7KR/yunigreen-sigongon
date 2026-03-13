@@ -27,6 +27,8 @@ import {
 } from "@/lib/fieldRepresentatives";
 import { useAuth } from "@/lib/auth";
 
+export const dynamic = 'force-dynamic';
+
 function todayDate() {
   return new Date().toISOString().slice(0, 10);
 }

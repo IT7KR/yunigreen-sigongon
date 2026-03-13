@@ -24,6 +24,8 @@ import {
 import { useProject } from "@/hooks";
 import { buildSampleFileDownloadUrl, buildSamplePath } from "@/lib/sampleFiles";
 
+export const dynamic = 'force-dynamic';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------

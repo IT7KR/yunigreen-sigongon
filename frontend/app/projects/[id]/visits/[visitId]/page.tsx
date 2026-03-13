@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import type { PhotoType, VisitType } from "@sigongcore/types";
 
+export const dynamic = 'force-dynamic';
+
 interface VisitDetailPageProps {
   params: Promise<{ id: string; visitId: string }>;
 }

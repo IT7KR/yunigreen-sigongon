@@ -36,6 +36,8 @@ import type {
   MaterialOrderStatus,
 } from "@sigongcore/types";
 
+export const dynamic = 'force-dynamic';
+
 type StatusBadgeMeta = {
   icon: ComponentType<{ className?: string }>;
   color: string;
