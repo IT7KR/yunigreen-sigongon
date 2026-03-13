@@ -1,6 +1,6 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { isServer, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode, type ComponentType } from "react";
 
 export function createQueryClient() {
@@ -27,11 +27,23 @@ export function createQueryClient() {
   });
 }
 
+let browserQueryClient: QueryClient | undefined = undefined;
+
+function getQueryClient() {
+  if (isServer) {
+    return createQueryClient();
+  }
+  if (!browserQueryClient) {
+    browserQueryClient = createQueryClient();
+  }
+  return browserQueryClient;
+}
+
 export function createProviders(
   AuthProvider: ComponentType<{ children: ReactNode }>,
 ) {
   return function Providers({ children }: { children: ReactNode }) {
-    const [queryClient] = useState(createQueryClient);
+    const queryClient = getQueryClient();
 
     return (
       <QueryClientProvider client={queryClient}>

@@ -240,7 +240,14 @@ export function createAuthModule<TUser extends AuthUserBase>(
     const context = useContext(AuthContext);
 
     if (!context) {
-      throw new Error("useAuth must be used within an AuthProvider");
+      return {
+        user: null,
+        isLoading: true,
+        isAuthenticated: false,
+        login: async () => ({ success: false }),
+        logout: () => {},
+        refreshUser: async () => {},
+      } as AuthContextValue<TUser>;
     }
 
     return context;

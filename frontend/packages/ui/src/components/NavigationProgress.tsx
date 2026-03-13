@@ -157,9 +157,11 @@ export function useNavigationProgress(): NavigationProgressContextValue {
   const context = useContext(NavigationProgressContext)
 
   if (!context) {
-    throw new Error(
-      "useNavigationProgress must be used within NavigationProgressProvider"
-    )
+    return {
+      isNavigating: false,
+      start: () => {},
+      done: () => {},
+    }
   }
 
   return context
