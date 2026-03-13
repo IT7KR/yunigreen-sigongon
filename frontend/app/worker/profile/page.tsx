@@ -48,6 +48,11 @@ type WorkerProfile = {
   account_number: string;
   job_type: string;
   documents: WorkerDocument[];
+  has_id_number?: boolean;
+  account_holder_name?: string;
+  safety_cert_number?: string;
+  safety_cert_issue_date?: string;
+  safety_cert_issuer?: string;
 };
 
 const samplePathByDocId: Record<string, string> = {
@@ -71,7 +76,14 @@ export default function WorkerProfilePage() {
     address: "",
     bank_name: "",
     account_number: "",
+    account_holder_name: "",
+    ssnFront: "",
+    ssnBack: "",
+    safety_cert_number: "",
+    safety_cert_issue_date: "",
+    safety_cert_issuer: "",
   });
+  const [ssnError, setSsnError] = useState("");
   const [isSavingInfo, setIsSavingInfo] = useState(false);
 
   // 비밀번호 변경 state
@@ -99,6 +111,12 @@ export default function WorkerProfilePage() {
           address: data.address ?? "",
           bank_name: data.bank_name ?? "",
           account_number: data.account_number ?? "",
+          account_holder_name: data.account_holder_name ?? "",
+          ssnFront: "",
+          ssnBack: "",
+          safety_cert_number: data.safety_cert_number ?? "",
+          safety_cert_issue_date: data.safety_cert_issue_date ?? "",
+          safety_cert_issuer: data.safety_cert_issuer ?? "",
         });
       }
       setIsLoading(false);
@@ -109,11 +127,61 @@ export default function WorkerProfilePage() {
 
   // 개인정보 저장
   const handleSaveInfo = async () => {
+    // SSN validation: either both parts or neither
+    if ((infoForm.ssnFront && !infoForm.ssnBack) || (!infoForm.ssnFront && infoForm.ssnBack)) {
+      setSsnError("주민번호 앞·뒤 자리를 모두 입력하세요.");
+      return;
+    }
+    if (infoForm.ssnFront && !/^\d{6}$/.test(infoForm.ssnFront)) {
+      setSsnError("앞 6자리는 숫자 6자리여야 합니다.");
+      return;
+    }
+    if (infoForm.ssnBack && !/^\d{7}$/.test(infoForm.ssnBack)) {
+      setSsnError("뒤 7자리는 숫자 7자리여야 합니다.");
+      return;
+    }
+    setSsnError("");
+
+    const id_number =
+      infoForm.ssnFront && infoForm.ssnBack
+        ? `${infoForm.ssnFront}${infoForm.ssnBack}`
+        : undefined;
+
+    const payload: Record<string, unknown> = {
+      phone: infoForm.phone,
+      address: infoForm.address,
+      bank_name: infoForm.bank_name,
+      account_number: infoForm.account_number,
+      account_holder_name: infoForm.account_holder_name || undefined,
+      safety_cert_number: infoForm.safety_cert_number || undefined,
+      safety_cert_issue_date: infoForm.safety_cert_issue_date || undefined,
+      safety_cert_issuer: infoForm.safety_cert_issuer || undefined,
+    };
+    if (id_number !== undefined) {
+      payload.id_number = id_number;
+    }
+
     setIsSavingInfo(true);
     try {
-      const res = await (api as any).updateWorkerProfile(workerId, infoForm);
+      const res = await (api as any).updateWorkerProfile(workerId, payload);
       if (res.success) {
-        setProfile((prev) => (prev ? { ...prev, ...infoForm } : prev));
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                phone: infoForm.phone,
+                address: infoForm.address,
+                bank_name: infoForm.bank_name,
+                account_number: infoForm.account_number,
+                account_holder_name: infoForm.account_holder_name,
+                safety_cert_number: infoForm.safety_cert_number,
+                safety_cert_issue_date: infoForm.safety_cert_issue_date,
+                safety_cert_issuer: infoForm.safety_cert_issuer,
+                has_id_number: id_number !== undefined ? true : prev.has_id_number,
+              }
+            : prev,
+        );
+        setInfoForm((prev) => ({ ...prev, ssnFront: "", ssnBack: "" }));
         setIsEditingInfo(false);
         toast.success("개인정보가 저장되었습니다.");
       } else {
@@ -132,7 +200,14 @@ export default function WorkerProfilePage() {
       address: profile?.address ?? "",
       bank_name: profile?.bank_name ?? "",
       account_number: profile?.account_number ?? "",
+      account_holder_name: profile?.account_holder_name ?? "",
+      ssnFront: "",
+      ssnBack: "",
+      safety_cert_number: profile?.safety_cert_number ?? "",
+      safety_cert_issue_date: profile?.safety_cert_issue_date ?? "",
+      safety_cert_issuer: profile?.safety_cert_issuer ?? "",
     });
+    setSsnError("");
     setIsEditingInfo(false);
   };
 
@@ -411,7 +486,7 @@ export default function WorkerProfilePage() {
             <CardContent className="space-y-4 py-4">
               {isLoading ? (
                 <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
                     <div
                       key={i}
                       className="h-12 animate-pulse rounded bg-slate-100"
@@ -492,6 +567,119 @@ export default function WorkerProfilePage() {
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-point-400 focus:outline-none focus:ring-2 focus:ring-brand-point-100"
                     />
                   </div>
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                      <User className="h-3.5 w-3.5" />
+                      예금주
+                    </label>
+                    <PrimitiveInput
+                      type="text"
+                      value={infoForm.account_holder_name}
+                      onChange={(e) =>
+                        setInfoForm((prev) => ({
+                          ...prev,
+                          account_holder_name: e.target.value,
+                        }))
+                      }
+                      placeholder="예금주명"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-point-400 focus:outline-none focus:ring-2 focus:ring-brand-point-100"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                      <Lock className="h-3.5 w-3.5" />
+                      주민등록번호
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <PrimitiveInput
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={infoForm.ssnFront}
+                        onChange={(e) => {
+                          setSsnError("");
+                          setInfoForm((prev) => ({
+                            ...prev,
+                            ssnFront: e.target.value.replace(/\D/g, ""),
+                          }));
+                        }}
+                        placeholder="앞 6자리"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-point-400 focus:outline-none focus:ring-2 focus:ring-brand-point-100"
+                      />
+                      <span className="flex-shrink-0 text-slate-400">-</span>
+                      <PrimitiveInput
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={7}
+                        value={infoForm.ssnBack}
+                        onChange={(e) => {
+                          setSsnError("");
+                          setInfoForm((prev) => ({
+                            ...prev,
+                            ssnBack: e.target.value.replace(/\D/g, ""),
+                          }));
+                        }}
+                        placeholder="뒤 7자리"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-point-400 focus:outline-none focus:ring-2 focus:ring-brand-point-100"
+                      />
+                    </div>
+                    {ssnError && (
+                      <p className="text-xs text-red-600">{ssnError}</p>
+                    )}
+                    {profile?.has_id_number && !infoForm.ssnFront && !infoForm.ssnBack && (
+                      <p className="text-xs text-slate-400">
+                        주민번호가 이미 등록되어 있습니다. 변경하려면 다시 입력하세요.
+                      </p>
+                    )}
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-3 space-y-3">
+                    <p className="text-xs font-medium text-slate-700">건설업 기초 안전보건교육 이수증</p>
+                    <p className="text-xs text-slate-400">이수증이 있는 경우에만 입력하세요.</p>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500">이수증 등록번호</label>
+                      <PrimitiveInput
+                        type="text"
+                        value={infoForm.safety_cert_number}
+                        onChange={(e) =>
+                          setInfoForm((prev) => ({
+                            ...prev,
+                            safety_cert_number: e.target.value,
+                          }))
+                        }
+                        placeholder="이수증 등록번호"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-point-400 focus:outline-none focus:ring-2 focus:ring-brand-point-100"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500">이수일자</label>
+                      <PrimitiveInput
+                        type="date"
+                        value={infoForm.safety_cert_issue_date}
+                        onChange={(e) =>
+                          setInfoForm((prev) => ({
+                            ...prev,
+                            safety_cert_issue_date: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-point-400 focus:outline-none focus:ring-2 focus:ring-brand-point-100"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500">발급처</label>
+                      <PrimitiveInput
+                        type="text"
+                        value={infoForm.safety_cert_issuer}
+                        onChange={(e) =>
+                          setInfoForm((prev) => ({
+                            ...prev,
+                            safety_cert_issuer: e.target.value,
+                          }))
+                        }
+                        placeholder="발급처"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-point-400 focus:outline-none focus:ring-2 focus:ring-brand-point-100"
+                      />
+                    </div>
+                  </div>
                   <div className="flex gap-2 pt-1">
                     <PrimitiveButton
                       onClick={handleCancelEditInfo}
@@ -552,6 +740,38 @@ export default function WorkerProfilePage() {
                       </dd>
                     </div>
                   </div>
+                  <div className="flex items-start gap-2">
+                    <User className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
+                    <div>
+                      <dt className="text-xs text-slate-400">예금주</dt>
+                      <dd className="text-sm font-medium text-slate-900">
+                        {profile?.account_holder_name || "—"}
+                      </dd>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Lock className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
+                    <div>
+                      <dt className="text-xs text-slate-400">주민등록번호</dt>
+                      <dd className="text-sm font-medium text-slate-900">
+                        {profile?.has_id_number ? "등록됨" : "—"}
+                      </dd>
+                    </div>
+                  </div>
+                  {(profile?.safety_cert_number || profile?.safety_cert_issue_date || profile?.safety_cert_issuer) && (
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 space-y-1">
+                      <p className="text-xs font-medium text-slate-600">건설업 기초 안전보건교육 이수증</p>
+                      {profile?.safety_cert_number && (
+                        <p className="text-xs text-slate-700">등록번호: {profile.safety_cert_number}</p>
+                      )}
+                      {profile?.safety_cert_issue_date && (
+                        <p className="text-xs text-slate-700">이수일자: {profile.safety_cert_issue_date}</p>
+                      )}
+                      {profile?.safety_cert_issuer && (
+                        <p className="text-xs text-slate-700">발급처: {profile.safety_cert_issuer}</p>
+                      )}
+                    </div>
+                  )}
                 </dl>
               )}
             </CardContent>

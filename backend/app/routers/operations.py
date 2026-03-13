@@ -5024,6 +5024,11 @@ async def get_worker_profile(
             "hire_date": daily_worker.hire_date if daily_worker else "",
             "birth_date": daily_worker.birth_date if daily_worker else "",
             "gender": daily_worker.gender if daily_worker else 1,
+            "has_id_number": bool(daily_worker and daily_worker.id_number_encrypted),
+            "account_holder_name": daily_worker.account_holder_name if daily_worker else "",
+            "safety_cert_number": daily_worker.safety_cert_number if daily_worker else "",
+            "safety_cert_issue_date": str(daily_worker.safety_cert_issue_date) if (daily_worker and daily_worker.safety_cert_issue_date) else "",
+            "safety_cert_issuer": daily_worker.safety_cert_issuer if daily_worker else "",
             "documents": [
                 {
                     "id": d.document_id,
@@ -5046,6 +5051,11 @@ class WorkerProfileUpdateRequest(BaseModel):
     address: Optional[str] = None
     bank_name: Optional[str] = None
     account_number: Optional[str] = None
+    account_holder_name: Optional[str] = None
+    id_number: Optional[str] = None  # 입력받아 id_number_encrypted에 저장
+    safety_cert_number: Optional[str] = None
+    safety_cert_issue_date: Optional[date] = None
+    safety_cert_issuer: Optional[str] = None
 
 
 @router.put("/workers/{worker_id}/profile", response_model=APIResponse[dict])
@@ -5072,6 +5082,16 @@ async def update_worker_profile(
         daily_worker.bank_name = data.bank_name
     if data.account_number is not None:
         daily_worker.account_number = data.account_number
+    if data.id_number is not None:
+        daily_worker.id_number_encrypted = data.id_number  # TypeDecorator auto-encrypts
+    if data.account_holder_name is not None:
+        daily_worker.account_holder_name = data.account_holder_name
+    if data.safety_cert_number is not None:
+        daily_worker.safety_cert_number = data.safety_cert_number
+    if data.safety_cert_issue_date is not None:
+        daily_worker.safety_cert_issue_date = data.safety_cert_issue_date
+    if data.safety_cert_issuer is not None:
+        daily_worker.safety_cert_issuer = data.safety_cert_issuer
 
     await db.commit()
     return APIResponse.ok({"updated": True})
