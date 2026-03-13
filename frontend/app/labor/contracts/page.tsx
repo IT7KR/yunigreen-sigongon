@@ -1,370 +1,206 @@
 "use client";
 
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
+import { Plus, FileDown, Send } from "lucide-react";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  toast,
-  Skeleton,
+  Card, CardContent, CardHeader, CardTitle,
+  Button, Badge, toast, Skeleton,
 } from "@sigongcore/ui";
-import { Plus, FileDown } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { MobileListCard } from "@/components/MobileListCard";
-import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import Link from "next/link";
+import { useProjects } from "@/hooks";
 
-type LaborContract = {
-  id: string;
-  worker_name: string;
-  project_name: string;
-  work_date: string;
-  daily_rate: number;
-  status: "draft" | "sent" | "signed" | "paid";
-  created_at: string;
+type ContractStatus = "draft" | "sent" | "signed" | "paid";
+const STATUS_MAP: Record<ContractStatus, { label: string; variant: "default" | "warning" | "success" }> = {
+  draft: { label: "임시저장", variant: "default" },
+  sent: { label: "발송완료", variant: "warning" },
+  signed: { label: "서명완료", variant: "success" },
+  paid: { label: "지급완료", variant: "success" },
 };
 
 export default function LaborContractsPage() {
-  const [contracts, setContracts] = useState<LaborContract[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<
-    "all" | "draft" | "sent" | "signed" | "paid"
-  >("all");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<"all" | ContractStatus>("all");
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      // Mock data - replace with actual API call
-      const mockContracts: LaborContract[] = [
-        {
-          id: "lc_1",
-          worker_name: "김철수",
-          project_name: "강남 아파트 리모델링",
-          work_date: "2024-01-20",
-          daily_rate: 150000,
-          status: "signed",
-          created_at: "2024-01-15",
-        },
-        {
-          id: "lc_2",
-          worker_name: "이영희",
-          project_name: "서초 상가 인테리어",
-          work_date: "2024-01-22",
-          daily_rate: 140000,
-          status: "sent",
-          created_at: "2024-01-16",
-        },
-        {
-          id: "lc_3",
-          worker_name: "박민수",
-          project_name: "강남 아파트 리모델링",
-          work_date: "2024-01-20",
-          daily_rate: 160000,
-          status: "draft",
-          created_at: "2024-01-17",
-        },
-      ];
-      setContracts(mockContracts);
-      setIsLoading(false);
-    };
+  // 내 프로젝트 목록
+  const { data: projectsResponse } = useProjects();
+  const projects = projectsResponse?.success ? projectsResponse.data : [];
 
-    fetchData();
-  }, []);
+  // 선택한 프로젝트의 근로계약 목록
+  const { data: contractsResponse, isLoading } = useQuery({
+    queryKey: ["labor-contracts", selectedProjectId],
+    queryFn: () => api.getLaborContracts(selectedProjectId),
+    enabled: !!selectedProjectId,
+  });
+  const allContracts = contractsResponse?.success ? contractsResponse.data : [];
+  const contracts = statusFilter === "all"
+    ? allContracts
+    : allContracts.filter((c) => c.status === statusFilter);
 
-  const getStatusBadge = (status: LaborContract["status"]) => {
-    const statusMap = {
-      draft: { label: "임시저장", variant: "default" as const },
-      sent: { label: "발송완료", variant: "warning" as const },
-      signed: { label: "서명완료", variant: "success" as const },
-      paid: { label: "지급완료", variant: "success" as const },
-    };
-    return statusMap[status];
+  const sendMutation = useMutation({
+    mutationFn: (id: string) => api.sendLaborContractForSignature(id),
+    onSuccess: () => {
+      toast.success("서명 요청을 발송했어요.");
+      queryClient.invalidateQueries({ queryKey: ["labor-contracts", selectedProjectId] });
+    },
+    onError: () => toast.error("발송에 실패했어요."),
+  });
+
+  const handleDownload = async (contractId: string, workerName: string) => {
+    try {
+      const blob = await api.downloadLaborContractHwpx(contractId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `표준근로계약서_${workerName}.hwpx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("근로계약서 다운로드에 실패했어요.");
+    }
   };
-
-  const filteredContracts =
-    filter === "all" ? contracts : contracts.filter((c) => c.status === filter);
 
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-900">근로계약 관리</h1>
-          <Button asChild>
-            <Link href="/labor/contracts/new">
-              <Plus className="mr-2 h-4 w-4" />새 계약 작성
-            </Link>
-          </Button>
+          {selectedProjectId && (
+            <Button asChild>
+              <Link href={`/projects/${selectedProjectId}/labor-contracts/new`}>
+                <Plus className="mr-2 h-4 w-4" />새 계약 작성
+              </Link>
+            </Button>
+          )}
         </div>
 
+        {/* 프로젝트 선택 */}
         <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>전체 근로계약 목록</CardTitle>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={filter === "all" ? "primary" : "secondary"}
-                  size="sm"
-                  onClick={() => setFilter("all")}
-                >
-                  전체
-                </Button>
-                <Button
-                  variant={filter === "draft" ? "primary" : "secondary"}
-                  size="sm"
-                  onClick={() => setFilter("draft")}
-                >
-                  임시저장
-                </Button>
-                <Button
-                  variant={filter === "sent" ? "primary" : "secondary"}
-                  size="sm"
-                  onClick={() => setFilter("sent")}
-                >
-                  발송완료
-                </Button>
-                <Button
-                  variant={filter === "signed" ? "primary" : "secondary"}
-                  size="sm"
-                  onClick={() => setFilter("signed")}
-                >
-                  서명완료
-                </Button>
-                <Button
-                  variant={filter === "paid" ? "primary" : "secondary"}
-                  size="sm"
-                  onClick={() => setFilter("paid")}
-                >
-                  지급완료
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
+          <CardHeader><CardTitle>프로젝트 선택</CardTitle></CardHeader>
           <CardContent>
-            {isLoading ? (
-              <>
-                {/* 모바일: 스켈레톤 리스트 */}
-                <div className="space-y-3 md:hidden">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3 bg-white">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                          <Skeleton className="h-5 w-24" />
-                          <Skeleton className="h-4 w-32" />
-                        </div>
-                        <Skeleton className="h-6 w-16 rounded-full" />
-                      </div>
-                      <div className="grid gap-2 pt-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-4 w-28" />
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <Skeleton className="h-8 w-16 rounded-lg" />
-                        <Skeleton className="h-8 w-20 rounded-lg" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* 데스크톱: 스켈레톤 테이블 */}
-                <div className="overflow-x-auto hidden md:block">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                        <th className="pb-3 font-medium">근로자명</th>
-                        <th className="pb-3 font-medium">프로젝트</th>
-                        <th className="pb-3 font-medium">근무일자</th>
-                        <th className="pb-3 font-medium">일당</th>
-                        <th className="pb-3 font-medium">상태</th>
-                        <th className="pb-3 font-medium">작성일</th>
-                        <th className="pb-3 font-medium">작업</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <tr key={i} className="border-b border-slate-100 last:border-0">
-                          <td className="py-4"><Skeleton className="h-4 w-16" /></td>
-                          <td className="py-4"><Skeleton className="h-4 w-32" /></td>
-                          <td className="py-4"><Skeleton className="h-4 w-24" /></td>
-                          <td className="py-4"><Skeleton className="h-4 w-20" /></td>
-                          <td className="py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
-                          <td className="py-4"><Skeleton className="h-4 w-24" /></td>
-                          <td className="py-4">
-                            <div className="flex gap-2">
-                              <Skeleton className="h-8 w-12 rounded-lg" />
-                              <Skeleton className="h-8 w-16 rounded-lg" />
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            ) : filteredContracts.length === 0 ? (
-              <div className="py-6 text-center text-sm text-slate-400">
-                {filter === "all"
-                  ? "등록된 계약이 없습니다."
-                  : `${getStatusBadge(filter).label} 상태의 계약이 없습니다.`}
-              </div>
-            ) : (
-              <>
-                {/* 모바일: 카드 리스트 */}
-                <div className="space-y-3 md:hidden">
-                  {filteredContracts.map((contract) => {
-                    const statusInfo = getStatusBadge(contract.status);
-                    return (
-                      <MobileListCard
-                        key={contract.id}
-                        title={contract.worker_name}
-                        subtitle={contract.project_name}
-                        badge={
-                          <Badge variant={statusInfo.variant}>
-                            {statusInfo.label}
-                          </Badge>
-                        }
-                        metadata={[
-                          {
-                            label: "일당",
-                            value: `${contract.daily_rate.toLocaleString()}원`,
-                          },
-                          { label: "근무일", value: contract.work_date },
-                          { label: "작성일", value: contract.created_at },
-                        ]}
-                        actions={
-                          <>
-                            <Button size="sm" variant="secondary">
-                              보기
-                            </Button>
-                            {contract.status === "draft" && (
-                              <Button size="sm">발송</Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={async () => {
-                                try {
-                                  const blob =
-                                    await api.downloadLaborContractHwpx(
-                                      contract.id,
-                                    );
-                                  const url = URL.createObjectURL(blob);
-                                  const a = document.createElement("a");
-                                  a.href = url;
-                                  a.download = `표준근로계약서_${contract.worker_name}.hwpx`;
-                                  document.body.appendChild(a);
-                                  a.click();
-                                  document.body.removeChild(a);
-                                  URL.revokeObjectURL(url);
-                                } catch (e) {
-                                  console.error("HWPX 다운로드 실패:", e);
-                                  toast.error(
-                                    "근로계약서 다운로드에 실패했어요.",
-                                  );
-                                }
-                              }}
-                            >
-                              <FileDown className="mr-1 h-3 w-3" />
-                              다운로드
-                            </Button>
-                          </>
-                        }
-                      />
-                    );
-                  })}
-                </div>
-                {/* 데스크톱: 기존 테이블 */}
-                <div className="overflow-x-auto hidden md:block">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
-                        <th className="pb-3 font-medium">근로자명</th>
-                        <th className="pb-3 font-medium">프로젝트</th>
-                        <th className="pb-3 font-medium">근무일자</th>
-                        <th className="pb-3 font-medium">일당</th>
-                        <th className="pb-3 font-medium">상태</th>
-                        <th className="pb-3 font-medium">작성일</th>
-                        <th className="pb-3 font-medium">작업</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredContracts.map((contract) => {
-                        const statusInfo = getStatusBadge(contract.status);
-                        return (
-                          <tr
-                            key={contract.id}
-                            className="border-b border-slate-100 last:border-0"
-                          >
-                            <td className="py-4 font-medium text-slate-900">
-                              {contract.worker_name}
-                            </td>
-                            <td className="py-4 text-slate-500">
-                              {contract.project_name}
-                            </td>
-                            <td className="py-4 text-slate-500">
-                              {contract.work_date}
-                            </td>
-                            <td className="py-4 text-slate-500">
-                              {contract.daily_rate.toLocaleString()}원
-                            </td>
-                            <td className="py-4">
-                              <Badge variant={statusInfo.variant}>
-                                {statusInfo.label}
-                              </Badge>
-                            </td>
-                            <td className="py-4 text-slate-500">
-                              {contract.created_at}
-                            </td>
-                            <td className="py-4">
-                              <div className="flex gap-2">
-                                <Button size="sm" variant="secondary">
-                                  보기
-                                </Button>
-                                {contract.status === "draft" && (
-                                  <Button size="sm">발송</Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={async () => {
-                                    try {
-                                      const blob =
-                                        await api.downloadLaborContractHwpx(
-                                          contract.id,
-                                        );
-                                      const url = URL.createObjectURL(blob);
-                                      const a = document.createElement("a");
-                                      a.href = url;
-                                      a.download = `표준근로계약서_${contract.worker_name}.hwpx`;
-                                      document.body.appendChild(a);
-                                      a.click();
-                                      document.body.removeChild(a);
-                                      URL.revokeObjectURL(url);
-                                    } catch (e) {
-                                      console.error("HWPX 다운로드 실패:", e);
-                                      toast.error(
-                                        "근로계약서 다운로드에 실패했어요.",
-                                      );
-                                    }
-                                  }}
-                                >
-                                  <FileDown className="mr-1 h-3 w-3" />
-                                  다운로드
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
+            <select
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+            >
+              <option value="">프로젝트를 선택하세요</option>
+              {projects.map((p) => (
+                <option key={p.id} value={String(p.id)}>{p.name}</option>
+              ))}
+            </select>
           </CardContent>
         </Card>
+
+        {/* 계약 목록 */}
+        {selectedProjectId && (
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle>근로계약 목록</CardTitle>
+                <div className="flex flex-wrap gap-2">
+                  {(["all", "draft", "sent", "signed", "paid"] as const).map((s) => (
+                    <Button
+                      key={s}
+                      size="sm"
+                      variant={statusFilter === s ? "primary" : "secondary"}
+                      onClick={() => setStatusFilter(s)}
+                    >
+                      {s === "all" ? "전체" : STATUS_MAP[s].label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-14 w-full" />
+                  ))}
+                </div>
+              ) : contracts.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-400">
+                  {statusFilter === "all" ? "등록된 계약이 없어요." : `${STATUS_MAP[statusFilter as ContractStatus]?.label} 상태의 계약이 없어요.`}
+                </p>
+              ) : (
+                <>
+                  {/* 모바일 */}
+                  <div className="space-y-3 md:hidden">
+                    {contracts.map((c) => {
+                      const si = STATUS_MAP[c.status as ContractStatus] ?? STATUS_MAP.draft;
+                      return (
+                        <MobileListCard
+                          key={c.id}
+                          title={c.worker_name}
+                          subtitle={c.work_date}
+                          badge={<Badge variant={si.variant}>{si.label}</Badge>}
+                          metadata={[{ label: "일당", value: `${Number(c.daily_rate).toLocaleString()}원` }]}
+                          actions={
+                            <>
+                              {c.status === "draft" && (
+                                <Button size="sm" onClick={() => sendMutation.mutate(String(c.id))} disabled={sendMutation.isPending}>
+                                  <Send className="mr-1 h-3 w-3" />발송
+                                </Button>
+                              )}
+                              <Button size="sm" variant="outline" onClick={() => handleDownload(String(c.id), c.worker_name)}>
+                                <FileDown className="mr-1 h-3 w-3" />다운로드
+                              </Button>
+                            </>
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                  {/* 데스크톱 */}
+                  <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
+                          <th className="pb-3 font-medium">근로자명</th>
+                          <th className="pb-3 font-medium">근무일자</th>
+                          <th className="pb-3 font-medium">일당</th>
+                          <th className="pb-3 font-medium">직종</th>
+                          <th className="pb-3 font-medium">상태</th>
+                          <th className="pb-3 font-medium">작업</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {contracts.map((c) => {
+                          const si = STATUS_MAP[c.status as ContractStatus] ?? STATUS_MAP.draft;
+                          return (
+                            <tr key={c.id} className="border-b border-slate-100 last:border-0">
+                              <td className="py-4 font-medium text-slate-900">{c.worker_name}</td>
+                              <td className="py-4 text-slate-500">{c.work_date}</td>
+                              <td className="py-4 text-slate-500">{Number(c.daily_rate).toLocaleString()}원</td>
+                              <td className="py-4 text-slate-500">{c.work_type ?? "-"}</td>
+                              <td className="py-4"><Badge variant={si.variant}>{si.label}</Badge></td>
+                              <td className="py-4">
+                                <div className="flex gap-2">
+                                  {c.status === "draft" && (
+                                    <Button size="sm" onClick={() => sendMutation.mutate(String(c.id))} disabled={sendMutation.isPending}>발송</Button>
+                                  )}
+                                  <Button size="sm" variant="outline" onClick={() => handleDownload(String(c.id), c.worker_name)}>
+                                    <FileDown className="mr-1 h-3 w-3" />다운로드
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AdminLayout>
   );
