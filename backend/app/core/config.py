@@ -92,6 +92,9 @@ class Settings(BaseSettings):
     labor_code_validation_enabled: bool = True
     labor_deployment_gate_enabled: bool = True
 
+    # 필드 암호화 (Fernet)
+    field_encryption_key: str = ""
+
     @property
     def async_database_url(self) -> str:
         """비동기 데이터베이스 URL 반환."""
