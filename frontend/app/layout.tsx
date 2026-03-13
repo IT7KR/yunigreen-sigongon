@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { AppRootLayout } from "@sigongcore/features";
+import { Toaster } from "@sigongcore/ui";
 import { Providers } from "@/lib/providers";
 import "./globals.css";
+
+const PRETENDARD_FONT_STYLESHEET =
+  "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css";
 
 export const metadata: Metadata = {
   title: "시공코어",
@@ -19,5 +22,21 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AppRootLayout Providers={Providers}>{children}</AppRootLayout>;
+  return (
+    <html lang="ko">
+      <head>
+        <link
+          rel="stylesheet"
+          as="style"
+          crossOrigin="anonymous"
+          href={PRETENDARD_FONT_STYLESHEET}
+        />
+      </head>
+      <body className="antialiased">
+        <Providers>{children}</Providers>
+        <Toaster />
+        <div id="modal-root" />
+      </body>
+    </html>
+  );
 }
