@@ -134,6 +134,15 @@ class MaterialOrder(SQLModel, table=True):
     invoice_amount: Optional[int] = Field(default=None)
     invoice_file_url: Optional[str] = Field(default=None, max_length=500)
     notes: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    # 발주 상세 정보 (신규)
+    order_date: Optional[date] = Field(default=None)
+    arrival_date: Optional[date] = Field(default=None)
+    arrival_time: Optional[str] = Field(default=None, max_length=10)      # "HH:MM"
+    delivery_address: Optional[str] = Field(default=None, max_length=500)
+    delivery_terms: Optional[str] = Field(default=None, max_length=100)   # 인도조건
+    payment_terms: Optional[str] = Field(default=None, max_length=200)    # 대금조건
+    site_manager_name: Optional[str] = Field(default=None, max_length=50)
+    site_manager_phone: Optional[str] = Field(default=None, max_length=20)
     requested_at: Optional[datetime] = Field(default=None)
     confirmed_at: Optional[datetime] = Field(default=None)  # Backward compatibility
     payment_at: Optional[datetime] = Field(default=None)
