@@ -86,6 +86,7 @@ export default function ProjectDetailLayout({
       category: "finance",
     },
     { name: "노무관리", href: `/projects/${id}/labor`, category: "finance" },
+    { name: "근로계약", href: `/projects/${id}/labor-contracts`, category: "finance" },
     {
       name: "하자보증",
       href: `/projects/${id}/warranty`,
