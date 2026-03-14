@@ -57,7 +57,7 @@ function getPlanPresentation(plan: string) {
 
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<TenantItem[]>([]);
-  const [filteredTenants, setFilteredTenants] = useState<TenantItem[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPlan, setFilterPlan] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -69,20 +69,22 @@ export default function TenantsPage() {
 
   useEffect(() => {
     loadTenants();
-  }, [currentPage]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [searchQuery, filterPlan, filterStatus, tenants]);
+  }, [currentPage, searchQuery, filterPlan, filterStatus]);
 
   async function loadTenants() {
     try {
       setIsLoading(true);
-      const response = await api.getTenants({ page: currentPage });
+      const response = await api.getTenants({
+        page: currentPage,
+        search: searchQuery || undefined,
+        plan: filterPlan !== "all" ? filterPlan : undefined,
+        status: filterStatus !== "all" ? filterStatus : undefined,
+      });
       if (response.success && response.data) {
         setTenants(response.data as TenantItem[]);
         if (response.meta) {
           setTotalPages(response.meta.total_pages);
+          setTotalItems(response.meta.total);
         }
       }
     } catch (err) {
@@ -92,23 +94,16 @@ export default function TenantsPage() {
     }
   }
 
-  function applyFilters() {
-    let filtered = [...tenants];
+  function handleFilterChange(setter: (v: string) => void) {
+    return (e: React.ChangeEvent<HTMLSelectElement>) => {
+      setter(e.target.value);
+      setCurrentPage(1);
+    };
+  }
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter((t) => t.name.toLowerCase().includes(q));
-    }
-
-    if (filterPlan !== "all") {
-      filtered = filtered.filter((t) => t.plan === filterPlan);
-    }
-
-    if (filterStatus !== "all") {
-      filtered = filtered.filter((t) => t.status === filterStatus);
-    }
-
-    setFilteredTenants(filtered);
+  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
   }
 
   return (
@@ -116,7 +111,7 @@ export default function TenantsPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">고객사 관리</h1>
-          <p className="mt-1 text-slate-500">전체 {tenants.length}개 고객사</p>
+          <p className="mt-1 text-slate-500">전체 {totalItems}개 고객사</p>
         </div>
 
         <Card>
@@ -128,7 +123,7 @@ export default function TenantsPage() {
                   type="search"
                   placeholder="고객사명으로 검색..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={handleSearchChange}
                   className="h-10 w-full max-w-md rounded-lg border border-slate-300 bg-white pl-10 pr-4 text-sm placeholder:text-slate-400 focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 />
               </div>
@@ -136,7 +131,7 @@ export default function TenantsPage() {
               <div className="flex gap-2">
                 <PrimitiveSelect
                   value={filterPlan}
-                  onChange={(e) => setFilterPlan(e.target.value)}
+                  onChange={handleFilterChange(setFilterPlan)}
                   className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 >
                   <option value="all">모든 요금제</option>
@@ -148,7 +143,7 @@ export default function TenantsPage() {
 
                 <PrimitiveSelect
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
+                  onChange={handleFilterChange(setFilterStatus)}
                   className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-2 focus:ring-brand-point-200"
                 >
                   <option value="all">모든 상태</option>
@@ -223,12 +218,12 @@ export default function TenantsPage() {
           <>
             {/* Mobile card view */}
             <div className="space-y-3 md:hidden">
-              {filteredTenants.length === 0 ? (
+              {tenants.length === 0 ? (
                 <div className="py-12 text-center text-slate-500">
                   고객사가 없어요
                 </div>
               ) : (
-                filteredTenants.map((tenant) => {
+                tenants.map((tenant) => {
                   const plan = getPlanPresentation(tenant.plan);
                   return (
                     <MobileListCard
@@ -290,7 +285,7 @@ export default function TenantsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredTenants.length === 0 ? (
+                      {tenants.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center">
                             <div className="py-12 text-slate-500">
@@ -299,7 +294,7 @@ export default function TenantsPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredTenants.map((tenant) => {
+                        tenants.map((tenant) => {
                           const plan = getPlanPresentation(tenant.plan);
 
                           return (

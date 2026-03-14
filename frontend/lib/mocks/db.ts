@@ -105,6 +105,13 @@ export interface Tenant {
   is_custom_trial: boolean; // 최고관리자이 부여한 커스텀 무료인지
   billing_amount?: number; // 결제 금액 (무료면 0)
   payment_id?: string; // 결제 ID (토스페이먼츠)
+  is_active?: boolean; // defaults to true if undefined
+  payment_history?: Array<{
+    id: string;
+    date: string;
+    amount: number;
+    status: "paid" | "failed";
+  }>;
 }
 
 // 구독 상태 판단 로직
@@ -434,6 +441,11 @@ const INITIAL_DATA: MockSchema = {
       subscription_end_date: "2026-01-01T00:00:00Z",
       is_custom_trial: false,
       billing_amount: 1188000,
+      payment_history: [
+        { id: "ph_t1_1", date: "2025-01-01", amount: 1188000, status: "paid" },
+        { id: "ph_t1_2", date: "2024-01-01", amount: 1188000, status: "paid" },
+        { id: "ph_t1_3", date: "2023-01-01", amount: 1188000, status: "paid" },
+      ],
     },
     {
       id: "tenant_2",
@@ -447,6 +459,10 @@ const INITIAL_DATA: MockSchema = {
       subscription_end_date: "2026-06-15T00:00:00Z",
       is_custom_trial: false,
       billing_amount: 588000,
+      payment_history: [
+        { id: "ph_t2_1", date: "2025-06-15", amount: 588000, status: "paid" },
+        { id: "ph_t2_2", date: "2024-06-15", amount: 588000, status: "paid" },
+      ],
     },
   ],
   invitations: [],

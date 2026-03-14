@@ -25,6 +25,8 @@ import {
   CreditCard,
   FolderKanban,
   Loader2,
+  Pencil,
+  RefreshCw,
   Sparkles,
   ToggleLeft,
   ToggleRight,
@@ -76,9 +78,11 @@ interface TenantDetail {
   is_active: boolean;
   trial_override_enabled?: boolean | null;
   trial_override_months?: number | null;
+  trial_override_unit?: "months" | "days" | null;
   trial_override_reason?: string | null;
   effective_trial_enabled?: boolean;
   effective_trial_months?: number;
+  effective_trial_unit?: "months" | "days";
   trial_source?: string | null;
 }
 
@@ -137,9 +141,26 @@ export default function TenantDetailPage() {
   const [tenant, setTenant] = useState<TenantDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showTrialPolicyModal, setShowTrialPolicyModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    business_number: "",
+    representative: "",
+    rep_phone: "",
+    rep_email: "",
+    contact_name: "",
+    contact_phone: "",
+    contact_position: "",
+  });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<"none" | "trial" | "basic" | "pro">("none");
+  const [planEndDate, setPlanEndDate] = useState("");
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
   const [trialEnabled, setTrialEnabled] = useState(false);
   const [trialMonths, setTrialMonths] = useState(1);
   const [trialReason, setTrialReason] = useState("");
+  const [trialUnit, setTrialUnit] = useState<"months" | "days">("months");
   const [isSavingTrialPolicy, setIsSavingTrialPolicy] = useState(false);
   const { confirm } = useConfirmDialog();
 
@@ -188,20 +209,9 @@ export default function TenantDetailPage() {
           contact_name: tenantAny.contact_name as string | undefined,
           contact_phone: tenantAny.contact_phone as string | undefined,
           contact_position: tenantAny.contact_position as string | undefined,
-          payment_history:
-            (tenantData.billing_amount || 0) > 0
-              ? [
-                  {
-                    id: "p1",
-                    date:
-                      tenantData.subscription_start_date?.slice(0, 10) || "-",
-                    amount: tenantData.billing_amount || 0,
-                    status: "paid",
-                  },
-                ]
-              : [],
-          users: [],
-          project_stats: {
+          payment_history: tenantData.payment_history || [],
+          users: tenantData.users || [],
+          project_stats: tenantData.project_stats || {
             draft: 0,
             in_progress: 0,
             completed: tenantData.projects_count,
@@ -210,9 +220,11 @@ export default function TenantDetailPage() {
           is_active: (tenantAny.is_active as boolean | undefined) ?? true,
           trial_override_enabled: tenantData.trial_override_enabled,
           trial_override_months: tenantData.trial_override_months,
+          trial_override_unit: tenantData.trial_override_unit,
           trial_override_reason: tenantData.trial_override_reason,
           effective_trial_enabled: tenantData.effective_trial_enabled,
           effective_trial_months: tenantData.effective_trial_months,
+          effective_trial_unit: tenantData.effective_trial_unit,
           trial_source: tenantData.trial_source,
         };
 
@@ -228,6 +240,11 @@ export default function TenantDetailPage() {
             1,
         );
         setTrialReason(tenantData.trial_override_reason || "");
+        setTrialUnit(
+          tenantData.trial_override_unit ??
+            tenantData.effective_trial_unit ??
+            "months",
+        );
       }
     } catch (err) {
       console.error("Failed to load tenant detail:", err);
@@ -239,7 +256,11 @@ export default function TenantDetailPage() {
 
   async function handleSaveTrialPolicy() {
     if (trialEnabled && trialMonths < 1) {
-      toast.error("무료 체험 개월 수를 1 이상으로 입력해 주세요.");
+      toast.error(
+        trialUnit === "days"
+          ? "무료 체험 일 수를 1 이상으로 입력해 주세요."
+          : "무료 체험 개월 수를 1 이상으로 입력해 주세요."
+      );
       return;
     }
 
@@ -248,6 +269,7 @@ export default function TenantDetailPage() {
       const response = await api.setTenantTrialPolicy(tenantId, {
         trial_enabled: trialEnabled,
         trial_months: trialEnabled ? trialMonths : 0,
+        trial_unit: trialUnit,
         reason: trialReason.trim() || undefined,
       });
 
@@ -266,20 +288,107 @@ export default function TenantDetailPage() {
     }
   }
 
+  function handleOpenPlanModal() {
+    if (!tenant) return;
+    setSelectedPlan(tenant.plan as "none" | "trial" | "basic" | "pro");
+    const nextYear = new Date();
+    nextYear.setFullYear(nextYear.getFullYear() + 1);
+    setPlanEndDate(nextYear.toISOString().slice(0, 10));
+    setShowPlanModal(true);
+  }
+
+  async function handleSavePlan() {
+    if (!tenant) return;
+    setIsSavingPlan(true);
+    try {
+      const planPrices: Record<string, number> = { basic: 588000, pro: 1188000, trial: 0, none: 0 };
+      const response = await api.changeTenantPlan(tenantId, {
+        plan: selectedPlan,
+        subscription_end_date: ["basic", "pro"].includes(selectedPlan) ? planEndDate : undefined,
+        billing_amount: planPrices[selectedPlan],
+      });
+      if (response.success) {
+        toast.success("요금제를 변경했어요.");
+        setShowPlanModal(false);
+        await loadTenantDetail();
+      } else {
+        toast.error(response.error?.message || "요금제 변경에 실패했어요.");
+      }
+    } catch (err) {
+      console.error("Failed to change plan:", err);
+      toast.error("요금제 변경에 실패했어요.");
+    } finally {
+      setIsSavingPlan(false);
+    }
+  }
+
+  function handleOpenEditModal() {
+    if (!tenant) return;
+    setEditForm({
+      name: tenant.name,
+      business_number: tenant.business_number,
+      representative: tenant.representative,
+      rep_phone: tenant.rep_phone,
+      rep_email: tenant.rep_email,
+      contact_name: tenant.contact_name || "",
+      contact_phone: tenant.contact_phone || "",
+      contact_position: tenant.contact_position || "",
+    });
+    setShowEditModal(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!tenant) return;
+    setIsSavingEdit(true);
+    try {
+      const response = await api.updateTenant(tenantId, {
+        name: editForm.name.trim() || undefined,
+        business_number: editForm.business_number.trim() || undefined,
+        representative: editForm.representative.trim() || undefined,
+        rep_phone: editForm.rep_phone.trim() || undefined,
+        rep_email: editForm.rep_email.trim() || undefined,
+        contact_name: editForm.contact_name.trim() || undefined,
+        contact_phone: editForm.contact_phone.trim() || undefined,
+        contact_position: editForm.contact_position.trim() || undefined,
+      });
+      if (response.success) {
+        toast.success("고객사 정보를 저장했어요.");
+        setShowEditModal(false);
+        await loadTenantDetail();
+      } else {
+        toast.error(response.error?.message || "저장에 실패했어요.");
+      }
+    } catch (err) {
+      console.error("Failed to update tenant:", err);
+      toast.error("저장에 실패했어요.");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
+
   async function toggleActiveStatus() {
     if (!tenant) return;
 
+    const nextActive = !tenant.is_active;
     const confirmed = await confirm({
       title: `정말 이 계정을 ${tenant.is_active ? "비활성화" : "활성화"}할까요?`,
       confirmLabel: tenant.is_active ? "비활성화" : "활성화",
       variant: "destructive",
     });
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
-    setTenant({ ...tenant, is_active: !tenant.is_active });
-    toast.success(`계정을 ${tenant.is_active ? "비활성화" : "활성화"}했어요.`);
+    try {
+      const response = await api.setTenantActive(tenantId, nextActive);
+      if (response.success) {
+        setTenant({ ...tenant, is_active: nextActive });
+        toast.success(`계정을 ${nextActive ? "활성화" : "비활성화"}했어요.`);
+      } else {
+        toast.error(response.error?.message || "상태 변경에 실패했어요.");
+      }
+    } catch (err) {
+      console.error("Failed to toggle tenant active status:", err);
+      toast.error("상태 변경에 실패했어요.");
+    }
   }
 
   if (isLoading) {
@@ -306,7 +415,7 @@ export default function TenantDetailPage() {
     tenant.trial_override_enabled == null
       ? "없음"
       : tenant.trial_override_enabled
-        ? `${tenant.trial_override_months || 0}개월 제공`
+        ? `${tenant.trial_override_months || 0}${(tenant.trial_override_unit || "months") === "days" ? "일" : "개월"} 제공`
         : "미제공";
   const remainingLabel =
     tenant.plan === "none"
@@ -345,8 +454,12 @@ export default function TenantDetailPage() {
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>기본 정보</CardTitle>
+              <Button variant="ghost" size="sm" onClick={handleOpenEditModal}>
+                <Pencil className="h-4 w-4" />
+                편집
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -427,8 +540,12 @@ export default function TenantDetailPage() {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>구독 정보</CardTitle>
+              <Button variant="ghost" size="sm" onClick={handleOpenPlanModal}>
+                <RefreshCw className="h-4 w-4" />
+                요금제 변경
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -509,7 +626,7 @@ export default function TenantDetailPage() {
                     <p className="font-medium text-slate-900">실효 정책</p>
                     <p className="mt-1 text-sm text-slate-600">
                       {tenant.effective_trial_enabled
-                        ? `${tenant.effective_trial_months || 0}개월 제공`
+                        ? `${tenant.effective_trial_months || 0}${(tenant.effective_trial_unit || "months") === "days" ? "일" : "개월"} 제공`
                         : "무료 체험 미제공"}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
@@ -764,6 +881,77 @@ export default function TenantDetailPage() {
       </div>
 
       <Modal
+        isOpen={showPlanModal}
+        onClose={() => setShowPlanModal(false)}
+        title="요금제 변경"
+        description="고객사의 요금제를 변경합니다."
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="mb-3 text-sm font-medium text-slate-700">요금제 선택</p>
+            <div className="grid grid-cols-2 gap-3">
+              {(["none", "trial", "basic", "pro"] as const).map((plan) => {
+                const labels = { none: "미선택", trial: "무료 체험", basic: "Basic", pro: "Pro" };
+                return (
+                  <Button
+                    key={plan}
+                    variant={selectedPlan === plan ? "primary" : "secondary"}
+                    onClick={() => setSelectedPlan(plan)}
+                    className="w-full"
+                  >
+                    {labels[plan]}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          {["basic", "pro"].includes(selectedPlan) && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">구독 만료일</label>
+              <PrimitiveInput
+                type="date"
+                value={planEndDate}
+                onChange={(e) => setPlanEndDate(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+              />
+            </div>
+          )}
+
+          <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+            {selectedPlan === "none" && "요금제 미선택 상태로 변경합니다."}
+            {selectedPlan === "trial" && "무료 체험 상태로 변경합니다."}
+            {selectedPlan === "basic" && "Basic 플랜 (연 588,000원)으로 변경합니다."}
+            {selectedPlan === "pro" && "Pro 플랜 (연 1,188,000원)으로 변경합니다."}
+          </div>
+        </div>
+        <div className="mt-6 flex gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => setShowPlanModal(false)}
+            className="flex-1"
+            disabled={isSavingPlan}
+          >
+            취소
+          </Button>
+          <Button
+            onClick={handleSavePlan}
+            className="flex-1"
+            disabled={isSavingPlan}
+          >
+            {isSavingPlan ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                변경 중...
+              </>
+            ) : (
+              "변경"
+            )}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
         isOpen={showTrialPolicyModal}
         onClose={() => setShowTrialPolicyModal(false)}
         title="고객사 무료 체험 정책 설정"
@@ -787,14 +975,44 @@ export default function TenantDetailPage() {
             </Button>
           </div>
 
+          {trialEnabled && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                단위 선택
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button
+                  variant={trialUnit === "months" ? "primary" : "secondary"}
+                  onClick={() => {
+                    setTrialUnit("months");
+                    setTrialMonths(1);
+                  }}
+                  className="w-full"
+                >
+                  개월
+                </Button>
+                <Button
+                  variant={trialUnit === "days" ? "primary" : "secondary"}
+                  onClick={() => {
+                    setTrialUnit("days");
+                    setTrialMonths(1);
+                  }}
+                  className="w-full"
+                >
+                  일
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              무료 체험 개월 수
+              {trialUnit === "days" ? "무료 체험 일 수" : "무료 체험 개월 수"}
             </label>
             <PrimitiveInput
               type="number"
               min={1}
-              max={24}
+              max={trialUnit === "days" ? 365 : 24}
               value={String(trialMonths)}
               onChange={(event) =>
                 setTrialMonths(Math.max(1, Number(event.target.value) || 1))
@@ -803,7 +1021,9 @@ export default function TenantDetailPage() {
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
             />
             <p className="mt-1 text-xs text-slate-500">
-              1개월 단위로 입력하며 최대 24개월까지 지원합니다.
+              {trialUnit === "days"
+                ? "1일 단위로 입력하며 최대 365일까지 지원합니다."
+                : "1개월 단위로 입력하며 최대 24개월까지 지원합니다."}
             </p>
           </div>
 
@@ -830,6 +1050,114 @@ export default function TenantDetailPage() {
             disabled={isSavingTrialPolicy}
           >
             {isSavingTrialPolicy ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                저장 중...
+              </>
+            ) : (
+              "저장"
+            )}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="기본 정보 편집"
+        description="고객사의 기본 정보를 수정합니다."
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">회사명</label>
+            <PrimitiveInput
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">사업자번호</label>
+            <PrimitiveInput
+              value={editForm.business_number}
+              onChange={(e) => setEditForm({ ...editForm, business_number: e.target.value })}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+            />
+          </div>
+          <div className="pt-2">
+            <h4 className="mb-3 text-sm font-semibold text-slate-700">대표자 정보</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">성함</label>
+                <PrimitiveInput
+                  value={editForm.representative}
+                  onChange={(e) => setEditForm({ ...editForm, representative: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">연락처</label>
+                <PrimitiveInput
+                  value={editForm.rep_phone}
+                  onChange={(e) => setEditForm({ ...editForm, rep_phone: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">이메일</label>
+                <PrimitiveInput
+                  value={editForm.rep_email}
+                  onChange={(e) => setEditForm({ ...editForm, rep_email: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="pt-2">
+            <h4 className="mb-3 text-sm font-semibold text-slate-700">실무자 정보 (선택)</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">성함</label>
+                <PrimitiveInput
+                  value={editForm.contact_name}
+                  onChange={(e) => setEditForm({ ...editForm, contact_name: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">연락처</label>
+                <PrimitiveInput
+                  value={editForm.contact_phone}
+                  onChange={(e) => setEditForm({ ...editForm, contact_phone: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">직위</label>
+                <PrimitiveInput
+                  value={editForm.contact_position}
+                  onChange={(e) => setEditForm({ ...editForm, contact_position: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mt-6 flex gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => setShowEditModal(false)}
+            className="flex-1"
+            disabled={isSavingEdit}
+          >
+            취소
+          </Button>
+          <Button
+            onClick={handleSaveEdit}
+            className="flex-1"
+            disabled={isSavingEdit}
+          >
+            {isSavingEdit ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 저장 중...
