@@ -235,24 +235,7 @@ export default function UsersPage() {
     await loadUsers();
   }
 
-  async function handleDelete(userId: string) {
-    const confirmed = await confirm({
-      title: "정말 이 사용자를 삭제할까요?",
-      description: "삭제 후에는 되돌릴 수 없습니다.",
-      confirmLabel: "삭제",
-      variant: "destructive",
-    });
-    if (!confirmed) return;
-
-    try {
-      await api.deleteUser(userId);
-      setUsers(users.filter((u) => u.id !== userId));
-      toast.success("사용자를 삭제했어요");
-    } catch (err) {
-      toast.error("삭제에 실패했어요");
-      console.error(err);
-    }
-  }
+  // handleDelete 제거됨 — 하드 삭제 대신 퇴사 처리(TerminateUserModal) 사용
 
   function openEditModal(user: UserItem) {
     setEditingUser(user);
@@ -490,12 +473,6 @@ export default function UsersPage() {
                               <UserMinus className="h-4 w-4 text-amber-500" />
                             </PrimitiveButton>
                           )}
-                          <PrimitiveButton
-                            onClick={() => handleDelete(user.id)}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-400" />
-                          </PrimitiveButton>
                         </>
                       }
                     />
@@ -594,12 +571,6 @@ export default function UsersPage() {
                                     <UserMinus className="h-4 w-4 text-amber-500" />
                                   </PrimitiveButton>
                                 )}
-                                <PrimitiveButton
-                                  onClick={() => handleDelete(user.id)}
-                                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-400" />
-                                </PrimitiveButton>
                               </div>
                             </TableCell>
                           </TableRow>

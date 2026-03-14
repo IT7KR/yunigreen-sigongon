@@ -249,29 +249,8 @@ async def update_user(
     return APIResponse.ok(UserListItem.model_validate(user))
 
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(
-    user_id: int,
-    db: DBSession,
-    admin: AdminUser,
-):
-    query = select(User).where(User.id == user_id, User.deleted_at == None)  # noqa: E711
-    if not _is_super_admin(admin):
-        query = query.where(User.organization_id == admin.organization_id)
-    result = await db.execute(query)
-    user = result.scalar_one_or_none()
-
-    if not user:
-        raise NotFoundException("user", user_id)
-
-    if user.id == admin.id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="자기 자신은 삭제할 수 없어요",
-        )
-
-    await db.delete(user)
-    await db.commit()
+# DELETE /{user_id} 하드삭제 엔드포인트 제거됨
+# → POST /{user_id}/delete (soft delete) 사용
 
 
 class UserDeleteRequest(BaseModel):
