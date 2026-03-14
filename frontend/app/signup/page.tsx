@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Card, Input, PrimitiveInput, Stepper } from "@sigongcore/ui";
-import { Droplets, Check, X, Loader2 } from "lucide-react";
+import { Button, Card, ConsentCheckboxGroup, Input, Stepper } from "@sigongcore/ui";
+import { LegalContentModal } from "@/components/legal/LegalContentModal";
+import { termsDocument } from "@/lib/legal/terms";
+import { privacyDocument } from "@/lib/legal/privacy";
+import { Droplets, Check, Loader2 } from "lucide-react";
 import {
   STEPS,
   getSignupData,
@@ -24,6 +27,9 @@ export default function SignupPage() {
 
   // Username check state
   const [usernameChecking, setUsernameChecking] = useState(false);
+
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
 
   // Phone verification state (OTP)
   const [phoneSending, setPhoneSending] = useState(false);
@@ -339,47 +345,36 @@ export default function SignupPage() {
             </div>
           )}
 
-          {/* Terms */}
-          <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <PrimitiveInput
-                type="checkbox"
-                checked={data.termsAgreed || false}
-                onChange={(e) =>
-                  setData({ ...data, termsAgreed: e.target.checked })
-                }
-                className="mt-0.5 h-5 w-5 rounded border-slate-300 text-brand-point-500 focus:ring-brand-point-500"
-              />
-              <div className="flex-1">
-                <span className="text-sm font-medium text-slate-900">
-                  서비스 이용약관 동의 (필수)
-                </span>
-              </div>
-            </label>
-
-            <label className="flex items-start gap-3 cursor-pointer">
-              <PrimitiveInput
-                type="checkbox"
-                checked={data.privacyAgreed || false}
-                onChange={(e) =>
-                  setData({ ...data, privacyAgreed: e.target.checked })
-                }
-                className="mt-0.5 h-5 w-5 rounded border-slate-300 text-brand-point-500 focus:ring-brand-point-500"
-              />
-              <div className="flex-1">
-                <span className="text-sm font-medium text-slate-900">
-                  개인정보 처리방침 동의 (필수)
-                </span>
-              </div>
-            </label>
-
-            {(errors.terms || errors.privacy) && (
-              <p className="text-sm text-red-600 flex items-center gap-1">
-                <X className="h-4 w-4" />
-                {errors.terms || errors.privacy}
-              </p>
-            )}
-          </div>
+          {/* Consent checkboxes */}
+          <ConsentCheckboxGroup
+            items={[
+              {
+                key: "termsAgreed",
+                label: "서비스 이용약관 동의",
+                required: true,
+                onViewDetail: () => setTermsModalOpen(true),
+              },
+              {
+                key: "privacyAgreed",
+                label: "개인정보 처리방침 동의",
+                required: true,
+                onViewDetail: () => setPrivacyModalOpen(true),
+              },
+              {
+                key: "marketingAgreed",
+                label: "마케팅 정보 수신 동의",
+                required: false,
+                description: "동의하지 않아도 서비스 이용에 제한이 없습니다",
+              },
+            ]}
+            values={{
+              termsAgreed: data.termsAgreed || false,
+              privacyAgreed: data.privacyAgreed || false,
+              marketingAgreed: data.marketingAgreed || false,
+            }}
+            onChange={(values) => setData({ ...data, ...values })}
+            error={errors.terms || errors.privacy}
+          />
 
           <div className="flex gap-3 pt-4">
             <Button variant="secondary" fullWidth size="lg" asChild>
@@ -403,6 +398,22 @@ export default function SignupPage() {
           </div>
         </div>
       </Card>
+
+      {/* Terms Modal */}
+      <LegalContentModal
+        isOpen={termsModalOpen}
+        onClose={() => setTermsModalOpen(false)}
+        document={termsDocument}
+        onConfirm={() => setData((prev) => ({ ...prev, termsAgreed: true }))}
+      />
+
+      {/* Privacy Modal */}
+      <LegalContentModal
+        isOpen={privacyModalOpen}
+        onClose={() => setPrivacyModalOpen(false)}
+        document={privacyDocument}
+        onConfirm={() => setData((prev) => ({ ...prev, privacyAgreed: true }))}
+      />
     </div>
   );
 }
