@@ -5564,6 +5564,49 @@ export class MockAPIClient {
     return delay(ok({ id: tenantId }));
   }
 
+  async createTenant(data: {
+    name: string;
+    business_number?: string;
+    representative?: string;
+    rep_phone?: string;
+    rep_email?: string;
+    plan: "none" | "trial" | "basic" | "pro";
+    subscription_end_date?: string;
+  }) {
+    const newTenant = {
+      id: `tenant_${Math.random().toString(36).slice(2, 10)}`,
+      name: data.name,
+      organization_id: `org_${Math.random().toString(36).slice(2, 10)}`,
+      businessNumber: data.business_number,
+      representative: data.representative,
+      rep_phone: data.rep_phone,
+      rep_email: data.rep_email,
+      plan: data.plan,
+      users_count: 0,
+      projects_count: 0,
+      created_at: new Date().toISOString(),
+      subscription_start_date: new Date().toISOString(),
+      subscription_end_date: data.subscription_end_date || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      is_custom_trial: false,
+      billing_amount: data.plan === "basic" ? 588000 : data.plan === "pro" ? 1188000 : 0,
+      is_active: true,
+      payment_history: [] as Array<{ id: string; date: string; amount: number; status: "paid" | "failed" }>,
+    };
+    const tenants = mockDb.get("tenants");
+    mockDb.set("tenants", [...tenants, newTenant]);
+    return delay(ok(newTenant));
+  }
+
+  async deleteTenant(tenantId: string) {
+    const tenants = mockDb.get("tenants");
+    const filtered = tenants.filter((t) => t.id !== tenantId);
+    if (filtered.length === tenants.length) {
+      return delay(fail<{ id: string }>("NOT_FOUND", "테넌트를 찾을 수 없어요"));
+    }
+    mockDb.set("tenants", filtered);
+    return delay(ok({ id: tenantId }));
+  }
+
   async uploadPricebook(
     file: File,
     data: { version_label: string; effective_from: string },

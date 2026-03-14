@@ -2655,6 +2655,29 @@ export class APIClient {
     return response.data;
   }
 
+  async createTenant(data: {
+    name: string;
+    business_number?: string;
+    representative?: string;
+    rep_phone?: string;
+    rep_email?: string;
+    plan: string;
+    subscription_end_date?: string;
+  }) {
+    const response = await this.client.post<APIResponse<{ id: string; name: string }>>(
+      "/admin/tenants",
+      data,
+    );
+    return response.data;
+  }
+
+  async deleteTenant(tenantId: string) {
+    const response = await this.client.delete<APIResponse<{ id: string }>>(
+      `/admin/tenants/${tenantId}`,
+    );
+    return response.data;
+  }
+
   async createInvitation(data: {
     phone: string;
     name: string;
