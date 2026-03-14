@@ -190,6 +190,7 @@ export default function SignupPage() {
           <p className="mt-2 text-slate-600">
             회원가입을 위한 기본 정보를 입력해주세요
           </p>
+          <p className="mt-1 text-xs text-slate-400">* 표시는 필수 입력 항목입니다</p>
         </div>
 
         <div className="space-y-4">
@@ -199,6 +200,7 @@ export default function SignupPage() {
               <div className="flex-1">
                 <Input
                   label="아이디"
+                  required
                   type="text"
                   placeholder="영문으로 시작, 4-20자"
                   value={data.username || ""}
@@ -248,6 +250,7 @@ export default function SignupPage() {
           {/* Password */}
           <Input
             label="비밀번호"
+            required
             type="password"
             showPasswordToggle
             placeholder="8자 이상, 영문+숫자+특수문자"
@@ -258,6 +261,7 @@ export default function SignupPage() {
 
           <Input
             label="비밀번호 확인"
+            required
             type="password"
             showPasswordToggle
             placeholder="비밀번호 재입력"
@@ -274,6 +278,7 @@ export default function SignupPage() {
               <div className="flex-1">
                 <Input
                   label="휴대폰 번호"
+                  required
                   placeholder="010-0000-0000"
                   value={data.phone || ""}
                   onChange={(e) => {

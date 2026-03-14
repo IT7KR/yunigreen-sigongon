@@ -10,7 +10,6 @@ import {
   Loader2,
   Building2,
   ArrowLeft,
-  ArrowRight,
   AlertTriangle,
   XCircle,
   HelpCircle,
@@ -24,7 +23,14 @@ import {
 } from "../types";
 import { api } from "@/lib/api";
 
-type VerificationStatus = "idle" | "loading" | "active" | "suspended" | "closed" | "unknown" | "duplicate";
+type VerificationStatus =
+  | "idle"
+  | "loading"
+  | "active"
+  | "suspended"
+  | "closed"
+  | "unknown"
+  | "duplicate";
 
 interface VerificationResult {
   status: VerificationStatus;
@@ -50,7 +56,8 @@ function BusinessStatusBadge({ result }: { result: VerificationResult }) {
             <div className="mt-1 space-y-0.5 text-sm text-green-800">
               {result.taxType && (
                 <p>
-                  <span className="font-medium">과세유형:</span> {result.taxType}
+                  <span className="font-medium">과세유형:</span>{" "}
+                  {result.taxType}
                 </p>
               )}
               <p className="text-green-700">{result.message}</p>
@@ -143,7 +150,8 @@ export default function BusinessPage() {
   const [data, setData] = useState<Partial<SignupData>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [verifying, setVerifying] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [verificationResult, setVerificationResult] =
+    useState<VerificationResult | null>(null);
 
   useEffect(() => {
     const stored = getSignupData();
@@ -172,7 +180,10 @@ export default function BusinessPage() {
     const newErrors: Record<string, string> = { ...errors };
 
     if (!data.businessNumber || !validateBusinessNumber(data.businessNumber)) {
-      setErrors({ ...newErrors, businessNumber: "000-00-00000 형식으로 입력하세요" });
+      setErrors({
+        ...newErrors,
+        businessNumber: "000-00-00000 형식으로 입력하세요",
+      });
       return;
     }
 
@@ -185,7 +196,8 @@ export default function BusinessPage() {
       if (!verifyRes.success || !verifyRes.data) {
         setVerificationResult({
           status: "unknown",
-          message: "사업자 상태를 조회할 수 없습니다. 잠시 후 다시 시도해주세요.",
+          message:
+            "사업자 상태를 조회할 수 없습니다. 잠시 후 다시 시도해주세요.",
         });
         setData({ ...data, businessVerified: false });
         setVerifying(false);
@@ -196,23 +208,41 @@ export default function BusinessPage() {
 
       switch (status) {
         case "duplicate":
-          setVerificationResult({ status: "duplicate", message: "이미 가입된 사업자등록번호입니다. 1개의 사업자번호로는 1개의 대표자 계정만 가입 가능합니다." });
+          setVerificationResult({
+            status: "duplicate",
+            message:
+              "이미 가입된 사업자등록번호입니다. 1개의 사업자번호로는 1개의 대표자 계정만 가입 가능합니다.",
+          });
           setData({ ...data, businessVerified: false });
           break;
         case "suspended":
-          setVerificationResult({ status: "suspended", message: "휴업 중인 사업자는 가입할 수 없습니다." });
+          setVerificationResult({
+            status: "suspended",
+            message: "휴업 중인 사업자는 가입할 수 없습니다.",
+          });
           setData({ ...data, businessVerified: false });
           break;
         case "closed":
-          setVerificationResult({ status: "closed", message: "폐업된 사업자로 가입이 불가합니다." });
+          setVerificationResult({
+            status: "closed",
+            message: "폐업된 사업자로 가입이 불가합니다.",
+          });
           setData({ ...data, businessVerified: false });
           break;
         case "active":
-          setVerificationResult({ status: "active", taxType: tax_type, message: "사업자등록번호가 정상 확인되었습니다." });
+          setVerificationResult({
+            status: "active",
+            taxType: tax_type,
+            message: "사업자등록번호가 정상 확인되었습니다.",
+          });
           setData({ ...data, businessVerified: true });
           break;
         default:
-          setVerificationResult({ status: "unknown", message: "사업자 상태를 확인할 수 없습니다. 관리자에게 문의해주세요." });
+          setVerificationResult({
+            status: "unknown",
+            message:
+              "사업자 상태를 확인할 수 없습니다. 관리자에게 문의해주세요.",
+          });
           setData({ ...data, businessVerified: false });
       }
     } catch {
@@ -282,6 +312,7 @@ export default function BusinessPage() {
           <p className="mt-2 text-slate-600">
             사업자등록번호를 검증하고 서류를 업로드해주세요
           </p>
+          <p className="mt-1 text-xs text-slate-400">* 표시는 필수 입력 항목입니다</p>
         </div>
 
         <div className="space-y-6">
@@ -291,10 +322,13 @@ export default function BusinessPage() {
               <div className="flex-1">
                 <Input
                   label="사업자등록번호"
+                  required
                   placeholder="000-00-00000"
                   value={data.businessNumber || ""}
                   onChange={(e) => {
-                    const formatted = handleBusinessNumberFormat(e.target.value);
+                    const formatted = handleBusinessNumberFormat(
+                      e.target.value,
+                    );
                     setData({
                       ...data,
                       businessNumber: formatted,
@@ -315,7 +349,9 @@ export default function BusinessPage() {
                       }
                     : handleVerifyBusiness
                 }
-                disabled={verifying || (!data.businessVerified && !data.businessNumber)}
+                disabled={
+                  verifying || (!data.businessVerified && !data.businessNumber)
+                }
                 variant={data.businessVerified ? "secondary" : "primary"}
                 className="mt-6"
               >
@@ -354,6 +390,7 @@ export default function BusinessPage() {
             {data.businessVerified && (
               <Input
                 label="회사명"
+                required
                 placeholder="사업자등록증상 회사명"
                 value={data.companyName || ""}
                 onChange={(e) => {
@@ -368,7 +405,7 @@ export default function BusinessPage() {
           <div className="grid gap-6 md:grid-cols-2 md:gap-4">
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-900">
-                사업자등록증 (필수)
+                사업자등록증 <span className="ml-1 text-red-500">*</span>
               </label>
               <FileUpload
                 accept=".pdf,.jpg,.jpeg,.png"
@@ -423,14 +460,15 @@ export default function BusinessPage() {
             <div className="h-full space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
               <h3 className="font-semibold text-slate-900">대표자 정보</h3>
               <Input
-                label="대표자 성함"
+                label="대표자 성함 (선택)"
                 value={data.representativeName || ""}
                 onChange={(e) =>
                   setData({ ...data, representativeName: e.target.value })
                 }
               />
               <Input
-                label="대표자 연락처 (필수)"
+                label="대표자 연락처"
+                required
                 placeholder="010-0000-0000"
                 value={data.repPhone || ""}
                 onChange={(e) => {
@@ -445,7 +483,8 @@ export default function BusinessPage() {
                 error={errors.repPhone}
               />
               <Input
-                label="대표자 이메일 (필수)"
+                label="대표자 이메일"
+                required
                 type="email"
                 placeholder="ceo@company.com"
                 value={data.repEmail || ""}
@@ -521,8 +560,8 @@ export default function BusinessPage() {
               이전
             </Button>
             <Button onClick={handleNext} fullWidth size="lg" className="flex-1">
-              <ArrowRight className="h-5 w-5" />
-              다음
+              <Check className="h-5 w-5" />
+              가입하기
             </Button>
           </div>
         </div>
