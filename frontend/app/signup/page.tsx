@@ -7,7 +7,7 @@ import { Button, Card, ConsentCheckboxGroup, Input, Stepper } from "@sigongcore/
 import { LegalContentModal } from "@/components/legal/LegalContentModal";
 import { termsDocument } from "@/lib/legal/terms";
 import { privacyDocument } from "@/lib/legal/privacy";
-import { Droplets, Check, X, Loader2 } from "lucide-react";
+import { Droplets, Check, Loader2 } from "lucide-react";
 import {
   STEPS,
   getSignupData,
