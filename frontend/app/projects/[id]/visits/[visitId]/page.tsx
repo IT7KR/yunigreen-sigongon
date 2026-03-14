@@ -17,6 +17,14 @@ import type { PhotoType, VisitType } from "@sigongcore/types";
 
 export const dynamic = 'force-dynamic';
 
+function getFileUrl(storagePath: string): string {
+  if (!storagePath) return "";
+  if (storagePath.startsWith("http") || storagePath.startsWith("blob:") || storagePath.startsWith("data:")) {
+    return storagePath;
+  }
+  return `/api/v1/files/${storagePath.replace(/\\/g, "/")}`;
+}
+
 interface VisitDetailPageProps {
   params: Promise<{ id: string; visitId: string }>;
 }
@@ -225,19 +233,11 @@ export default function VisitDetailPage({ params }: VisitDetailPageProps) {
                   key={photo.id}
                   className="overflow-hidden rounded-lg border border-slate-200 bg-white hover:shadow-md transition-shadow"
                 >
-                  {photo.storage_path.startsWith("http") ||
-                  photo.storage_path.startsWith("blob:") ||
-                  photo.storage_path.startsWith("data:") ? (
-                    <img
-                      src={photo.storage_path}
-                      alt={photo.caption || "현장 사진"}
-                      className="aspect-video w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex aspect-video items-center justify-center bg-slate-100">
-                      <Camera className="h-10 w-10 text-slate-400" />
-                    </div>
-                  )}
+                  <img
+                    src={getFileUrl(photo.storage_path)}
+                    alt={photo.caption || "현장 사진"}
+                    className="aspect-video w-full object-cover"
+                  />
                   <div className="space-y-2 p-3">
                     <span
                       className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${photoTypeBadgeClass[photo.photo_type]}`}

@@ -305,6 +305,8 @@ export class MockAPIClient {
     {
       id: "mm_1001",
       name: "방수 시트",
+      specification_part1: null,
+      specification_part2: null,
       unit: "롤",
       unit_price: 45000,
       is_active: true,
@@ -316,6 +318,8 @@ export class MockAPIClient {
     {
       id: "mm_1002",
       name: "우레탄 방수재",
+      specification_part1: 4,
+      specification_part2: 16,
       unit: "통",
       unit_price: 120000,
       is_active: true,
@@ -327,6 +331,8 @@ export class MockAPIClient {
     {
       id: "mm_1003",
       name: "실리콘 코킹제",
+      specification_part1: null,
+      specification_part2: null,
       unit: "개",
       unit_price: 5000,
       is_active: true,
@@ -1486,10 +1492,27 @@ export class MockAPIClient {
     return delay(ok({ available: !exists }));
   }
 
-  async checkBusinessNumber(businessNumber: string) {
+  async verifyBusiness(businessNumber: string) {
+    const cleaned = businessNumber.replace(/[^0-9]/g, "");
+
+    // 중복 확인
     const tenants = mockDb.get("tenants");
-    const exists = tenants.some((t) => t.businessNumber === businessNumber);
-    return delay(ok({ available: !exists }));
+    if (tenants.some((t) => t.businessNumber === businessNumber)) {
+      return delay(ok({ status: "duplicate" as const, tax_type: null }));
+    }
+
+    // 폐업 테스트용
+    if (cleaned === "0000000000") {
+      return delay(ok({ status: "closed" as const, tax_type: null }));
+    }
+
+    // 휴업 테스트용
+    if (cleaned === "1111111111") {
+      return delay(ok({ status: "suspended" as const, tax_type: null }));
+    }
+
+    // 정상
+    return delay(ok({ status: "active" as const, tax_type: "일반과세자" }));
   }
 
   async sendOtp(phone: string) {
@@ -6484,6 +6507,8 @@ export class MockAPIClient {
     unit: string;
     unit_price: number;
     is_active?: boolean;
+    specification_part1?: number | null;
+    specification_part2?: number | null;
   }) {
     const forbidden = this.requireSuperAdmin();
     if (forbidden) {
@@ -6494,6 +6519,8 @@ export class MockAPIClient {
     const materialMaster: MaterialMaster = {
       id: randomId("mm"),
       name: data.name.trim(),
+      specification_part1: data.specification_part1 ?? null,
+      specification_part2: data.specification_part2 ?? null,
       unit: data.unit.trim(),
       unit_price: Number(data.unit_price),
       is_active: data.is_active ?? true,
@@ -6510,7 +6537,7 @@ export class MockAPIClient {
   async updateMaterialMaster(
     materialMasterId: string,
     data: Partial<
-      Pick<MaterialMaster, "name" | "unit" | "unit_price" | "is_active">
+      Pick<MaterialMaster, "name" | "unit" | "unit_price" | "is_active" | "specification_part1" | "specification_part2">
     >,
   ) {
     const forbidden = this.requireSuperAdmin();
@@ -6531,6 +6558,8 @@ export class MockAPIClient {
     if (typeof data.unit_price === "number")
       target.unit_price = data.unit_price;
     if (typeof data.is_active === "boolean") target.is_active = data.is_active;
+    if ("specification_part1" in data) target.specification_part1 = data.specification_part1 ?? null;
+    if ("specification_part2" in data) target.specification_part2 = data.specification_part2 ?? null;
     target.updated_by_user_id = currentUser.id;
     target.updated_at = nowIso();
 
@@ -8968,12 +8997,26 @@ export class MockAPIClient {
     return mockDb.get("constructionPhases") as any[];
   }
 
+  private _getLabors(): any[] {
+    return (mockDb.get("constructionLabors") as any[]) || [];
+  }
+
+  private _getMaterials(): any[] {
+    return (mockDb.get("constructionMaterials") as any[]) || [];
+  }
+
   private _buildPlanDetail(projectId: string) {
     const plans = this._getPlans();
     const plan = plans.find((p: any) => p.project_id === projectId);
     if (!plan) return null;
     const phases = this._getPhases().filter(
       (ph: any) => ph.plan_id === plan.id,
+    );
+    const labors = this._getLabors().filter(
+      (l: any) => l.plan_id === plan.id,
+    );
+    const materials = this._getMaterials().filter(
+      (m: any) => m.plan_id === plan.id,
     );
     const completed = phases.filter(
       (p: any) => p.status === "completed",
@@ -8992,7 +9035,7 @@ export class MockAPIClient {
       progress_percent:
         phases.length > 0 ? Math.round((completed / phases.length) * 100) : 0,
     };
-    return { plan, phases, summary };
+    return { plan, phases, labors, materials, summary };
   }
 
   async getConstructionPlan(projectId: string) {
@@ -9021,6 +9064,8 @@ export class MockAPIClient {
       data: {
         plan,
         phases: [],
+        labors: [],
+        materials: [],
         summary: {
           total: 0,
           completed: 0,
@@ -9036,7 +9081,13 @@ export class MockAPIClient {
 
   async updateConstructionPlan(
     projectId: string,
-    data: { title?: string; notes?: string },
+    data: {
+      title?: string;
+      notes?: string;
+      safety_plan?: string | null;
+      equipment_plan?: string | null;
+      waste_plan?: string | null;
+    },
   ) {
     const plans = this._getPlans();
     const idx = plans.findIndex((p: any) => p.project_id === projectId);
@@ -9171,6 +9222,104 @@ export class MockAPIClient {
       data: this._buildPlanDetail(projectId),
       error: null,
     });
+  }
+
+  // ============ Labor Plan (인력계획) ============
+
+  async addLaborPlan(
+    projectId: string,
+    data: { job_title: string; headcount: number; start_date: string; end_date: string },
+  ) {
+    const plans = this._getPlans();
+    const plan = plans.find((p: any) => p.project_id === projectId);
+    if (!plan) return delay({ success: false, data: null, error: null });
+    const labors = this._getLabors();
+    const existing = labors.filter((l: any) => l.plan_id === plan.id);
+    const labor = {
+      id: Date.now(),
+      plan_id: plan.id,
+      sort_order: existing.length,
+      job_title: data.job_title,
+      headcount: data.headcount,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    mockDb.set("constructionLabors", [...labors, labor]);
+    return delay({ success: true, data: labor, error: null });
+  }
+
+  async updateLaborPlan(
+    projectId: string,
+    laborId: string,
+    data: { job_title?: string; headcount?: number; start_date?: string; end_date?: string },
+  ) {
+    const labors = this._getLabors();
+    const idx = labors.findIndex((l: any) => String(l.id) === String(laborId));
+    if (idx < 0) return delay({ success: false, data: null, error: null });
+    const updated = [...labors];
+    updated[idx] = { ...updated[idx], ...data, updated_at: new Date().toISOString() };
+    mockDb.set("constructionLabors", updated);
+    return delay({ success: true, data: updated[idx], error: null });
+  }
+
+  async deleteLaborPlan(projectId: string, laborId: string) {
+    const labors = this._getLabors();
+    mockDb.set(
+      "constructionLabors",
+      labors.filter((l: any) => String(l.id) !== String(laborId)),
+    );
+    return delay({ success: true, data: { deleted: true }, error: null });
+  }
+
+  // ============ Material Plan (자재투입계획) ============
+
+  async addMaterialPlan(
+    projectId: string,
+    data: { material_name: string; quantity: string; start_date: string; end_date: string },
+  ) {
+    const plans = this._getPlans();
+    const plan = plans.find((p: any) => p.project_id === projectId);
+    if (!plan) return delay({ success: false, data: null, error: null });
+    const materials = this._getMaterials();
+    const existing = materials.filter((m: any) => m.plan_id === plan.id);
+    const material = {
+      id: Date.now(),
+      plan_id: plan.id,
+      sort_order: existing.length,
+      material_name: data.material_name,
+      quantity: data.quantity,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    mockDb.set("constructionMaterials", [...materials, material]);
+    return delay({ success: true, data: material, error: null });
+  }
+
+  async updateMaterialPlan(
+    projectId: string,
+    materialId: string,
+    data: { material_name?: string; quantity?: string; start_date?: string; end_date?: string },
+  ) {
+    const materials = this._getMaterials();
+    const idx = materials.findIndex((m: any) => String(m.id) === String(materialId));
+    if (idx < 0) return delay({ success: false, data: null, error: null });
+    const updated = [...materials];
+    updated[idx] = { ...updated[idx], ...data, updated_at: new Date().toISOString() };
+    mockDb.set("constructionMaterials", updated);
+    return delay({ success: true, data: updated[idx], error: null });
+  }
+
+  async deleteMaterialPlan(projectId: string, materialId: string) {
+    const materials = this._getMaterials();
+    mockDb.set(
+      "constructionMaterials",
+      materials.filter((m: any) => String(m.id) !== String(materialId)),
+    );
+    return delay({ success: true, data: { deleted: true }, error: null });
   }
 }
 

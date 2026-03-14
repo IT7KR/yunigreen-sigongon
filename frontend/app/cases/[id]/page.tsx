@@ -205,7 +205,7 @@ export default function CaseDetailPage({ params }: CaseDetailPageProps) {
               {images.map((image) => (
                 <img
                   key={image.id}
-                  src={image.file_url}
+                  src={api.getFileUrl(image.file_url)}
                   alt="case image"
                   className="aspect-square rounded-lg border border-slate-200 object-cover"
                 />

@@ -71,6 +71,8 @@ import type {
   WorkerDocumentType,
   ConstructionPhaseRead,
   ConstructionPlanDetail,
+  LaborPlanRead,
+  MaterialPlanRead,
   PhaseStatus,
 } from "@sigongcore/types";
 
@@ -350,6 +352,26 @@ export class APIClient {
     this.refreshToken = token;
   }
 
+  /**
+   * 스토리지 경로를 완전한 URL로 변환.
+   * - 이미 완전한 URL (http/https/blob/data)이면 그대로 반환
+   * - 상대 경로면 API 서버 기준 URL 생성
+   */
+  getFileUrl(storagePath: string): string {
+    if (!storagePath) return "";
+    if (
+      storagePath.startsWith("http://") ||
+      storagePath.startsWith("https://") ||
+      storagePath.startsWith("blob:") ||
+      storagePath.startsWith("data:")
+    ) {
+      return storagePath;
+    }
+    const normalized = storagePath.replace(/\\/g, "/");
+    const base = this.client.defaults.baseURL ?? "";
+    return `${base}/files/${normalized}`;
+  }
+
   // ============================================
   // Auth
   // ============================================
@@ -401,11 +423,15 @@ export class APIClient {
     return response.data;
   }
 
-  async checkBusinessNumber(businessNumber: string) {
-    const response = await this.client.get<APIResponse<{ available: boolean }>>(
-      "/auth/check-business-number",
-      { params: { business_number: businessNumber } },
-    );
+  async verifyBusiness(businessNumber: string) {
+    const response = await this.client.post<
+      APIResponse<{
+        status: "active" | "duplicate" | "suspended" | "closed" | "unknown";
+        tax_type: string | null;
+      }>
+    >("/auth/verify-business", {
+      business_number: businessNumber,
+    });
     return response.data;
   }
 
@@ -3842,7 +3868,13 @@ export class APIClient {
 
   async updateConstructionPlan(
     projectId: string,
-    data: { title?: string; notes?: string },
+    data: {
+      title?: string;
+      notes?: string;
+      safety_plan?: string | null;
+      equipment_plan?: string | null;
+      waste_plan?: string | null;
+    },
   ): Promise<APIResponse<ConstructionPlanDetail>> {
     const response = await this.client.patch<APIResponse<ConstructionPlanDetail>>(
       `/projects/${projectId}/construction-plan`,
@@ -3913,6 +3945,76 @@ export class APIClient {
     const response = await this.client.patch<APIResponse<ConstructionPlanDetail>>(
       `/projects/${projectId}/construction-plan/phases/reorder`,
       { phase_ids: phaseIds },
+    );
+    return response.data;
+  }
+
+  // ============ Labor Plan (인력계획) ============
+
+  async addLaborPlan(
+    projectId: string,
+    data: { job_title: string; headcount: number; start_date: string; end_date: string },
+  ): Promise<APIResponse<LaborPlanRead>> {
+    const response = await this.client.post<APIResponse<LaborPlanRead>>(
+      `/projects/${projectId}/construction-plan/labors`,
+      data,
+    );
+    return response.data;
+  }
+
+  async updateLaborPlan(
+    projectId: string,
+    laborId: string,
+    data: { job_title?: string; headcount?: number; start_date?: string; end_date?: string },
+  ): Promise<APIResponse<LaborPlanRead>> {
+    const response = await this.client.patch<APIResponse<LaborPlanRead>>(
+      `/projects/${projectId}/construction-plan/labors/${laborId}`,
+      data,
+    );
+    return response.data;
+  }
+
+  async deleteLaborPlan(
+    projectId: string,
+    laborId: string,
+  ): Promise<APIResponse<{ deleted: boolean }>> {
+    const response = await this.client.delete<APIResponse<{ deleted: boolean }>>(
+      `/projects/${projectId}/construction-plan/labors/${laborId}`,
+    );
+    return response.data;
+  }
+
+  // ============ Material Plan (자재투입계획) ============
+
+  async addMaterialPlan(
+    projectId: string,
+    data: { material_name: string; quantity: string; start_date: string; end_date: string },
+  ): Promise<APIResponse<MaterialPlanRead>> {
+    const response = await this.client.post<APIResponse<MaterialPlanRead>>(
+      `/projects/${projectId}/construction-plan/materials`,
+      data,
+    );
+    return response.data;
+  }
+
+  async updateMaterialPlan(
+    projectId: string,
+    materialId: string,
+    data: { material_name?: string; quantity?: string; start_date?: string; end_date?: string },
+  ): Promise<APIResponse<MaterialPlanRead>> {
+    const response = await this.client.patch<APIResponse<MaterialPlanRead>>(
+      `/projects/${projectId}/construction-plan/materials/${materialId}`,
+      data,
+    );
+    return response.data;
+  }
+
+  async deleteMaterialPlan(
+    projectId: string,
+    materialId: string,
+  ): Promise<APIResponse<{ deleted: boolean }>> {
+    const response = await this.client.delete<APIResponse<{ deleted: boolean }>>(
+      `/projects/${projectId}/construction-plan/materials/${materialId}`,
     );
     return response.data;
   }

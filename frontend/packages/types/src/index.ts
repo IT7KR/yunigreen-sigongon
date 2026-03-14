@@ -99,7 +99,34 @@ export interface ConstructionPlanRead {
   organization_id: number
   title: string | null
   notes: string | null
+  safety_plan: string | null
+  equipment_plan: string | null
+  waste_plan: string | null
   created_by: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface LaborPlanRead {
+  id: number
+  plan_id: number
+  sort_order: number
+  job_title: string
+  headcount: number
+  start_date: string  // "YYYY-MM-DD"
+  end_date: string
+  created_at: string
+  updated_at: string
+}
+
+export interface MaterialPlanRead {
+  id: number
+  plan_id: number
+  sort_order: number
+  material_name: string
+  quantity: string
+  start_date: string  // "YYYY-MM-DD"
+  end_date: string
   created_at: string
   updated_at: string
 }
@@ -116,6 +143,8 @@ export interface PlanSummary {
 export interface ConstructionPlanDetail {
   plan: ConstructionPlanRead
   phases: ConstructionPhaseRead[]
+  labors: LaborPlanRead[]
+  materials: MaterialPlanRead[]
   summary: PlanSummary
 }
 
@@ -517,7 +546,8 @@ export interface WarrantyInfo {
 export interface MaterialMaster {
   id: string
   name: string
-  specification: string | null
+  specification_part1: number | null
+  specification_part2: number | null
   unit: string
   unit_price: number
   is_active: boolean

@@ -168,6 +168,8 @@ export interface MockSchema {
   costCalculations: any[];
   constructionPlans: any[];
   constructionPhases: any[];
+  constructionLabors: any[];
+  constructionMaterials: any[];
 }
 
 const STORAGE_KEY = "sigongcore_mock_v4";
@@ -1854,6 +1856,8 @@ const INITIAL_DATA: MockSchema = {
       delay_days: 0,
     },
   ] as any[],
+  constructionLabors: [] as any[],
+  constructionMaterials: [] as any[],
 };
 
 class MockDB {
@@ -1922,6 +1926,12 @@ class MockDB {
       constructionPhases: Array.isArray(parsed?.constructionPhases)
         ? parsed.constructionPhases
         : INITIAL_DATA.constructionPhases,
+      constructionLabors: Array.isArray(parsed?.constructionLabors)
+        ? parsed.constructionLabors
+        : INITIAL_DATA.constructionLabors,
+      constructionMaterials: Array.isArray(parsed?.constructionMaterials)
+        ? parsed.constructionMaterials
+        : INITIAL_DATA.constructionMaterials,
     };
 
     return normalized;
