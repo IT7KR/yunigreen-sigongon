@@ -123,7 +123,7 @@ async def create_user(
     admin: AdminUser,
 ):
     existing = await db.execute(
-        select(User).where(User.email == user_data.email)
+        select(User).where(User.email == user_data.email, User.deleted_at == None)  # noqa: E711
     )
     if existing.scalar_one_or_none():
         raise HTTPException(
@@ -135,7 +135,7 @@ async def create_user(
     username = base_username
     suffix = 1
     while (
-        await db.execute(select(User).where(User.username == username))
+        await db.execute(select(User).where(User.username == username, User.deleted_at == None))  # noqa: E711
     ).scalar_one_or_none():
         suffix += 1
         username = f"{base_username}{suffix}"
@@ -200,12 +200,12 @@ async def get_user(
     db: DBSession,
     admin: AdminUser,
 ):
-    query = select(User).where(User.id == user_id)
+    query = select(User).where(User.id == user_id, User.deleted_at == None)  # noqa: E711
     if not _is_super_admin(admin):
         query = query.where(User.organization_id == admin.organization_id)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise NotFoundException("user", user_id)
 
@@ -229,15 +229,15 @@ async def update_user(
     db: DBSession,
     admin: AdminUser,
 ):
-    query = select(User).where(User.id == user_id)
+    query = select(User).where(User.id == user_id, User.deleted_at == None)  # noqa: E711
     if not _is_super_admin(admin):
         query = query.where(User.organization_id == admin.organization_id)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise NotFoundException("user", user_id)
-    
+
     update_data = user_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(user, field, value)
@@ -255,15 +255,15 @@ async def delete_user(
     db: DBSession,
     admin: AdminUser,
 ):
-    query = select(User).where(User.id == user_id)
+    query = select(User).where(User.id == user_id, User.deleted_at == None)  # noqa: E711
     if not _is_super_admin(admin):
         query = query.where(User.organization_id == admin.organization_id)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise NotFoundException("user", user_id)
-    
+
     if user.id == admin.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
