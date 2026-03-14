@@ -317,3 +317,73 @@ async def soft_delete_user(
         "user_id": str(user_id),
         "message": "사용자를 삭제했어요.",
     })
+
+
+class TerminationCheckResponse(PydanticBaseModel):
+    can_terminate: bool
+    blocking_reasons: list[dict] = []
+    assigned_projects: list[dict] = []
+
+
+@router.get("/{user_id}/termination-check", response_model=APIResponse[TerminationCheckResponse])
+async def check_user_termination(
+    user_id: int,
+    db: DBSession,
+    admin: AdminUser,
+):
+    """퇴사 처리 가능 여부를 사전 검증한다."""
+    from app.services.user_deletion import check_termination_eligibility
+
+    query = select(User).where(User.id == user_id, User.deleted_at == None)  # noqa: E711
+    if not _is_super_admin(admin):
+        query = query.where(User.organization_id == admin.organization_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise NotFoundException("user", user_id)
+
+    check_result = await check_termination_eligibility(db, user, admin)
+    return APIResponse.ok(TerminationCheckResponse(**check_result))
+
+
+class UserTerminateRequest(PydanticBaseModel):
+    reason: str
+
+
+@router.post("/{user_id}/terminate", response_model=APIResponse[dict])
+async def terminate_user(
+    user_id: int,
+    payload: UserTerminateRequest,
+    db: DBSession,
+    admin: AdminUser,
+):
+    """직원 퇴사 처리를 실행한다."""
+    from app.services.user_deletion import check_termination_eligibility, execute_termination
+
+    query = select(User).where(User.id == user_id, User.deleted_at == None)  # noqa: E711
+    if not _is_super_admin(admin):
+        query = query.where(User.organization_id == admin.organization_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise NotFoundException("user", user_id)
+
+    if user.id == admin.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="자기 자신은 퇴사 처리할 수 없어요")
+
+    check = await check_termination_eligibility(db, user, admin)
+    if not check["can_terminate"]:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=check["blocking_reasons"][0]["message"] if check["blocking_reasons"] else "퇴사 처리할 수 없어요",
+        )
+
+    await execute_termination(db, user, admin, payload.reason)
+    await db.commit()
+
+    return APIResponse.ok({
+        "user_id": str(user_id),
+        "message": "퇴사 처리가 완료되었어요.",
+    })
