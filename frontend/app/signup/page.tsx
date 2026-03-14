@@ -404,7 +404,7 @@ export default function SignupPage() {
         isOpen={termsModalOpen}
         onClose={() => setTermsModalOpen(false)}
         document={termsDocument}
-        onConfirm={() => setData({ ...data, termsAgreed: true })}
+        onConfirm={() => setData((prev) => ({ ...prev, termsAgreed: true }))}
       />
 
       {/* Privacy Modal */}
@@ -412,7 +412,7 @@ export default function SignupPage() {
         isOpen={privacyModalOpen}
         onClose={() => setPrivacyModalOpen(false)}
         document={privacyDocument}
-        onConfirm={() => setData({ ...data, privacyAgreed: true })}
+        onConfirm={() => setData((prev) => ({ ...prev, privacyAgreed: true }))}
       />
     </div>
   );
