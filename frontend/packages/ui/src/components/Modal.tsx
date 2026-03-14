@@ -14,6 +14,7 @@ export interface ModalProps {
   children: ReactNode;
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
   closeOnBackdropClick?: boolean;
+  hideHeader?: boolean;
 }
 
 const sizeClasses = {
@@ -33,6 +34,7 @@ export function Modal({
   children,
   size = "md",
   closeOnBackdropClick = true,
+  hideHeader = false,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const portalRef = useRef<HTMLElement | null>(null);
@@ -147,32 +149,34 @@ export function Modal({
             {/* 모바일 드래그 핸들 */}
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-slate-300 sm:hidden" />
             {/* Header */}
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2
-                  id={titleId}
-                  className="text-lg font-semibold text-slate-900"
-                >
-                  {title}
-                </h2>
-                {description && (
-                  <p
-                    id={descriptionId}
-                    className="mt-1 text-sm text-slate-500"
+            {!hideHeader && (
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2
+                    id={titleId}
+                    className="text-lg font-semibold text-slate-900"
                   >
-                    {description}
-                  </p>
-                )}
+                    {title}
+                  </h2>
+                  {description && (
+                    <p
+                      id={descriptionId}
+                      className="mt-1 text-sm text-slate-500"
+                    >
+                      {description}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="닫기"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="닫기"
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+            )}
 
             {/* Content */}
             <div className="mt-4 max-h-[calc(90dvh-8rem)] sm:max-h-[calc(80vh-8rem)] overflow-y-auto">

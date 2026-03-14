@@ -29,18 +29,25 @@ function ConfirmModal({
   loading = false,
 }: ConfirmModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-      <div className="flex items-start gap-3">
-        {variant === "destructive" && (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm" hideHeader>
+      <div className="flex flex-col items-center text-center gap-4 pt-2">
+        {variant === "destructive" ? (
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-50">
+            <AlertTriangle className="h-6 w-6 text-red-500" />
+          </div>
+        ) : (
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-50">
+            <AlertTriangle className="h-6 w-6 text-brand-500" />
           </div>
         )}
-        {description && (
-          <p className="pt-2 text-sm leading-relaxed text-slate-600">{description}</p>
-        )}
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+          {description && (
+            <p className="text-sm leading-relaxed text-slate-500">{description}</p>
+          )}
+        </div>
       </div>
-      <div className="mt-6 border-t border-slate-100 pt-5 flex gap-3">
+      <div className="mt-8 flex gap-3 w-full">
         <Button
           type="button"
           variant="outline"
