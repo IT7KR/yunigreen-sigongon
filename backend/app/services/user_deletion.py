@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from app.models.user import User
 
 
+RETENTION_YEARS = 5
+
 # 비즈니스 데이터 체크 대상 테이블
 # (module, class_name, fk_field, label)
 BUSINESS_DATA_CHECKS = [
@@ -212,4 +214,139 @@ async def execute_sa_deletion(
         user_id=admin.id,
         action="user.delete",
         description=f"사용자 삭제: user_id={target_user.id}, reason={reason}",
+    )
+
+
+async def check_termination_eligibility(
+    db: AsyncSession,
+    target_user: "User",
+    admin: "User",
+) -> dict:
+    """퇴사 처리 가능 여부를 검사한다."""
+    blocking_reasons = []
+
+    # 자기 자신
+    if target_user.id == admin.id:
+        blocking_reasons.append({
+            "code": "CANNOT_TERMINATE_SELF",
+            "message": "자기 자신은 퇴사 처리할 수 없어요.",
+        })
+
+    # company_admin은 퇴사 대상 아님
+    role_val = target_user.role.value if hasattr(target_user.role, "value") else str(target_user.role)
+    if role_val in ("super_admin", "company_admin"):
+        blocking_reasons.append({
+            "code": "INVALID_ROLE",
+            "message": "관리자 계정은 퇴사 처리할 수 없어요. 시스템 관리자에게 문의해 주세요.",
+        })
+
+    # 같은 조직 확인
+    if target_user.organization_id != admin.organization_id:
+        blocking_reasons.append({
+            "code": "DIFFERENT_ORG",
+            "message": "다른 조직의 직원은 퇴사 처리할 수 없어요.",
+        })
+
+    # 담당 프로젝트 조회 (ProjectAccessPolicy.manager_ids에 포함된 프로젝트)
+    assigned_projects = []
+    try:
+        from app.models.operations import ProjectAccessPolicy
+        from app.models.project import Project
+        policies = await db.execute(select(ProjectAccessPolicy))
+        for policy in policies.scalars().all():
+            if target_user.id in (policy.manager_ids or []):
+                # 프로젝트 이름 조회
+                proj = await db.execute(
+                    select(Project).where(Project.id == policy.project_id)
+                )
+                p = proj.scalar_one_or_none()
+                if p:
+                    assigned_projects.append({
+                        "project_id": str(p.id),
+                        "project_name": p.name,
+                        "status": p.status.value if hasattr(p.status, "value") else str(p.status),
+                    })
+    except Exception:
+        pass
+
+    return {
+        "can_terminate": len(blocking_reasons) == 0,
+        "blocking_reasons": blocking_reasons,
+        "assigned_projects": assigned_projects,
+    }
+
+
+async def execute_termination(
+    db: AsyncSession,
+    target_user: "User",
+    admin: "User",
+    reason: str,
+) -> None:
+    """Scenario C: 직원 퇴사 처리 실행."""
+    from app.models.user_deletion_log import UserDeletionLog, DeletionType
+
+    now = datetime.utcnow()
+
+    # 1. 스냅샷
+    snapshot = _create_snapshot(target_user)
+    log = UserDeletionLog(
+        user_id=target_user.id,
+        deletion_type=DeletionType.EMPLOYEE_TERMINATION,
+        deleted_by=admin.id,
+        reason=reason,
+        user_snapshot=snapshot,
+        organization_id=target_user.organization_id,
+        retention_expires_at=now + timedelta(days=RETENTION_YEARS * 365),
+        deleted_at=now,
+    )
+    db.add(log)
+
+    # 2. 익명화 (퇴사자용 이름)
+    target_user.username = f"terminated_{target_user.id}_{int(now.timestamp())}"
+    target_user.name = "퇴사한 직원"
+    target_user.email = None
+    target_user.phone = None
+    target_user.password_hash = ""
+    target_user.is_active = False
+
+    # 3. 퇴사 필드
+    target_user.terminated_at = now
+    target_user.terminated_by = admin.id
+    target_user.deleted_at = now
+    target_user.deleted_by = admin.id
+    target_user.deletion_reason = reason
+    target_user.updated_at = now
+
+    # 4. ProjectAccessPolicy에서 제거
+    try:
+        from app.models.operations import ProjectAccessPolicy
+        policies = await db.execute(select(ProjectAccessPolicy))
+        for policy in policies.scalars().all():
+            if target_user.id in (policy.manager_ids or []):
+                policy.manager_ids = [
+                    mid for mid in policy.manager_ids if mid != target_user.id
+                ]
+    except Exception:
+        pass
+
+    # 5. 시스템 부수 데이터 정리
+    from app.models.device_token import DeviceToken
+    from app.models.operations import UserNotificationPrefs, AppNotification
+    for model_cls, fk in [
+        (DeviceToken, "user_id"),
+        (UserNotificationPrefs, "user_id"),
+        (AppNotification, "user_id"),
+    ]:
+        try:
+            fk_col = getattr(model_cls, fk)
+            items = await db.execute(select(model_cls).where(fk_col == target_user.id))
+            for item in items.scalars().all():
+                await db.delete(item)
+        except Exception:
+            continue
+
+    # 6. 감사 로그
+    await write_activity_log(
+        db, admin.id, "user_terminated",
+        f"직원 {snapshot['name']}({target_user.id}) 퇴사 처리. 사유: {reason}",
     )
