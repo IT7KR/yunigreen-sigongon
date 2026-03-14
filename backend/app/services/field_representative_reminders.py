@@ -74,6 +74,7 @@ async def _load_notification_receivers(
         select(User)
         .where(User.organization_id == organization_id)
         .where(User.is_active.is_(True))
+        .where(User.deleted_at == None)  # noqa: E711
         .where(
             User.role.in_(
                 [UserRole.COMPANY_ADMIN, UserRole.SITE_MANAGER],
