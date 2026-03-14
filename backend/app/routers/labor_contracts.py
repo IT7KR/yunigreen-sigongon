@@ -59,7 +59,7 @@ async def register_worker(
     # 기존 worker 확인 (전화번호 기준)
     phone_cleaned = request.phone.replace("-", "")
     result = await db.execute(
-        select(User).where(User.phone == request.phone, User.role == UserRole.WORKER)
+        select(User).where(User.phone == request.phone, User.role == UserRole.WORKER, User.deleted_at == None)  # noqa: E711
     )
     existing = result.scalar_one_or_none()
     if existing:

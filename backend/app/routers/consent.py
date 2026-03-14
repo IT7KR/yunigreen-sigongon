@@ -44,7 +44,7 @@ async def get_optional_current_user(
     except (TypeError, ValueError):
         return None
 
-    result = await db.execute(select(User).where(User.id == user_id_int))
+    result = await db.execute(select(User).where(User.id == user_id_int, User.deleted_at == None))  # noqa: E711
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
         return None
