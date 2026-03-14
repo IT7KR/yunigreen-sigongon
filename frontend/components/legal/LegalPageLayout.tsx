@@ -1,5 +1,5 @@
 import { Shield } from "lucide-react";
-import { LegalDocument } from "@/lib/legal/types";
+import type { LegalDocument } from "@/lib/legal/types";
 import { LegalTableOfContents } from "./LegalTableOfContents";
 
 interface LegalPageLayoutProps {
@@ -45,10 +45,10 @@ export function LegalPageLayout({
         <div className="rounded-b-2xl border border-t-0 border-slate-200 bg-white p-6 md:p-8 shadow-sm">
 
           {/* Desktop: 2-column layout with sidebar TOC */}
-          <div className="flex gap-8">
+          <div className="flex flex-col md:flex-row gap-8">
 
             {/* Sidebar TOC — component renders both mobile (sticky top pills) and desktop (sticky sidebar) */}
-            <aside className="w-56 flex-shrink-0">
+            <aside className="hidden md:block w-56 flex-shrink-0">
               <LegalTableOfContents sections={tocSections} />
             </aside>
 
