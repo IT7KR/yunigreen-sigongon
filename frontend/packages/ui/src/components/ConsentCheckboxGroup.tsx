@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { cn } from "../lib/utils";
 import { PrimitiveButton } from "./PrimitiveButton";
 
@@ -43,38 +43,33 @@ export function ConsentCheckboxGroup({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {showSelectAll && (
         <PrimitiveButton
           type="button"
           onClick={handleSelectAll}
           className={cn(
-            "w-full flex items-center gap-3 rounded-xl border p-4 text-left transition-colors",
+            "w-full flex items-center gap-3 rounded-2xl px-5 py-4 text-left font-semibold text-sm transition-all duration-200",
             allChecked
-              ? "border-brand-point-400 bg-brand-point-50"
-              : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50",
+              ? "bg-brand-point-500 text-white shadow-lg shadow-brand-point-500/25"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200 active:bg-slate-200",
           )}
         >
           <span
             className={cn(
-              "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+              "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full transition-colors",
               allChecked
-                ? "border-brand-point-500 bg-brand-point-500"
-                : "border-slate-300",
+                ? "bg-white/25"
+                : "border border-slate-300 bg-white",
             )}
           >
-            {allChecked && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+            {allChecked && <Check className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />}
           </span>
-          <span className={cn(
-            "text-sm font-semibold transition-colors",
-            allChecked ? "text-brand-point-700" : "text-slate-800",
-          )}>
-            전체 동의합니다
-          </span>
+          전체 동의합니다
         </PrimitiveButton>
       )}
 
-      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+      <div>
         {items.map((item, idx) => {
           const checked = !!values[item.key];
           return (
@@ -82,7 +77,7 @@ export function ConsentCheckboxGroup({
               key={item.key}
               className={cn(idx > 0 && "border-t border-slate-100")}
             >
-              <div className="flex items-center gap-3 px-4 py-3">
+              <div className="flex items-center gap-3 py-3 px-1">
                 <button
                   type="button"
                   onClick={() => handleToggle(item.key)}
@@ -90,20 +85,24 @@ export function ConsentCheckboxGroup({
                 >
                   <span
                     className={cn(
-                      "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2 transition-colors",
+                      "flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-[4px] border-[1.5px] transition-all duration-150",
                       checked
                         ? "border-brand-point-500 bg-brand-point-500"
                         : "border-slate-300 bg-white",
                     )}
                   >
-                    {checked && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                    {checked && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
                   </span>
                   <span className="text-sm text-slate-700 leading-snug">
                     {item.label}
-                    <span className={cn(
-                      "text-xs ml-1.5",
-                      item.required ? "text-brand-point-500 font-medium" : "text-slate-400",
-                    )}>
+                    <span
+                      className={cn(
+                        "ml-1.5 text-xs",
+                        item.required
+                          ? "font-medium text-brand-point-500"
+                          : "text-slate-400",
+                      )}
+                    >
                       ({item.required ? "필수" : "선택"})
                     </span>
                   </span>
@@ -112,15 +111,14 @@ export function ConsentCheckboxGroup({
                   <button
                     type="button"
                     onClick={item.onViewDetail}
-                    className="flex items-center gap-0.5 text-xs text-slate-400 hover:text-brand-point-600 transition-colors flex-shrink-0 ml-2"
+                    className="flex-shrink-0 text-xs text-slate-400 underline underline-offset-2 hover:text-brand-point-600 transition-colors"
                   >
                     보기
-                    <ChevronRight className="h-3 w-3" />
                   </button>
                 )}
               </div>
               {item.description && (
-                <p className="px-4 pb-3 pl-12 text-xs text-slate-400 leading-relaxed">
+                <p className="pb-2.5 pl-9 pr-1 text-xs leading-relaxed text-slate-400">
                   {item.description}
                 </p>
               )}
@@ -130,7 +128,7 @@ export function ConsentCheckboxGroup({
       </div>
 
       {error && (
-        <p className="flex items-center gap-1.5 text-sm text-red-500">
+        <p className="flex items-center gap-1.5 text-xs text-red-500">
           <X className="h-3.5 w-3.5 flex-shrink-0" />
           {error}
         </p>
