@@ -163,6 +163,7 @@ from app.models.device_token import (
     DeviceTokenRead,
 )
 from app.models.otp import OtpRecord
+from app.models.user_deletion_log import UserDeletionLog, DeletionType  # noqa: F401
 
 __all__ = [
     # Base
@@ -363,4 +364,7 @@ __all__ = [
     "DeviceTokenRead",
     # OTP
     "OtpRecord",
+    # User Deletion Log
+    "UserDeletionLog",
+    "DeletionType",
 ]
