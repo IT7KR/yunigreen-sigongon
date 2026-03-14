@@ -195,7 +195,7 @@ export default function SignupPage() {
         <div className="space-y-4">
           {/* Username with Check */}
           <div>
-            <div className="flex gap-2 items-end">
+            <div className="flex gap-2 items-start">
               <div className="flex-1">
                 <Input
                   label="아이디"
@@ -218,6 +218,7 @@ export default function SignupPage() {
                 <Button
                   onClick={handleCheckUsername}
                   disabled={usernameChecking}
+                  className="mt-[26px]"
                 >
                   {usernameChecking ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -248,6 +249,7 @@ export default function SignupPage() {
           <Input
             label="비밀번호"
             type="password"
+            showPasswordToggle
             placeholder="8자 이상, 영문+숫자+특수문자"
             value={data.password || ""}
             onChange={(e) => setData({ ...data, password: e.target.value })}
@@ -257,6 +259,7 @@ export default function SignupPage() {
           <Input
             label="비밀번호 확인"
             type="password"
+            showPasswordToggle
             placeholder="비밀번호 재입력"
             value={data.passwordConfirm || ""}
             onChange={(e) =>
@@ -267,7 +270,7 @@ export default function SignupPage() {
 
           {/* Phone with Verification */}
           <div>
-            <div className="flex gap-2 items-end">
+            <div className="flex gap-2 items-start">
               <div className="flex-1">
                 <Input
                   label="휴대폰 번호"
@@ -288,7 +291,7 @@ export default function SignupPage() {
                 />
               </div>
               {!data.phoneVerified && (
-                <Button onClick={handleSendPhoneCode} disabled={phoneSending}>
+                <Button onClick={handleSendPhoneCode} disabled={phoneSending} className="mt-[26px]">
                   {phoneSending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : phoneCodeSent ? (

@@ -11,6 +11,9 @@ import {
   Building2,
   ArrowLeft,
   ArrowRight,
+  AlertTriangle,
+  XCircle,
+  HelpCircle,
 } from "lucide-react";
 import {
   STEPS,
@@ -21,16 +24,130 @@ import {
 } from "../types";
 import { api } from "@/lib/api";
 
+type VerificationStatus = "idle" | "loading" | "active" | "suspended" | "closed" | "unknown" | "duplicate";
+
+interface VerificationResult {
+  status: VerificationStatus;
+  taxType?: string | null;
+  message: string;
+}
+
+function BusinessStatusBadge({ result }: { result: VerificationResult }) {
+  if (result.status === "active") {
+    return (
+      <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100">
+            <Building2 className="h-5 w-5 text-green-600" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-green-900">계속사업자 확인</h3>
+              <span className="rounded-full bg-green-600 px-2 py-0.5 text-xs font-medium text-white">
+                정상
+              </span>
+            </div>
+            <div className="mt-1 space-y-0.5 text-sm text-green-800">
+              {result.taxType && (
+                <p>
+                  <span className="font-medium">과세유형:</span> {result.taxType}
+                </p>
+              )}
+              <p className="text-green-700">{result.message}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (result.status === "suspended") {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-amber-900">휴업 사업자</h3>
+              <span className="rounded-full bg-amber-600 px-2 py-0.5 text-xs font-medium text-white">
+                가입 불가
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-amber-800">{result.message}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (result.status === "closed") {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-100">
+            <XCircle className="h-5 w-5 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-red-900">폐업 사업자</h3>
+              <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-medium text-white">
+                가입 불가
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-red-800">{result.message}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (result.status === "duplicate") {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-100">
+            <XCircle className="h-5 w-5 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-red-900">이미 가입된 사업자</h3>
+            <p className="mt-1 text-sm text-red-800">{result.message}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (result.status === "unknown") {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+            <HelpCircle className="h-5 w-5 text-slate-500" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-slate-700">조회 불가</h3>
+            <p className="mt-1 text-sm text-slate-600">{result.message}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export default function BusinessPage() {
   const router = useRouter();
   const [data, setData] = useState<Partial<SignupData>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [verifying, setVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
 
   useEffect(() => {
     const stored = getSignupData();
 
-    // Redirect if basic info not completed (both email and phone verification required)
     if (
       !stored.username ||
       !stored.usernameAvailable ||
@@ -52,41 +169,60 @@ export default function BusinessPage() {
   };
 
   const handleVerifyBusiness = async () => {
+    const newErrors: Record<string, string> = { ...errors };
+
     if (!data.businessNumber || !validateBusinessNumber(data.businessNumber)) {
-      setErrors({
-        ...errors,
-        businessNumber: "000-00-00000 형식으로 입력하세요",
-      });
+      setErrors({ ...newErrors, businessNumber: "000-00-00000 형식으로 입력하세요" });
       return;
     }
 
     setVerifying(true);
+    setVerificationResult(null);
+    setErrors({ ...errors, businessNumber: "" });
+
     try {
-      // Phase 1: 사업자등록번호 중복 체크
-      const checkRes = await api.checkBusinessNumber(data.businessNumber);
-      if (!checkRes.success || !checkRes.data?.available) {
-        setErrors({
-          ...errors,
-          businessNumber: "이미 가입된 사업자번호입니다",
+      const verifyRes = await api.verifyBusiness(data.businessNumber);
+      if (!verifyRes.success || !verifyRes.data) {
+        setVerificationResult({
+          status: "unknown",
+          message: "사업자 상태를 조회할 수 없습니다. 잠시 후 다시 시도해주세요.",
         });
+        setData({ ...data, businessVerified: false });
         setVerifying(false);
         return;
       }
 
-      // Mock API call to verify business number
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const { status, tax_type } = verifyRes.data;
 
-      // Mock data returned from verification
-      setData({
-        ...data,
-        businessVerified: true,
-        companyName: "(주)시공온",
-        representativeName: "홍길동",
-      });
-      setErrors({ ...errors, businessNumber: "" });
+      switch (status) {
+        case "duplicate":
+          setVerificationResult({ status: "duplicate", message: "이미 가입된 사업자등록번호입니다. 1개의 사업자번호로는 1개의 대표자 계정만 가입 가능합니다." });
+          setData({ ...data, businessVerified: false });
+          break;
+        case "suspended":
+          setVerificationResult({ status: "suspended", message: "휴업 중인 사업자는 가입할 수 없습니다." });
+          setData({ ...data, businessVerified: false });
+          break;
+        case "closed":
+          setVerificationResult({ status: "closed", message: "폐업된 사업자로 가입이 불가합니다." });
+          setData({ ...data, businessVerified: false });
+          break;
+        case "active":
+          setVerificationResult({ status: "active", taxType: tax_type, message: "사업자등록번호가 정상 확인되었습니다." });
+          setData({ ...data, businessVerified: true });
+          break;
+        default:
+          setVerificationResult({ status: "unknown", message: "사업자 상태를 확인할 수 없습니다. 관리자에게 문의해주세요." });
+          setData({ ...data, businessVerified: false });
+      }
     } catch {
-      setErrors({ ...errors, businessNumber: "검증 중 오류가 발생했습니다" });
+      setVerificationResult({
+        status: "unknown",
+        message: "검증 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+      });
+      setData({ ...data, businessVerified: false });
     }
+
     setVerifying(false);
   };
 
@@ -99,6 +235,10 @@ export default function BusinessPage() {
       newErrors.businessNumber = "사업자등록번호 검증이 필요합니다";
     }
 
+    if (!data.companyName) {
+      newErrors.companyName = "회사명을 입력해주세요";
+    }
+
     if (!data.businessLicenseFile) {
       newErrors.businessLicense = "사업자등록증을 업로드해주세요";
     }
@@ -109,12 +249,6 @@ export default function BusinessPage() {
 
     if (!data.repEmail) {
       newErrors.repEmail = "대표자 이메일을 입력해주세요";
-    }
-
-    // Validation: At least one contact phone must be provided
-    if (!data.repPhone && !data.contactPhone) {
-      newErrors.contactPhone =
-        "대표자 또는 실무자 연락처 중 하나 이상 입력해주세요";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -152,7 +286,7 @@ export default function BusinessPage() {
 
         <div className="space-y-6">
           {/* Business Number Verification */}
-          <div>
+          <div className="space-y-3">
             <div className="flex gap-2">
               <div className="flex-1">
                 <Input
@@ -160,64 +294,75 @@ export default function BusinessPage() {
                   placeholder="000-00-00000"
                   value={data.businessNumber || ""}
                   onChange={(e) => {
-                    const formatted = handleBusinessNumberFormat(
-                      e.target.value,
-                    );
+                    const formatted = handleBusinessNumberFormat(e.target.value);
                     setData({
                       ...data,
                       businessNumber: formatted,
                       businessVerified: false,
                     });
+                    setVerificationResult(null);
                   }}
                   error={errors.businessNumber}
                   disabled={data.businessVerified}
                 />
               </div>
-              {!data.businessVerified && (
-                <Button
-                  onClick={handleVerifyBusiness}
-                  disabled={verifying}
-                  className="mt-6"
-                >
-                  {verifying ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "검증"
-                  )}
-                </Button>
-              )}
+              <Button
+                onClick={
+                  data.businessVerified
+                    ? () => {
+                        setData({ ...data, businessVerified: false });
+                        setVerificationResult(null);
+                      }
+                    : handleVerifyBusiness
+                }
+                disabled={verifying || (!data.businessVerified && !data.businessNumber)}
+                variant={data.businessVerified ? "secondary" : "primary"}
+                className="mt-6"
+              >
+                {verifying ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : data.businessVerified ? (
+                  "재검증"
+                ) : (
+                  "조회"
+                )}
+              </Button>
             </div>
+
+            {/* Verification in progress */}
+            {verifying && (
+              <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                국세청 API로 사업자 상태를 조회 중입니다...
+              </div>
+            )}
+
+            {/* Verification result */}
+            {!verifying && verificationResult && (
+              <BusinessStatusBadge result={verificationResult} />
+            )}
+
+            {/* Success indicator under input */}
             {data.businessVerified && (
-              <p className="mt-1 text-sm text-green-600 flex items-center gap-1">
+              <p className="text-sm text-green-600 flex items-center gap-1">
                 <Check className="h-4 w-4" />
                 사업자등록번호가 확인되었습니다
               </p>
             )}
-          </div>
 
-          {/* Verified Business Info */}
-          {data.businessVerified && (
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                  <Building2 className="h-5 w-5 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-green-900">사업자 정보</h3>
-                  <div className="mt-2 space-y-1 text-sm text-green-800">
-                    <p>
-                      <span className="font-medium">회사명:</span>{" "}
-                      {data.companyName}
-                    </p>
-                    <p>
-                      <span className="font-medium">대표자:</span>{" "}
-                      {data.representativeName}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+            {/* Company Name - shown after verification */}
+            {data.businessVerified && (
+              <Input
+                label="회사명"
+                placeholder="사업자등록증상 회사명"
+                value={data.companyName || ""}
+                onChange={(e) => {
+                  setData({ ...data, companyName: e.target.value });
+                }}
+                error={errors.companyName}
+              />
+            )}
+          </div>
 
           {/* Business License + Construction License (2-column grid) */}
           <div className="grid gap-6 md:grid-cols-2 md:gap-4">
@@ -283,7 +428,6 @@ export default function BusinessPage() {
                 onChange={(e) =>
                   setData({ ...data, representativeName: e.target.value })
                 }
-                disabled={data.businessVerified}
               />
               <Input
                 label="대표자 연락처 (필수)"
