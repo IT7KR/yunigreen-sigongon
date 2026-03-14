@@ -3178,6 +3178,8 @@ export class MockAPIClient {
     const start = (page - 1) * per_page;
     const pageItems = users.slice(start, start + per_page);
 
+    const tenants = mockDb.get("tenants");
+
     return delay(
       okPage(
         pageItems.map((u) => ({
@@ -3189,6 +3191,15 @@ export class MockAPIClient {
           is_active: u.is_active,
           created_at: u.created_at,
           last_login_at: u.last_login_at,
+          organization_id: u.organization_id,
+          tenant_name:
+            tenants.find((t) => t.organization_id === u.organization_id)
+              ?.name ??
+            u.organization_id ??
+            "\u2014",
+          tenant_id:
+            tenants.find((t) => t.organization_id === u.organization_id)?.id ??
+            null,
         })),
         { page, per_page, total, total_pages },
       ),
@@ -3301,6 +3312,19 @@ export class MockAPIClient {
         role: updatedUser.role,
         is_active: updatedUser.is_active,
       }),
+    );
+  }
+
+  async resetUserPassword(userId: string) {
+    const users = mockDb.get("users");
+    const user = users.find((u) => u.id === userId);
+    if (!user) {
+      return delay(
+        fail<{ message: string }>("NOT_FOUND", "사용자를 찾을 수 없어요"),
+      );
+    }
+    return delay(
+      ok({ message: "비밀번호 초기화 링크를 이메일로 전송했어요." }),
     );
   }
 
@@ -5015,6 +5039,7 @@ export class MockAPIClient {
     const newTenant: Tenant = {
       id: tenant_id,
       name: data.company_name,
+      organization_id: tenant_id,
       plan: tenantPlan,
       users_count: 1,
       projects_count: 0,

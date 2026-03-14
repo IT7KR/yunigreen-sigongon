@@ -2994,6 +2994,9 @@ export class APIClient {
         is_active: boolean;
         created_at: string;
         last_login_at?: string;
+        organization_id?: string | null;
+        tenant_name?: string;
+        tenant_id?: string | null;
       }>
     >("/users", { params });
     return response.data;
@@ -3036,6 +3039,13 @@ export class APIClient {
         is_active: boolean;
       }>
     >(`/users/${userId}`, data);
+    return response.data;
+  }
+
+  async resetUserPassword(userId: string) {
+    const response = await this.client.post<
+      APIResponse<{ message: string }>
+    >(`/users/${userId}/reset-password`);
     return response.data;
   }
 

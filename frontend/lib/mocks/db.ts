@@ -92,6 +92,7 @@ export interface DailyReport {
 export interface Tenant {
   id: string;
   name: string;
+  organization_id?: string; // mockDb User.organization_id 와 매핑
   businessNumber?: string; // 사업자등록번호
   plan: "trial" | "basic" | "pro" | "none";
   users_count: number;
@@ -423,6 +424,7 @@ const INITIAL_DATA: MockSchema = {
     {
       id: "tenant_1",
       name: "유니그린개발",
+      organization_id: "org_1",
       plan: "pro",
       users_count: 5,
       projects_count: 12,
@@ -435,6 +437,7 @@ const INITIAL_DATA: MockSchema = {
     {
       id: "tenant_2",
       name: "ABC건설",
+      organization_id: "org_2",
       plan: "basic",
       users_count: 3,
       projects_count: 5,
