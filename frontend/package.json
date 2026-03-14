@@ -26,7 +26,7 @@
     "@sigongcore/types": "workspace:*",
     "@sigongcore/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.16",
-    "@tosspayments/payment-widget-sdk": "^0.12.1",
+    "@tosspayments/tosspayments-sdk": "^2.6.0",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "firebase": "^11.0.0",
