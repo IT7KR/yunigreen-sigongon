@@ -119,22 +119,19 @@ async def check_deletion_eligibility(
                 "message": "해당 회사의 유일한 회사관리자는 삭제할 수 없어요",
             })
 
-    # 4. 비즈니스 데이터 존재 여부
-    from sqlalchemy import text as sa_text
-
+    # 4. 비즈니스 데이터 존재 여부 (SELECT COUNT(*) 사용)
     for module_name, class_name, fk_field, label in BUSINESS_DATA_CHECKS:
         try:
             module = __import__(f"app.models.{module_name}", fromlist=[class_name])
             model_cls = getattr(module, class_name)
             fk_col = getattr(model_cls, fk_field)
             count_result = await db.execute(
-                select(model_cls).where(fk_col == target_user.id)
+                select(func.count()).select_from(model_cls).where(fk_col == target_user.id)
             )
-            count = len(count_result.scalars().all())
+            count = int(count_result.scalar() or 0)
             if count > 0:
                 business_data[label] = count
         except (ImportError, AttributeError):
-            # 해당 모듈/모델이 없으면 건너뜀
             continue
 
     if business_data:
@@ -186,6 +183,7 @@ async def execute_sa_deletion(
     target_user.deleted_at = now
     target_user.deleted_by = admin.id
     target_user.deletion_reason = reason
+    target_user.updated_at = now
 
     # 5. 관련 데이터 삭제
     # DeviceToken
