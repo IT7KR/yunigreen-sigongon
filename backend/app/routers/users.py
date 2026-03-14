@@ -4,6 +4,7 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel as PydanticBaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 from sqlmodel import select
@@ -11,7 +12,7 @@ from sqlmodel import select
 from app.core.database import get_async_db
 from app.core.security import get_current_active_admin, get_password_hash
 from app.core.exceptions import NotFoundException
-from app.models.user import User, UserRole, UserRead
+from app.models.user import Organization, User, UserRole, UserRead
 from app.schemas.response import APIResponse, PaginatedResponse
 
 router = APIRouter()
@@ -21,7 +22,8 @@ AdminUser = Annotated[User, Depends(get_current_active_admin)]
 
 
 class UserListItem(UserRead):
-    pass
+    tenant_name: Optional[str] = None
+    tenant_id: Optional[str] = None
 
 
 class UserCreateRequest(BaseModel):
@@ -62,7 +64,7 @@ async def list_users(
     role: Optional[UserRole] = None,
     is_active: Optional[bool] = None,
 ):
-    query = select(User)
+    query = select(User).where(User.deleted_at == None)  # noqa: E711
     if not _is_super_admin(admin):
         query = query.where(User.organization_id == admin.organization_id)
     
@@ -88,9 +90,26 @@ async def list_users(
     
     result = await db.execute(query)
     users = result.scalars().all()
-    
+
+    # Resolve organization names
+    org_ids = [u.organization_id for u in users if u.organization_id]
+    org_map: dict[int, str] = {}
+    if org_ids:
+        org_result = await db.execute(
+            select(Organization.id, Organization.name).where(Organization.id.in_(org_ids))
+        )
+        org_map = {row.id: row.name for row in org_result.all()}
+
+    items = []
+    for u in users:
+        item = UserListItem.model_validate(u)
+        if u.organization_id and u.organization_id in org_map:
+            item.tenant_name = org_map[u.organization_id]
+            item.tenant_id = str(u.organization_id)
+        items.append(item)
+
     return PaginatedResponse.create(
-        items=[UserListItem.model_validate(u) for u in users],
+        items=items,
         page=page,
         per_page=per_page,
         total=total,
@@ -147,6 +166,34 @@ async def create_user(
     )
 
 
+class DeletionCheckResponse(PydanticBaseModel):
+    deletable: bool
+    blocking_reasons: list[dict] = []
+    business_data: dict[str, int] = {}
+
+
+@router.get("/{user_id}/deletion-check", response_model=APIResponse[DeletionCheckResponse])
+async def check_user_deletion(
+    user_id: int,
+    db: DBSession,
+    admin: AdminUser,
+):
+    """삭제 가능 여부를 사전 검증한다."""
+    from app.services.user_deletion import check_deletion_eligibility
+
+    query = select(User).where(User.id == user_id, User.deleted_at == None)  # noqa: E711
+    if not _is_super_admin(admin):
+        query = query.where(User.organization_id == admin.organization_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise NotFoundException("user", user_id)
+
+    check_result = await check_deletion_eligibility(db, user, admin)
+    return APIResponse.ok(DeletionCheckResponse(**check_result))
+
+
 @router.get("/{user_id}", response_model=APIResponse[UserListItem])
 async def get_user(
     user_id: int,
@@ -161,8 +208,18 @@ async def get_user(
     
     if not user:
         raise NotFoundException("user", user_id)
-    
-    return APIResponse.ok(UserListItem.model_validate(user))
+
+    item = UserListItem.model_validate(user)
+    if user.organization_id:
+        org_result = await db.execute(
+            select(Organization.name).where(Organization.id == user.organization_id)
+        )
+        org_name = org_result.scalar_one_or_none()
+        if org_name:
+            item.tenant_name = org_name
+            item.tenant_id = str(user.organization_id)
+
+    return APIResponse.ok(item)
 
 
 @router.patch("/{user_id}", response_model=APIResponse[UserListItem])
@@ -212,6 +269,51 @@ async def delete_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="자기 자신은 삭제할 수 없어요",
         )
-    
+
     await db.delete(user)
     await db.commit()
+
+
+class UserDeleteRequest(BaseModel):
+    reason: str
+
+
+@router.post("/{user_id}/delete", response_model=APIResponse[dict])
+async def soft_delete_user(
+    user_id: int,
+    payload: UserDeleteRequest,
+    db: DBSession,
+    admin: AdminUser,
+):
+    """사용자를 soft delete한다."""
+    from app.services.user_deletion import check_deletion_eligibility, execute_sa_deletion
+
+    query = select(User).where(User.id == user_id, User.deleted_at == None)  # noqa: E711
+    if not _is_super_admin(admin):
+        query = query.where(User.organization_id == admin.organization_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise NotFoundException("user", user_id)
+
+    if user.id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="자기 자신은 삭제할 수 없어요",
+        )
+
+    check = await check_deletion_eligibility(db, user, admin)
+    if not check["deletable"]:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=check["blocking_reasons"][0]["message"] if check["blocking_reasons"] else "삭제할 수 없어요",
+        )
+
+    await execute_sa_deletion(db, user, admin, payload.reason)
+    await db.commit()
+
+    return APIResponse.ok({
+        "user_id": str(user_id),
+        "message": "사용자를 삭제했어요.",
+    })
