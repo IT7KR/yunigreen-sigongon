@@ -5039,54 +5039,6 @@ export class MockAPIClient {
     return delay(ok({ success: true }));
   }
 
-  async verifyBusiness(businessNumber: string) {
-    const cleaned = businessNumber.replace(/[^0-9]/g, "");
-    if (cleaned.length !== 10) {
-      return delay(
-        ok({
-          valid: false,
-        }),
-      );
-    }
-
-    const sampleCompanies: Record<
-      string,
-      { company_name: string; representative: string; business_type: string }
-    > = {
-      "1234567890": {
-        company_name: "유니그린개발",
-        representative: "이중호",
-        business_type: "실내건축공사업",
-      },
-      "9876543210": {
-        company_name: "ABC건설",
-        representative: "김철수",
-        business_type: "종합건설업",
-      },
-    };
-
-    const company = sampleCompanies[cleaned];
-    if (company) {
-      return delay(
-        ok({
-          valid: true,
-          company_name: company.company_name,
-          representative: company.representative,
-          business_type: company.business_type,
-        }),
-      );
-    }
-
-    return delay(
-      ok({
-        valid: true,
-        company_name: "샘플업체",
-        representative: "홍길동",
-        business_type: "건설업",
-      }),
-    );
-  }
-
   async register(data: {
     username: string;
     password: string;
