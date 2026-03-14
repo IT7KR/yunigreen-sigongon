@@ -797,12 +797,12 @@ async def _resolve_worker_user_id(
         candidate_id = int(worker_id.split("worker_", 1)[1])
 
     if candidate_id is not None:
-        result = await db.execute(select(User).where(User.id == candidate_id))
+        result = await db.execute(select(User).where(User.id == candidate_id, User.deleted_at == None))  # noqa: E711
         user = result.scalar_one_or_none()
         if user:
             return user.id
 
-    result = await db.execute(select(User).where(User.username == worker_id))
+    result = await db.execute(select(User).where(User.username == worker_id, User.deleted_at == None))  # noqa: E711
     user = result.scalar_one_or_none()
     if user:
         return user.id
@@ -1114,6 +1114,7 @@ async def update_project_access_policy(
                 select(User).where(
                     User.id.in_(manager_ids),
                     User.role == UserRole.SITE_MANAGER,
+                    User.deleted_at == None,  # noqa: E711
                 )
             )
         ).scalars().all()
@@ -2624,6 +2625,7 @@ async def accept_invitation(
         select(User).where(
             User.phone == invitation.phone,
             User.organization_id == invitation.organization_id,
+            User.deleted_at == None,  # noqa: E711
         )
     )
     user = existing.scalar_one_or_none()
@@ -4837,7 +4839,7 @@ async def verify_worker_access(
 
     record.verified = True
 
-    user_result = await db.execute(select(User).where(User.phone == record.phone, User.role == UserRole.WORKER))
+    user_result = await db.execute(select(User).where(User.phone == record.phone, User.role == UserRole.WORKER, User.deleted_at == None))  # noqa: E711
     worker_user = user_result.scalar_one_or_none()
 
     if not worker_user:
@@ -4866,7 +4868,7 @@ async def verify_worker_invite(
     db: DBSession,
 ):
     username = f"worker_invite_{payload.invite_token[-8:]}"
-    result = await db.execute(select(User).where(User.username == username))
+    result = await db.execute(select(User).where(User.username == username, User.deleted_at == None))  # noqa: E711
     user = result.scalar_one_or_none()
     if not user:
         user = User(
@@ -5035,7 +5037,7 @@ async def get_worker_profile(
 ):
     worker_user_id = await _require_worker_self(db, current_user, worker_id)
 
-    user = (await db.execute(select(User).where(User.id == worker_user_id))).scalar_one_or_none()
+    user = (await db.execute(select(User).where(User.id == worker_user_id, User.deleted_at == None))).scalar_one_or_none()  # noqa: E711
     if not user:
         raise NotFoundException("user", worker_id)
 
@@ -5145,7 +5147,7 @@ async def change_worker_password(
 ):
     worker_user_id = await _require_worker_self(db, current_user, worker_id)
 
-    user = (await db.execute(select(User).where(User.id == worker_user_id))).scalar_one_or_none()
+    user = (await db.execute(select(User).where(User.id == worker_user_id, User.deleted_at == None))).scalar_one_or_none()  # noqa: E711
     if not user:
         raise NotFoundException("user", worker_id)
 
