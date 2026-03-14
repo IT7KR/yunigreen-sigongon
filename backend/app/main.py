@@ -84,6 +84,10 @@ def _get_status_code(code: str) -> int:
         "ESTIMATE_LOCKED": 400,
         "AI_SERVICE_ERROR": 503,
         "FILE_UPLOAD_ERROR": 400,
+        "STORAGE_FILE_NOT_FOUND": 404,
+        "STORAGE_ACCESS_DENIED": 403,
+        "STORAGE_VALIDATION_ERROR": 422,
+        "STORAGE_ERROR": 500,
     }
     return status_map.get(code, 500)
 
@@ -140,6 +144,7 @@ from app.routers.device_tokens import router as device_tokens_router
 from app.routers.cost_calculations import router as cost_calculations_router
 from app.routers.construction_rates import router as construction_rates_router
 from app.routers.construction_plans import router as construction_plans_router
+from app.routers.files import router as files_router
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["인증"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["사용자 관리"])
@@ -172,3 +177,4 @@ app.include_router(device_tokens_router, prefix="/api/v1", tags=["FCM 디바이�
 app.include_router(cost_calculations_router, prefix="/api/v1", tags=["원가계산서"])
 app.include_router(construction_rates_router, prefix="/api/v1", tags=["건설 원가 요율"])
 app.include_router(construction_plans_router, prefix="/api/v1", tags=["시공계획서"])
+app.include_router(files_router, prefix="/api/v1/files", tags=["파일 서빙"])

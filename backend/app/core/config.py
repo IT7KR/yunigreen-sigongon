@@ -37,6 +37,17 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 10
     allowed_image_types: list[str] = ["image/jpeg", "image/png", "image/webp"]
     harness_data_dir: str = ".runtime/harness_runs"
+
+    # 파일 스토리지 백엔드
+    storage_backend: str = "local"          # "local" | "s3"
+    storage_is_mock: bool = True            # True면 항상 local 사용
+    storage_base_url: str = ""              # 파일 URL 생성용 (빈 문자열이면 /api/v1/files/ 사용)
+    # S3 (Phase 3 - 현재 미사용)
+    s3_bucket: Optional[str] = None
+    s3_region: Optional[str] = None
+    s3_prefix: str = ""
+    s3_presigned_url_expiry: int = 3600
+    cdn_base_url: Optional[str] = None
     
     # CORS
     cors_origins: list[str] = [

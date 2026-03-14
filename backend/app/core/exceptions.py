@@ -200,9 +200,43 @@ class DuplicateException(SigongCoreException):
 
 class InactiveAccountException(SigongCoreException):
     """비활성 계정."""
-    
+
     def __init__(self):
         super().__init__(
             message="비활성화된 계정이에요. 관리자에게 문의해 주세요.",
             code="ACCOUNT_INACTIVE",
         )
+
+
+class StorageError(SigongCoreException):
+    """파일 스토리지 관련 예외."""
+
+    def __init__(self, message: str = "파일 저장에 실패했어요", code: str = "STORAGE_ERROR"):
+        super().__init__(message=message, code=code)
+
+
+class StorageFileNotFoundError(StorageError):
+    """스토리지에서 파일을 찾을 수 없음."""
+
+    def __init__(self, path: str = ""):
+        super().__init__(
+            message="파일을 찾을 수 없어요. 삭제되었거나 경로가 잘못됐을 수 있어요.",
+            code="STORAGE_FILE_NOT_FOUND",
+        )
+
+
+class StorageAccessDeniedError(StorageError):
+    """스토리지 접근 권한 없음."""
+
+    def __init__(self):
+        super().__init__(
+            message="이 파일에 접근할 권한이 없어요.",
+            code="STORAGE_ACCESS_DENIED",
+        )
+
+
+class StorageValidationError(StorageError):
+    """스토리지 파일 유효성 검사 실패."""
+
+    def __init__(self, message: str = "파일 형식이나 크기가 올바르지 않아요"):
+        super().__init__(message=message, code="STORAGE_VALIDATION_ERROR")

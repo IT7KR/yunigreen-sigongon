@@ -2,6 +2,7 @@ import io
 import logging
 from datetime import date, datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Annotated, Optional
 from urllib.parse import quote
 
@@ -399,8 +400,7 @@ async def download_contract_source(
     if not storage_service.file_exists(contract.source_document_path):
         raise HTTPException(status_code=404, detail="원본 계약서 파일을 찾을 수 없어요")
 
-    absolute_path = storage_service.get_absolute_path(contract.source_document_path)
-    filename = absolute_path.name
+    filename = Path(contract.source_document_path).name
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     media_type_map = {
         "pdf": "application/pdf",
@@ -411,8 +411,7 @@ async def download_contract_source(
     }
     media_type = media_type_map.get(ext, "application/octet-stream")
 
-    with open(absolute_path, "rb") as f:
-        content = f.read()
+    content = await storage_service.read_file(contract.source_document_path)
 
     filename_quoted = quote(filename)
     return StreamingResponse(
