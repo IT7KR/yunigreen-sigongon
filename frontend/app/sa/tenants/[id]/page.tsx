@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/AdminLayout";
 import {
   Badge,
@@ -30,6 +30,7 @@ import {
   Sparkles,
   ToggleLeft,
   ToggleRight,
+  Trash2,
   Users,
   XCircle,
 } from "lucide-react";
@@ -163,6 +164,7 @@ export default function TenantDetailPage() {
   const [trialUnit, setTrialUnit] = useState<"months" | "days">("months");
   const [isSavingTrialPolicy, setIsSavingTrialPolicy] = useState(false);
   const { confirm } = useConfirmDialog();
+  const router = useRouter();
 
   useEffect(() => {
     void loadTenantDetail();
@@ -366,6 +368,30 @@ export default function TenantDetailPage() {
     }
   }
 
+  async function handleDeleteTenant() {
+    if (!tenant) return;
+    const confirmed = await confirm({
+      title: `"${tenant.name}"을(를) 정말 삭제할까요?`,
+      description: "삭제된 고객사는 복구할 수 없으며, 모든 데이터가 사라집니다.",
+      confirmLabel: "영구 삭제",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+
+    try {
+      const response = await api.deleteTenant(tenantId);
+      if (response.success) {
+        toast.success("고객사를 삭제했어요.");
+        router.push("/sa/tenants");
+      } else {
+        toast.error(response.error?.message || "삭제에 실패했어요.");
+      }
+    } catch (err) {
+      console.error("Failed to delete tenant:", err);
+      toast.error("삭제에 실패했어요.");
+    }
+  }
+
   async function toggleActiveStatus() {
     if (!tenant) return;
 
@@ -433,6 +459,15 @@ export default function TenantDetailPage() {
             <p className="mt-1 text-slate-500">고객사 상세 정보</p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDeleteTenant}
+              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+              삭제
+            </Button>
             <Button
               variant={tenant.is_active ? "destructive" : "primary"}
               onClick={toggleActiveStatus}

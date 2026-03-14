@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   CardContent,
+  Modal,
   Pagination,
   PrimitiveInput,
   PrimitiveSelect,
@@ -19,6 +20,7 @@ import {
   TableHeader,
   TableRow,
   formatDate,
+  toast,
 } from "@sigongcore/ui";
 import {
   Search,
@@ -27,6 +29,7 @@ import {
   FolderKanban,
   Loader2,
   Eye,
+  Plus,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { MobileListCard } from "@/components/MobileListCard";
@@ -64,6 +67,17 @@ export default function TenantsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    business_number: "",
+    representative: "",
+    rep_phone: "",
+    rep_email: "",
+    plan: "none" as "none" | "trial" | "basic" | "pro",
+    subscription_end_date: "",
+  });
+  const [isCreating, setIsCreating] = useState(false);
 
   const perPage = 10;
 
@@ -106,12 +120,52 @@ export default function TenantsPage() {
     setCurrentPage(1);
   }
 
+  async function handleCreateTenant() {
+    if (!createForm.name.trim()) {
+      toast.error("회사명을 입력해 주세요.");
+      return;
+    }
+    setIsCreating(true);
+    try {
+      const response = await api.createTenant({
+        name: createForm.name.trim(),
+        business_number: createForm.business_number.trim() || undefined,
+        representative: createForm.representative.trim() || undefined,
+        rep_phone: createForm.rep_phone.trim() || undefined,
+        rep_email: createForm.rep_email.trim() || undefined,
+        plan: createForm.plan,
+        subscription_end_date: ["basic", "pro"].includes(createForm.plan) && createForm.subscription_end_date
+          ? createForm.subscription_end_date
+          : undefined,
+      });
+      if (response.success) {
+        toast.success("고객사를 등록했어요.");
+        setShowCreateModal(false);
+        setCreateForm({ name: "", business_number: "", representative: "", rep_phone: "", rep_email: "", plan: "none", subscription_end_date: "" });
+        await loadTenants();
+      } else {
+        toast.error(response.error?.message || "등록에 실패했어요.");
+      }
+    } catch (err) {
+      console.error("Failed to create tenant:", err);
+      toast.error("등록에 실패했어요.");
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">고객사 관리</h1>
-          <p className="mt-1 text-slate-500">전체 {totalItems}개 고객사</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">고객사 관리</h1>
+            <p className="mt-1 text-slate-500">전체 {totalItems}개 고객사</p>
+          </div>
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4" />
+            신규 고객사 등록
+          </Button>
         </div>
 
         <Card>
@@ -379,6 +433,98 @@ export default function TenantsPage() {
           </>
         )}
       </div>
+
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="신규 고객사 등록"
+        description="새로운 고객사를 플랫폼에 등록합니다."
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">회사명 *</label>
+            <PrimitiveInput
+              value={createForm.name}
+              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              placeholder="(주)시공코어"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">사업자번호</label>
+            <PrimitiveInput
+              value={createForm.business_number}
+              onChange={(e) => setCreateForm({ ...createForm, business_number: e.target.value })}
+              placeholder="000-00-00000"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">대표자 성함</label>
+            <PrimitiveInput
+              value={createForm.representative}
+              onChange={(e) => setCreateForm({ ...createForm, representative: e.target.value })}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">대표자 연락처</label>
+            <PrimitiveInput
+              value={createForm.rep_phone}
+              onChange={(e) => setCreateForm({ ...createForm, rep_phone: e.target.value })}
+              placeholder="010-0000-0000"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">대표자 이메일</label>
+            <PrimitiveInput
+              value={createForm.rep_email}
+              onChange={(e) => setCreateForm({ ...createForm, rep_email: e.target.value })}
+              type="email"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">요금제</label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(["none", "trial", "basic", "pro"] as const).map((plan) => {
+                const labels = { none: "미선택", trial: "무료 체험", basic: "Basic", pro: "Pro" };
+                return (
+                  <Button
+                    key={plan}
+                    variant={createForm.plan === plan ? "primary" : "secondary"}
+                    size="sm"
+                    onClick={() => setCreateForm({ ...createForm, plan })}
+                    className="w-full"
+                  >
+                    {labels[plan]}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+          {["basic", "pro"].includes(createForm.plan) && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">구독 만료일</label>
+              <PrimitiveInput
+                type="date"
+                value={createForm.subscription_end_date}
+                onChange={(e) => setCreateForm({ ...createForm, subscription_end_date: e.target.value })}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-point-500 focus:outline-none focus:ring-1 focus:ring-brand-point-500"
+              />
+            </div>
+          )}
+        </div>
+        <div className="mt-6 flex gap-3">
+          <Button variant="secondary" onClick={() => setShowCreateModal(false)} className="flex-1" disabled={isCreating}>
+            취소
+          </Button>
+          <Button onClick={handleCreateTenant} className="flex-1" disabled={isCreating}>
+            {isCreating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />등록 중...</> : "등록"}
+          </Button>
+        </div>
+      </Modal>
     </AdminLayout>
   );
 }
