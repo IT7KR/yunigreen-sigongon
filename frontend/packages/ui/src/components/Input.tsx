@@ -1,7 +1,7 @@
 "use client"
 
 import { forwardRef, useId, useState, type InputHTMLAttributes } from "react"
-import { Check } from "lucide-react"
+import { Check, Eye, EyeOff } from "lucide-react"
 import { cn } from "../lib/utils"
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -12,6 +12,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   validateOnBlur?: boolean
   validateOnChange?: boolean
   showSuccessState?: boolean
+  showPasswordToggle?: boolean
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -26,6 +27,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     validateOnBlur = false,
     validateOnChange = false,
     showSuccessState = false,
+    showPasswordToggle = false,
     onBlur,
     onChange,
     value,
@@ -35,6 +37,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputId = id || generatedId
     const [touched, setTouched] = useState(false)
     const [internalError, setInternalError] = useState<string | undefined>()
+    const [showPassword, setShowPassword] = useState(false)
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
       setTouched(true)
@@ -59,6 +62,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const displayError = error || internalError
     const currentValue = value?.toString() || ''
     const isValid = showSuccessState && touched && !displayError && currentValue
+    const isPasswordToggle = showPasswordToggle && type === "password"
+    const effectiveType = isPasswordToggle ? (showPassword ? "text" : "password") : type
 
     return (
       <div className="space-y-1.5">
@@ -73,7 +78,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className="relative">
           <input
-            type={type}
+            type={effectiveType}
             id={inputId}
             className={cn(
               "flex h-11 w-full rounded-lg border bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400",
@@ -84,7 +89,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                 ? "border-green-500 focus:border-green-500 focus:ring-green-200"
                 : "border-slate-300 focus:border-brand-point-500 focus:ring-brand-point-200",
               "disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500",
-              isValid ? "pr-10" : "",
+              (isValid || isPasswordToggle) ? "pr-10" : "",
               className
             )}
             ref={ref}
@@ -95,11 +100,25 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             value={value}
             {...props}
           />
-          {isValid && (
+          {isPasswordToggle ? (
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              tabIndex={-1}
+              aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
+            </button>
+          ) : isValid ? (
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
               <Check className="h-5 w-5 text-green-500" />
             </div>
-          )}
+          ) : null}
         </div>
         {displayError && (
           <p id={`${inputId}-error`} className="text-sm text-red-500">

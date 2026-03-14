@@ -12,6 +12,7 @@ export interface FileUploadProps {
   onFiles: (files: File[]) => void;
   disabled?: boolean;
   className?: string;
+  uploadProgress?: number; // 0-100, undefined = no progress bar shown
 }
 
 export function FileUpload({
@@ -21,6 +22,7 @@ export function FileUpload({
   onFiles,
   disabled = false,
   className,
+  uploadProgress,
 }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -191,6 +193,22 @@ export function FileUpload({
               <span>{error}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Upload Progress */}
+      {uploadProgress !== undefined && uploadProgress >= 0 && uploadProgress <= 100 && (
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs text-slate-500">
+            <span>업로드 중...</span>
+            <span>{Math.round(uploadProgress)}%</span>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-slate-200">
+            <div
+              className="h-1.5 rounded-full bg-brand-point-500 transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
         </div>
       )}
 
