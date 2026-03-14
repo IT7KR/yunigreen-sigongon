@@ -2513,7 +2513,7 @@ export class APIClient {
     return response.data;
   }
 
-  async getTenants(params?: { page?: number; search?: string }) {
+  async getTenants(params?: { page?: number; search?: string; plan?: string; status?: string }) {
     const response = await this.client.get<
       PaginatedResponse<{
         id: string;
@@ -2552,9 +2552,11 @@ export class APIClient {
         is_active?: boolean;
         trial_override_enabled?: boolean | null;
         trial_override_months?: number | null;
+        trial_override_unit?: "months" | "days" | null;
         trial_override_reason?: string | null;
         effective_trial_enabled?: boolean;
         effective_trial_months?: number;
+        effective_trial_unit?: "months" | "days";
         trial_source?: string | null;
       }>
     >(`/admin/tenants/${tenantId}`);
@@ -2566,6 +2568,7 @@ export class APIClient {
       APIResponse<{
         default_trial_enabled: boolean;
         default_trial_months: number;
+        default_trial_unit: "months" | "days";
       }>
     >("/admin/billing/trial-policy");
     return response.data;
@@ -2574,11 +2577,13 @@ export class APIClient {
   async updateTrialPolicy(data: {
     default_trial_enabled: boolean;
     default_trial_months: number;
+    default_trial_unit?: "months" | "days";
   }) {
     const response = await this.client.put<
       APIResponse<{
         default_trial_enabled: boolean;
         default_trial_months: number;
+        default_trial_unit: "months" | "days";
       }>
     >("/admin/billing/trial-policy", data);
     return response.data;
@@ -2589,6 +2594,7 @@ export class APIClient {
     data: {
       trial_enabled: boolean;
       trial_months: number;
+      trial_unit?: "months" | "days";
       reason?: string;
     },
   ) {
@@ -2597,11 +2603,20 @@ export class APIClient {
         id: string;
         trial_enabled: boolean;
         trial_months: number;
+        trial_unit: "months" | "days";
         reason?: string | null;
         subscription_end_date: string;
         is_custom_trial: boolean;
       }>
     >(`/admin/tenants/${tenantId}/trial-policy`, data);
+    return response.data;
+  }
+
+  async setTenantActive(tenantId: string, isActive: boolean) {
+    const response = await this.client.patch<APIResponse<{ id: string; is_active: boolean }>>(
+      `/admin/tenants/${tenantId}/active`,
+      { is_active: isActive },
+    );
     return response.data;
   }
 
@@ -3064,6 +3079,25 @@ export class APIClient {
     const response = await this.client.post<APIResponse<{ user_id: string; message: string }>>(
       `/users/${userId}/delete`,
       { reason: reason || "" },
+    );
+    return response.data;
+  }
+
+  async checkTermination(userId: string) {
+    const response = await this.client.get<
+      APIResponse<{
+        can_terminate: boolean;
+        blocking_reasons: Array<{ code: string; message: string }>;
+        assigned_projects: Array<{ project_id: string; project_name: string; status: string }>;
+      }>
+    >(`/users/${userId}/termination-check`);
+    return response.data;
+  }
+
+  async terminateUser(userId: string, reason: string) {
+    const response = await this.client.post<APIResponse<{ user_id: string; message: string }>>(
+      `/users/${userId}/terminate`,
+      { reason },
     );
     return response.data;
   }
