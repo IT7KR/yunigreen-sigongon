@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -350,3 +351,116 @@ async def execute_termination(
         db, admin.id, "user_terminated",
         f"직원 {snapshot['name']}({target_user.id}) 퇴사 처리. 사유: {reason}",
     )
+
+
+async def request_withdrawal(
+    db: AsyncSession,
+    user: "User",
+    reason: str,
+) -> dict:
+    """Scenario B1: 탈퇴 신청. 30일 유예 기간 시작."""
+    from app.models.user import User, UserRole
+
+    now = datetime.utcnow()
+
+    # 이미 탈퇴 신청 중
+    if user.withdrawal_requested_at is not None:
+        raise ValueError("이미 탈퇴가 신청되어 있어요.")
+
+    # super_admin은 탈퇴 불가
+    role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+    if role_val == "super_admin":
+        raise ValueError("최고관리자 계정은 직접 탈퇴할 수 없어요.")
+
+    # 유일한 company_admin 체크
+    if role_val == "company_admin" and user.organization_id:
+        count_result = await db.execute(
+            select(func.count()).select_from(User).where(
+                User.role == UserRole.COMPANY_ADMIN,
+                User.organization_id == user.organization_id,
+                User.is_active == True,  # noqa: E712
+                User.deleted_at == None,  # noqa: E711
+                User.id != user.id,
+            )
+        )
+        if int(count_result.scalar() or 0) == 0:
+            raise ValueError("조직의 유일한 대표이므로 탈퇴할 수 없어요. 다른 대표를 먼저 지정해 주세요.")
+
+    scheduled_at = now + timedelta(days=30)
+    user.withdrawal_requested_at = now
+    user.withdrawal_scheduled_at = scheduled_at
+    user.withdrawal_reason = reason
+    user.updated_at = now
+
+    await write_activity_log(db, user.id, "withdrawal_request", "회원 탈퇴 신청")
+
+    return {
+        "requested_at": now.isoformat(),
+        "scheduled_at": scheduled_at.isoformat(),
+    }
+
+
+async def cancel_withdrawal(
+    db: AsyncSession,
+    user: "User",
+) -> None:
+    """Scenario B1: 탈퇴 철회."""
+    if user.withdrawal_requested_at is None:
+        raise ValueError("진행 중인 탈퇴 요청이 없어요.")
+
+    user.withdrawal_requested_at = None
+    user.withdrawal_scheduled_at = None
+    user.withdrawal_reason = None
+    user.updated_at = datetime.utcnow()
+
+    await write_activity_log(db, user.id, "withdrawal_cancel", "회원 탈퇴 철회")
+
+
+async def execute_withdrawal(
+    db: AsyncSession,
+    user: "User",
+) -> None:
+    """Scenario B1: 유예 만료 후 탈퇴 자동 실행."""
+    from app.models.user_deletion_log import UserDeletionLog, DeletionType
+
+    now = datetime.utcnow()
+
+    # 스냅샷
+    snapshot = _create_snapshot(user)
+    log = UserDeletionLog(
+        user_id=user.id,
+        deletion_type=DeletionType.SELF_WITHDRAWAL,
+        deleted_by=None,
+        reason=user.withdrawal_reason,
+        user_snapshot=snapshot,
+        organization_id=user.organization_id,
+        retention_expires_at=now + timedelta(days=RETENTION_YEARS * 365),
+        deleted_at=now,
+    )
+    db.add(log)
+
+    # 익명화
+    _anonymize_user(user)
+
+    # Soft delete
+    user.deleted_at = now
+    user.deletion_reason = user.withdrawal_reason
+    user.updated_at = now
+
+    # 시스템 부수 데이터 정리
+    from app.models.device_token import DeviceToken
+    from app.models.operations import UserNotificationPrefs, AppNotification
+    for model_cls, fk in [
+        (DeviceToken, "user_id"),
+        (UserNotificationPrefs, "user_id"),
+        (AppNotification, "user_id"),
+    ]:
+        try:
+            fk_col = getattr(model_cls, fk)
+            items = await db.execute(select(model_cls).where(fk_col == user.id))
+            for item in items.scalars().all():
+                await db.delete(item)
+        except Exception:
+            continue
+
+    await write_activity_log(db, user.id, "withdrawal_executed", "회원 탈퇴 자동 실행")
