@@ -3143,6 +3143,7 @@ export class MockAPIClient {
   }) {
     const currentUser = this.getCurrentUser();
     let users = mockDb.get("users");
+    users = users.filter((u) => !u.deleted_at);
 
     // Tenant isolation: non-super_admin users only see users in their organization
     if (
@@ -3328,18 +3329,62 @@ export class MockAPIClient {
     );
   }
 
-  async deleteUser(userId: string) {
-    const before = mockDb.get("users");
-    const exists = before.some((u) => u.id === userId);
-    if (!exists) {
-      return delay(fail<void>("NOT_FOUND", "사용자를 찾을 수 없어요"));
+  async checkUserDeletion(userId: string) {
+    const users = mockDb.get("users");
+    const user = users.find((u) => u.id === userId);
+    if (!user) {
+      return delay(fail<any>("NOT_FOUND", "사용자를 찾을 수 없어요"));
     }
-    mockDb.update("users", (prev) => prev.filter((u) => u.id !== userId));
-    const current = mockDb.get("currentUser");
-    if (current?.id === userId) {
-      mockDb.set("currentUser", null);
+
+    const businessData: Record<string, number> = {};
+    const blockingReasons: Array<{ code: string; message: string; detail: string }> = [];
+
+    // mock: organization_id가 있는 사용자는 비즈니스 데이터가 있다고 가정
+    if (user.organization_id && user.role !== "super_admin") {
+      const projects = mockDb.get("projects");
+      const projectCount = projects.filter(
+        (p) => p.organization_id === user.organization_id,
+      ).length;
+      if (projectCount > 0) {
+        businessData["프로젝트"] = projectCount;
+      }
     }
-    return delay(ok<void>(null));
+
+    if (Object.keys(businessData).length > 0) {
+      const total = Object.values(businessData).reduce((a, b) => a + b, 0);
+      blockingReasons.push({
+        code: "HAS_BUSINESS_DATA",
+        message: `비즈니스 데이터 ${total}건이 연결되어 있어 삭제할 수 없어요.`,
+        detail: "비활성화 기능을 사용해 주세요.",
+      });
+    }
+
+    return delay(
+      ok({
+        deletable: blockingReasons.length === 0,
+        blocking_reasons: blockingReasons,
+        business_data: businessData,
+      }),
+    );
+  }
+
+  async deleteUser(userId: string, reason?: string) {
+    const users = mockDb.get("users");
+    const idx = users.findIndex((u) => u.id === userId);
+    if (idx < 0) {
+      return delay(fail<any>("NOT_FOUND", "사용자를 찾을 수 없어요"));
+    }
+    const now = new Date().toISOString();
+    users[idx] = {
+      ...users[idx],
+      name: "삭제된 사용자",
+      email: null,
+      phone: undefined,
+      is_active: false,
+      deleted_at: now,
+    };
+    mockDb.set("users", users);
+    return delay(ok({ user_id: userId, message: "사용자를 삭제했어요." }));
   }
 
   async getRevisions(_pricebookId?: string) {
@@ -5270,12 +5315,23 @@ export class MockAPIClient {
     return delay(ok(overview.data.history));
   }
 
-  async getTenants(params?: { page?: number; search?: string }) {
+  async getTenants(params?: { page?: number; search?: string; plan?: string; status?: string }) {
     let tenants = mockDb.get("tenants");
 
     if (params?.search) {
       const q = params.search.toLowerCase();
       tenants = tenants.filter((t) => t.name.toLowerCase().includes(q));
+    }
+
+    if (params?.plan) {
+      tenants = tenants.filter((t) => t.plan === params.plan);
+    }
+
+    if (params?.status) {
+      tenants = tenants.filter((t) => {
+        const isActive = t.is_active !== false; // default true if undefined
+        return params.status === "active" ? isActive : !isActive;
+      });
     }
 
     const page = params?.page || 1;
@@ -5285,7 +5341,7 @@ export class MockAPIClient {
     const start = (page - 1) * per_page;
     const pageItems = tenants.slice(start, start + per_page).map((tenant) => ({
       ...tenant,
-      status: "active" as const,
+      status: (tenant.is_active !== false ? "active" : "inactive") as "active" | "inactive",
     }));
 
     return delay(okPage(pageItems, { page, per_page, total, total_pages }));

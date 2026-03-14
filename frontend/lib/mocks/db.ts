@@ -37,6 +37,7 @@ export interface User {
   created_at?: string;
   last_login_at?: string;
   password_hash?: string;
+  deleted_at?: string | null;
 }
 
 export interface Project {

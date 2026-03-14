@@ -3049,9 +3049,21 @@ export class APIClient {
     return response.data;
   }
 
-  async deleteUser(userId: string) {
-    const response = await this.client.delete<APIResponse<void>>(
-      `/users/${userId}`,
+  async checkUserDeletion(userId: string) {
+    const response = await this.client.get<
+      APIResponse<{
+        deletable: boolean;
+        blocking_reasons: Array<{ code: string; message: string; detail: string }>;
+        business_data: Record<string, number>;
+      }>
+    >(`/users/${userId}/deletion-check`);
+    return response.data;
+  }
+
+  async deleteUser(userId: string, reason?: string) {
+    const response = await this.client.post<APIResponse<{ user_id: string; message: string }>>(
+      `/users/${userId}/delete`,
+      { reason: reason || "" },
     );
     return response.data;
   }
