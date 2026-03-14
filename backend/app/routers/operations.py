@@ -89,10 +89,10 @@ from app.services.labor_codebook import (
 )
 from app.services.storage import storage_service
 from app.services.trial_policy import (
-    add_months,
+    calculate_trial_end,
     get_or_create_signup_trial_policy,
     get_trial_override,
-    normalize_trial_months,
+    normalize_trial_duration,
     resolve_trial_policy,
 )
 
@@ -2837,29 +2837,26 @@ async def request_account_deactivation(
     return APIResponse.ok({"requested": True})
 
 
-@router.post("/me/account-deletion", response_model=APIResponse[dict])
+@router.post("/me/account-deletion", response_model=APIResponse[dict], deprecated=True)
 async def request_account_deletion(
     payload: AccountDeletionRequest,
     db: DBSession,
     current_user: CurrentUser,
 ):
+    """[Deprecated] 새 API: POST /api/v1/auth/withdrawal 를 사용하세요."""
     if not verify_password(payload.password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="비밀번호가 올바르지 않아요")
 
-    current_user.is_active = False
-    current_user.updated_at = datetime.utcnow()
+    from app.services.user_deletion import request_withdrawal
 
-    db.add(
-        AccountRequest(
-            user_id=current_user.id,
-            type="deletion",
-            reason=payload.reason,
-            status="requested",
-        )
-    )
-    await _log_activity(db, current_user.id, "settings_change", "회원탈퇴 요청")
+    try:
+        result = await request_withdrawal(db, current_user, payload.reason or "")
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
-    return APIResponse.ok({"requested": True})
+    await db.commit()
+
+    return APIResponse.ok({"requested": True, "scheduled_at": result["scheduled_at"]})
 
 
 # ----------------------------
@@ -5297,11 +5294,13 @@ class PaymentMethodRequest(BaseModel):
 class TrialPolicyRequest(BaseModel):
     default_trial_enabled: bool
     default_trial_months: int = 0
+    default_trial_unit: str = "months"
 
 
 class TenantTrialOverrideRequest(BaseModel):
     trial_enabled: bool
     trial_months: int = 0
+    trial_unit: str = "months"
     reason: Optional[str] = None
 
 
@@ -5328,6 +5327,13 @@ async def get_billing_overview(
 ):
     org_id = _require_org_id(current_user)
 
+    seats_used_result = await db.execute(
+        select(func.count(User.id))
+        .where(User.organization_id == org_id)
+        .where(User.is_active == True)
+    )
+    seats_used = seats_used_result.scalar() or 0
+
     subscription = (
         await db.execute(
             select(Subscription).where(Subscription.organization_id == org_id)
@@ -5343,7 +5349,7 @@ async def get_billing_overview(
                 "days_remaining": 0,
                 "is_custom_trial": False,
                 "billing_amount": 0,
-                "seats_used": 0,
+                "seats_used": seats_used,
                 "seats_total": 0,
                 "scheduled_plan": None,
                 "scheduled_plan_date": None,
@@ -5353,6 +5359,9 @@ async def get_billing_overview(
                 "trial_months": trial_override.trial_months
                 if trial_override and trial_override.trial_enabled
                 else 0,
+                "trial_unit": trial_override.trial_unit
+                if trial_override and trial_override.trial_enabled
+                else "months",
                 "history": [],
             }
         )
@@ -5389,7 +5398,7 @@ async def get_billing_overview(
                     next((p.amount for p in payments if p.status == PaymentStatus.PAID), 0)
                 )
             ),
-            "seats_used": 0,
+            "seats_used": seats_used,
             "seats_total": _billing_seat_limit(subscription.plan),
             "scheduled_plan": None,
             "scheduled_plan_date": None,
@@ -5402,6 +5411,11 @@ async def get_billing_overview(
                 trial_resolution.months
                 if subscription.plan == SubscriptionPlan.TRIAL and trial_resolution
                 else 0
+            ),
+            "trial_unit": (
+                trial_resolution.unit
+                if subscription.plan == SubscriptionPlan.TRIAL and trial_resolution
+                else "months"
             ),
             "history": [
                 {
@@ -5458,6 +5472,7 @@ async def get_signup_trial_policy(
         {
             "default_trial_enabled": policy.default_trial_enabled,
             "default_trial_months": policy.default_trial_months,
+            "default_trial_unit": policy.default_trial_unit,
         }
     )
 
@@ -5470,18 +5485,24 @@ async def update_signup_trial_policy(
 ):
     _require_super_admin(current_user)
 
-    months = normalize_trial_months(
-        payload.default_trial_months if payload.default_trial_enabled else 0
+    if payload.default_trial_unit not in ("months", "days"):
+        raise HTTPException(status_code=400, detail="단위는 'months' 또는 'days'만 가능해요.")
+
+    months = normalize_trial_duration(
+        payload.default_trial_months if payload.default_trial_enabled else 0,
+        payload.default_trial_unit,
     )
+    duration_label = "일 수" if payload.default_trial_unit == "days" else "개월 수"
     if payload.default_trial_enabled and months <= 0:
         raise HTTPException(
             status_code=400,
-            detail="무료 체험을 제공할 때는 개월 수를 1 이상으로 설정해 주세요.",
+            detail=f"무료 체험을 제공할 때는 {duration_label}를 1 이상으로 설정해 주세요.",
         )
 
     policy = await get_or_create_signup_trial_policy(db)
     policy.default_trial_enabled = payload.default_trial_enabled
     policy.default_trial_months = months
+    policy.default_trial_unit = payload.default_trial_unit
     policy.updated_at = datetime.utcnow()
     await db.commit()
 
@@ -5489,6 +5510,7 @@ async def update_signup_trial_policy(
         {
             "default_trial_enabled": policy.default_trial_enabled,
             "default_trial_months": policy.default_trial_months,
+            "default_trial_unit": policy.default_trial_unit,
         }
     )
 
@@ -5778,11 +5800,15 @@ async def get_tenant(
             "trial_override_months": (
                 trial_override.trial_months if trial_override is not None else None
             ),
+            "trial_override_unit": (
+                trial_override.trial_unit if trial_override is not None else None
+            ),
             "trial_override_reason": (
                 trial_override.reason if trial_override is not None else None
             ),
             "effective_trial_enabled": trial_resolution.enabled,
             "effective_trial_months": trial_resolution.months,
+            "effective_trial_unit": trial_resolution.unit,
             "trial_source": (
                 trial_resolution.source
                 if subscription is not None
@@ -5802,17 +5828,21 @@ async def set_tenant_trial_policy(
 ):
     _require_super_admin(current_user)
 
+    if payload.trial_unit not in ("months", "days"):
+        raise HTTPException(status_code=400, detail="단위는 'months' 또는 'days'만 가능해요.")
+
     org = (
         await db.execute(select(Organization).where(Organization.id == tenant_id))
     ).scalar_one_or_none()
     if not org:
         raise NotFoundException("tenant", tenant_id)
 
-    months = normalize_trial_months(payload.trial_months if payload.trial_enabled else 0)
+    months = normalize_trial_duration(payload.trial_months if payload.trial_enabled else 0, payload.trial_unit)
+    duration_label = "일 수" if payload.trial_unit == "days" else "개월 수"
     if payload.trial_enabled and months <= 0:
         raise HTTPException(
             status_code=400,
-            detail="무료 체험을 부여할 때는 개월 수를 1 이상으로 설정해 주세요.",
+            detail=f"무료 체험을 부여할 때는 {duration_label}를 1 이상으로 설정해 주세요.",
         )
 
     now = datetime.utcnow()
@@ -5826,6 +5856,7 @@ async def set_tenant_trial_policy(
 
     override.trial_enabled = payload.trial_enabled
     override.trial_months = months
+    override.trial_unit = payload.trial_unit
     override.reason = (payload.reason or "").strip() or None
     override.updated_by_user_id = current_user.id
     override.updated_at = now
@@ -5853,7 +5884,7 @@ async def set_tenant_trial_policy(
                 detail="이미 유료 구독 이력이 있는 고객사에는 무료 체험 정책을 적용할 수 없어요.",
             )
 
-        trial_end = add_months(now, months)
+        trial_end = calculate_trial_end(now, months, payload.trial_unit)
         if not sub:
             sub = Subscription(
                 organization_id=org.id,
@@ -5885,6 +5916,7 @@ async def set_tenant_trial_policy(
             "id": str(org.id),
             "trial_enabled": override.trial_enabled,
             "trial_months": override.trial_months,
+            "trial_unit": override.trial_unit,
             "reason": override.reason,
             "subscription_end_date": (
                 sub.expires_at.isoformat()
