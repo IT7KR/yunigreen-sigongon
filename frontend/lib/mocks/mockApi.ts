@@ -5556,6 +5556,62 @@ export class MockAPIClient {
     return delay(ok({ id: tenantId, is_active: isActive }));
   }
 
+  async updateTenant(
+    tenantId: string,
+    data: {
+      name?: string;
+      business_number?: string;
+      representative?: string;
+      rep_phone?: string;
+      rep_email?: string;
+      contact_name?: string;
+      contact_phone?: string;
+      contact_position?: string;
+    },
+  ) {
+    const tenants = mockDb.get("tenants");
+    const idx = tenants.findIndex((t) => t.id === tenantId);
+    if (idx < 0) {
+      return delay(fail<Tenant>("NOT_FOUND", "테넌트를 찾을 수 없어요"));
+    }
+    const updated = tenants.map((t) =>
+      t.id === tenantId ? { ...t, ...(data as Record<string, unknown>) } : t,
+    ) as Tenant[];
+    mockDb.set("tenants", updated);
+    return delay(ok(updated[idx]));
+  }
+
+  async changeTenantPlan(
+    tenantId: string,
+    data: {
+      plan: "none" | "trial" | "basic" | "pro";
+      subscription_end_date?: string;
+      billing_amount?: number;
+    }
+  ) {
+    const tenants = mockDb.get("tenants");
+    const idx = tenants.findIndex((t) => t.id === tenantId);
+    if (idx < 0) {
+      return delay(fail<{ id: string }>("NOT_FOUND", "테넌트를 찾을 수 없어요"));
+    }
+    const now = new Date().toISOString();
+    const planPrices: Record<string, number> = { basic: 588000, pro: 1188000, trial: 0, none: 0 };
+    const updated = tenants.map((t) =>
+      t.id === tenantId
+        ? {
+            ...t,
+            plan: data.plan,
+            subscription_start_date: data.plan !== "none" ? now : t.subscription_start_date,
+            subscription_end_date: data.subscription_end_date || t.subscription_end_date,
+            billing_amount: data.billing_amount ?? planPrices[data.plan] ?? 0,
+            is_custom_trial: data.plan === "trial" ? t.is_custom_trial : false,
+          }
+        : t,
+    );
+    mockDb.set("tenants", updated);
+    return delay(ok({ id: tenantId }));
+  }
+
   async uploadPricebook(
     file: File,
     data: { version_label: string; effective_from: string },
@@ -7260,6 +7316,80 @@ export class MockAPIClient {
       return delay(fail("MISSING_REASON", "탈퇴 사유를 입력해 주세요"));
     }
     return delay(ok({ success: true, message: "회원 탈퇴가 완료되었습니다" }));
+  }
+
+  async requestWithdrawal(password: string, reason: string) {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      return delay(fail<any>("UNAUTHORIZED", "로그인이 필요해요"));
+    }
+
+    if (currentUser.role === "super_admin") {
+      return delay(fail<any>("FORBIDDEN", "최고관리자 계정은 직접 탈퇴할 수 없어요"));
+    }
+
+    const now = new Date();
+    const scheduled = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    // mock: withdrawal 상태 저장 (간이)
+    const users = mockDb.get("users");
+    const idx = users.findIndex((u) => u.id === currentUser.id);
+    if (idx >= 0) {
+      (users[idx] as any).withdrawal_requested_at = now.toISOString();
+      (users[idx] as any).withdrawal_scheduled_at = scheduled.toISOString();
+      mockDb.set("users", users);
+    }
+
+    return delay(
+      ok({
+        requested: true,
+        scheduled_at: scheduled.toISOString(),
+        message: "탈퇴 신청이 접수되었어요. 30일 후 자동으로 처리됩니다.",
+      }),
+    );
+  }
+
+  async cancelWithdrawal() {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      return delay(fail<any>("UNAUTHORIZED", "로그인이 필요해요"));
+    }
+
+    const users = mockDb.get("users");
+    const idx = users.findIndex((u) => u.id === currentUser.id);
+    if (idx >= 0) {
+      delete (users[idx] as any).withdrawal_requested_at;
+      delete (users[idx] as any).withdrawal_scheduled_at;
+      mockDb.set("users", users);
+    }
+
+    return delay(ok({ cancelled: true, message: "탈퇴 신청이 철회되었어요." }));
+  }
+
+  async getWithdrawalStatus() {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      return delay(fail<any>("UNAUTHORIZED", "로그인이 필요해요"));
+    }
+
+    const requestedAt = (currentUser as any).withdrawal_requested_at;
+    const scheduledAt = (currentUser as any).withdrawal_scheduled_at;
+    const isWithdrawing = !!requestedAt;
+
+    let remainingDays = null;
+    if (scheduledAt) {
+      const delta = new Date(scheduledAt).getTime() - Date.now();
+      remainingDays = Math.max(0, Math.ceil(delta / (1000 * 60 * 60 * 24)));
+    }
+
+    return delay(
+      ok({
+        is_withdrawing: isWithdrawing,
+        requested_at: requestedAt || null,
+        scheduled_at: scheduledAt || null,
+        remaining_days: remainingDays,
+      }),
+    );
   }
 
   // ============================================

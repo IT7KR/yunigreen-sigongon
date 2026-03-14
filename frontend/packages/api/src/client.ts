@@ -2620,6 +2620,41 @@ export class APIClient {
     return response.data;
   }
 
+  async updateTenant(
+    tenantId: string,
+    data: {
+      name?: string;
+      business_number?: string;
+      representative?: string;
+      rep_phone?: string;
+      rep_email?: string;
+      contact_name?: string;
+      contact_phone?: string;
+      contact_position?: string;
+    },
+  ) {
+    const response = await this.client.patch<APIResponse<{ id: string }>>(
+      `/admin/tenants/${tenantId}`,
+      data,
+    );
+    return response.data;
+  }
+
+  async changeTenantPlan(
+    tenantId: string,
+    data: {
+      plan: string;
+      subscription_end_date?: string;
+      billing_amount?: number;
+    }
+  ) {
+    const response = await this.client.patch<APIResponse<{ id: string }>>(
+      `/admin/tenants/${tenantId}/plan`,
+      data,
+    );
+    return response.data;
+  }
+
   async createInvitation(data: {
     phone: string;
     name: string;
@@ -2966,6 +3001,32 @@ export class APIClient {
         requested: boolean;
       }>
     >("/me/account-deletion", data);
+    return response.data;
+  }
+
+  async requestWithdrawal(password: string, reason: string) {
+    const response = await this.client.post<
+      APIResponse<{ requested: boolean; scheduled_at: string; message: string }>
+    >("/auth/withdrawal", { password, reason });
+    return response.data;
+  }
+
+  async cancelWithdrawal() {
+    const response = await this.client.post<
+      APIResponse<{ cancelled: boolean; message: string }>
+    >("/auth/withdrawal/cancel");
+    return response.data;
+  }
+
+  async getWithdrawalStatus() {
+    const response = await this.client.get<
+      APIResponse<{
+        is_withdrawing: boolean;
+        requested_at: string | null;
+        scheduled_at: string | null;
+        remaining_days: number | null;
+      }>
+    >("/auth/withdrawal/status");
     return response.data;
   }
 
