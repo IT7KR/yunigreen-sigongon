@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy import BigInteger
 from sqlmodel import SQLModel, Field, Relationship
+from pydantic import field_serializer
 
 from app.core.snowflake import generate_snowflake_id
 
@@ -94,6 +95,10 @@ class OrganizationRead(OrganizationBase):
     id: int
     created_at: datetime
 
+    @field_serializer('id')
+    def serialize_id(self, v: int) -> str:
+        return str(v)
+
 
 class UserBase(SQLModel):
     """User base fields."""
@@ -155,6 +160,14 @@ class UserRead(UserBase):
     organization_id: Optional[int]
     created_at: datetime
     last_login_at: Optional[datetime]
+
+    @field_serializer('id')
+    def serialize_id(self, v: int) -> str:
+        return str(v)
+
+    @field_serializer('organization_id')
+    def serialize_org_id(self, v: Optional[int]) -> Optional[str]:
+        return str(v) if v is not None else None
 
 
 class UserLogin(SQLModel):

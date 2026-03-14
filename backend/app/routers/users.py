@@ -40,7 +40,7 @@ class UserUpdateRequest(BaseModel):
 
 
 class UserCreateResponse(BaseModel):
-    id: int
+    id: str
     email: str
     name: str
     role: UserRole
@@ -138,7 +138,7 @@ async def create_user(
     
     return APIResponse.ok(
         UserCreateResponse(
-            id=user.id,
+            id=str(user.id),
             email=user.email,
             name=user.name,
             role=user.role,
