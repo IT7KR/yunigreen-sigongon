@@ -146,6 +146,7 @@ from app.routers.construction_rates import router as construction_rates_router
 from app.routers.construction_plans import router as construction_plans_router
 from app.routers.files import router as files_router
 from app.routers.withdrawal import router as withdrawal_router
+from app.routers.tenants import router as tenants_router
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["인증"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["사용자 관리"])
@@ -180,3 +181,4 @@ app.include_router(construction_rates_router, prefix="/api/v1", tags=["건설 �
 app.include_router(construction_plans_router, prefix="/api/v1", tags=["시공계획서"])
 app.include_router(files_router, prefix="/api/v1/files", tags=["파일 서빙"])
 app.include_router(withdrawal_router, prefix="/api/v1/auth", tags=["withdrawal"])
+app.include_router(tenants_router, prefix="/api/v1/admin/tenants", tags=["고객사 관리 (SA)"])
