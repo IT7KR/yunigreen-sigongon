@@ -37,7 +37,10 @@ import {
   User,
   CheckCircle,
   X,
+  Trash2,
 } from "lucide-react";
+import { DeleteUserModal } from "./_components/DeleteUserModal";
+import { useDeleteUser } from "./_components/useDeleteUser";
 import { api } from "@/lib/api";
 import { MobileListCard } from "@/components/MobileListCard";
 
@@ -79,6 +82,18 @@ export default function SAUsersPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { confirm } = useConfirmDialog();
+
+  const {
+    flowState: deleteFlowState,
+    isOpen: deleteModalOpen,
+    startDeletionCheck,
+    executeDelete,
+    close: closeDeleteModal,
+  } = useDeleteUser(() => {
+    closeDetailModal();
+    loadUsers();
+    toast.success("계정이 삭제되었어요.");
+  });
 
   // Avatar Colors
   const avatarColors = [
@@ -879,8 +894,42 @@ export default function SAUsersPage() {
               </Button>
               <ToggleActiveButton user={selectedUser} size="modal" />
             </div>
+
+            {/* Danger zone - 계정 삭제 */}
+            {selectedUser.id !== currentUserId && (
+              <div className="mt-4 border-t border-dashed border-slate-200 pt-4">
+                <p className="text-xs text-slate-500">
+                  계정을 영구적으로 삭제합니다.
+                </p>
+                <p className="mb-3 text-xs text-slate-400">
+                  삭제된 계정은 복구할 수 없습니다.
+                </p>
+                <button
+                  onClick={() => startDeletionCheck(selectedUser.id)}
+                  disabled={isActionLoading}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-transparent py-2.5 text-sm font-medium text-red-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  계정 삭제
+                </button>
+              </div>
+            )}
           </div>
         </Modal>
+      )}
+      {/* Delete user modal */}
+      {selectedUser && (
+        <DeleteUserModal
+          isOpen={deleteModalOpen}
+          onClose={closeDeleteModal}
+          user={selectedUser}
+          flowState={deleteFlowState}
+          onConfirm={(reason) => executeDelete(selectedUser.id, reason)}
+          onDeactivate={() => {
+            closeDeleteModal();
+            handleToggleActive(selectedUser.id, selectedUser.is_active);
+          }}
+        />
       )}
     </AdminLayout>
   );
