@@ -20,6 +20,7 @@ export default function SABillingPolicyPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [trialEnabled, setTrialEnabled] = useState(true);
   const [trialMonths, setTrialMonths] = useState(1);
+  const [trialUnit, setTrialUnit] = useState<"months" | "days">("months");
 
   useEffect(() => {
     void loadPolicy();
@@ -32,6 +33,7 @@ export default function SABillingPolicyPage() {
       if (response.success && response.data) {
         setTrialEnabled(response.data.default_trial_enabled);
         setTrialMonths(response.data.default_trial_months || 1);
+        setTrialUnit(response.data.default_trial_unit || "months");
       }
     } catch (err) {
       console.error("Failed to load billing policy:", err);
@@ -43,7 +45,11 @@ export default function SABillingPolicyPage() {
 
   async function handleSave() {
     if (trialEnabled && trialMonths < 1) {
-      toast.error("무료 체험 개월 수를 1 이상으로 입력해 주세요.");
+      toast.error(
+        trialUnit === "days"
+          ? "무료 체험 일 수를 1 이상으로 입력해 주세요."
+          : "무료 체험 개월 수를 1 이상으로 입력해 주세요."
+      );
       return;
     }
 
@@ -52,6 +58,7 @@ export default function SABillingPolicyPage() {
       const response = await api.updateTrialPolicy({
         default_trial_enabled: trialEnabled,
         default_trial_months: trialEnabled ? trialMonths : 0,
+        default_trial_unit: trialUnit,
       });
 
       if (response.success) {
@@ -111,14 +118,44 @@ export default function SABillingPolicyPage() {
                 </Button>
               </div>
 
+              {trialEnabled && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    단위 선택
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Button
+                      variant={trialUnit === "months" ? "primary" : "secondary"}
+                      onClick={() => {
+                        setTrialUnit("months");
+                        setTrialMonths(1);
+                      }}
+                      className="w-full"
+                    >
+                      개월
+                    </Button>
+                    <Button
+                      variant={trialUnit === "days" ? "primary" : "secondary"}
+                      onClick={() => {
+                        setTrialUnit("days");
+                        setTrialMonths(1);
+                      }}
+                      className="w-full"
+                    >
+                      일
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  기본 무료 체험 개월 수
+                  {trialUnit === "days" ? "기본 무료 체험 일 수" : "기본 무료 체험 개월 수"}
                 </label>
                 <PrimitiveInput
                   type="number"
                   min={1}
-                  max={24}
+                  max={trialUnit === "days" ? 365 : 24}
                   value={String(trialMonths)}
                   onChange={(event) =>
                     setTrialMonths(Math.max(1, Number(event.target.value) || 1))
@@ -154,7 +191,7 @@ export default function SABillingPolicyPage() {
                     <p className="font-medium text-slate-900">신규 가입 시</p>
                     <p className="mt-1 text-sm text-slate-600">
                       {trialEnabled
-                        ? `${trialMonths}개월 무료 체험 후 결제 전환`
+                        ? `${trialMonths}${trialUnit === "days" ? "일" : "개월"} 무료 체험 후 결제 전환`
                         : "무료 체험 없이 가입 후 바로 요금제 선택"}
                     </p>
                   </div>
