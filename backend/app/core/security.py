@@ -173,7 +173,10 @@ async def get_current_user(
     from app.models.user import User
     
     result = await db.execute(
-        select(User).where(User.id == user_id_int)
+        select(User).where(
+            User.id == user_id_int,
+            User.deleted_at == None,  # noqa: E711
+        )
     )
     user = result.scalar_one_or_none()
     
