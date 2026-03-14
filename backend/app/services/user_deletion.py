@@ -241,8 +241,9 @@ async def check_termination_eligibility(
             "message": "관리자 계정은 퇴사 처리할 수 없어요. 시스템 관리자에게 문의해 주세요.",
         })
 
-    # 같은 조직 확인
-    if target_user.organization_id != admin.organization_id:
+    # 같은 조직 확인 (super_admin은 모든 조직 퇴사 처리 가능)
+    admin_role = admin.role.value if hasattr(admin.role, "value") else str(admin.role)
+    if admin_role != "super_admin" and target_user.organization_id != admin.organization_id:
         blocking_reasons.append({
             "code": "DIFFERENT_ORG",
             "message": "다른 조직의 직원은 퇴사 처리할 수 없어요.",
