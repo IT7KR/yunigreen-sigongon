@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -325,3 +325,130 @@ async def test_tenant_trial_override_endpoint_creates_and_withdraws_trial(
     await db.refresh(subscription)
     assert subscription.status == SubscriptionStatus.EXPIRED
     assert subscription.expires_at <= datetime.utcnow()
+
+
+@pytest.mark.asyncio
+async def test_register_applies_day_based_trial_policy(
+    async_client,
+    trial_policy_context,
+):
+    """일 단위 정책 설정 후 회원가입 시 expires_at이 N일 후인지 검증."""
+    db = trial_policy_context["db"]
+
+    policy = SignupTrialPolicy(
+        default_trial_enabled=True,
+        default_trial_months=14,
+        default_trial_unit="days",
+    )
+    db.add(policy)
+    await db.commit()
+
+    response = await async_client.post(
+        "/api/v1/auth/register",
+        json={
+            "username": "signup_day_trial_user",
+            "password": "Password!123",
+            "phone": "010-5555-6666",
+            "email": "signup-day-trial@example.com",
+            "company_name": "데이트라이얼 건설",
+            "business_number": "333-45-67890",
+            "representative_name": "박대표",
+            "rep_phone": "010-5555-7777",
+            "rep_email": "owner@daytrial.example.com",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+
+    org = (
+        await db.execute(
+            select(Organization).where(Organization.business_number == "333-45-67890")
+        )
+    ).scalar_one()
+    subscription = (
+        await db.execute(
+            select(Subscription).where(Subscription.organization_id == org.id)
+        )
+    ).scalar_one()
+
+    assert subscription.plan == SubscriptionPlan.TRIAL
+    assert subscription.status == SubscriptionStatus.ACTIVE
+    expected_end = subscription.started_at + timedelta(days=14)
+    assert subscription.expires_at.date() == expected_end.date()
+
+
+@pytest.mark.asyncio
+async def test_tenant_trial_override_with_days_unit(
+    async_client,
+    trial_policy_context,
+):
+    """일 단위 테넌트 override → subscription 만료일 검증."""
+    db = trial_policy_context["db"]
+    org = trial_policy_context["organization"]
+
+    response = await async_client.put(
+        f"/api/v1/admin/tenants/{org.id}/trial-policy",
+        json={
+            "trial_enabled": True,
+            "trial_months": 30,
+            "trial_unit": "days",
+            "reason": "데모 연장 30일",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["data"]["trial_enabled"] is True
+    assert payload["data"]["trial_months"] == 30
+    assert payload["data"]["trial_unit"] == "days"
+
+    subscription = (
+        await db.execute(
+            select(Subscription).where(Subscription.organization_id == org.id)
+        )
+    ).scalar_one()
+    assert subscription.plan == SubscriptionPlan.TRIAL
+    # Verify that end date is approximately 30 days from start
+    diff = (subscription.expires_at - subscription.started_at).days
+    assert diff == 30
+
+
+@pytest.mark.asyncio
+async def test_invalid_trial_unit_returns_400(
+    async_client,
+    trial_policy_context,
+):
+    """잘못된 unit 값 → 400 에러 검증."""
+    response = await async_client.put(
+        "/api/v1/admin/billing/trial-policy",
+        json={
+            "default_trial_enabled": True,
+            "default_trial_months": 3,
+            "default_trial_unit": "weeks",
+        },
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_trial_unit_defaults_to_months_when_omitted(
+    async_client,
+    trial_policy_context,
+):
+    """unit 미전송 시 기본값 'months' 동작 검증."""
+    db = trial_policy_context["db"]
+
+    response = await async_client.put(
+        "/api/v1/admin/billing/trial-policy",
+        json={
+            "default_trial_enabled": True,
+            "default_trial_months": 2,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["data"]["default_trial_unit"] == "months"
+    assert payload["data"]["default_trial_months"] == 2

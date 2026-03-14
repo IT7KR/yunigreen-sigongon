@@ -1,4 +1,5 @@
 """결제 및 구독 관리 API 라우터 - Toss Payments 연동."""
+import os
 import uuid
 import hmac
 import hashlib
@@ -373,20 +374,50 @@ async def change_plan(
 
         proration_amount = new_charge - refund_amount
 
-        # TODO: Process proration payment if amount > 0
-        # For now, we'll just log it
         if proration_amount > 0:
-            # Create a proration payment record
+            order_id = f"proration-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+            proration_order_name = f"{target_plan.value.capitalize()} 플랜 업그레이드 차액"
+            customer_key = f"org-{current_user.organization_id}"
+
             payment = Payment(
                 subscription_id=subscription.id,
                 organization_id=current_user.organization_id,
-                payment_key=f"proration-{uuid.uuid4()}",
-                order_id=f"proration-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}",
+                payment_key=f"proration-{uuid.uuid4()}",  # placeholder, updated after charge
+                order_id=order_id,
                 amount=proration_amount,
                 method="proration",
                 status=PaymentStatus.PENDING,
             )
             db.add(payment)
+            await db.flush()  # get payment.id
+
+            # Attempt actual charge if billing key exists
+            if subscription.billing_key:
+                from app.services.billing_service import get_payment_service
+                payment_service = get_payment_service()
+                try:
+                    charge_result = await payment_service.charge_billing(
+                        billing_key=subscription.billing_key,
+                        amount=str(int(proration_amount)),
+                        order_id=order_id,
+                        order_name=proration_order_name,
+                        customer_key=customer_key,
+                    )
+                    payment.payment_key = charge_result.get("paymentKey", payment.payment_key)
+                    payment.status = PaymentStatus.PAID
+                    payment.paid_at = datetime.utcnow()
+                    payment.method = charge_result.get("method", "카드")
+                    payment.receipt_url = charge_result.get("receiptUrl")
+                except Exception as e:
+                    payment.status = PaymentStatus.FAILED
+                    payment.failed_at = datetime.utcnow()
+                    payment.failure_reason = str(e)
+                    payment.updated_at = datetime.utcnow()
+                    # Don't block the plan change - log the failure but continue
+                    import logging
+                    logging.getLogger(__name__).error(f"프로레이션 결제 실패: {e}")
+
+            payment.updated_at = datetime.utcnow()
 
     # Update plan
     subscription.plan = target_plan
@@ -575,7 +606,6 @@ async def handle_webhook(
                     subscription = result.scalar_one_or_none()
 
                     if subscription:
-                        # TODO: Encrypt billing_key in production
                         subscription.billing_key = billing_key
                         subscription.updated_at = datetime.utcnow()
                         await db.commit()
@@ -583,6 +613,126 @@ async def handle_webhook(
                     pass  # Invalid int format
 
     return {"status": "ok", "received": event_type}
+
+
+class AutoRenewResult(BaseModel):
+    """자동갱신 결과."""
+    processed: int
+    succeeded: int
+    failed: int
+    errors: list[str]
+
+
+@router.post("/billing/auto-renew", response_model=APIResponse[AutoRenewResult])
+async def auto_renew_subscriptions(
+    request: Request,
+    db: DBSession,
+    x_internal_secret: Optional[str] = Header(default=None, alias="X-Internal-Secret"),
+):
+    """구독 자동갱신.
+
+    만료 3일 전이거나 만료된 ACTIVE 구독을 자동으로 갱신해요.
+    내부 크론잡에서 호출하는 엔드포인트예요.
+    """
+    # Verify internal secret
+    internal_secret = os.environ.get("INTERNAL_RENEWAL_SECRET", "")
+    if not internal_secret or x_internal_secret != internal_secret:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="인증되지 않은 접근이에요",
+        )
+
+    now = datetime.utcnow()
+    renewal_threshold = now + timedelta(days=3)
+
+    # Find subscriptions expiring soon or already expired with billing key
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.billing_key.isnot(None),
+            Subscription.expires_at <= renewal_threshold,
+        )
+    )
+    subscriptions = result.scalars().all()
+
+    from app.services.billing_service import get_payment_service
+    payment_service = get_payment_service()
+
+    processed = 0
+    succeeded = 0
+    failed = 0
+    errors = []
+
+    for subscription in subscriptions:
+        processed += 1
+        order_id = f"renewal-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{subscription.organization_id}"
+        plan_price = PLAN_PRICING.get(subscription.plan, Decimal("0"))
+
+        if plan_price == Decimal("0"):
+            continue  # Skip free/trial plans
+
+        try:
+            charge_result = await payment_service.charge_billing(
+                billing_key=subscription.billing_key,
+                amount=str(int(plan_price)),
+                order_id=order_id,
+                order_name=f"{subscription.plan.value.capitalize()} 플랜 연간 갱신",
+                customer_key=f"org-{subscription.organization_id}",
+            )
+
+            # Create payment record
+            payment = Payment(
+                subscription_id=subscription.id,
+                organization_id=subscription.organization_id,
+                payment_key=charge_result.get("paymentKey", f"renewal-{uuid.uuid4()}"),
+                order_id=order_id,
+                amount=plan_price,
+                method=charge_result.get("method", "카드"),
+                status=PaymentStatus.PAID,
+                paid_at=now,
+                receipt_url=charge_result.get("receiptUrl"),
+            )
+            db.add(payment)
+
+            # Extend subscription
+            subscription.expires_at = subscription.expires_at + timedelta(days=365)
+            subscription.status = SubscriptionStatus.ACTIVE
+            subscription.updated_at = now
+
+            succeeded += 1
+
+        except Exception as e:
+            error_msg = f"org {subscription.organization_id}: {str(e)}"
+            errors.append(error_msg)
+
+            # Create failed payment record
+            payment = Payment(
+                subscription_id=subscription.id,
+                organization_id=subscription.organization_id,
+                payment_key=f"renewal-failed-{uuid.uuid4()}",
+                order_id=order_id,
+                amount=plan_price,
+                method="카드",
+                status=PaymentStatus.FAILED,
+                failed_at=now,
+                failure_reason=str(e),
+            )
+            db.add(payment)
+
+            # Mark subscription as past due
+            subscription.status = SubscriptionStatus.PAST_DUE
+            subscription.updated_at = now
+
+            failed += 1
+
+    await db.commit()
+
+    return APIResponse.ok(AutoRenewResult(
+        processed=processed,
+        succeeded=succeeded,
+        failed=failed,
+        errors=errors,
+    ))
 
 
 # Helper functions

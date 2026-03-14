@@ -119,12 +119,13 @@ class TossPaymentsService:
         """웹훅 시그니처 검증."""
         if not self.webhook_secret or not signature:
             return True  # 시크릿 미설정 시 검증 건너뜀
-        expected = hmac.new(
+        expected_bytes = hmac.new(
             self.webhook_secret.encode(),
             body,
             hashlib.sha256,
-        ).hexdigest()
-        return hmac.compare_digest(expected, signature)
+        ).digest()
+        expected_b64 = base64.b64encode(expected_bytes).decode()
+        return hmac.compare_digest(expected_b64, signature)
 
 
 class MockPaymentService:

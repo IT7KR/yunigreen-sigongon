@@ -3,9 +3,10 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, TYPE_CHECKING
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, Column
 from sqlmodel import SQLModel, Field, Relationship
 
+from app.core.encryption import EncryptedString
 from app.core.snowflake import generate_snowflake_id
 
 if TYPE_CHECKING:
@@ -35,6 +36,12 @@ class PaymentStatus(str, Enum):
     REFUNDED = "refunded"
 
 
+class TrialUnit(str, Enum):
+    """Trial duration unit."""
+    MONTHS = "months"
+    DAYS = "days"
+
+
 class SignupTrialPolicy(SQLModel, table=True):
     """Global trial policy applied at signup time."""
     __tablename__ = "signup_trial_policy"
@@ -42,6 +49,7 @@ class SignupTrialPolicy(SQLModel, table=True):
     id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
     default_trial_enabled: bool = Field(default=True)
     default_trial_months: int = Field(default=1, ge=0)
+    default_trial_unit: str = Field(default="months", max_length=10)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -54,6 +62,7 @@ class OrganizationTrialOverride(SQLModel, table=True):
     organization_id: int = Field(sa_type=BigInteger, unique=True, index=True)
     trial_enabled: bool = Field(default=False)
     trial_months: int = Field(default=0, ge=0)
+    trial_unit: str = Field(default="months", max_length=10)
     reason: Optional[str] = Field(default=None, max_length=500)
     updated_by_user_id: Optional[int] = Field(default=None, sa_type=BigInteger, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -78,8 +87,11 @@ class Subscription(SubscriptionBase, table=True):
         index=True
     )
 
-    # Toss Payments billing key for recurring payments (encrypted in production)
-    billing_key: Optional[str] = Field(default=None, max_length=500)
+    # Toss Payments billing key for recurring payments (Fernet-encrypted at rest)
+    billing_key: Optional[str] = Field(
+        default=None,
+        sa_column=Column(EncryptedString(), nullable=True)
+    )
 
     # Subscription period
     started_at: datetime = Field(default_factory=datetime.utcnow)
