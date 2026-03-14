@@ -296,10 +296,11 @@ export class MockAPIClient {
   private signupTrialPolicy = {
     default_trial_enabled: true,
     default_trial_months: 1,
+    default_trial_unit: "months" as "months" | "days",
   };
   private tenantTrialOverrides: Record<
     string,
-    { trial_enabled: boolean; trial_months: number; reason?: string | null }
+    { trial_enabled: boolean; trial_months: number; trial_unit: "months" | "days"; reason?: string | null }
   > = {};
   private materialMasters: MaterialMaster[] = [
     {
@@ -1156,6 +1157,7 @@ export class MockAPIClient {
       return {
         enabled: override.trial_enabled && override.trial_months > 0,
         months: override.trial_enabled ? override.trial_months : 0,
+        unit: override.trial_unit,
         source: "override" as const,
         reason: override.reason ?? null,
       };
@@ -1168,6 +1170,7 @@ export class MockAPIClient {
       months: this.signupTrialPolicy.default_trial_enabled
         ? this.signupTrialPolicy.default_trial_months
         : 0,
+      unit: this.signupTrialPolicy.default_trial_unit,
       source: this.signupTrialPolicy.default_trial_enabled
         ? ("default" as const)
         : ("none" as const),
@@ -3387,6 +3390,50 @@ export class MockAPIClient {
     return delay(ok({ user_id: userId, message: "사용자를 삭제했어요." }));
   }
 
+  async checkTermination(userId: string) {
+    const users = mockDb.get("users");
+    const user = users.find((u) => u.id === userId);
+    if (!user) {
+      return delay(fail<any>("NOT_FOUND", "사용자를 찾을 수 없어요"));
+    }
+
+    const blockingReasons: Array<{ code: string; message: string }> = [];
+    const role = user.role;
+    if (role === "super_admin" || role === "company_admin") {
+      blockingReasons.push({
+        code: "INVALID_ROLE",
+        message: "관리자 계정은 퇴사 처리할 수 없어요.",
+      });
+    }
+
+    return delay(
+      ok({
+        can_terminate: blockingReasons.length === 0,
+        blocking_reasons: blockingReasons,
+        assigned_projects: [],
+      }),
+    );
+  }
+
+  async terminateUser(userId: string, reason?: string) {
+    const users = mockDb.get("users");
+    const idx = users.findIndex((u) => u.id === userId);
+    if (idx < 0) {
+      return delay(fail<any>("NOT_FOUND", "사용자를 찾을 수 없어요"));
+    }
+    const now = new Date().toISOString();
+    users[idx] = {
+      ...users[idx],
+      name: "퇴사한 직원",
+      email: null,
+      phone: undefined,
+      is_active: false,
+      deleted_at: now,
+    };
+    mockDb.set("users", users);
+    return delay(ok({ user_id: userId, message: "퇴사 처리가 완료되었어요." }));
+  }
+
   async getRevisions(_pricebookId?: string) {
     return delay(
       ok([
@@ -3857,6 +3904,7 @@ export class MockAPIClient {
           scheduled_plan_date: null,
           trial_source: null,
           trial_months: 0,
+          trial_unit: "months" as const,
           payment_method: null,
           history: [],
         }),
@@ -3880,6 +3928,7 @@ export class MockAPIClient {
           trial_source:
             effectivePolicy.source === "none" ? null : effectivePolicy.source,
           trial_months: effectivePolicy.enabled ? effectivePolicy.months : 0,
+          trial_unit: effectivePolicy.unit,
           payment_method: null,
           history: [],
         }),
@@ -3928,6 +3977,7 @@ export class MockAPIClient {
         scheduled_plan_date: null,
         trial_source: tenant.plan === "trial" ? effectivePolicy.source : null,
         trial_months: tenant.plan === "trial" ? effectivePolicy.months : 0,
+        trial_unit: effectivePolicy.unit,
         payment_method:
           tenant.plan !== "trial" && !isCustomTrial
             ? {
@@ -5356,14 +5406,44 @@ export class MockAPIClient {
     const effectivePolicy = this.resolveTenantTrialPolicy(tenantId);
     const override = this.tenantTrialOverrides[tenantId];
 
+    const tenantUsers = tenant.organization_id
+      ? mockDb
+          .get("users")
+          .filter((u) => u.organization_id === tenant.organization_id)
+          .map((u) => ({
+            id: String(u.id),
+            name: u.name,
+            phone: u.phone || "-",
+            email: u.email || "-",
+            role: u.role,
+            last_login_at: u.last_login_at,
+          }))
+      : [];
+
+    const allProjects = mockDb.get("projects");
+    const tenantProjects = tenant.organization_id
+      ? allProjects.filter((p) => p.organization_id === tenant.organization_id)
+      : [];
+    const projectStats = {
+      draft: tenantProjects.filter((p) => p.status === "draft").length,
+      in_progress: tenantProjects.filter((p) => p.status === "in_progress").length,
+      completed: tenantProjects.filter((p) => p.status === "completed").length,
+      total: tenantProjects.length,
+    };
+
     return delay(
       ok({
         ...tenant,
+        users: tenantUsers,
+        project_stats: projectStats,
+        payment_history: tenant.payment_history || [],
         trial_override_enabled: override?.trial_enabled ?? null,
         trial_override_months: override?.trial_months ?? null,
+        trial_override_unit: override?.trial_unit ?? null,
         trial_override_reason: override?.reason ?? null,
         effective_trial_enabled: effectivePolicy.enabled,
         effective_trial_months: effectivePolicy.months,
+        effective_trial_unit: effectivePolicy.unit,
         trial_source: tenant.plan === "trial" ? effectivePolicy.source : null,
       }),
     );
@@ -5376,12 +5456,14 @@ export class MockAPIClient {
   async updateTrialPolicy(data: {
     default_trial_enabled: boolean;
     default_trial_months: number;
+    default_trial_unit?: "months" | "days";
   }) {
     this.signupTrialPolicy = {
       default_trial_enabled: data.default_trial_enabled,
       default_trial_months: data.default_trial_enabled
         ? Math.max(1, data.default_trial_months)
         : 0,
+      default_trial_unit: data.default_trial_unit || "months",
     };
 
     return delay(ok(this.signupTrialPolicy));
@@ -5392,6 +5474,7 @@ export class MockAPIClient {
     data: {
       trial_enabled: boolean;
       trial_months: number;
+      trial_unit?: "months" | "days";
       reason?: string;
     },
   ) {
@@ -5404,6 +5487,7 @@ export class MockAPIClient {
           id: string;
           trial_enabled: boolean;
           trial_months: number;
+          trial_unit: "months" | "days";
           reason?: string | null;
           subscription_end_date: string;
           is_custom_trial: boolean;
@@ -5412,9 +5496,11 @@ export class MockAPIClient {
     }
 
     const months = data.trial_enabled ? Math.max(1, data.trial_months) : 0;
+    const unit = data.trial_unit || "months";
     this.tenantTrialOverrides[tenantId] = {
       trial_enabled: data.trial_enabled,
       trial_months: months,
+      trial_unit: unit,
       reason: data.reason ?? null,
     };
     const tenant = tenants[idx];
@@ -5424,7 +5510,10 @@ export class MockAPIClient {
           ...tenant,
           plan: "trial" as const,
           subscription_start_date: now.toISOString(),
-          subscription_end_date: this.addMonths(now, months).toISOString(),
+          subscription_end_date: (unit === "days"
+            ? new Date(now.getTime() + months * 24 * 60 * 60 * 1000)
+            : this.addMonths(now, months)
+          ).toISOString(),
           is_custom_trial: true,
           billing_amount: 0,
         }
@@ -5446,11 +5535,25 @@ export class MockAPIClient {
         id: tenantId,
         trial_enabled: data.trial_enabled,
         trial_months: months,
+        trial_unit: unit,
         reason: data.reason ?? null,
         subscription_end_date: updated.subscription_end_date,
         is_custom_trial: data.trial_enabled,
       }),
     );
+  }
+
+  async setTenantActive(tenantId: string, isActive: boolean) {
+    const tenants = mockDb.get("tenants");
+    const idx = tenants.findIndex((t) => t.id === tenantId);
+    if (idx < 0) {
+      return delay(fail<{ id: string; is_active: boolean }>("NOT_FOUND", "테넌트를 찾을 수 없어요"));
+    }
+    const updated = tenants.map((t) =>
+      t.id === tenantId ? { ...t, is_active: isActive } : t,
+    );
+    mockDb.set("tenants", updated);
+    return delay(ok({ id: tenantId, is_active: isActive }));
   }
 
   async uploadPricebook(
