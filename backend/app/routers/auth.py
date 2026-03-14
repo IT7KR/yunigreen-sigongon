@@ -22,7 +22,7 @@ from app.models.otp import OtpRecord
 from app.models.user import User, UserLogin, Token, UserRead, UserRole, OrganizationRead
 from app.schemas.response import APIResponse
 from app.services.sms import get_sms_service
-from app.services.trial_policy import add_months, resolve_trial_policy
+from app.services.trial_policy import calculate_trial_end, resolve_trial_policy
 
 router = APIRouter()
 
@@ -105,7 +105,7 @@ async def login(
     """
     # 사용자 조회
     result = await db.execute(
-        select(User).where(User.username == credentials.username)
+        select(User).where(User.username == credentials.username, User.deleted_at == None)  # noqa: E711
     )
     user = result.scalar_one_or_none()
 
@@ -179,7 +179,7 @@ async def refresh_token(
     
     # 사용자 조회
     result = await db.execute(
-        select(User).where(User.id == user_id)
+        select(User).where(User.id == user_id, User.deleted_at == None)  # noqa: E711
     )
     user = result.scalar_one_or_none()
     
@@ -293,7 +293,7 @@ class PasswordResetConfirm(BaseModel):
 async def request_password_reset(request: PasswordResetRequest, db: DBSession):
     """아이디로 비밀번호 재설정 요청. 등록된 휴대전화로 OTP 발송."""
     result = await db.execute(
-        select(User).where(User.username == request.username)
+        select(User).where(User.username == request.username, User.deleted_at == None)  # noqa: E711
     )
     user = result.scalar_one_or_none()
     if not user or not user.phone:
@@ -350,7 +350,7 @@ async def confirm_password_reset(request: PasswordResetConfirm, db: DBSession):
 
     # phone으로 User 조회
     user_result = await db.execute(
-        select(User).where(User.phone == otp_record.phone)
+        select(User).where(User.phone == otp_record.phone, User.deleted_at == None)  # noqa: E711
     )
     user = user_result.scalar_one_or_none()
     if not user:
@@ -376,7 +376,7 @@ async def confirm_password_reset(request: PasswordResetConfirm, db: DBSession):
 async def check_username(username: str, db: DBSession):
     """아이디 중복 확인."""
     result = await db.execute(
-        select(User).where(User.username == username)
+        select(User).where(User.username == username, User.deleted_at == None)  # noqa: E711
     )
     existing = result.scalar_one_or_none()
     return APIResponse.ok({"available": existing is None})
@@ -386,7 +386,7 @@ async def check_username(username: str, db: DBSession):
 async def check_phone(phone: str, db: DBSession):
     """휴대전화번호 중복 확인."""
     result = await db.execute(
-        select(User).where(User.phone == phone)
+        select(User).where(User.phone == phone, User.deleted_at == None)  # noqa: E711
     )
     existing = result.scalar_one_or_none()
     return APIResponse.ok({"available": existing is None})
@@ -454,7 +454,7 @@ async def register(request: RegisterRequest, db: DBSession):
     """회원가입."""
     # 아이디 중복 확인
     result = await db.execute(
-        select(User).where(User.username == request.username)
+        select(User).where(User.username == request.username, User.deleted_at == None)  # noqa: E711
     )
     if result.scalar_one_or_none():
         raise HTTPException(
@@ -520,7 +520,7 @@ async def register(request: RegisterRequest, db: DBSession):
                 plan=SubscriptionPlan.TRIAL,
                 status=SubscriptionStatus.ACTIVE,
                 started_at=now,
-                expires_at=add_months(now, trial_policy.months),
+                expires_at=calculate_trial_end(now, trial_policy.months, trial_policy.unit),
             )
 
     if subscription is not None:
