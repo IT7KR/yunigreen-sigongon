@@ -23,6 +23,7 @@ import {
   CreditCard,
   ChevronDown,
   ChevronRight,
+  Bell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -41,6 +42,7 @@ import { AdminBottomNav } from "./AdminBottomNav";
 import { useUnreadCount } from "@/hooks/useNotifications";
 import { NavBadge } from "./NavBadge";
 import { NotificationDropdown } from "./NotificationDropdown";
+import { WithdrawalBanner } from "./WithdrawalBanner";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -90,6 +92,7 @@ const saNavItems = [
   { href: "/sa/tenants", icon: Building2, label: "고객사 관리" },
   { href: "/sa/billing-policy", icon: CreditCard, label: "체험/결제 정책" },
   { href: "/sa/users", icon: Users, label: "전체 사용자" },
+  { href: "/sa/notifications", icon: Bell, label: "공지/알림" },
   {
     href: "/sa/estimation-governance",
     icon: FileSpreadsheet,
@@ -439,6 +442,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
 
       {/* Main content */}
       <main className="lg:ml-64 pb-nav-safe lg:pb-0">
+        <WithdrawalBanner />
         {/* 모바일 상단 헤더 */}
         <div className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
           <AppLink href="/dashboard" className="flex items-center gap-2">
