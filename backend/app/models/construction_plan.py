@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Optional, TYPE_CHECKING
 from sqlalchemy import BigInteger
 from sqlmodel import SQLModel, Field
+from pydantic import model_validator
 
 from app.core.snowflake import generate_snowflake_id
 
@@ -27,6 +28,9 @@ class ConstructionPlan(SQLModel, table=True):
     organization_id: int = Field(sa_type=BigInteger, index=True)
     title: Optional[str] = Field(default=None, max_length=200)
     notes: Optional[str] = Field(default=None)
+    safety_plan: Optional[str] = Field(default=None)
+    equipment_plan: Optional[str] = Field(default=None)
+    waste_plan: Optional[str] = Field(default=None)
     created_by: Optional[int] = Field(default=None, sa_type=BigInteger)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -52,6 +56,36 @@ class ConstructionPhase(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class ConstructionLaborPlan(SQLModel, table=True):
+    """ConstructionLaborPlan - labor allocation within a plan."""
+    __tablename__ = "construction_labor_plan"
+
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    plan_id: int = Field(sa_type=BigInteger, index=True)
+    sort_order: int = Field(default=0)
+    job_title: str = Field(max_length=100)
+    headcount: int = Field(default=1, ge=1)
+    start_date: date
+    end_date: date
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ConstructionMaterialPlan(SQLModel, table=True):
+    """ConstructionMaterialPlan - material allocation within a plan."""
+    __tablename__ = "construction_material_plan"
+
+    id: int = Field(default_factory=generate_snowflake_id, primary_key=True, sa_type=BigInteger)
+    plan_id: int = Field(sa_type=BigInteger, index=True)
+    sort_order: int = Field(default=0)
+    material_name: str = Field(max_length=200)
+    quantity: str = Field(max_length=100)
+    start_date: date
+    end_date: date
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class ConstructionPlanCreate(SQLModel):
     """Schema for creating a construction plan."""
     title: Optional[str] = None
@@ -62,6 +96,9 @@ class ConstructionPlanUpdate(SQLModel):
     """Schema for updating a construction plan."""
     title: Optional[str] = None
     notes: Optional[str] = None
+    safety_plan: Optional[str] = None
+    equipment_plan: Optional[str] = None
+    waste_plan: Optional[str] = None
 
 
 class ConstructionPhaseCreate(SQLModel):
@@ -105,6 +142,92 @@ class ConstructionPhaseRead(SQLModel):
     delay_days: int
 
 
+class LaborPlanCreate(SQLModel):
+    """Schema for creating a labor plan entry."""
+    job_title: str
+    headcount: int = Field(default=1, ge=1)
+    start_date: date
+    end_date: date
+    sort_order: Optional[int] = None
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.start_date and self.end_date and self.start_date >= self.end_date:
+            raise ValueError("시작일은 종료일보다 앞서야 합니다.")
+        return self
+
+
+class LaborPlanUpdate(SQLModel):
+    """Schema for updating a labor plan entry."""
+    job_title: Optional[str] = None
+    headcount: Optional[int] = Field(default=None, ge=1)
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    sort_order: Optional[int] = None
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.start_date and self.end_date and self.start_date >= self.end_date:
+            raise ValueError("시작일은 종료일보다 앞서야 합니다.")
+        return self
+
+
+class LaborPlanRead(SQLModel):
+    """Schema for reading a labor plan entry."""
+    id: int
+    plan_id: int
+    sort_order: int
+    job_title: str
+    headcount: int
+    start_date: date
+    end_date: date
+    created_at: datetime
+    updated_at: datetime
+
+
+class MaterialPlanCreate(SQLModel):
+    """Schema for creating a material plan entry."""
+    material_name: str
+    quantity: str
+    start_date: date
+    end_date: date
+    sort_order: Optional[int] = None
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.start_date and self.end_date and self.start_date >= self.end_date:
+            raise ValueError("시작일은 종료일보다 앞서야 합니다.")
+        return self
+
+
+class MaterialPlanUpdate(SQLModel):
+    """Schema for updating a material plan entry."""
+    material_name: Optional[str] = None
+    quantity: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    sort_order: Optional[int] = None
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.start_date and self.end_date and self.start_date >= self.end_date:
+            raise ValueError("시작일은 종료일보다 앞서야 합니다.")
+        return self
+
+
+class MaterialPlanRead(SQLModel):
+    """Schema for reading a material plan entry."""
+    id: int
+    plan_id: int
+    sort_order: int
+    material_name: str
+    quantity: str
+    start_date: date
+    end_date: date
+    created_at: datetime
+    updated_at: datetime
+
+
 class ConstructionPlanRead(SQLModel):
     """Schema for reading a construction plan (without phases)."""
     id: int
@@ -112,6 +235,9 @@ class ConstructionPlanRead(SQLModel):
     organization_id: int
     title: Optional[str]
     notes: Optional[str]
+    safety_plan: Optional[str]
+    equipment_plan: Optional[str]
+    waste_plan: Optional[str]
     created_by: Optional[int]
     created_at: datetime
     updated_at: datetime
@@ -128,7 +254,9 @@ class PlanSummary(SQLModel):
 
 
 class ConstructionPlanDetail(SQLModel):
-    """Full construction plan detail with phases and summary."""
+    """Full construction plan detail with phases, labors, materials, and summary."""
     plan: ConstructionPlanRead
     phases: list[ConstructionPhaseRead]
+    labors: list[LaborPlanRead] = []
+    materials: list[MaterialPlanRead] = []
     summary: PlanSummary
