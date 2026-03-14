@@ -14,11 +14,13 @@ import {
   RotateCcw,
   X,
   UserPlus,
+  UserMinus,
 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { MobileListCard } from "@/components/MobileListCard";
 import { UserModal } from "@/components/UserModal";
 import { InviteUserModal } from "@/components/InviteUserModal";
+import { TerminateUserModal } from "./_components/TerminateUserModal";
 import { useAuth } from "@/lib/auth";
 import {
   Badge,
@@ -121,6 +123,8 @@ export default function UsersPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+  const [terminateModalOpen, setTerminateModalOpen] = useState(false);
+  const [terminateTarget, setTerminateTarget] = useState<UserItem | null>(null);
   const { confirm } = useConfirmDialog();
 
   useEffect(() => {
@@ -477,6 +481,15 @@ export default function UsersPage() {
                           >
                             <Edit2 className="h-4 w-4 text-slate-400" />
                           </PrimitiveButton>
+                          {user.role !== "company_admin" && user.role !== "super_admin" && (
+                            <PrimitiveButton
+                              onClick={() => { setTerminateTarget(user); setTerminateModalOpen(true); }}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-amber-50"
+                              title="퇴사 처리"
+                            >
+                              <UserMinus className="h-4 w-4 text-amber-500" />
+                            </PrimitiveButton>
+                          )}
                           <PrimitiveButton
                             onClick={() => handleDelete(user.id)}
                             className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
@@ -572,6 +585,15 @@ export default function UsersPage() {
                                 >
                                   <Edit2 className="h-4 w-4 text-slate-400" />
                                 </PrimitiveButton>
+                                {user.role !== "company_admin" && user.role !== "super_admin" && (
+                                  <PrimitiveButton
+                                    onClick={() => { setTerminateTarget(user); setTerminateModalOpen(true); }}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-amber-50"
+                                    title="퇴사 처리"
+                                  >
+                                    <UserMinus className="h-4 w-4 text-amber-500" />
+                                  </PrimitiveButton>
+                                )}
                                 <PrimitiveButton
                                   onClick={() => handleDelete(user.id)}
                                   className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-50"
@@ -811,6 +833,13 @@ export default function UsersPage() {
         onClose={() => setInviteModalOpen(false)}
         onInvite={handleInviteUser}
         currentUserRole={(currentUser?.role as UserRole) || "company_admin"}
+      />
+
+      <TerminateUserModal
+        isOpen={terminateModalOpen}
+        onClose={() => { setTerminateModalOpen(false); setTerminateTarget(null); }}
+        user={terminateTarget}
+        onTerminated={() => { loadUsers(); }}
       />
     </AdminLayout>
   );
