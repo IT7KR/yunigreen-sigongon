@@ -54,10 +54,11 @@ export default function CompletePage() {
       setCompanyName(signupData.companyName || "");
 
       try {
-        const token =
-          signupData.accessToken ||
-          (
-            await api.register({
+        let token = signupData.accessToken;
+
+        if (!token) {
+          try {
+            const registerResult = await api.register({
               username: signupData.username,
               email: signupData.email,
               password: signupData.password,
@@ -70,8 +71,19 @@ export default function CompletePage() {
               contact_name: signupData.contactName || undefined,
               contact_phone: signupData.contactPhone || undefined,
               contact_position: signupData.contactPosition || undefined,
-            })
-          ).data?.access_token;
+            });
+            token = registerResult.data?.access_token;
+          } catch (registerErr: unknown) {
+            // 409: username already exists from a concurrent call (React StrictMode)
+            const status = (registerErr as { status?: number })?.status;
+            if (status === 409) {
+              const refreshed = getSignupData();
+              token = refreshed.accessToken;
+            } else {
+              throw registerErr;
+            }
+          }
+        }
 
         if (!token) {
           throw new Error("missing_access_token");
