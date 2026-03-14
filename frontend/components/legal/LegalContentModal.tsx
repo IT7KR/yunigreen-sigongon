@@ -17,32 +17,25 @@ export function LegalContentModal({
   document,
   onConfirm,
 }: LegalContentModalProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
 
+  // Reset scroll position and progress when modal opens
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen && scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
       setScrollProgress(0);
-      return;
     }
-
-    // Modal renders children inside div.mt-4.overflow-y-auto — that's containerRef's parentElement
-    const container = containerRef.current?.parentElement;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const maxScroll = scrollHeight - clientHeight;
-      const progress = maxScroll <= 0 ? 100 : (scrollTop / maxScroll) * 100;
-      setScrollProgress(progress);
-    };
-
-    // Initial check in case content fits without scrolling
-    handleScroll();
-
-    container.addEventListener("scroll", handleScroll, { passive: true });
-    return () => container.removeEventListener("scroll", handleScroll);
   }, [isOpen]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const progress =
+      scrollHeight <= clientHeight
+        ? 100
+        : (scrollTop / (scrollHeight - clientHeight)) * 100;
+    setScrollProgress(progress);
+  };
 
   const handleConfirm = () => {
     onConfirm?.();
@@ -57,17 +50,22 @@ export function LegalContentModal({
       size="2xl"
       closeOnBackdropClick={false}
     >
-      <div ref={containerRef}>
-        {/* Scroll progress bar */}
-        <div className="sticky top-0 -mx-6 z-10 mb-4">
-          <div className="h-0.5 bg-slate-100">
-            <div
-              className="h-full bg-brand-point-500 transition-all duration-100"
-              style={{ width: `${scrollProgress}%` }}
-            />
-          </div>
+      {/* Scroll progress bar */}
+      <div className="sticky top-0 -mx-6 z-10">
+        <div className="h-0.5 bg-slate-100">
+          <div
+            className="h-full bg-brand-point-500 transition-all duration-100"
+            style={{ width: `${scrollProgress}%` }}
+          />
         </div>
+      </div>
 
+      {/* Self-contained scrollable content — no reliance on Modal internals */}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="overflow-y-auto max-h-[calc(70vh-10rem)] mt-4"
+      >
         {/* Document metadata */}
         <p className="text-xs text-slate-500 mb-4">
           시행일: {document.effectiveDate} | v{document.version}.0
@@ -113,17 +111,17 @@ export function LegalContentModal({
             ))}
           </div>
         ))}
+      </div>
 
-        {/* Confirm button */}
-        <div className="mt-8 pt-4 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={handleConfirm}
-            className="w-full rounded-lg bg-brand-point-600 px-4 py-3 text-sm font-medium text-white hover:bg-brand-point-700 transition-colors"
-          >
-            확인했습니다
-          </button>
-        </div>
+      {/* Confirm button — outside scroll area */}
+      <div className="mt-4 pt-4 border-t border-slate-100">
+        <button
+          type="button"
+          onClick={handleConfirm}
+          className="w-full rounded-lg bg-brand-point-600 px-4 py-3 text-sm font-medium text-white hover:bg-brand-point-700 transition-colors"
+        >
+          확인했습니다
+        </button>
       </div>
     </Modal>
   );
