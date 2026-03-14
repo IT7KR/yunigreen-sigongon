@@ -128,6 +128,20 @@ class User(UserBase, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     last_login_at: Optional[datetime] = Field(default=None)
 
+    # --- Soft delete (Scenario A, B1, C 공통) ---
+    deleted_at: Optional[datetime] = Field(default=None, index=True)
+    deleted_by: Optional[int] = Field(default=None, sa_type=BigInteger)
+    deletion_reason: Optional[str] = Field(default=None, max_length=500)
+
+    # --- Withdrawal (Scenario B1: 개인 탈퇴) ---
+    withdrawal_requested_at: Optional[datetime] = Field(default=None)
+    withdrawal_scheduled_at: Optional[datetime] = Field(default=None)
+    withdrawal_reason: Optional[str] = Field(default=None, max_length=500)
+
+    # --- Termination (Scenario C: 직원 퇴사) ---
+    terminated_at: Optional[datetime] = Field(default=None)
+    terminated_by: Optional[int] = Field(default=None, sa_type=BigInteger)
+
     # Relationships
     organization: Optional[Organization] = Relationship(
         back_populates="users",
@@ -160,6 +174,7 @@ class UserRead(UserBase):
     organization_id: Optional[int]
     created_at: datetime
     last_login_at: Optional[datetime]
+    deleted_at: Optional[datetime] = None
 
     @field_serializer('id')
     def serialize_id(self, v: int) -> str:
