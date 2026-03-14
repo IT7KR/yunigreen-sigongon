@@ -463,7 +463,7 @@ export default function MaterialOrdersPage({
                         </div>
                         {item.specification && (
                           <p className="text-sm text-slate-600">
-                            {item.specification}
+                            규격: {item.specification}
                           </p>
                         )}
                         <p className="mt-1 text-sm text-slate-500">
@@ -674,7 +674,8 @@ export default function MaterialOrdersPage({
 type CreateItem = {
   material_master_id: string;
   quantity: number;
-  specification: string | null;
+  specification_part1: number | null;
+  specification_part2: number | null;
 };
 
 function isItemSubmittable(item: CreateItem): boolean {
@@ -699,7 +700,8 @@ function CreateOrderModal({
     {
       material_master_id: "",
       quantity: 1,
-      specification: null,
+      specification_part1: null,
+      specification_part2: null,
     },
   ]);
   const [notes, setNotes] = useState("");
@@ -725,7 +727,8 @@ function CreateOrderModal({
         items: items.map((item) => ({
           material_master_id: item.material_master_id || undefined,
           quantity: item.quantity,
-          specification: item.specification || undefined,
+          specification_part1: item.specification_part1 ?? undefined,
+          specification_part2: item.specification_part2 ?? undefined,
         })),
         notes: notes || undefined,
         order_date: orderDate || null,
@@ -751,7 +754,8 @@ function CreateOrderModal({
       {
         material_master_id: "",
         quantity: 1,
-        specification: null,
+        specification_part1: null,
+        specification_part2: null,
       },
     ]);
   };
@@ -763,7 +767,7 @@ function CreateOrderModal({
   const updateItem = (
     index: number,
     field: keyof CreateItem,
-    value: string | number | null,
+    value: string | number | null | undefined,
   ) => {
     setItems((prev) => {
       const next = [...prev];
@@ -874,23 +878,63 @@ function CreateOrderModal({
                       />
                     </div>
 
-                    {selectedMaterialMaster?.specification && (
+                    {(selectedMaterialMaster?.specification_part1 !== null && selectedMaterialMaster?.specification_part1 !== undefined) ||
+                     (selectedMaterialMaster?.specification_part2 !== null && selectedMaterialMaster?.specification_part2 !== undefined) ? (
                       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <p className="text-xs text-slate-500">기본 규격</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">
-                          {selectedMaterialMaster.specification}
-                        </p>
+                        {selectedMaterialMaster!.specification_part1 !== null && selectedMaterialMaster!.specification_part2 !== null ? (
+                          <div className="mt-1 flex flex-col text-sm font-semibold text-slate-900">
+                            <span>{selectedMaterialMaster!.specification_part1}kg</span>
+                            <span className="w-full border-b border-slate-300 my-0.5" />
+                            <span>{selectedMaterialMaster!.specification_part2}kg</span>
+                          </div>
+                        ) : (
+                          <p className="mt-1 text-sm font-semibold text-slate-900">
+                            {selectedMaterialMaster!.specification_part1 !== null
+                              ? `${selectedMaterialMaster!.specification_part1}kg`
+                              : `${selectedMaterialMaster!.specification_part2}kg`}
+                          </p>
+                        )}
                       </div>
-                    )}
+                    ) : null}
 
-                    <Input
-                      label="규격 (선택)"
-                      placeholder="예: 4/16"
-                      value={item.specification ?? ""}
-                      onChange={(e) =>
-                        updateItem(index, "specification", e.target.value || null)
-                      }
-                    />
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-700">
+                        규격 (선택)
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">1제 (주재료)</label>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="KG"
+                              value={item.specification_part1 ?? ""}
+                              onChange={(e) =>
+                                updateItem(index, "specification_part1", e.target.value ? Number(e.target.value) : null)
+                              }
+                            />
+                            <span className="text-sm text-slate-500">kg</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">2제 (경화제)</label>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="KG"
+                              value={item.specification_part2 ?? ""}
+                              onChange={(e) =>
+                                updateItem(index, "specification_part2", e.target.value ? Number(e.target.value) : null)
+                              }
+                            />
+                            <span className="text-sm text-slate-500">kg</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
                     <div className="text-right text-sm">
                       <span className="text-slate-600">금액: </span>

@@ -25,7 +25,8 @@ import { api } from "@/lib/api";
 
 type MaterialMasterFormState = {
   name: string;
-  specification: string | null;
+  specification_part1: number | null;
+  specification_part2: number | null;
   unit: string;
   unit_price: string;
   is_active: boolean;
@@ -33,7 +34,8 @@ type MaterialMasterFormState = {
 
 const EMPTY_FORM: MaterialMasterFormState = {
   name: "",
-  specification: null,
+  specification_part1: null,
+  specification_part2: null,
   unit: "",
   unit_price: "",
   is_active: true,
@@ -45,7 +47,8 @@ function normalizeFormState(
   if (!materialMaster) return EMPTY_FORM;
   return {
     name: materialMaster.name,
-    specification: materialMaster.specification,
+    specification_part1: materialMaster.specification_part1,
+    specification_part2: materialMaster.specification_part2,
     unit: materialMaster.unit,
     unit_price: String(materialMaster.unit_price),
     is_active: materialMaster.is_active,
@@ -84,7 +87,8 @@ export default function MaterialMastersPage() {
     mutationFn: async () => {
       const payload = {
         name: form.name.trim(),
-        specification: form.specification || null,
+        specification_part1: form.specification_part1,
+        specification_part2: form.specification_part2,
         unit: form.unit.trim(),
         unit_price: Number(form.unit_price),
         is_active: form.is_active,
@@ -228,10 +232,21 @@ export default function MaterialMastersPage() {
                           {materialMaster.is_active ? "사용 중" : "비활성"}
                         </Badge>
                       </div>
-                      {materialMaster.specification && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          규격: {materialMaster.specification}
-                        </p>
+                      {(materialMaster.specification_part1 !== null || materialMaster.specification_part2 !== null) && (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {materialMaster.specification_part1 !== null && materialMaster.specification_part2 !== null ? (
+                            <>
+                              <p>1제: {materialMaster.specification_part1}kg</p>
+                              <p>2제: {materialMaster.specification_part2}kg</p>
+                            </>
+                          ) : (
+                            <p>
+                              {materialMaster.specification_part1 !== null
+                                ? `1제: ${materialMaster.specification_part1}kg`
+                                : `2제: ${materialMaster.specification_part2}kg`}
+                            </p>
+                          )}
+                        </div>
                       )}
                       <p className="mt-2 text-sm text-slate-600">
                         {materialMaster.unit} /{" "}
@@ -270,7 +285,15 @@ export default function MaterialMastersPage() {
                         {materialMaster.name}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {materialMaster.specification ?? "-"}
+                        {materialMaster.specification_part1 !== null && materialMaster.specification_part2 !== null ? (
+                          <div className="flex flex-col items-start">
+                            <span>{materialMaster.specification_part1}kg</span>
+                            <span className="w-full border-b border-slate-200" />
+                            <span>{materialMaster.specification_part2}kg</span>
+                          </div>
+                        ) : (
+                          "-"
+                        )}
                       </TableCell>
                       <TableCell>{materialMaster.unit}</TableCell>
                       <TableCell>
@@ -319,21 +342,46 @@ export default function MaterialMastersPage() {
               }
               placeholder="예: 방수 시트"
             />
-            <div className="space-y-1">
+            <div className="space-y-2">
               <label className="text-sm font-medium">규격</label>
-              <Input
-                placeholder="예: 4/16 (1제+2제 KG 비율), 단일 성분은 비워두세요"
-                value={form.specification ?? ""}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    specification: e.target.value || null,
-                  }))
-                }
-              />
-              <p className="text-xs text-muted-foreground">
-                2성분 제품(주재료+경화제)의 경우 "주재료KG/경화제KG" 형식으로 입력
-              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">1제 (주재료)</label>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="KG"
+                      value={form.specification_part1 ?? ""}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          specification_part1: e.target.value ? Number(e.target.value) : null,
+                        }))
+                      }
+                    />
+                    <span className="text-sm text-slate-500">kg</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">2제 (경화제)</label>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="KG"
+                      value={form.specification_part2 ?? ""}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          specification_part2: e.target.value ? Number(e.target.value) : null,
+                        }))
+                      }
+                    />
+                    <span className="text-sm text-slate-500">kg</span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Input
