@@ -112,7 +112,8 @@ class MaterialMaster(SQLModel, table=True):
 
     id: int = Field(default_factory=generate_snowflake_id, sa_column=Column(BigInteger, primary_key=True))
     name: str = Field(max_length=255, index=True)
-    specification: Optional[str] = Field(default=None, max_length=255)
+    specification_part1: Optional[int] = Field(default=None)
+    specification_part2: Optional[int] = Field(default=None)
     unit: str = Field(max_length=20)
     unit_price: Decimal = Field(default=Decimal("0"), max_digits=15, decimal_places=2)
     is_active: bool = Field(default=True, index=True)

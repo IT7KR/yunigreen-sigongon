@@ -556,7 +556,8 @@ def _serialize_material_master(material_master: MaterialMaster) -> dict:
     return {
         "id": str(material_master.id),
         "name": material_master.name,
-        "specification": material_master.specification,
+        "specification_part1": material_master.specification_part1,
+        "specification_part2": material_master.specification_part2,
         "unit": material_master.unit,
         "unit_price": float(material_master.unit_price),
         "is_active": material_master.is_active,
@@ -1449,7 +1450,8 @@ class MaterialMasterCreateRequest(BaseModel):
     unit: str
     unit_price: Decimal
     is_active: bool = True
-    specification: Optional[str] = None
+    specification_part1: Optional[int] = None
+    specification_part2: Optional[int] = None
 
 
 class MaterialMasterUpdateRequest(BaseModel):
@@ -1457,7 +1459,8 @@ class MaterialMasterUpdateRequest(BaseModel):
     unit: Optional[str] = None
     unit_price: Optional[Decimal] = None
     is_active: Optional[bool] = None
-    specification: Optional[str] = None
+    specification_part1: Optional[int] = None
+    specification_part2: Optional[int] = None
 
 
 def _validate_material_master_name(raw_value: Optional[str]) -> str:
@@ -1532,7 +1535,8 @@ async def create_material_master(
     now = datetime.utcnow()
     material_master = MaterialMaster(
         name=_validate_material_master_name(payload.name),
-        specification=payload.specification or None,
+        specification_part1=payload.specification_part1,
+        specification_part2=payload.specification_part2,
         unit=_validate_material_master_unit(payload.unit),
         unit_price=_validate_material_master_price(payload.unit_price),
         is_active=payload.is_active,
@@ -1572,8 +1576,10 @@ async def update_material_master(
         material_master.unit_price = _validate_material_master_price(payload.unit_price)
     if payload.is_active is not None:
         material_master.is_active = payload.is_active
-    if "specification" in payload.model_fields_set:
-        material_master.specification = payload.specification or None
+    if "specification_part1" in payload.model_fields_set:
+        material_master.specification_part1 = payload.specification_part1
+    if "specification_part2" in payload.model_fields_set:
+        material_master.specification_part2 = payload.specification_part2
 
     material_master.updated_by = current_user.id
     material_master.updated_at = datetime.utcnow()
@@ -3656,12 +3662,12 @@ async def download_worker_document(
     if not document.storage_path:
         raise HTTPException(status_code=404, detail="업로드된 파일이 없어요.")
 
-    absolute_path = storage_service.get_absolute_path(document.storage_path)
-    if not absolute_path.exists():
+    from app.core.exceptions import StorageFileNotFoundError
+    try:
+        content = await storage_service.read_file(document.storage_path)
+    except StorageFileNotFoundError:
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없어요.")
-
-    content = absolute_path.read_bytes()
-    filename = document.original_filename or absolute_path.name
+    filename = document.original_filename or Path(document.storage_path).name
     encoded_filename = quote(filename, safe="")
 
     return StreamingResponse(
