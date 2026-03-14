@@ -41,6 +41,23 @@ ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"]
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 
+def _extract_exif_datetime(content: bytes) -> Optional[datetime]:
+    """EXIF 데이터에서 촬영 시간을 추출해요."""
+    try:
+        from PIL import Image, ExifTags
+        import io as _io
+        img = Image.open(_io.BytesIO(content))
+        exif_data = img._getexif()
+        if exif_data:
+            for tag_id, value in exif_data.items():
+                tag = ExifTags.TAGS.get(tag_id, "")
+                if tag == "DateTimeOriginal" and value:
+                    return datetime.strptime(value, "%Y:%m:%d %H:%M:%S")
+    except Exception:
+        pass
+    return None
+
+
 class SiteVisitWithPhotos(SiteVisitRead):
     """현장 방문 정보 + 사진 목록."""
     photos: list[PhotoRead] = []
@@ -210,7 +227,9 @@ async def upload_photo(
     
     content = await file.read()
     await file.seek(0)
-    
+
+    taken_at = _extract_exif_datetime(content) or datetime.utcnow()
+
     # 사진 레코드 생성
     photo = Photo(
         site_visit_id=visit_id,
@@ -220,7 +239,7 @@ async def upload_photo(
         original_filename=file.filename,
         file_size_bytes=len(content),
         mime_type=file.content_type,
-        taken_at=datetime.utcnow(),  # TODO: EXIF에서 추출
+        taken_at=taken_at,
     )
     
     db.add(photo)

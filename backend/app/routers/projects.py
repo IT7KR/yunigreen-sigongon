@@ -436,10 +436,28 @@ async def update_project_status(
     project = await _get_project_for_current_user(db, project_id, current_user)
     
     new_status = status_data.status
-    
-    # 상태 전이 유효성 검사 (선택적)
-    # TODO: 상태 전이 규칙 추가
-    
+
+    # 상태 전이 유효성 검사
+    VALID_TRANSITIONS = {
+        ProjectStatus.DRAFT: {ProjectStatus.DIAGNOSING, ProjectStatus.ESTIMATING, ProjectStatus.CONTRACTED, ProjectStatus.IN_PROGRESS},
+        ProjectStatus.DIAGNOSING: {ProjectStatus.ESTIMATING, ProjectStatus.QUOTED, ProjectStatus.DRAFT},
+        ProjectStatus.ESTIMATING: {ProjectStatus.QUOTED, ProjectStatus.DIAGNOSING},
+        ProjectStatus.QUOTED: {ProjectStatus.CONTRACTED, ProjectStatus.ESTIMATING, ProjectStatus.CLOSED},
+        ProjectStatus.CONTRACTED: {ProjectStatus.IN_PROGRESS, ProjectStatus.QUOTED},
+        ProjectStatus.IN_PROGRESS: {ProjectStatus.COMPLETED, ProjectStatus.CONTRACTED},
+        ProjectStatus.COMPLETED: {ProjectStatus.WARRANTY, ProjectStatus.CLOSED},
+        ProjectStatus.WARRANTY: {ProjectStatus.CLOSED},
+        ProjectStatus.CLOSED: set(),
+    }
+
+    if new_status != project.status:
+        allowed = VALID_TRANSITIONS.get(project.status, set())
+        if new_status not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"'{project.status.value}' 상태에서 '{new_status.value}'으로 변경할 수 없어요.",
+            )
+
     apply_project_status_update(project, new_status)
     
     await db.commit()

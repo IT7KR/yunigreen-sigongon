@@ -439,6 +439,7 @@ class ModusignRequest(SQLModel, table=True):
 
     id: int = Field(default_factory=generate_snowflake_id, sa_column=Column(BigInteger, primary_key=True))
     contract_id: int = Field(sa_column=Column(BigInteger, nullable=False, unique=True, index=True))
+    modusign_document_id: Optional[str] = Field(default=None, max_length=200)  # Modusign API document ID
     status: str = Field(default="pending", max_length=30)
     signer_name: str = Field(max_length=100)
     signer_email: str = Field(max_length=255)

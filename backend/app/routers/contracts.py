@@ -446,20 +446,23 @@ async def request_modusign(
 
     signing_service = get_signing_service()
 
+    modusign_document_id = None
     try:
-        await signing_service.request_signature(
+        sign_result = await signing_service.request_signature(
             document_url=document_url,
             signer_name=payload.signer_name,
             signer_email=payload.signer_email or "",
             signer_phone=payload.signer_phone or "",
             contract_id=contract_id,
         )
+        modusign_document_id = sign_result.get("request_id")
     except Exception as e:
         logger.warning("모두싸인 서명 요청 실패: %s, mock으로 폴백", e)
 
     if not req:
         req = ModusignRequest(
             contract_id=contract_id,
+            modusign_document_id=modusign_document_id,
             status="sent",
             signer_name=payload.signer_name,
             signer_email=payload.signer_email,
@@ -470,6 +473,7 @@ async def request_modusign(
         db.add(req)
     else:
         req.status = "sent"
+        req.modusign_document_id = modusign_document_id
         req.signer_name = payload.signer_name
         req.signer_email = payload.signer_email
         req.signer_phone = payload.signer_phone
@@ -506,7 +510,7 @@ async def get_modusign_status(contract_id: int, db: DBSession, current_user: Cur
         from app.services.modusign_service import get_signing_service
 
         signing_service = get_signing_service()
-        request_id = f"mock_modusign_{contract_id}"
+        request_id = req.modusign_document_id or f"mock_modusign_{contract_id}"
         try:
             fresh = await signing_service.get_status(request_id)
             fresh_status = fresh.get("status", req.status)
@@ -550,7 +554,7 @@ async def cancel_modusign(contract_id: int, db: DBSession, current_user: Current
     from app.services.modusign_service import get_signing_service
 
     signing_service = get_signing_service()
-    request_id = f"mock_modusign_{contract_id}"
+    request_id = req.modusign_document_id or f"mock_modusign_{contract_id}"
     try:
         await signing_service.cancel(request_id)
     except Exception as e:

@@ -506,6 +506,91 @@ async def reorder_album_photos(
     )
 
 
+async def _generate_album_pdf(
+    photos: list,
+    album_name: str,
+    project_name: str,
+    columns: int,
+) -> bytes:
+    """Pillow으로 사진 앨범 PDF를 생성해요."""
+    from PIL import Image, ImageDraw, ImageFont
+    import io as _io
+
+    # A4 at 150 DPI
+    PAGE_W, PAGE_H = 1240, 1754
+    MARGIN = 40
+    HEADER_H = 80
+    CELL_PADDING = 10
+
+    col_count = columns
+    available_w = PAGE_W - 2 * MARGIN
+    cell_w = (available_w - (col_count - 1) * CELL_PADDING) // col_count
+    cell_h = int(cell_w * 0.75)  # 4:3 aspect ratio
+
+    pages = []
+    current_page = Image.new("RGB", (PAGE_W, PAGE_H), "white")
+    draw = ImageDraw.Draw(current_page)
+
+    # Header
+    draw.rectangle([MARGIN, MARGIN, PAGE_W - MARGIN, MARGIN + HEADER_H - 10], fill="#f0f0f0")
+    draw.text((MARGIN + 10, MARGIN + 10), f"{project_name} - {album_name}", fill="black")
+
+    row_start_y = MARGIN + HEADER_H
+    col_idx = 0
+    row_idx = 0
+
+    for photo in photos:
+        x = MARGIN + col_idx * (cell_w + CELL_PADDING)
+        y = row_start_y + row_idx * (cell_h + CELL_PADDING + 20)
+
+        # New page if needed
+        if y + cell_h > PAGE_H - MARGIN:
+            pages.append(current_page)
+            current_page = Image.new("RGB", (PAGE_W, PAGE_H), "white")
+            draw = ImageDraw.Draw(current_page)
+            col_idx = 0
+            row_idx = 0
+            x = MARGIN
+            y = MARGIN
+
+        # Try to load photo
+        try:
+            photo_bytes = photo.get("_bytes")
+            if photo_bytes:
+                img = Image.open(_io.BytesIO(photo_bytes))
+                img = img.convert("RGB")
+                img.thumbnail((cell_w, cell_h))
+                # Center in cell
+                offset_x = (cell_w - img.width) // 2
+                offset_y = (cell_h - img.height) // 2
+                current_page.paste(img, (x + offset_x, y + offset_y))
+        except Exception:
+            # Draw placeholder on error
+            draw.rectangle([x, y, x + cell_w, y + cell_h], outline="#cccccc", fill="#f5f5f5")
+            draw.text((x + 10, y + cell_h // 2), "사진 없음", fill="#999999")
+
+        # Caption
+        caption = photo.get("caption") or ""
+        if caption:
+            draw.text((x, y + cell_h + 2), caption[:30], fill="#555555")
+
+        col_idx += 1
+        if col_idx >= col_count:
+            col_idx = 0
+            row_idx += 1
+
+    pages.append(current_page)
+
+    # Save as multi-page PDF
+    buf = _io.BytesIO()
+    if len(pages) == 1:
+        pages[0].save(buf, format="PDF")
+    else:
+        pages[0].save(buf, format="PDF", save_all=True, append_images=pages[1:])
+
+    return buf.getvalue()
+
+
 @router.get("/albums/{album_id}/export")
 async def export_album_as_pdf(
     album_id: int,
@@ -531,23 +616,38 @@ async def export_album_as_pdf(
     # Get photos with details
     photos = await _get_album_photos(db, album_id)
 
-    # TODO: Implement actual PDF generation with reportlab or weasyprint
-    # For now, return JSON data that can be used by frontend to generate PDF
-    return APIResponse.ok({
-        "album_id": str(album_id),
-        "album_name": album.name,
-        "project_name": project.name,
-        "layout": album.layout.value,
-        "columns": 3 if album.layout == AlbumLayoutType.THREE_COLUMN else 4,
-        "photo_count": len(photos),
-        "photos": [
-            {
-                "id": p.id,
-                "storage_path": p.storage_path,
-                "caption": p.caption_override or p.caption,
-                "sort_order": p.sort_order,
-            }
-            for p in photos
-        ],
-        "message": "PDF 생성 데이터입니다. 클라이언트에서 PDF를 생성하세요.",
-    })
+    # Load photo bytes for PDF generation
+    from app.services.storage import get_storage_service
+    storage = get_storage_service()
+
+    photos_with_bytes = []
+    for p in photos:
+        photo_dict = {
+            "id": p.id,
+            "caption": p.caption_override or p.caption,
+            "sort_order": p.sort_order,
+        }
+        try:
+            photo_dict["_bytes"] = await storage.read_file(p.storage_path)
+        except Exception:
+            photo_dict["_bytes"] = None
+        photos_with_bytes.append(photo_dict)
+
+    columns = 3 if album.layout == AlbumLayoutType.THREE_COLUMN else 4
+    pdf_bytes = await _generate_album_pdf(
+        photos=photos_with_bytes,
+        album_name=album.name,
+        project_name=project.name,
+        columns=columns,
+    )
+
+    from urllib.parse import quote
+    filename = quote(f"{album.name}.pdf")
+    return StreamingResponse(
+        iter([pdf_bytes]),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{filename}",
+            "Content-Length": str(len(pdf_bytes)),
+        },
+    )

@@ -303,14 +303,21 @@ async def activate_revision(
     # 새 버전 활성화
     revision.status = RevisionStatus.ACTIVE
     revision.activated_at = datetime.utcnow()
-    
+
     await db.commit()
     await db.refresh(revision)
-    
+
     message = "활성화했어요"
     if old_version_label:
         message = f"활성화했어요. 이전 버전({old_version_label})은 deprecated 처리했어요."
-    
+
+    # 품목 수 조회
+    item_count_result = await db.execute(
+        select(func.count(CatalogItemPrice.id))
+        .where(CatalogItemPrice.pricebook_revision_id == revision.id)
+    )
+    item_count = item_count_result.scalar() or 0
+
     return APIResponse.ok(
         ActivateResponse(
             id=revision.id,
@@ -321,7 +328,7 @@ async def activate_revision(
             status=revision.status,
             created_at=revision.created_at,
             activated_at=revision.activated_at,
-            item_count=0,  # TODO
+            item_count=item_count,
             message=message,
         )
     )
