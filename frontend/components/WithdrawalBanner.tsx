@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AlertTriangle, X } from "lucide-react";
-import { Button, formatDate } from "@sigongcore/ui";
+import { Button, formatDate, toast } from "@sigongcore/ui";
 import { api } from "@/lib/api";
 
 export function WithdrawalBanner() {
@@ -39,7 +39,7 @@ export function WithdrawalBanner() {
         setStatus({ ...status, is_withdrawing: false });
       }
     } catch {
-      // 에러 무시
+      toast.error("탈퇴 철회에 실패했어요. 잠시 후 다시 시도해주세요.");
     } finally {
       setIsCancelling(false);
     }
