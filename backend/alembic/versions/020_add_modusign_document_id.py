@@ -7,8 +7,8 @@ Revises: 019
 from alembic import op
 import sqlalchemy as sa
 
-revision = "020"
-down_revision = "019"
+revision = "020_add_modusign_document_id"
+down_revision = "019_encrypt_billing_key"
 branch_labels = None
 depends_on = None
 

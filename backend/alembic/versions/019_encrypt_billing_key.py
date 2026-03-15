@@ -10,8 +10,8 @@ Revises: 018
 from alembic import op
 import sqlalchemy as sa
 
-revision = "019"
-down_revision = "018"
+revision = "019_encrypt_billing_key"
+down_revision = "018_add_trial_unit_columns"
 branch_labels = None
 depends_on = None
 

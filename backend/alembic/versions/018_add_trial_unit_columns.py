@@ -1,14 +1,17 @@
 """Add trial_unit columns to signup_trial_policy and organization_trial_override.
 
-Revision ID: 018
-Revises: 017
+Revision ID: 018_add_trial_unit_columns
+Revises: 017_user_deletion_lifecycle
+Create Date: 2026-03-15
 """
+
+from typing import Union
 
 from alembic import op
 import sqlalchemy as sa
 
-revision = "018"
-down_revision = "017"
+revision: str = "018_add_trial_unit_columns"
+down_revision: Union[str, None] = "017_user_deletion_lifecycle"
 branch_labels = None
 depends_on = None
 
