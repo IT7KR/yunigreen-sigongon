@@ -3359,8 +3359,11 @@ export class MockAPIClient {
     const businessData: Record<string, number> = {};
     const blockingReasons: Array<{ code: string; message: string; detail: string }> = [];
 
-    // mock: organization_id가 있는 사용자는 비즈니스 데이터가 있다고 가정
-    if (user.organization_id && user.role !== "super_admin") {
+    // 비즈니스 데이터 체크: 실제 백엔드는 created_by == user.id로 검사.
+    // Mock에서는 초기 시드 사용자(u0~u3)만 데이터를 보유한 것으로 간주.
+    // 신규 가입 사용자는 비즈니스 데이터가 없으므로 삭제 가능.
+    const seedUserIds = new Set(["u0", "u1", "u2", "u3"]);
+    if (seedUserIds.has(user.id) && user.role !== "super_admin") {
       const projects = mockDb.get("projects");
       const projectCount = projects.filter(
         (p) => p.organization_id === user.organization_id,
