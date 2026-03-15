@@ -43,6 +43,7 @@ import type {
 } from "@sigongcore/types";
 import {
   mockDb,
+  getSubscriptionStatus,
   type Project,
   type User,
   type Tenant,
@@ -1465,6 +1466,21 @@ export class MockAPIClient {
 
     const user = this.getCurrentUser() || this.getStoredUsers()[0];
 
+    let subscription_status: string | undefined;
+    if (user.role === "company_admin" || user.role === "site_manager") {
+      const tenants = mockDb.get("tenants") as Tenant[];
+      const tenant = tenants.find(
+        (t: Tenant) =>
+          t.id === user.organization_id ||
+          t.organization_id === user.organization_id,
+      );
+      if (!tenant) {
+        subscription_status = "none";
+      } else {
+        subscription_status = getSubscriptionStatus(tenant);
+      }
+    }
+
     return delay(
       ok({
         id: user.id,
@@ -1473,6 +1489,7 @@ export class MockAPIClient {
         name: user.name,
         phone: user.phone,
         role: user.role,
+        subscription_status,
         organization: {
           id: user.organization_id,
           name: "시공코어",

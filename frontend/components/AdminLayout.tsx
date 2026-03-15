@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, type ReactNode, useState, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  type ReactNode,
+  useState,
+  useEffect,
+} from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -24,6 +30,7 @@ import {
   ChevronDown,
   ChevronRight,
   Bell,
+  Lock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -92,7 +99,6 @@ const saNavItems = [
   { href: "/sa/tenants", icon: Building2, label: "고객사 관리" },
   { href: "/sa/billing-policy", icon: CreditCard, label: "체험/결제 정책" },
   { href: "/sa/users", icon: Users, label: "전체 사용자" },
-  { href: "/sa/notifications", icon: Bell, label: "공지/알림" },
   {
     href: "/sa/estimation-governance",
     icon: FileSpreadsheet,
@@ -113,6 +119,64 @@ type NavItem = {
     icon: React.ComponentType<{ className?: string }>;
   }>;
 };
+
+// Subscription statuses that allow full access
+const ACTIVE_STATUSES = new Set(["active", "trial"]);
+
+function isSubscriptionActive(
+  status: string | undefined,
+  role: string | undefined,
+): boolean {
+  // super_admin and worker have no subscription
+  if (role === "super_admin" || role === "worker" || !role) return true;
+  // If no status info, allow access (avoid false positives)
+  if (!status) return true;
+  return ACTIVE_STATUSES.has(status);
+}
+
+function SubscriptionGate({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // /billing must remain accessible so company_admin can renew
+  if (
+    pathname.startsWith("/billing") ||
+    isSubscriptionActive(user?.subscription_status, user?.role)
+  ) {
+    return <>{children}</>;
+  }
+
+  const isCompanyAdmin = user?.role === "company_admin";
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
+      <div className="max-w-md">
+        <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+          <Lock className="h-8 w-8 text-amber-600" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">
+          서비스 이용이 제한되었습니다
+        </h2>
+        <p className="text-slate-500 mb-6">
+          {user?.subscription_status === "past_due"
+            ? "결제에 실패하였습니다. 결제 수단을 확인하고 다시 시도해주세요."
+            : user?.subscription_status === "none"
+              ? "서비스 이용을 시작하려면 요금제를 선택해주세요."
+              : "구독이 만료되었습니다."}{" "}
+          {isCompanyAdmin
+            ? "결제 페이지에서 구독을 갱신해주세요."
+            : "서비스 이용을 위해 대표자에게 문의해주세요."}
+        </p>
+        {isCompanyAdmin && (
+          <Button onClick={() => router.push("/billing")}>
+            결제 페이지로 이동
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function AdminLayoutFrame({ children }: AdminLayoutProps) {
   const pathname = usePathname();
@@ -143,10 +207,22 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
   );
   const effectiveExpanded =
     expandedMenu ?? (autoExpandedMenu ? autoExpandedMenu.href : null);
-  const visibleNavItems =
-    user?.role === "super_admin"
-      ? navItems.filter((item) => item.href !== "/labor")
-      : navItems;
+  const subscriptionActive = isSubscriptionActive(
+    user?.subscription_status,
+    user?.role,
+  );
+
+  const visibleNavItems = (() => {
+    if (!subscriptionActive) {
+      return user?.role === "company_admin"
+        ? navItems.filter((item) => item.href === "/billing")
+        : []; // site_manager sees no nav items
+    }
+    if (user?.role === "super_admin") {
+      return navItems.filter((item) => item.href !== "/labor");
+    }
+    return navItems;
+  })();
 
   return (
     <div className="isolate min-h-screen bg-slate-50">
@@ -159,9 +235,9 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
       </a>
 
       {/* Swipe Overlay - Mobile Only */}
-      <div 
+      <div
         className="fixed inset-y-0 right-0 z-[55] w-6 lg:hidden"
-        style={{ pointerEvents: sidebarOpen ? 'none' : 'auto' }}
+        style={{ pointerEvents: sidebarOpen ? "none" : "auto" }}
         onPointerDown={(e) => {
           // This invisible edge area captures the initial swipe to open
           // But it shouldn't block content when sidebar is open
@@ -188,14 +264,14 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
         id="main-sidebar"
         aria-label="주 메뉴"
         initial={false}
-        animate={{ 
+        animate={{
           x: isTablet ? (sidebarOpen ? 0 : "100%") : 0,
         }}
-        transition={{ 
-          type: "spring", 
-          damping: 25, 
+        transition={{
+          type: "spring",
+          damping: 25,
           stiffness: 200,
-          mass: 0.8
+          mass: 0.8,
         }}
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
@@ -224,7 +300,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
           <div className="flex items-center gap-1">
             {/* 벨 아이콘 - 데스크톱에서만 표시 (모바일은 X 버튼과 겹침) */}
             <NotificationDropdown
-              notificationsHref={user?.role === "super_admin" ? "/sa/notifications" : "/notifications"}
+              notificationsHref="/notifications"
               align="left"
               className="hidden lg:flex"
             />
@@ -354,7 +430,9 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
               >
                 <span className="relative">
                   <item.icon className="h-5 w-5" />
-                  {item.href === "/notifications" && <NavBadge count={unreadCount} />}
+                  {item.href === "/notifications" && (
+                    <NavBadge count={unreadCount} />
+                  )}
                 </span>
                 {item.label}
               </AppLink>
@@ -390,7 +468,9 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
                   >
                     <span className="relative">
                       <item.icon className="h-5 w-5" />
-                      {item.href === "/sa/notifications" && <NavBadge count={unreadCount} />}
+                      {item.href === "/notifications" && (
+                        <NavBadge count={unreadCount} />
+                      )}
                     </span>
                     {item.label}
                   </AppLink>
@@ -456,9 +536,7 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
             <span className="font-semibold text-slate-900">시공코어</span>
           </AppLink>
           <div className="flex items-center gap-1">
-            <NotificationDropdown
-              notificationsHref={user?.role === "super_admin" ? "/sa/notifications" : "/notifications"}
-            />
+            <NotificationDropdown notificationsHref="/notifications" />
             <PrimitiveButton
               onClick={() => setSidebarOpen(true)}
               className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-600"
@@ -472,7 +550,9 @@ function AdminLayoutFrame({ children }: AdminLayoutProps) {
           className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 sm:pt-8 lg:p-8"
           loadingOverlay={<AdminContentLoadingOverlay />}
         >
-          <div id="main-content">{children}</div>
+          <div id="main-content">
+            <SubscriptionGate>{children}</SubscriptionGate>
+          </div>
         </ContentTransitionBoundary>
       </main>
       <AdminBottomNav />

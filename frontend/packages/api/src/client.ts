@@ -398,6 +398,7 @@ export class APIClient {
         name: string;
         phone?: string;
         role: string;
+        subscription_status?: string;
         organization?: {
           id: string;
           name: string;

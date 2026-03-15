@@ -12,6 +12,7 @@ interface AuthUser extends AuthUserBase {
   username: string;
   email?: string;
   role: UserRole;
+  subscription_status?: string;
 }
 
 const authModule = createAuthModule<AuthUser>({
