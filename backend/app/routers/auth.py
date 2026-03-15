@@ -22,6 +22,7 @@ from app.models.otp import OtpRecord
 from app.models.user import User, UserLogin, Token, UserRead, UserRole, OrganizationRead
 from app.schemas.response import APIResponse
 from app.services.sms import get_sms_service
+from app.models.billing import Subscription, SubscriptionPlan, SubscriptionStatus
 from app.services.trial_policy import calculate_trial_end, resolve_trial_policy
 
 router = APIRouter()
@@ -52,6 +53,7 @@ class MeResponse(UserRead):
     """현재 사용자 정보 응답."""
     username: str
     organization: OrganizationRead | None = None
+    subscription_status: str | None = None
 
 
 class OtpSendRequest(BaseModel):
@@ -215,7 +217,27 @@ async def get_me(
     """
     # 조직 정보 로드
     await db.refresh(current_user, ["organization"])
-    
+
+    # 구독 상태 조회 (테넌트 역할만)
+    subscription_status: str | None = None
+    if current_user.role in (UserRole.COMPANY_ADMIN, UserRole.SITE_MANAGER):
+        sub_result = await db.execute(
+            select(Subscription).where(
+                Subscription.organization_id == current_user.organization_id
+            )
+        )
+        subscription = sub_result.scalar_one_or_none()
+        if subscription is None:
+            subscription_status = "none"
+        elif subscription.status == SubscriptionStatus.PAST_DUE:
+            subscription_status = "past_due"
+        elif subscription.expires_at < datetime.utcnow():
+            subscription_status = "expired"
+        elif subscription.plan == SubscriptionPlan.TRIAL:
+            subscription_status = "trial"
+        else:
+            subscription_status = "active"
+
     response = MeResponse(
         id=current_user.id,
         username=current_user.username,
@@ -229,6 +251,7 @@ async def get_me(
         last_login_at=current_user.last_login_at,
         organization=OrganizationRead.model_validate(current_user.organization)
             if current_user.organization else None,
+        subscription_status=subscription_status,
     )
 
     return APIResponse.ok(response)
